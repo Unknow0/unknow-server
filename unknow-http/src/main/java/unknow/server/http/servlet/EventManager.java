@@ -1,0 +1,165 @@
+/**
+ * 
+ */
+package unknow.server.http.servlet;
+
+import java.util.EventListener;
+import java.util.List;
+
+import javax.servlet.ServletContext;
+import javax.servlet.ServletContextAttributeEvent;
+import javax.servlet.ServletContextAttributeListener;
+import javax.servlet.ServletContextEvent;
+import javax.servlet.ServletContextListener;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletRequestAttributeEvent;
+import javax.servlet.ServletRequestAttributeListener;
+import javax.servlet.ServletRequestEvent;
+import javax.servlet.ServletRequestListener;
+import javax.servlet.http.HttpSessionAttributeListener;
+import javax.servlet.http.HttpSessionIdListener;
+import javax.servlet.http.HttpSessionListener;
+
+/**
+ * @author unknow
+ */
+public class EventManager {
+	private final List<ServletContextListener> contextListeners;
+	private final List<ServletContextAttributeListener> contextAttributeListeners;
+	private final List<ServletRequestListener> requestListeners;
+	private final List<ServletRequestAttributeListener> requestAttributeListeners;
+	private final List<HttpSessionListener> sessionListeners;
+	private final List<HttpSessionAttributeListener> sessionAttributeListeners;
+	private final List<HttpSessionIdListener> sessionIdListeners;
+
+	/**
+	 * create new EventManager
+	 * 
+	 * @param contextListeners
+	 * @param contextAttributeListeners
+	 * @param requestListeners
+	 * @param requestAttributeListeners
+	 * @param sessionListeners
+	 * @param sessionAttributeListeners
+	 * @param sessionIdListeners
+	 */
+	public EventManager(List<ServletContextListener> contextListeners, List<ServletContextAttributeListener> contextAttributeListeners, List<ServletRequestListener> requestListeners, List<ServletRequestAttributeListener> requestAttributeListeners, List<HttpSessionListener> sessionListeners, List<HttpSessionAttributeListener> sessionAttributeListeners, List<HttpSessionIdListener> sessionIdListeners) {
+		this.contextListeners = contextListeners;
+		this.contextAttributeListeners = contextAttributeListeners;
+		this.requestListeners = requestListeners;
+		this.requestAttributeListeners = requestAttributeListeners;
+		this.sessionListeners = sessionListeners;
+		this.sessionAttributeListeners = sessionAttributeListeners;
+		this.sessionIdListeners = sessionIdListeners;
+	}
+
+	/**
+	 * notify of the context initialization
+	 */
+	public void fireContextInitialized(ServletContext context) {
+		ServletContextEvent sce = new ServletContextEvent(context);
+		for (ServletContextListener l : contextListeners)
+			l.contextInitialized(sce);
+	}
+
+	/**
+	 * notify the context destruction
+	 */
+	public void fireContextDestroyed(ServletContext context) {
+		ServletContextEvent sce = new ServletContextEvent(context);
+		for (ServletContextListener l : contextListeners)
+			l.contextInitialized(sce);
+	}
+
+	/**
+	 * fire a change in the context attribute
+	 * 
+	 * @param key   the key that changed
+	 * @param value the new value
+	 * @param old   the old value
+	 */
+	public void fireContextAttribute(ServletContext context, String key, Object value, Object old) {
+		if (contextAttributeListeners.isEmpty())
+			return;
+		if (value == null) {
+			ServletContextAttributeEvent e = new ServletContextAttributeEvent(context, key, old);
+			for (ServletContextAttributeListener l : contextAttributeListeners)
+				l.attributeRemoved(e);
+		} else if (old == null) {
+			ServletContextAttributeEvent e = new ServletContextAttributeEvent(context, key, value);
+			for (ServletContextAttributeListener l : contextAttributeListeners)
+				l.attributeAdded(e);
+
+		} else {
+			ServletContextAttributeEvent e = new ServletContextAttributeEvent(context, key, old);
+			for (ServletContextAttributeListener l : contextAttributeListeners)
+				l.attributeReplaced(e);
+		}
+	}
+
+	/**
+	 * fire a request initialization
+	 * 
+	 * @param req the request
+	 */
+	public void fireRequestInitialized(ServletRequest req) {
+		ServletRequestEvent e = new ServletRequestEvent(req.getServletContext(), req);
+		for (ServletRequestListener l : requestListeners)
+			l.requestInitialized(e);
+	}
+
+	/**
+	 * fire a request destruction
+	 * 
+	 * @param req the request
+	 */
+	public void fireRequestDestroyed(ServletRequest req) {
+		ServletRequestEvent e = new ServletRequestEvent(req.getServletContext(), req);
+		for (ServletRequestListener l : requestListeners)
+			l.requestDestroyed(e);
+	}
+
+	/**
+	 * fire a change in a request attribute
+	 * 
+	 * @param req   the request
+	 * @param key   the key that changed
+	 * @param value the new value
+	 * @param old   the old value
+	 */
+	public void fireRequestAttribute(ServletRequest req, String key, Object value, Object old) {
+		if (contextAttributeListeners.isEmpty())
+			return;
+		if (value == null) {
+			ServletRequestAttributeEvent e = new ServletRequestAttributeEvent(req.getServletContext(), req, key, old);
+			for (ServletRequestAttributeListener l : requestAttributeListeners)
+				l.attributeRemoved(e);
+		} else if (old == null) {
+			ServletRequestAttributeEvent e = new ServletRequestAttributeEvent(req.getServletContext(), req, key, value);
+			for (ServletRequestAttributeListener l : requestAttributeListeners)
+				l.attributeAdded(e);
+
+		} else {
+			ServletRequestAttributeEvent e = new ServletRequestAttributeEvent(req.getServletContext(), req, key, old);
+			for (ServletRequestAttributeListener l : requestAttributeListeners)
+				l.attributeReplaced(e);
+		}
+	}
+
+	public <T extends EventListener> void addListener(T t) {
+		if (t instanceof ServletContextListener)
+			contextListeners.add((ServletContextListener) t);
+		else if (t instanceof ServletContextAttributeListener)
+			contextAttributeListeners.add((ServletContextAttributeListener) t);
+		else if (t instanceof ServletRequestListener)
+			requestListeners.add((ServletRequestListener) t);
+		else if (t instanceof ServletRequestAttributeListener)
+			requestAttributeListeners.add((ServletRequestAttributeListener) t);
+		else if (t instanceof HttpSessionListener)
+			sessionListeners.add((HttpSessionListener) t);
+		else if (t instanceof HttpSessionAttributeListener)
+			sessionAttributeListeners.add((HttpSessionAttributeListener) t);
+		else if (t instanceof HttpSessionIdListener)
+			sessionIdListeners.add((HttpSessionIdListener) t);
+	}
+}
