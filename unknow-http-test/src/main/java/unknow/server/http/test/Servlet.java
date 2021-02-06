@@ -24,12 +24,13 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import static javax.servlet.DispatcherType.ERROR;
+
 /**
  * @author unknow
  */
-@WebServlet(urlPatterns = { "/test/*" }, name = "test", loadOnStartup = 1, initParams = @WebInitParam(name = "content", value = "it works"))
+@WebServlet(urlPatterns = { "/test/*", "/bla", "/bla/yes/*", "*.test" }, name = "test", loadOnStartup = 1, initParams = @WebInitParam(name = "content", value = "it works"))
 @WebListener
-@WebFilter(dispatcherTypes = {DispatcherType.REQUEST,  ERROR})
+@WebFilter(dispatcherTypes = { DispatcherType.REQUEST, ERROR }, value ={"/foo/*", "/test"})
 public class Servlet extends HttpServlet implements ServletRequestListener, Filter {
 	private static final long serialVersionUID = 1L;
 
@@ -64,6 +65,7 @@ public class Servlet extends HttpServlet implements ServletRequestListener, Filt
 
 	@Override
 	public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+		System.out.println("filtering " + request);
 		chain.doFilter(request, response);
 	}
 }

@@ -319,6 +319,23 @@ public class Buffers {
 			b = Buf.free(b);
 	}
 
+	/**
+	 * @param bytes byte array to fill
+	 * @return all this buffers as byte array
+	 */
+	public synchronized byte[] toBytes(byte[] bytes) {
+		if (bytes.length < size)
+			bytes = new byte[size];
+		Buf b = head;
+		int i = 0;
+		do {
+			System.arraycopy(b.b, b.o, bytes, i, b.l);
+			i += b.l;
+			b = b.next;
+		} while (b != null);
+		return bytes;
+	}
+
 	@Override
 	public String toString() {
 		if (head == null)

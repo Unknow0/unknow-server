@@ -9,12 +9,18 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.util.concurrent.ExecutorService;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import unknow.server.http.HttpRawRequest.RawHeader;
 import unknow.server.nio.Handler;
 import unknow.server.nio.util.Buffers;
 
 public class HttpHandler extends Handler implements Runnable {
+	private static final Logger log = LoggerFactory.getLogger(HttpHandler.class);
+
 	private static final byte[] CRLF = new byte[] { '\r', '\n' };
+	private static final byte QUESTION = '?';
 	private static final byte SPACE = ' ';
 	private static final byte COLON = ':';
 
@@ -56,11 +62,11 @@ public class HttpHandler extends Handler implements Runnable {
 			executor.submit(this);
 	}
 
-	private boolean tryRead(byte lookup, int limit, int next, Buffers out) throws IOException {
+	private boolean tryRead(byte lookup, int limit, int next, Buffers out, HttpError e) throws IOException {
 		int i = pendingRead.indexOf(lookup, limit);
 		if (i < 0) {
 			if (pendingRead.size() > limit)
-				getOut().close();
+				error(e);
 			return false;
 		}
 		pendingRead.read(i, out);
@@ -69,11 +75,11 @@ public class HttpHandler extends Handler implements Runnable {
 		return true;
 	}
 
-	private boolean tryRead(byte[] lookup, int limit, int next, Buffers out) throws IOException {
+	private boolean tryRead(byte[] lookup, int limit, int next, Buffers out, HttpError e) throws IOException {
 		int i = pendingRead.indexOf(lookup, limit);
 		if (i < 0) {
 			if (pendingRead.size() > limit)
-				getOut().close();
+				error(e);
 			return false;
 		}
 		pendingRead.read(i, out);
@@ -84,24 +90,72 @@ public class HttpHandler extends Handler implements Runnable {
 
 	private void tryParse() throws IOException {
 		if (step == METHOD)
-			tryRead(SPACE, MAX_METHOD_SIZE, PATH, request.method);
-		if (step == PATH)
-			tryRead(SPACE, MAX_PATH_SIZE, PROTOCOL, request.path);
+			tryRead(SPACE, MAX_METHOD_SIZE, PATH, request.method, HttpError.BAD_REQUEST);
+		if (step == PATH) {
+			int m = pendingRead.indexOf(SPACE, MAX_PATH_SIZE);
+			if (m < 0) {
+				if (pendingRead.size() > MAX_PATH_SIZE)
+					error(HttpError.URI_TOO_LONG);
+				return;
+			}
+			int l = pendingRead.indexOf(QUESTION, m);
+			int query = 0;
+			if (l > 0) {
+				query = m - l;
+				m = l;
+			}
+			int i = pendingRead.read();
+			if (i != '/') {
+				error(HttpError.BAD_REQUEST);
+				return;
+			}
+			m--;
+			while ((i = pendingRead.indexOf((byte) '/', m)) > 0) {
+				Buffers b = new Buffers();
+				pendingRead.read(i, b);
+				if (i == 1) {
+					if (b.getHead().b[0] != '.') {
+						request.path.add(b);
+						b.append((byte) i);
+					}
+				} else if (i == 2) {
+					byte[] p = b.getHead().b;
+					if (p[0] != '.' || p[1] != '.')
+						request.path.add(b);
+					else
+						request.path.remove(request.path.size() - 1);
+				} else
+					request.path.add(b);
+				pendingRead.read();
+				m -= i + 1;
+			}
+			if (m > 0) {
+				Buffers b = new Buffers();
+				pendingRead.read(m, b);
+				request.path.add(b);
+			}
+			if (query > 0) {
+				pendingRead.read();
+				pendingRead.read(query, request.query);
+			}
+			pendingRead.read();
+			step = PROTOCOL;
+		}
 		if (step == PROTOCOL)
-			tryRead(CRLF, MAX_VERSION_SIZE, HEADER, request.protocol);
+			tryRead(CRLF, MAX_VERSION_SIZE, HEADER, request.protocol, HttpError.BAD_REQUEST);
 		if (step == HEADER) {
 			int k;
 			while ((k = pendingRead.indexOf(CRLF, MAX_HEADER_SIZE)) > 0) {
 				int i = pendingRead.indexOf(COLON, MAX_HEADER_SIZE);
 				if (i < 0) {
 					if (pendingRead.size() > MAX_HEADER_SIZE)
-						getOut().close();
+						error(HttpError.HEADER_TOO_LARGE);
 					return;
 				}
 
 				RawHeader header = request.nextHeader();
 				if (header == null) { // max number of header reach
-					getOut().close();
+					error(HttpError.HEADER_TOO_LARGE);
 					return;
 				}
 				pendingRead.read(i, header);
@@ -110,12 +164,20 @@ public class HttpHandler extends Handler implements Runnable {
 				pendingRead.read(pendingRead.indexOf(CRLF, MAX_HEADER_SIZE), header.value);
 				pendingRead.skip(2);
 			}
+			if (k < 0 && pendingRead.size() > MAX_PATH_SIZE)
+				error(HttpError.HEADER_TOO_LARGE);
 			if (k == 0) {
 				pendingRead.skip(2);
 				step = CONTENT;
 				request.content = pendingRead;
 			}
 		}
+	}
+
+	private final void error(HttpError e) throws IOException {
+		log.error("{}: {}", getRemote(), e);
+		getOut().write(e.data);
+		getOut().close();
 	}
 
 	@Override

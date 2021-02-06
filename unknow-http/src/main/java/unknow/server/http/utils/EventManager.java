@@ -1,7 +1,7 @@
 /**
  * 
  */
-package unknow.server.http.servlet;
+package unknow.server.http.utils;
 
 import java.util.EventListener;
 import java.util.List;
@@ -20,10 +20,15 @@ import javax.servlet.http.HttpSessionAttributeListener;
 import javax.servlet.http.HttpSessionIdListener;
 import javax.servlet.http.HttpSessionListener;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * @author unknow
  */
 public class EventManager {
+	private static final Logger log = LoggerFactory.getLogger(EventManager.class);
+
 	private final List<ServletContextListener> contextListeners;
 	private final List<ServletContextAttributeListener> contextAttributeListeners;
 	private final List<ServletRequestListener> requestListeners;
@@ -57,18 +62,28 @@ public class EventManager {
 	 * notify of the context initialization
 	 */
 	public void fireContextInitialized(ServletContext context) {
-		ServletContextEvent sce = new ServletContextEvent(context);
-		for (ServletContextListener l : contextListeners)
-			l.contextInitialized(sce);
+		ServletContextEvent e = new ServletContextEvent(context);
+		for (ServletContextListener l : contextListeners) {
+			try {
+				l.contextInitialized(e);
+			} catch (Exception ex) {
+				log.error("failed to notify {}", ex, l);
+			}
+		}
 	}
 
 	/**
 	 * notify the context destruction
 	 */
 	public void fireContextDestroyed(ServletContext context) {
-		ServletContextEvent sce = new ServletContextEvent(context);
-		for (ServletContextListener l : contextListeners)
-			l.contextInitialized(sce);
+		ServletContextEvent e = new ServletContextEvent(context);
+		for (ServletContextListener l : contextListeners) {
+			try {
+				l.contextInitialized(e);
+			} catch (Exception ex) {
+				log.error("failed to notify {}", ex, l);
+			}
+		}
 	}
 
 	/**
@@ -83,17 +98,34 @@ public class EventManager {
 			return;
 		if (value == null) {
 			ServletContextAttributeEvent e = new ServletContextAttributeEvent(context, key, old);
-			for (ServletContextAttributeListener l : contextAttributeListeners)
-				l.attributeRemoved(e);
+			for (ServletContextAttributeListener l : contextAttributeListeners) {
+				try {
+					l.attributeRemoved(e);
+				} catch (Exception ex) {
+					log.error("failed to notify {}", ex, l);
+				}
+			}
 		} else if (old == null) {
 			ServletContextAttributeEvent e = new ServletContextAttributeEvent(context, key, value);
-			for (ServletContextAttributeListener l : contextAttributeListeners)
-				l.attributeAdded(e);
+			for (ServletContextAttributeListener l : contextAttributeListeners) {
+				try {
+					l.attributeAdded(e);
+				} catch (Exception ex) {
+					log.error("failed to notify {}", ex, l);
+
+				}
+			}
 
 		} else {
 			ServletContextAttributeEvent e = new ServletContextAttributeEvent(context, key, old);
-			for (ServletContextAttributeListener l : contextAttributeListeners)
-				l.attributeReplaced(e);
+			for (ServletContextAttributeListener l : contextAttributeListeners) {
+				try {
+					l.attributeReplaced(e);
+				} catch (Exception ex) {
+					log.error("failed to notify {}", ex, l);
+
+				}
+			}
 		}
 	}
 
@@ -104,8 +136,14 @@ public class EventManager {
 	 */
 	public void fireRequestInitialized(ServletRequest req) {
 		ServletRequestEvent e = new ServletRequestEvent(req.getServletContext(), req);
-		for (ServletRequestListener l : requestListeners)
-			l.requestInitialized(e);
+		for (ServletRequestListener l : requestListeners) {
+			try {
+				l.requestInitialized(e);
+			} catch (Exception ex) {
+				log.error("failed to notify {}", ex, l);
+
+			}
+		}
 	}
 
 	/**
@@ -115,8 +153,14 @@ public class EventManager {
 	 */
 	public void fireRequestDestroyed(ServletRequest req) {
 		ServletRequestEvent e = new ServletRequestEvent(req.getServletContext(), req);
-		for (ServletRequestListener l : requestListeners)
-			l.requestDestroyed(e);
+		for (ServletRequestListener l : requestListeners) {
+			try {
+				l.requestDestroyed(e);
+			} catch (Exception ex) {
+				log.error("failed to notify {}", ex, l);
+
+			}
+		}
 	}
 
 	/**
@@ -132,17 +176,35 @@ public class EventManager {
 			return;
 		if (value == null) {
 			ServletRequestAttributeEvent e = new ServletRequestAttributeEvent(req.getServletContext(), req, key, old);
-			for (ServletRequestAttributeListener l : requestAttributeListeners)
-				l.attributeRemoved(e);
+			for (ServletRequestAttributeListener l : requestAttributeListeners) {
+				try {
+					l.attributeRemoved(e);
+				} catch (Exception ex) {
+					log.error("failed to notify {}", ex, l);
+
+				}
+			}
 		} else if (old == null) {
 			ServletRequestAttributeEvent e = new ServletRequestAttributeEvent(req.getServletContext(), req, key, value);
-			for (ServletRequestAttributeListener l : requestAttributeListeners)
-				l.attributeAdded(e);
+			for (ServletRequestAttributeListener l : requestAttributeListeners) {
+				try {
+					l.attributeAdded(e);
+				} catch (Exception ex) {
+					log.error("failed to notify {}", ex, l);
+
+				}
+			}
 
 		} else {
 			ServletRequestAttributeEvent e = new ServletRequestAttributeEvent(req.getServletContext(), req, key, old);
-			for (ServletRequestAttributeListener l : requestAttributeListeners)
-				l.attributeReplaced(e);
+			for (ServletRequestAttributeListener l : requestAttributeListeners) {
+				try {
+					l.attributeReplaced(e);
+				} catch (Exception ex) {
+					log.error("failed to notify {}", ex, l);
+
+				}
+			}
 		}
 	}
 

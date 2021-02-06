@@ -1,7 +1,7 @@
 /**
  * 
  */
-package unknow.server.http;
+package unknow.server.http.utils;
 
 import unknow.server.nio.util.Buffers;
 import unknow.server.nio.util.BuffersUtils;
@@ -66,6 +66,26 @@ public interface PathMatcher {
 		@Override
 		public boolean match(Buffers path) {
 			return BuffersUtils.endsWith(path, match);
+		}
+	}
+
+	public static class AndMatcher implements PathMatcher {
+		private final PathMatcher a;
+		private final PathMatcher b;
+
+		public AndMatcher(PathMatcher a, PathMatcher b) {
+			this.a = a;
+			this.b = b;
+		}
+
+		@Override
+		public int length() {
+			return a.length();
+		}
+
+		@Override
+		public boolean match(Buffers path) {
+			return a.match(path) && b.match(path);
 		}
 	}
 }

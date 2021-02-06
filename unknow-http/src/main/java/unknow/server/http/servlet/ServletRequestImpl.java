@@ -38,6 +38,7 @@ import javax.servlet.http.Part;
 
 import unknow.server.http.HttpRawRequest;
 import unknow.server.http.HttpRawRequest.RawHeader;
+import unknow.server.http.utils.ArrayMap;
 import unknow.server.nio.util.Buffers;
 import unknow.server.nio.util.BuffersUtils;
 
@@ -56,19 +57,25 @@ public class ServletRequestImpl implements HttpServletRequest {
 	private String method = null;
 	private String servletPath = null;
 	private String pathInfo = null;
-	private String pathUri = null;
 	private String query = null;
 
 	private String encoding = null;
 	private long contentLength = -2;
 
 	private Map<String, List<String>> headers;
+	private Map<String, List<String>> parameter;
 
 	private String remoteAddr;
 	private String remoteHost;
 	private String localAddr;
 	private String localHost;
 
+	/**
+	 * create new ServletRequestImpl
+	 * 
+	 * @param ctx the context
+	 * @param req the raw request
+	 */
 	public ServletRequestImpl(ServletContextImpl ctx, HttpRawRequest req) {
 		this.ctx = ctx;
 		this.req = req;
@@ -79,10 +86,15 @@ public class ServletRequestImpl implements HttpServletRequest {
 	 * 
 	 * @return the raw path
 	 */
-	public final Buffers rawPath() {
+	public final List<Buffers> rawPath() {
 		return req.path;
 	}
 
+	/**
+	 * set path start index of path info
+	 * 
+	 * @param infoStart
+	 */
 	public final void setPathInfoStart(int infoStart) {
 		this.infoStart = infoStart;
 	}
@@ -100,6 +112,13 @@ public class ServletRequestImpl implements HttpServletRequest {
 			list.add(toString(h.value, 0, -1));
 			h = h.next;
 		}
+	}
+
+	private void generateParam() {
+		if (parameter != null)
+			return;
+		parameter = new HashMap<>();
+		// TODO
 	}
 
 	@Override
@@ -256,10 +275,8 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public String getQueryString() {
-		if (query == null) {
-			int i = req.path.indexOf((byte) '?', -1);
-			query = i == -1 ? "" : toString(req.path, i + 1, -1);
-		}
+		if (query == null)
+			query = toString(req.query, 0, -1);
 		return query.isEmpty() ? null : query;
 	}
 
@@ -390,8 +407,13 @@ public class ServletRequestImpl implements HttpServletRequest {
 	@Override
 	public String getServletPath() {
 		if (servletPath == null) {
-			int i = req.path.indexOf((byte) '?', -1);
-			servletPath = toString(req.path, 0, Math.max(i, infoStart));
+			int e = infoStart < 0 ? req.path.size() : infoStart;
+			StringBuilder sb = new StringBuilder();
+			for (int i = 0; i < e; i++) {
+				sb.append('/'); // TODO decode
+				BuffersUtils.toString(sb, req.path.get(i), 0, -1);
+			}
+			servletPath = sb.toString();
 		}
 		return servletPath;
 	}
@@ -400,8 +422,11 @@ public class ServletRequestImpl implements HttpServletRequest {
 	public String getPathInfo() {
 		if (pathInfo == null) {
 			if (infoStart > 0) {
-				int i = req.path.indexOf((byte) '?', -1);
-				pathInfo = toString(req.path, infoStart, i);
+				StringBuilder sb = new StringBuilder();
+				for (int i = infoStart; i < req.path.size(); i++) {
+					sb.append('/'); // TODO decode
+					BuffersUtils.toString(sb, req.path.get(i), 0, -1);
+				}
 			} else
 				pathInfo = "";
 		}
@@ -420,16 +445,16 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public String getRequestURI() {
-		if (pathUri == null) {
-			int i = req.path.indexOf((byte) '?', -1);
-			pathUri = toString(req.path, 0, i);
-		}
-		return pathUri;
+		String s = getServletPath();
+		return getPathInfo() == null ? s : s + getPathInfo();
 	}
 
 	@Override
 	public StringBuffer getRequestURL() {
-		return new StringBuffer("http://").append(getServerName()).append(':').append(getServerPort()).append(getRequestURI());
+		StringBuffer append = new StringBuffer("http://").append(getServerName()).append(':').append(getServerPort()).append(getServletPath());
+		if (getPathInfo() != null)
+			append.append(getPathInfo());
+		return append;
 	}
 
 	@Override

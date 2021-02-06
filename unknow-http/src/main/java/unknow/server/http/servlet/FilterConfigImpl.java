@@ -5,7 +5,7 @@ package unknow.server.http.servlet;
 
 import java.util.Enumeration;
 
-import javax.servlet.ServletConfig;
+import javax.servlet.FilterConfig;
 import javax.servlet.ServletContext;
 
 import unknow.server.http.utils.ArrayMap;
@@ -13,19 +13,19 @@ import unknow.server.http.utils.ArrayMap;
 /**
  * @author unknow
  */
-public class ServletConfigImpl implements ServletConfig {
+public class FilterConfigImpl implements FilterConfig {
 	private final String name;
 	private final ServletContext context;
 	private final ArrayMap<String> parameters;
 
-	public ServletConfigImpl(String name, ServletContext context, ArrayMap<String> parameters) {
+	public FilterConfigImpl(String name, ServletContext context, ArrayMap<String> parameters) {
 		this.name = name;
 		this.context = context;
 		this.parameters = parameters;
 	}
 
 	@Override
-	public String getServletName() {
+	public String getFilterName() {
 		return name;
 	}
 

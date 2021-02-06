@@ -4,6 +4,7 @@
 package unknow.server.http.servlet;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -12,18 +13,18 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 
-final class FilterChainImpl implements FilterChain {
-	private final Filter[] filters;
-	private int i;
+public final class FilterChainImpl implements FilterChain {
+	private final Filter filter;
+	private final FilterChain next;
 
-	public FilterChainImpl(Filter[] filters) {
-		this.filters = filters;
-		i = 0;
+	public FilterChainImpl(Filter filter, FilterChain next) {
+		this.filter = filter;
+		this.next = next;
 	}
 
 	@Override
 	public void doFilter(ServletRequest request, ServletResponse response) throws IOException, ServletException {
-		filters[i++].doFilter(request, response, this);
+		filter.doFilter(request, response, next);
 	}
 
 	public static class ServletFilter implements FilterChain, Filter {
@@ -41,6 +42,11 @@ final class FilterChainImpl implements FilterChain {
 		@Override
 		public void doFilter(ServletRequest request, ServletResponse response) throws IOException, ServletException {
 			servlet.service(request, response);
+		}
+
+		@Override
+		public String toString() {
+			return servlet.getServletConfig().getServletName();
 		}
 	}
 }
