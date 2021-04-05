@@ -4,6 +4,8 @@
 package unknow.server.maven.builder;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -20,27 +22,34 @@ import javax.servlet.Servlet;
 import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
-import com.github.javaparser.ast.expr.AssignExpr;
-import com.github.javaparser.ast.expr.AssignExpr.Operator;
+import com.github.javaparser.ast.body.Parameter;
+import com.github.javaparser.ast.expr.ClassExpr;
 import com.github.javaparser.ast.expr.Expression;
+import com.github.javaparser.ast.expr.IntegerLiteralExpr;
+import com.github.javaparser.ast.expr.LambdaExpr;
+import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.NullLiteralExpr;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
-import com.github.javaparser.ast.expr.VariableDeclarationExpr;
+import com.github.javaparser.ast.expr.TypeExpr;
 import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.stmt.ReturnStmt;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
+import com.github.javaparser.ast.type.PrimitiveType;
 
 import unknow.server.http.servlet.FilterChainImpl;
 import unknow.server.http.servlet.FilterChainImpl.ServletFilter;
+import unknow.server.http.utils.IntArrayMap;
+import unknow.server.http.utils.ObjectArrayMap;
 import unknow.server.http.utils.PathTree;
 import unknow.server.http.utils.PathTree.EndNode;
 import unknow.server.http.utils.ServletManager;
 import unknow.server.maven.Builder;
-import unknow.server.maven.Descriptor;
-import unknow.server.maven.SD;
+import unknow.server.maven.Names;
 import unknow.server.maven.TreePathBuilder;
 import unknow.server.maven.TypeCache;
+import unknow.server.maven.descriptor.Descriptor;
+import unknow.server.maven.descriptor.SD;
 
 /**
  * @author unknow
@@ -59,9 +68,9 @@ public class CreateServletManager extends Builder {
 		for (SD s : descriptor.servlets) {
 			tree.addServlet(s);
 			String n = "s" + s.index;
-			names.put(s.e, new NameExpr(n));
-			servlets.add(names.get(s.e));
-			ClassOrInterfaceType t = types.get(s.e);
+			names.put(s.clazz, new NameExpr(n));
+			ClassOrInterfaceType t = types.get(s.clazz);
+			servlets.add(names.get(s.clazz));
 			b.addStatement(assign(t, n, new ObjectCreationExpr(null, t, emptyList())));
 
 			for (String p : s.pattern) {
@@ -72,15 +81,15 @@ public class CreateServletManager extends Builder {
 		}
 		for (SD f : descriptor.filters) {
 			tree.addFilter(f);
-			if (names.containsKey(f.e)) {
-				filters.add(names.get(f.e));
+			if (names.containsKey(f.clazz)) {
+				filters.add(names.get(f.clazz));
 				continue;
 			}
 			String n = "f" + f.index;
-			names.put(f.e, new NameExpr(n));
-			filters.add(names.get(f.e));
+			names.put(f.clazz, new NameExpr(n));
+			filters.add(names.get(f.clazz));
 
-			ClassOrInterfaceType t = types.get(f.e);
+			ClassOrInterfaceType t = types.get(f.clazz);
 			b.addStatement(assign(t, n, new ObjectCreationExpr(null, t, emptyList())));
 		}
 		tree.normalize();
@@ -91,10 +100,11 @@ public class CreateServletManager extends Builder {
 		b.addStatement(new ReturnStmt(new ObjectCreationExpr(null, types.get(ServletManager.class), list(
 				array(types.get(Servlet.class), servlets),
 				array(types.get(Filter.class), filters),
-				treePath(b, tree, null, tree.endingFilter, types, names, new HashSet<>())))));
+				treePath(b, tree, null, tree.endingFilter, types, names, new HashSet<>()),
+				errorCode(descriptor.errorCode, types), errorClass(descriptor.errorClass, types)))));
 	}
 
-	private Expression treePath(BlockStmt b, TreePathBuilder tree, String path, Map<String, List<SD>> endingFilter, TypeCache types, Map<Object, NameExpr> names, Set<String> created) {
+	private static Expression treePath(BlockStmt b, TreePathBuilder tree, String path, Map<String, List<SD>> endingFilter, TypeCache types, Map<Object, NameExpr> names, Set<String> created) {
 		NodeList<Expression> childs = new NodeList<>();
 		NodeList<Expression> ends = new NodeList<>();
 		Expression exact = new NullLiteralExpr();
@@ -161,7 +171,7 @@ public class CreateServletManager extends Builder {
 		String n = name(names, chains.size(), chains, s);
 		if (!created.contains(n)) {
 			created.add(n);
-			b.addStatement(assign(types.get(ServletFilter.class), n, new ObjectCreationExpr(null, types.get(ServletFilter.class), list(names.get(s.e)))));
+			b.addStatement(assign(types.get(ServletFilter.class), n, new ObjectCreationExpr(null, types.get(ServletFilter.class), list(names.get(s.clazz)))));
 		}
 
 		int size = b.getStatements().size();
@@ -170,7 +180,7 @@ public class CreateServletManager extends Builder {
 			if (created.contains(name))
 				break;
 			created.add(name);
-			b.addStatement(size, assign(types.get(FilterChainImpl.class), name, new ObjectCreationExpr(null, types.get(FilterChainImpl.class), list(names.get(chains.get(i).e), new NameExpr(name(names, i + 1, chains, s))))));
+			b.addStatement(size, assign(types.get(FilterChainImpl.class), name, new ObjectCreationExpr(null, types.get(FilterChainImpl.class), list(names.get(chains.get(i).clazz), new NameExpr(name(names, i + 1, chains, s))))));
 		}
 		return name(names, 0, chains, s);
 	}
@@ -178,8 +188,8 @@ public class CreateServletManager extends Builder {
 	private static String name(Map<Object, NameExpr> names, int i, List<SD> chains, SD s) {
 		StringBuilder sb = new StringBuilder("c");
 		for (; i < chains.size(); i++)
-			sb.append(names.get(chains.get(i).e).getNameAsString());
-		sb.append(names.get(s.e).getNameAsString());
+			sb.append(names.get(chains.get(i).clazz).getNameAsString());
+		sb.append(names.get(s.clazz).getNameAsString());
 		return sb.toString();
 	}
 
@@ -191,5 +201,40 @@ public class CreateServletManager extends Builder {
 				it.remove();
 		}
 		return filters;
+	}
+
+	private static ObjectCreationExpr errorCode(Map<Integer, String> errorCode, TypeCache types) {
+		NodeList<Expression> k = new NodeList<>();
+		NodeList<Expression> v = new NodeList<>();
+		List<Integer> l = new ArrayList<>(errorCode.keySet());
+		Collections.sort(l);
+		for (Integer e : l) {
+			k.add(new IntegerLiteralExpr(e.toString()));
+
+			String[] split = errorCode.get(e).split("/");
+			NodeList<Expression> p = new NodeList<>();
+			for (int i = 0; i < split.length; i++)
+				p.add(byteArray(PathTree.encodePart(split[i])));
+			v.add(new MethodCallExpr(new TypeExpr(types.get(Arrays.class)), "asList", p));
+		}
+		return new ObjectCreationExpr(null, types.get(IntArrayMap.class, TypeCache.EMPTY), list(array(PrimitiveType.intType(), k), array(types.get(List.class), v)));
+	}
+
+	private static ObjectCreationExpr errorClass(Map<String, String> errorClass, TypeCache types) {
+		NodeList<Expression> k = new NodeList<>();
+		NodeList<Expression> v = new NodeList<>();
+		List<String> l = new ArrayList<>(errorClass.keySet());
+		Collections.sort(l);
+		for (String e : l) {
+			k.add(new ClassExpr(types.get(e)));
+
+			String[] split = errorClass.get(e).split("/");
+			NodeList<Expression> p = new NodeList<>();
+			for (int i = 0; i < split.length; i++)
+				p.add(byteArray(PathTree.encodePart(split[i])));
+			v.add(new MethodCallExpr(new TypeExpr(types.get(Arrays.class)), "asList", p));
+		}
+		LambdaExpr cmp = new LambdaExpr(list(new Parameter(TypeCache.EMPTY, "a"), new Parameter(TypeCache.EMPTY, "b")), new MethodCallExpr(new MethodCallExpr(Names.a, "getName"), "compareTo", list(new MethodCallExpr(Names.b, "getName"))));
+		return new ObjectCreationExpr(null, types.get(ObjectArrayMap.class, TypeCache.EMPTY), list(array(types.get(Class.class), k), array(types.get(List.class), v), cmp));
 	}
 }

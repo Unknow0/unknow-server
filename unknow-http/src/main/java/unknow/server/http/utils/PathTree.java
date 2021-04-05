@@ -4,11 +4,10 @@
 package unknow.server.http.utils;
 
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 
 import javax.servlet.FilterChain;
 
-import unknow.server.http.servlet.ServletRequestImpl;
+import unknow.server.http.HttpHandler;
 import unknow.server.nio.util.Buffers;
 
 /**
@@ -19,6 +18,7 @@ import unknow.server.nio.util.Buffers;
 public class PathTree {
 	private final byte[] part;
 	private final PathTree[] nexts;
+	// TODO add pattern
 	private final EndNode[] ends;
 	private final FilterChain[] exact;
 	private final FilterChain[] def;
@@ -40,64 +40,55 @@ public class PathTree {
 		this.def = def;
 	}
 
-	public FilterChain[] find(ServletRequestImpl req) {
-		List<Buffers> path = req.rawPath();
-		byte[] tmp = new byte[1024];
+	public FilterChain[] find(HttpHandler req) {
+		Buffers path = req.meta;
+		int o = req.pathStart() + 1;
+		int e = req.pathEnd();
+		if (o == e)
+			return exact == null ? def : exact;
 
 		PathTree last = this;
-		int i = 0;
 		do {
-			Buffers b = path.get(i++);
-			tmp = b.toBytes(tmp);
-			PathTree n = last.next(tmp, b.size());
+			int i = path.indexOf((byte) '/', o, e - o);
+			if (i < 0)
+				i = e;
+			PathTree n = last.next(path, o, i);
 			if (n == null)
 				break;
-			if (i == path.size())
+			if (i == e)
 				return n.exact == null ? n.def : n.exact;
-			last = n;
+			o = i + 1;
 		} while (last.nexts != null);
 
 		EndNode[] end = last.ends == null ? ends : last.ends;
 		if (end != null) {
-			Buffers buffers = path.get(path.size() - 1);
-			tmp = buffers.toBytes(tmp);
-			for (i = 0; i < end.length; i++) {
-				if (endWith(tmp, buffers.size(), end[i].ext))
+			for (;;) {
+				int i = path.indexOf((byte) '/', o, e - o);
+				if (i < 0)
+					break;
+				o = i + 1;
+			}
+			int l = e - o;
+			for (int i = 0; i < end.length; i++) {
+				byte[] ext = end[i].ext;
+				if (ext.length < l && path.equals(ext, e - ext.length))
 					return end[i].chain;
 			}
 		}
+		// TODO
+//		req.setPathInfoStart(o);
 		return last.def == null ? def : last.def;
 	}
 
-	private final PathTree next(byte[] path, int l) {
+	private final PathTree next(Buffers path, int o, int e) {
 		PathTree[] n = nexts;
+		int l = e - o;
 		for (int i = 0; i < n.length; i++) {
 			PathTree node = n[i];
-			if (equals(node.part, path, l))
+			if (node.part.length == l && path.equals(node.part, o))
 				return node;
 		}
 		return null;
-	}
-
-	private static final boolean equals(byte[] path, byte[] b, int l) {
-		if (path.length != l)
-			return false;
-		for (int i = 0; i < l; i++) {
-			if (path[i] != b[i])
-				return false;
-		}
-		return true;
-	}
-
-	private static boolean endWith(byte[] b, int l, byte[] end) {
-		if (l < end.length)
-			return false;
-		int o = l - end.length;
-		for (int i = 0; i < end.length; i++) {
-			if (b[o + i] != end[i])
-				return false;
-		}
-		return true;
 	}
 
 	public static final class EndNode {

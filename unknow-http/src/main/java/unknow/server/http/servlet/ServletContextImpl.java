@@ -66,6 +66,10 @@ public class ServletContextImpl implements ServletContext {
 		return events;
 	}
 
+	public ServletManager getServletManager() {
+		return servlets;
+	}
+
 	@Override
 	public String getContextPath() {
 		return "";

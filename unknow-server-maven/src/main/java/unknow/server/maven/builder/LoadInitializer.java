@@ -19,9 +19,9 @@ import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.stmt.ForEachStmt;
 
 import unknow.server.maven.Builder;
-import unknow.server.maven.Descriptor;
 import unknow.server.maven.Names;
 import unknow.server.maven.TypeCache;
+import unknow.server.maven.descriptor.Descriptor;
 
 /**
  * @author unknow

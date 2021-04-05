@@ -29,14 +29,15 @@ public class NIOServer implements Runnable {
 	/**
 	 * create new Server
 	 * 
-	 * @param bindTo   address to bind to
-	 * @param iothread number of io thread
-	 * @param factory  handler factory
-	 * @param listener listener
+	 * @param bindTo     address to bind to
+	 * @param iothread   number of io thread
+	 * @param factory    handler factory
+	 * @param listener   listener
+	 * @param selectTime max wait time on Selector.select
 	 * 
 	 * @throws IOException
 	 */
-	public NIOServer(SocketAddress bindTo, int iothread, HandlerFactory factory, NIOServerListener listener) throws IOException {
+	public NIOServer(SocketAddress bindTo, int iothread, HandlerFactory factory, NIOServerListener listener, long selectTime) throws IOException {
 		log.debug("Creating new NIOServer on {}, iothread={} factory={} listener={}", bindTo, iothread, factory, listener);
 		channel = ServerSocketChannel.open();
 
@@ -48,7 +49,7 @@ public class NIOServer implements Runnable {
 		len = iothread;
 		workers = new IOWorker[len];
 		for (int i = 0; i < len; i++)
-			workers[i] = new IOWorker(i, factory, listener);
+			workers[i] = new IOWorker(i, factory, listener, selectTime);
 		this.listener = listener;
 	}
 
@@ -57,8 +58,6 @@ public class NIOServer implements Runnable {
 	 */
 	@Override
 	public void run() {
-		log.debug("starting {}", this);
-
 		listener.starting(this);
 		Thread t = Thread.currentThread();
 		try {
@@ -72,7 +71,6 @@ public class NIOServer implements Runnable {
 			listener.closing(this, e);
 			log.error("error on {}", this, e);
 		}
-		log.debug("closing {}", this);
 	}
 
 	/**

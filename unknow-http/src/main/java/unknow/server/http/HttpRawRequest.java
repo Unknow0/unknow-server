@@ -4,8 +4,6 @@
 package unknow.server.http;
 
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.List;
 
 import unknow.server.nio.util.Buffers;
 
@@ -17,8 +15,8 @@ import unknow.server.nio.util.Buffers;
 public class HttpRawRequest {
 	/** the method */
 	public final Buffers method = new Buffers();
-	/** the full path */
-	public final List<Buffers> path = new ArrayList<>();
+	/** the path without query string */
+	public final Buffers path = new Buffers();
 	/** the query string */
 	public final Buffers query = new Buffers();
 	/** the protocol */
@@ -28,7 +26,9 @@ public class HttpRawRequest {
 	public final RawHeader headers = new RawHeader();
 	RawHeader headerTail = null;
 
+	/** the local address */
 	public InetSocketAddress local;
+	/** the remote address */
 	public InetSocketAddress remote;
 
 	/** the content */
@@ -53,6 +53,7 @@ public class HttpRawRequest {
 		local = remote = null;
 		method.clear();
 		path.clear();
+		query.clear();
 		protocol.clear();
 
 		content = null;

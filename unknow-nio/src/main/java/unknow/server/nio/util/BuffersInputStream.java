@@ -30,12 +30,7 @@ public class BuffersInputStream extends InputStream {
 
 	@Override
 	public int read(byte[] b) throws IOException {
-		int i = read(b, 0, b.length);
-		if (mark != null && i >= 0) {
-			ensureMark(l + 1);
-			mark[l++] = (byte) i;
-		}
-		return i;
+		return read(b, 0, b.length);
 	}
 
 	@Override
@@ -76,6 +71,6 @@ public class BuffersInputStream extends InputStream {
 
 	@Override
 	public int available() throws IOException {
-		return buffers.size();
+		return buffers.length();
 	}
 }

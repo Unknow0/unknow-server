@@ -11,9 +11,9 @@ import com.github.javaparser.ast.expr.SuperExpr;
 import com.github.javaparser.ast.stmt.ReturnStmt;
 
 import unknow.server.maven.Builder;
-import unknow.server.maven.Descriptor;
 import unknow.server.maven.Names;
 import unknow.server.maven.TypeCache;
+import unknow.server.maven.descriptor.Descriptor;
 
 /**
  * @author unknow

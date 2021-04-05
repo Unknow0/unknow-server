@@ -10,5 +10,8 @@ import java.io.OutputStream;
  * @author unknow
  */
 public interface HttpRawProcessor {
-	void process(HttpRawRequest request, OutputStream out) throws IOException;
+	default void process(HttpRawRequest request, OutputStream out) throws IOException {
+	}
+
+	void process(HttpHandler handler) throws IOException;
 }

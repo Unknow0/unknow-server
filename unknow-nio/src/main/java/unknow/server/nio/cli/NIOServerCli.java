@@ -4,7 +4,6 @@
 package unknow.server.nio.cli;
 
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.concurrent.Callable;
 
 import picocli.CommandLine;
@@ -41,6 +40,10 @@ public class NIOServerCli implements Callable<Integer> {
 	@Option(names = "--listener", description = "set the listener, default to NOP", descriptionKey = "listener", converter = NIOListenerConverter.class)
 	public NIOServerListener listener = NIOServerListener.NOP;
 
+	/** selectionTime */
+	@Option(names = "--selecttime", description = "timeout on Selector.select, 0=unlimited", descriptionKey = "selecttime")
+	public long selectTime = 0;
+
 	/**
 	 * @return local address to bind to
 	 */
@@ -52,10 +55,18 @@ public class NIOServerCli implements Callable<Integer> {
 
 	@Override
 	public Integer call() throws Exception {
-		new unknow.server.nio.NIOServer(getInetAddress(), iothread, handler, listener).run();
+		if (selectTime < 0)
+			throw new IllegalArgumentException("selectTime should not be <0");
+
+		new unknow.server.nio.NIOServer(getInetAddress(), iothread, handler, listener, selectTime).run();
 		return 0;
 	}
 
+	/**
+	 * the main
+	 * 
+	 * @param arg cli param
+	 */
 	public static void main(String[] arg) {
 		System.exit(new CommandLine(new NIOServerCli()).execute(arg));
 	}

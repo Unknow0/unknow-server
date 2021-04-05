@@ -26,8 +26,8 @@ import com.github.javaparser.ast.type.UnknownType;
 import picocli.CommandLine;
 import unknow.server.http.HttpHandler;
 import unknow.server.maven.Builder;
-import unknow.server.maven.Descriptor;
 import unknow.server.maven.TypeCache;
+import unknow.server.maven.descriptor.Descriptor;
 import unknow.server.nio.Handler;
 import unknow.server.nio.HandlerFactory;
 

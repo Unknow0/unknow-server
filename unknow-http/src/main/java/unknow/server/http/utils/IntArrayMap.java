@@ -4,13 +4,12 @@
 package unknow.server.http.utils;
 
 import java.util.Arrays;
-import java.util.Enumeration;
 
 /**
  * @author unknow
  */
-public class ArrayMap<T> {
-	private String[] key;
+public class IntArrayMap<T> {
+	private int[] key;
 	private T[] value;
 	private int len;
 
@@ -18,8 +17,8 @@ public class ArrayMap<T> {
 	 * create an empty array map
 	 */
 	@SuppressWarnings("unchecked")
-	public ArrayMap() {
-		key = new String[10];
+	public IntArrayMap() {
+		key = new int[10];
 		value = (T[]) new Object[10];
 		len = 0;
 	}
@@ -27,7 +26,7 @@ public class ArrayMap<T> {
 	/**
 	 * create a new arrayMap with these key/value /!\ key should already be sorted
 	 */
-	public ArrayMap(String[] key, T[] value) {
+	public IntArrayMap(int[] key, T[] value) {
 		if (key.length != value.length)
 			throw new IllegalArgumentException("different number of key and value");
 		this.key = key;
@@ -35,16 +34,12 @@ public class ArrayMap<T> {
 		this.len = key.length;
 	}
 
-	public T get(String name) {
+	public T get(int name) {
 		int i = Arrays.binarySearch(key, 0, len, name);
 		return i < 0 ? null : value[i];
 	}
 
-	public Enumeration<String> names() {
-		return new E();
-	}
-
-	public T set(String name, T o) {
+	public T set(int name, T o) {
 		int i = Arrays.binarySearch(key, 0, len, name);
 		if (i >= 0) {
 			value[i] = o;
@@ -58,7 +53,7 @@ public class ArrayMap<T> {
 		return old;
 	}
 
-	public boolean setOnce(String name, T o) {
+	public boolean setOnce(int name, T o) {
 		int i = Arrays.binarySearch(key, 0, len, name);
 		if (i >= 0)
 			return false;
@@ -69,7 +64,7 @@ public class ArrayMap<T> {
 		return true;
 	}
 
-	public T remove(String name) {
+	public T remove(int name) {
 		return set(name, null);
 	}
 
@@ -78,20 +73,5 @@ public class ArrayMap<T> {
 			return;
 		key = Arrays.copyOf(key, l);
 		value = Arrays.copyOf(value, l);
-	}
-
-	private class E implements Enumeration<String> {
-		private int i = 0;
-
-		@Override
-		public boolean hasMoreElements() {
-			return i < len;
-		}
-
-		@Override
-		public String nextElement() {
-			return key[i++];
-		}
-
 	}
 }

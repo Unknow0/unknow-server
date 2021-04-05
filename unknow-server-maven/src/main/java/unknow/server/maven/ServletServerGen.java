@@ -2,7 +2,8 @@ package unknow.server.maven;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.io.InputStream;
+import java.nio.charset.Charset;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -10,11 +11,12 @@ import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
+
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
 
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -24,6 +26,11 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xml.sax.ErrorHandler;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
+import org.xml.sax.SAXParseException;
+import org.xml.sax.XMLReader;
 
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParserConfiguration;
@@ -33,7 +40,6 @@ import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.expr.ClassExpr;
 import com.github.javaparser.ast.expr.MethodCallExpr;
-import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.TypeExpr;
 import com.github.javaparser.printer.PrettyPrinterConfiguration;
 import com.github.javaparser.printer.PrettyPrinterConfiguration.IndentType;
@@ -55,6 +61,9 @@ import unknow.server.maven.builder.Initialize;
 import unknow.server.maven.builder.LoadInitializer;
 import unknow.server.maven.builder.Main;
 import unknow.server.maven.builder.Process;
+import unknow.server.maven.descriptor.Descriptor;
+import unknow.server.maven.sax.HandlerContext;
+import unknow.server.maven.sax.WebApp;
 import unknow.server.nio.cli.NIOServerCli;
 
 /**
@@ -74,12 +83,6 @@ public class ServletServerGen extends AbstractMojo {
 
 	private final Descriptor descriptor = new Descriptor();
 
-	private final Set<String> chains = new HashSet<>();
-
-	private final Map<Object, NameExpr> names = new HashMap<>();
-
-	private final StringBuilder sb = new StringBuilder();
-
 	@Parameter(name = "src", defaultValue = "${project.build.sourceDirectory}")
 	private String src;
 
@@ -92,7 +95,15 @@ public class ServletServerGen extends AbstractMojo {
 	@Parameter(name = "output")
 	private String output;
 
-	private String name = "ROOT";
+	@Parameter(name = "web-xml")
+	private String webXml;
+
+	@Parameter(name = "charset", defaultValue = "UTF8")
+	private Charset charset;
+
+	public void setCharset(String charset) {
+		this.charset = Charset.forName(charset);
+	}
 
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
@@ -102,6 +113,39 @@ public class ServletServerGen extends AbstractMojo {
 
 		if (output == null)
 			output = src;
+
+		if (webXml != null) {
+			try {
+				SAXParserFactory newInstance = SAXParserFactory.newInstance();
+				newInstance.setNamespaceAware(true);
+				SAXParser parser = newInstance.newSAXParser();
+				XMLReader xmlReader = parser.getXMLReader();
+				xmlReader.setContentHandler(new WebApp(new HandlerContext(new StringBuilder(), descriptor, xmlReader)));
+				xmlReader.setErrorHandler(new ErrorHandler() {
+					@Override
+					public void warning(SAXParseException exception) throws SAXException {
+						getLog().warn("failed to parse '" + webXml + "'", exception);
+					}
+
+					@Override
+					public void fatalError(SAXParseException exception) throws SAXException {
+						getLog().error("failed to parse '" + webXml + "'", exception);
+					}
+
+					@Override
+					public void error(SAXParseException exception) throws SAXException {
+						getLog().error("failed to parse '" + webXml + "'", exception);
+					}
+				});
+				try (InputStream r = Files.newInputStream(Paths.get(webXml))) {
+					xmlReader.parse(new InputSource(r));
+				}
+			} catch (Exception e) {
+				getLog().error("failed to parse '" + webXml + "'", e);
+			}
+
+			System.out.println(">> " + descriptor);
+		}
 
 		final Set<String> existingClass = new HashSet<>();
 		final Path local = Paths.get(src, packageName == null ? new String[0] : packageName.split("\\."));
@@ -152,7 +196,7 @@ public class ServletServerGen extends AbstractMojo {
 		if (packageName != null)
 			file = file.resolve(packageName.replace('.', '/'));
 
-		try (BufferedWriter w = Files.newBufferedWriter(file.resolve(className + ".java"), StandardCharsets.UTF_8)) {
+		try (BufferedWriter w = Files.newBufferedWriter(file.resolve(className + ".java"), charset)) {
 			w.write(cu.toString(pp));
 		} catch (IOException e) {
 			throw new MojoFailureException("failed to write output class", e);

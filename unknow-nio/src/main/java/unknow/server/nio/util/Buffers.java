@@ -4,347 +4,702 @@
 package unknow.server.nio.util;
 
 import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.Charset;
-import java.nio.charset.CodingErrorAction;
+import java.util.Queue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /**
- * a chain of buffer
- * 
  * @author unknow
  */
 public class Buffers {
-	private Buf head;
-	private Buf tail;
-	private int size;
+	private Chunk head;
+	private Chunk tail;
+	private int len;
+
+	public Chunk getHead() {
+		return head;
+	}
 
 	/**
-	 * append a byte
 	 * 
+	 * @return the current number of bytes
+	 */
+	public int length() {
+		return len;
+	}
+
+	/**
 	 * @param b
 	 */
-	public synchronized void append(byte b) {
-		if (tail != null && tail.l < tail.b.length - 1) {
-			tail.b[tail.l++] = b;
-			return;
+	public synchronized void write(int b) {
+		if (tail == null)
+			head = tail = Chunk.get();
+		if (tail.o + tail.l == 4096) {
+			tail.next = Chunk.get();
+			tail = tail.next;
 		}
-		Buf buf = Buf.get();
-		buf.set(new byte[255], 0, 1);
-		buf.b[0] = b;
-		append(buf);
+		tail.b[tail.o + tail.l] = (byte) b;
+		tail.l++;
+	}
+
+	/**
+	 * append data into this buffers
+	 * 
+	 * @param buf the data to add
+	 * @param o   the offset
+	 * @param l   the length of data to write
+	 */
+	public synchronized void write(byte[] buf, int o, int l) {
+		if (l == 0)
+			return;
+		if (tail == null)
+			head = tail = Chunk.get();
+		writeInto(tail, buf, o, l);
 	}
 
 	/**
 	 * append data to this buffers
 	 * 
-	 * @param buffer the data to add
+	 * @param bb data to append
 	 */
-	public void append(ByteBuffer buffer) {
-		int l = buffer.remaining();
-		byte[] b = new byte[l];
-		buffer.get(b);
-		append(b, 0, l);
+	public synchronized void write(ByteBuffer bb) {
+		if (bb.remaining() == 0)
+			return;
+		if (tail == null)
+			head = tail = Chunk.get();
+		writeInto(tail, bb);
 	}
 
-	/**
-	 * append data to this buffers. the data isn't copied
-	 * 
-	 * @param b the data
-	 * @param o offset
-	 * @param l length
-	 */
-
-	public void append(byte[] b, int o, int l) {
-		Buf buf = Buf.get();
-		buf.set(b, o, l);
-		append(buf);
-	}
-
-	/**
-	 * append a buf in this chain
-	 * 
-	 * @param b
-	 */
-	private synchronized void append(Buf b) {
-		if (tail != null)
-			tail.next = b;
-		tail = b;
-		if (head == null)
-			head = b;
-		size += b.l;
+	public synchronized void prepend(byte b) {
+		len++;
+		if (head != null && head.o > 0) {
+			head.o--;
+			head.b[head.o] = b;
+			return;
+		}
+		Chunk c = Chunk.get();
+		c.b[0] = b;
+		c.l = 1;
+		c.next = head;
+		head = c;
+		if (tail == null)
+			tail = head;
 	}
 
 	/**
 	 * add data in front of this buffers
 	 * 
-	 * @param buffer data to get
+	 * @param buf data to add
+	 * @param o   offset
+	 * @param l   length
 	 */
-	public void prepend(ByteBuffer buffer) {
-		int l = buffer.remaining();
-		byte[] b = new byte[l];
-		buffer.get(b);
-		prepend(b, 0, l);
+	public synchronized void prepend(byte[] buf, int o, int l) {
+		len += l;
+		if (head != null && l < head.o) {
+			System.arraycopy(buf, o, head.b, head.o - l, l);
+			return;
+		}
+		Chunk c = Chunk.get();
+		c.next = head;
+		head = c;
+		c = writeInto(c, buf, o, l);
+		if (tail == null)
+			tail = c;
 	}
 
 	/**
 	 * add data in front of this buffers
 	 * 
-	 * @param b data
-	 * @param o offset
-	 * @param l length
+	 * @param buf data to append
 	 */
-	public synchronized void prepend(byte[] b, int o, int l) {
-		Buf buf = Buf.get();
-		buf.set(b, o, l);
-		buf.next = head;
-		head = buf;
+	public synchronized void prepend(ByteBuffer buf) {
+		int r = buf.remaining();
+		len += r;
+		if (head != null && r < head.o) {
+			buf.get(head.b, head.o - r, r);
+			return;
+		}
+		Chunk c = Chunk.get();
+		c.next = head;
+		head = c;
+		c = writeInto(c, buf);
+		if (tail == null)
+			tail = c;
 	}
 
 	/**
-	 * discard bytes
+	 * read one byte
 	 * 
-	 * @param l number of byte to discard
+	 * @return -1 if no more byte are readable
 	 */
-	public synchronized void skip(int l) {
-		do {
-			if (head.l > l) {
-				head.o += l;
-				head.l -= l;
-				size -= l;
-				return;
+	public synchronized int read() {
+		if (len == 0)
+			return -1;
+		int r = head.b[head.o++];
+		if (len-- == 0)
+			tail = null;
+		if (--head.l == 0)
+			head = Chunk.free(head);
+		return r;
+	}
+
+	/**
+	 * read data from this buffers
+	 * 
+	 * @param buf where to read
+	 * @param o   offset
+	 * @param l   max length to read
+	 * @return the number of bytes read
+	 */
+	public synchronized int read(byte[] buf, int o, int l) {
+		if (head == null || l == 0)
+			return -1;
+		int v = 0;
+		while (head != null && v < l) {
+			int r = Math.min(l - v, head.l);
+			System.arraycopy(head.b, head.o, buf, o, r);
+			len -= r;
+			v += r;
+			if (r == head.l) {
+				head = Chunk.free(head);
+				if (head == null)
+					tail = null;
+			} else {
+				head.o += r;
+				head.l -= r;
 			}
-			l -= head.l;
-			size -= head.l;
-			head = Buf.free(head);
-		} while (head != null && l > 0);
+		}
+		return v;
 	}
 
 	/**
-	 * read data into a ByteBuffer
+	 * read data from this buffers
 	 * 
-	 * @param bb where to read data
-	 * @return true if we read something
+	 * @param bb where to read
+	 * @return true if data where read
 	 */
 	public synchronized boolean read(ByteBuffer bb) {
-		if (head == null || !bb.hasRemaining())
-			return false;
 		int l = bb.remaining();
-		do {
-			if (head.l > l) {
-				bb.put(head.b, head.o, l);
-				head.o += l;
-				head.l -= l;
-				size -= l;
-				return true;
+		if (head == null || l == 0)
+			return false;
+		while (head != null && l > 0) {
+			int r = Math.min(l, head.l);
+			bb.put(head.b, head.o, r);
+			len -= r;
+			l -= r;
+			if (r == head.l) {
+				head = Chunk.free(head);
+				if (head == null)
+					tail = null;
+			} else {
+				head.o += r;
+				head.l -= r;
 			}
-			bb.put(head.b, head.o, head.l);
-			l -= head.l;
-			size -= head.l;
-			head = Buf.free(head);
-		} while (head != null && l > 0);
+		}
 		return true;
 	}
 
 	/**
-	 * @return the byte or -1 if beffers is empty
+	 * read a number amount of byte into the buffers
+	 * 
+	 * @param buf where to read
+	 * @param l   number of byte to read
 	 */
-	public synchronized int read() {
-		if (head == null)
-			return -1;
-		byte b = head.b[head.o];
-		size--;
-		if (--head.l == 0)
-			head = Buf.free(head);
-		else
-			head.o++;
-		return b;
+	public synchronized void read(Buffers buf, int l) {
+		if (l == 0 || head == null)
+			return;
+		Chunk h = head;
+		Chunk c = head;
+		Chunk last = null;
+		int read = 0;
+		while (c != null && l > c.l) {
+			l -= c.l;
+			read += c.l;
+			last = c;
+			c = c.next;
+		}
+		if (c == null)
+			;
+		else if (l > 0) {
+			Chunk n = Chunk.get();
+			System.arraycopy(c.b, c.o, n.b, 0, l);
+			c.o += l;
+			n.l = l;
+			read += l;
+			if (last != null)
+				last.next = n;
+			else
+				h = n;
+			last = n;
+		} else
+			last.next = null;
+
+		len -= read;
+		head = c;
+		if (c == null)
+			tail = c;
+		synchronized (buf) {
+			buf.len += read;
+			if (buf.head == null)
+				buf.head = buf.tail = h;
+			else
+				buf.tail.next = h;
+		}
 	}
 
 	/**
-	 * read data into another buffers
+	 * skip l bytes
 	 * 
-	 * @param l   number of byte to move
-	 * @param out the output
+	 * @param l number of byte to skip
 	 */
-	public synchronized void read(int l, Buffers out) {
-		do {
-			if (head.l > l) {
-				Buf buf = Buf.get();
-				buf.set(head.b, head.o, l);
-				out.append(buf);
-				head.o += l;
-				head.l -= l;
-				size -= l;
-				break;
-			}
+	public synchronized void skip(int l) {
+		while (head != null && l > head.l) {
 			l -= head.l;
-			size -= head.l;
-			Buf n = head;
-			head = head.next;
-			n.next = null;
-			out.append(n);
-		} while (head != null && l > 0);
+			len -= head.l;
+			head = Chunk.free(head);
+		}
+		if (head != null) {
+			head.o += l;
+			head.l -= l;
+			len -= l;
+		} else
+			tail = null;
 	}
 
 	/**
-	 * read data into byte array
-	 * 
-	 * @parma buf output data
-	 * @param o offset
-	 * @param l number of byte to move
-	 * @return actual number of byte written
+	 * clear this buffers
 	 */
-	public synchronized int read(byte[] buf, int o, int l) {
-		do {
-			if (head.l > l) {
-				System.arraycopy(head.b, head.o, buf, o, l);
-				head.o += l;
-				head.l -= l;
-				size -= l;
-				return o + l;
-			}
-			System.arraycopy(head.b, head.o, buf, o, head.l);
-			l -= head.l;
-			o += head.l;
-			size -= head.l;
-			head = Buf.free(head);
-		} while (head != null && l > 0);
-		return o;
-	}
-
-	/**
-	 * @return the number of bytes in this buffers
-	 */
-	public int size() {
-		return size;
-	}
-
-	/**
-	 * check if this buffers contains some byte
-	 * 
-	 * @param lookup byte to lookup
-	 * @param limit  check only the "limit" first bytes
-	 * @return -1 if the data is not found, else the index of the first lookup
-	 */
-	public int indexOf(byte lookup, int limit) {
-		return indexOf(lookup, 0, limit);
-	}
-
-	/**
-	 * check if this buffers contains some byte
-	 * 
-	 * @param lookup byte to lookup
-	 * @param start  position of the first byte to check
-	 * @param limit  check only the "limit" first bytes
-	 * @return -1 if the data is not found, else the index of the first lookup
-	 */
-	public int indexOf(byte lookup, int start, int limit) {
-		if (head == null)
-			return -1;
-		if (limit < 0)
-			limit = size - start;
-		int i = 0;
-		Buf b = head;
-		do {
-			int e = b.o + b.l;
-			if (b.l < start) {
-				start -= b.l;
-				continue;
-			}
-			for (int j = b.o + start; j < e && i < limit; j++, i++) {
-				if (b.b[j] == lookup)
-					return i;
-			}
-		} while ((b = b.next) != null);
-		return -1;
-	}
-
-	/**
-	 * check if this buffers contains some bytes
-	 * 
-	 * @param lookup bytes to lookup
-	 * @param limit  check only the first "limit" bytes
-	 * @return -1 if the data is not found, else the index of the first lookup
-	 */
-	public synchronized int indexOf(byte[] lookup, int limit) {
-		if (head == null)
-			return -1;
-		int i = 0, k = 0;
-		int l = lookup.length;
-		if (limit < 0)
-			limit = size;
-		else
-			limit += l;
-		Buf b = head;
-		do {
-			int e = b.o + b.l;
-			for (int j = b.o; j < e && i < limit; j++) {
-				i++;
-				if (b.b[j] == lookup[k])
-					k++;
-				else
-					k = 0;
-				if (k == l)
-					return i - l;
-			}
-		} while ((b = b.next) != null);
-		return -1;
-	}
-
-	/**
-	 * return the head of these buffers
-	 * 
-	 * @return the head
-	 */
-	public Buf getHead() {
-		return head;
+	public synchronized void clear() {
+		len = 0;
+		Chunk c = head;
+		while (c != null)
+			c = Chunk.free(c);
+		head = tail = null;
 	}
 
 	/**
 	 * @return true if this buffers is empty
 	 */
 	public boolean isEmpty() {
-		return head == null;
+		return len == 0;
 	}
 
 	/**
-	 * remove all data
+	 * find a byte in the buffers
+	 * 
+	 * @param b   the byte to find
+	 * @param max the maximum number of byte to read
+	 * @return -1 if not found, -2 if max reached
 	 */
-	public synchronized void clear() {
-		Buf b = head;
-		tail = head = null;
-		size = 0;
-		while (b != null)
-			b = Buf.free(b);
+	public int indexOf(byte b, int max) {
+		return indexOf(b, 0, max);
 	}
 
 	/**
-	 * @param bytes byte array to fill
-	 * @return all this buffers as byte array
+	 * find a byte in the buffers
+	 * 
+	 * @param b   the byte to find
+	 * @param off start offset
+	 * @param len the maximum number of byte to read
+	 * @return -1 if not found, -2 if max reached
 	 */
-	public synchronized byte[] toBytes(byte[] bytes) {
-		if (bytes.length < size)
-			bytes = new byte[size];
-		Buf b = head;
-		int i = 0;
-		do {
-			System.arraycopy(b.b, b.o, bytes, i, b.l);
-			i += b.l;
+	public synchronized int indexOf(byte b, int off, int len) {
+		if (this.len - off < 1)
+			return -1;
+		if (len < 0)
+			len = this.len + 1;
+		Chunk c = head;
+		int l;
+		int o = off;
+		while (c.l < off) {
+			off -= c.l;
+			c = c.next;
+			if (c == null)
+				return -1;
+		}
+		if (off > 0) {
+			l = Math.min(c.l, len);
+			for (int i = 0; i < l; i++) {
+				if (c.b[i + off + c.o] == b)
+					return o + i;
+			}
+			len -= l;
+			o += l;
+			if (len == 0)
+				return -2;
+			c = c.next;
+			if (c == null)
+				return -1;
+		}
+		for (;;) {
+			l = Math.min(c.l, len);
+			for (int i = 0; i < l; i++) {
+				if (c.b[i + off + c.o] == b)
+					return o + i;
+			}
+			len -= l;
+			o += l;
+			if (len == 0)
+				return -2;
+			c = c.next;
+			if (c == null)
+				return -1;
+		}
+	}
+
+	/**
+	 * find a bytes in the buffers
+	 * 
+	 * @param b   the byte to find
+	 * @param max the maximum number of byte to read
+	 * @return -1 if not found, -2 if max reached
+	 */
+	public int indexOf(byte[] b, int max) {
+		return indexOf(b, 0, max);
+	}
+
+	public synchronized int indexOf(byte[] b, int o, int max) {
+		if (len - o < b.length)
+			return -1;
+		Chunk c = head;
+		int l = o;
+		int j = 0;
+		while (c != null && c.l < o) {
+			o -= c.l;
+			c = c.next;
+		}
+		while (c != null) {
+			loop: for (int i = c.o + o; i < c.o + c.l; i++) {
+				for (int k = i; j < b.length; j++, k++) {
+					if (c.b[k] != b[j]) {
+						j = 0;
+						continue loop;
+					}
+				}
+				if (j == b.length)
+					return i - c.o;
+			}
+			o = 0;
+			l += c.l;
+			if (max >= 0 && l > max)
+				return -2;
+			c = c.next;
+		}
+		return -1;
+	}
+
+	/**
+	 * get index of next byte that is one of
+	 * 
+	 * @param b   byte to look for
+	 * @param off first index
+	 * @param len max length
+	 * @return index of or -1 if not found, -2 if len reached
+	 */
+	public synchronized int indexOfOne(byte[] b, int off, int len) {
+		if (this.len - off < 1)
+			return -1;
+		if (len < 0)
+			len = this.len + 1;
+		Chunk c = head;
+		int l;
+		int o = off;
+		while (c.l < off) {
+			off -= c.l;
+			c = c.next;
+			if (c == null)
+				return -1;
+		}
+		if (off > 0) {
+			l = Math.min(c.l, len);
+			for (int i = 0; i < l; i++) {
+				int k = i + off + c.o;
+				for (int j = 0; j < b.length; j++) {
+					if (c.b[k] == b[j])
+						return o + i;
+				}
+			}
+			len -= l;
+			o += l;
+			if (len == 0)
+				return -2;
+			c = c.next;
+			if (c == null)
+				return -1;
+		}
+		for (;;) {
+			l = Math.min(c.l, len);
+			for (int i = 0; i < l; i++) {
+				int k = i + off + c.o;
+				for (int j = 0; j < b.length; j++) {
+					if (c.b[k] == b[j])
+						return o + i;
+				}
+			}
+			len -= l;
+			o += l;
+			if (len == 0)
+				return -2;
+			c = c.next;
+			if (c == null)
+				return -1;
+		}
+	}
+
+	/**
+	 * get index of next byte that isn't one of
+	 * 
+	 * @param b   byte to not look for
+	 * @param off first index
+	 * @param len max length
+	 * @return index of or -1 if not found, -2 if len reached
+	 */
+	public synchronized int indexOfNot(byte[] b, int off, int len) {
+		if (this.len - off < 1)
+			return -1;
+		if (len < 0)
+			len = this.len + 1;
+		Chunk c = head;
+		int l;
+		int o = off;
+		while (c.l < off) {
+			off -= c.l;
+			c = c.next;
+			if (c == null)
+				return -1;
+		}
+		if (off > 0) {
+			l = Math.min(c.l, len);
+			loop: for (int i = 0; i < l; i++) {
+				int k = i + off + c.o;
+				for (int j = 0; j < b.length; j++) {
+					if (c.b[k] == b[j])
+						continue loop;
+				}
+				return o + i;
+			}
+			len -= l;
+			o += l;
+			if (len == 0)
+				return -2;
+			c = c.next;
+			if (c == null)
+				return -1;
+		}
+		for (;;) {
+			l = Math.min(c.l, len);
+			loop: for (int i = 0; i < l; i++) {
+				int k = i + off + c.o;
+				for (int j = 0; j < b.length; j++) {
+					if (c.b[k] == b[j])
+						continue loop;
+				}
+				return o + i;
+			}
+			len -= l;
+			o += l;
+			if (len == 0)
+				return -2;
+			c = c.next;
+			if (c == null)
+				return -1;
+		}
+	}
+
+	/**
+	 * get a single byte
+	 * 
+	 * @param off offset
+	 * @return the byte or -1 if off outside of buffers range
+	 */
+	public synchronized int get(int off) {
+		Chunk b = head;
+		if (b == null || off > len)
+			return -1;
+		while (b.l < off) {
+			off -= b.l;
 			b = b.next;
-		} while (b != null);
-		return bytes;
+			if (b == null)
+				return -1;
+		}
+		return b.b[b.o + off];
+	}
+
+	/**
+	 * @param p
+	 * @param off
+	 * @param len
+	 */
+	public synchronized void get(byte[] p, int off, int len) {
+		Chunk b = head;
+		if (b == null)
+			return;
+		if (len == 0 || off >= length())
+			return;
+		if (len == -1)
+			len = length() - off;
+		int o = 0;
+		do {
+			if (b.l < off) {
+				off -= b.l;
+				continue;
+			}
+			int w = b.l - off;
+			System.arraycopy(b.b, b.o, p, o, w);
+			off = 0;
+			len -= w;
+			o += w;
+		} while (len > 0 && (b = b.next) != null);
+	}
+
+	/**
+	 * @param part
+	 * @param o
+	 * @return true if the part equals
+	 */
+	public synchronized boolean equals(byte[] part, int o) {
+		if (len - o < part.length)
+			return false;
+		Chunk c = head;
+		while (c != null && c.l < o) {
+			o -= c.l;
+			c = c.next;
+		}
+		int j = 0;
+		while (c != null) {
+			for (int i = c.o + o; i < c.o + c.l; i++) {
+				if (c.b[i] != part[j++] || j > part.length)
+					return false;
+			}
+			c = c.next;
+		}
+		return true;
+	}
+
+	private final Chunk writeInto(Chunk c, ByteBuffer bb) {
+		int l = bb.remaining();
+		for (;;) {
+			int r = Math.min(l, 4096 - c.l - c.o);
+			bb.get(c.b, c.o, r);
+			c.l += r;
+			len += r;
+			l -= r;
+			if (l == 0)
+				return c;
+			c.next = Chunk.get();
+			c = c.next;
+		}
+	}
+
+	private final Chunk writeInto(Chunk c, byte[] buf, int o, int l) {
+		for (;;) {
+			int r = Math.min(l, 4096 - c.l - c.o);
+			System.arraycopy(buf, o, c.b, c.o, r);
+			c.l += r;
+			len += r;
+			l -= r;
+			o += r;
+			if (l == 0)
+				return c;
+			c.next = Chunk.get();
+			c = c.next;
+		}
 	}
 
 	@Override
 	public String toString() {
-		if (head == null)
-			return "";
 		StringBuilder sb = new StringBuilder();
-		Buf b = head;
-		do {
-			sb.append(b);
-		} while ((b = b.next) != null);
+		toString(sb, 0, len);
 		return sb.toString();
+	}
+
+	/**
+	 * convert the buffers to string assuming ascii encoding
+	 * 
+	 * @param sb
+	 * @param off
+	 * @param len
+	 */
+	public synchronized void toString(StringBuilder sb, int off, int len) {
+		Chunk b = head;
+		if (b == null || len == 0 || off >= this.len)
+			return;
+		if (len == -1 || len > this.len - off)
+			len = this.len - off;
+		sb.ensureCapacity(len);
+		char[] c = new char[4096];
+
+		while (b.l < off) {
+			off -= b.l;
+			if ((b = b.next) == null)
+				return;
+		}
+		if (off > 0) {
+			int e = Math.min(b.o + len, b.l);
+			for (int i = b.o; i < e; i++)
+				c[i - b.o] = (char) b.b[i + off];
+			int l = e - b.o;
+			sb.append(c, 0, l);
+			len -= l;
+			b = b.next;
+		}
+		while (len > 0 && b != null) {
+			int e = b.o + b.l < len ? b.l : len;
+			for (int i = b.o; i < e; i++)
+				c[i - b.o] = (char) b.b[i];
+			int l = e - b.o;
+			sb.append(c, 0, l);
+			len -= l;
+			b = b.next;
+		}
+	}
+
+	/**
+	 * a chunk of data
+	 * 
+	 * @author unknow
+	 */
+	public static class Chunk {
+		private static final Queue<Chunk> POOL = new LinkedBlockingQueue<>();
+		/** the content */
+		public final byte[] b;
+		/** the current offset */
+		public int o;
+		/** the current length */
+		public int l;
+		/** next chunk of data of null if in end */
+		public Chunk next;
+
+		private Chunk() {
+			b = new byte[4096];
+		}
+
+		/**
+		 * create or get an idle chunk
+		 * 
+		 * @return a chunk
+		 */
+		public static Chunk get() {
+			Chunk poll;
+			synchronized (POOL) {
+				poll = POOL.poll();
+			}
+			if (poll == null)
+				poll = new Chunk();
+			return poll;
+		}
+
+		/**
+		 * free a chunk
+		 * 
+		 * @param c the chunk to free
+		 * @return the next of the freed chunk
+		 */
+		public static Chunk free(Chunk c) {
+			Chunk n = c.next;
+			c.o = c.l = 0;
+			c.next = null;
+			POOL.offer(c);
+			return n;
+		}
 	}
 }

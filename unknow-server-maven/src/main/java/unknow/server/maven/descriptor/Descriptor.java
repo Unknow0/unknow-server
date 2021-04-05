@@ -1,7 +1,7 @@
 /**
  * 
  */
-package unknow.server.maven;
+package unknow.server.maven.descriptor;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -43,6 +43,9 @@ public class Descriptor implements Consumer<CompilationUnit> {
 	public final List<SD> servlets = new ArrayList<>();
 	public final List<SD> filters = new ArrayList<>();
 
+	public final Map<String, String> errorClass = new HashMap<>();
+	public final Map<Integer, String> errorCode = new HashMap<>();
+
 	@Override
 	public void accept(CompilationUnit c) {
 		for (ClassOrInterfaceDeclaration t : c.findAll(ClassOrInterfaceDeclaration.class)) {
@@ -73,17 +76,15 @@ public class Descriptor implements Consumer<CompilationUnit> {
 				listener.add(cl);
 		}
 
-		listeners.add(new LD(t, listener));
+		listeners.add(new LD(t.resolve().getQualifiedName(), listener));
 	}
 
-	public static class LD {
-		public final ClassOrInterfaceDeclaration t;
-		public final Set<Class<?>> listener;
-
-		public LD(ClassOrInterfaceDeclaration t, Set<Class<?>> listener) {
-			this.t = t;
-			this.listener = listener;
-		}
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		sb.append(name).append("\n");
+		sb.append(servlets).append("\n");
+		sb.append(filters).append("\n");
+		return sb.toString();
 	}
-
 }

@@ -13,6 +13,7 @@ import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.type.ArrayType;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.Type;
+import com.github.javaparser.ast.type.UnknownType;
 import com.github.javaparser.ast.type.VarType;
 import com.github.javaparser.resolution.declarations.ResolvedReferenceTypeDeclaration;
 
@@ -20,7 +21,7 @@ import com.github.javaparser.resolution.declarations.ResolvedReferenceTypeDeclar
  * @author unknow
  */
 public class TypeCache {
-	public static final Type EMPTY = new VarType();
+	public static final Type EMPTY = new UnknownType();
 
 	private final Map<String, ClassOrInterfaceType> types;
 
@@ -74,6 +75,25 @@ public class TypeCache {
 			types.put(sb.toString(), c = create(cl, param));
 		sb.setLength(0);
 		return c;
+	}
+
+	public ClassOrInterfaceType get(String cl) {
+		int indexOf = cl.indexOf('<');
+		if (indexOf >= 0)
+			cl = cl.substring(0, indexOf);
+		ClassOrInterfaceType t = types.get(cl);
+		if (t != null)
+			return t;
+
+		String[] split = cl.split("\\.");
+		String last = split[split.length - 1];
+		if (existingClass.contains(last)) {
+			for (int i = 0; i < split.length; i++)
+				t = new ClassOrInterfaceType(t, split[i]);
+		} else
+			t = new ClassOrInterfaceType(null, last);
+		types.put(cl, t);
+		return t;
 	}
 
 	@SuppressWarnings("null")

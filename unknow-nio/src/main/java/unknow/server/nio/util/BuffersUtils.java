@@ -3,6 +3,8 @@
  */
 package unknow.server.nio.util;
 
+import unknow.server.nio.util.Buffers.Chunk;
+
 /**
  * @author unknow
  */
@@ -19,9 +21,9 @@ public final class BuffersUtils {
 	 */
 	public static boolean startsWith(Buffers buf, byte[] lookup) {
 		synchronized (buf) {
-			Buf b = buf.getHead();
+			Chunk b = buf.getHead();
 			int l = lookup.length;
-			if (b == null || buf.size() < l)
+			if (b == null || buf.length() < l)
 				return false;
 			int i = 0;
 
@@ -45,9 +47,9 @@ public final class BuffersUtils {
 	 */
 	public static boolean endsWith(Buffers buf, byte[] lookup) {
 		synchronized (buf) {
-			Buf b = buf.getHead();
+			Chunk b = buf.getHead();
 			int l = lookup.length;
-			int o = buf.size() - l;
+			int o = buf.length() - l;
 			if (b == null || o < 0)
 				return false;
 			int i = 0;
@@ -77,9 +79,9 @@ public final class BuffersUtils {
 	 */
 	public static boolean equals(Buffers buf, byte[] lookup) {
 		synchronized (buf) {
-			Buf b = buf.getHead();
+			Chunk b = buf.getHead();
 			int l = lookup.length;
-			if (b == null || buf.size() != l)
+			if (b == null || buf.length() != l)
 				return false;
 			int i = 0;
 			int e, j;
@@ -106,9 +108,9 @@ public final class BuffersUtils {
 	 */
 	public static boolean pathMatches(Buffers buf, byte[] path) {
 		synchronized (buf) {
-			Buf b = buf.getHead();
+			Chunk b = buf.getHead();
 			int l = path.length;
-			if (b == null || buf.size() < l)
+			if (b == null || buf.length() < l)
 				return false;
 			int i = 0;
 			int e, j;
@@ -136,13 +138,13 @@ public final class BuffersUtils {
 	 */
 	public static void toString(StringBuilder sb, Buffers buf, int off, int len) {
 		synchronized (buf) {
-			Buf b = buf.getHead();
+			Chunk b = buf.getHead();
 			if (b == null)
 				return;
-			if (len == 0 || off >= buf.size())
+			if (len == 0 || off >= buf.length())
 				return;
 			if (len == -1)
-				len = buf.size() - off;
+				len = buf.length() - off;
 			sb.ensureCapacity(len);
 			do {
 				if (b.l < off) {

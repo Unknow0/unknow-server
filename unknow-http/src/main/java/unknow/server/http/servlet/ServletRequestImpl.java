@@ -12,7 +12,6 @@ import java.security.Principal;
 import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -36,11 +35,8 @@ import javax.servlet.http.HttpSession;
 import javax.servlet.http.HttpUpgradeHandler;
 import javax.servlet.http.Part;
 
-import unknow.server.http.HttpRawRequest;
-import unknow.server.http.HttpRawRequest.RawHeader;
+import unknow.server.http.HttpHandler;
 import unknow.server.http.utils.ArrayMap;
-import unknow.server.nio.util.Buffers;
-import unknow.server.nio.util.BuffersUtils;
 
 /**
  * @author unknow
@@ -49,9 +45,8 @@ public class ServletRequestImpl implements HttpServletRequest {
 	private final ArrayMap<Object> attributes = new ArrayMap<>();
 
 	private final ServletContextImpl ctx;
-	private final HttpRawRequest req;
-
-	private int infoStart;
+	public final HttpHandler req;
+	private final DispatcherType type;
 
 	private String protocol = null;
 	private String method = null;
@@ -63,7 +58,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 	private long contentLength = -2;
 
 	private Map<String, List<String>> headers;
-	private Map<String, List<String>> parameter;
+	private Map<String, String[]> parameter;
 
 	private String remoteAddr;
 	private String remoteHost;
@@ -73,52 +68,44 @@ public class ServletRequestImpl implements HttpServletRequest {
 	/**
 	 * create new ServletRequestImpl
 	 * 
-	 * @param ctx the context
-	 * @param req the raw request
+	 * @param ctx  the context
+	 * @param req  the raw request
+	 * @param type dispatcher type of this request
 	 */
-	public ServletRequestImpl(ServletContextImpl ctx, HttpRawRequest req) {
+	public ServletRequestImpl(ServletContextImpl ctx, HttpHandler req, DispatcherType type) {
 		this.ctx = ctx;
 		this.req = req;
+		this.type = type;
 	}
 
-	/**
-	 * get the raw path
-	 * 
-	 * @return the raw path
-	 */
-	public final List<Buffers> rawPath() {
-		return req.path;
-	}
-
-	/**
-	 * set path start index of path info
-	 * 
-	 * @param infoStart
-	 */
-	public final void setPathInfoStart(int infoStart) {
-		this.infoStart = infoStart;
-	}
-
-	private void generateHeader() {
-		if (headers != null)
-			return;
-		headers = new HashMap<>();
-		RawHeader h = req.headers;
-		while (h != null && !h.isEmpty()) {
-			String k = toString(h, 0, -1).toLowerCase();
-			List<String> list = headers.get(k);
-			if (list == null)
-				headers.put(k, list = new ArrayList<>(1));
-			list.add(toString(h.value, 0, -1));
-			h = h.next;
-		}
-	}
-
-	private void generateParam() {
+	private void parseParam() {
 		if (parameter != null)
 			return;
 		parameter = new HashMap<>();
-		// TODO
+//		Map<String, List<String>> p = new HashMap<>();
+//		if (!req.query.isEmpty()) {
+//			int i, j = 0;
+//			do {
+//				i = req.query.indexOf((byte) '&', j, -1);
+//				int k = req.query.indexOf((byte) '=', j, i);
+//				sb.setLength(0);
+//				req.query.toString(sb, j, k);
+//				String key = sb.toString();
+//				List<String> list = p.get(key);
+//				if (list == null)
+//					p.put(key, list = new ArrayList<>());
+//				if (k > 0) {
+//					sb.setLength(0);
+//					req.query.toString(sb, k, i);
+//					list.add(sb.toString());
+//				}
+//			} while (i > 0);
+//		}
+//		// TODO content-type application/x-www-form-urlencoded
+//
+//		String[] s = new String[0];
+//		for (Entry<String, List<String>> e : p.entrySet())
+//			parameter.put(e.getKey(), e.getValue().toArray(s));
 	}
 
 	@Override
@@ -145,7 +132,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 	@Override
 	public String getCharacterEncoding() {
 		if (encoding == null) {
-			// get from request
+			// TODO get from request
 			if (encoding == null)
 				encoding = ctx.getRequestCharacterEncoding();
 		}
@@ -159,21 +146,24 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public String getHeader(String name) {
-		generateHeader();
+		if (headers == null)
+			headers = req.parseHeader();
 		List<String> list = headers.get(name.toLowerCase());
 		return list == null || list.isEmpty() ? null : list.get(0);
 	}
 
 	@Override
 	public Enumeration<String> getHeaders(String name) {
-		generateHeader();
+		if (headers == null)
+			headers = req.parseHeader();
 		List<String> list = headers.get(name.toLowerCase());
 		return list == null || list.isEmpty() ? Collections.emptyEnumeration() : Collections.enumeration(list);
 	}
 
 	@Override
 	public Enumeration<String> getHeaderNames() {
-		generateHeader();
+		if (headers == null)
+			headers = req.parseHeader();
 		return Collections.enumeration(headers.keySet());
 	}
 
@@ -238,27 +228,38 @@ public class ServletRequestImpl implements HttpServletRequest {
 	}
 
 	@Override
-	public String getParameter(String name) {
+	public BufferedReader getReader() throws IOException {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public Enumeration<String> getParameterNames() {
-		// TODO Auto-generated method stub
-		return null;
+		if (parameter == null)
+			parseParam();
+		return Collections.enumeration(parameter.keySet());
 	}
 
 	@Override
 	public String[] getParameterValues(String name) {
-		// TODO Auto-generated method stub
-		return null;
+		if (parameter == null)
+			parseParam();
+		return parameter.get(name);
+	}
+
+	@Override
+	public String getParameter(String name) {
+		if (parameter == null)
+			parseParam();
+		String[] strings = parameter.get(name);
+		return strings == null || strings.length == 0 ? null : strings[0];
 	}
 
 	@Override
 	public Map<String, String[]> getParameterMap() {
-		// TODO Auto-generated method stub
-		return null;
+		if (parameter == null)
+			parseParam();
+		return Collections.unmodifiableMap(parameter);
 	}
 
 	@Override
@@ -269,40 +270,32 @@ public class ServletRequestImpl implements HttpServletRequest {
 	@Override
 	public String getMethod() {
 		if (method == null)
-			method = toString(req.method, 0, -1);
+			method = req.parseMethod();
 		return method;
 	}
 
 	@Override
 	public String getQueryString() {
 		if (query == null)
-			query = toString(req.query, 0, -1);
+			query = req.parseQuery();
 		return query.isEmpty() ? null : query;
 	}
 
 	@Override
 	public String getProtocol() {
 		if (protocol == null)
-			protocol = toString(req.protocol, 0, -1);
+			protocol = req.parseProtocol();
 		return protocol;
 	}
 
 	@Override
 	public String getServerName() {
-		// TODO Auto-generated method stub
-//		ServletContextImpl.get().getVirtualServerName()
-		return null;
+		return ctx.getVirtualServerName();
 	}
 
 	@Override
 	public int getServerPort() {
 		return getLocalPort();
-	}
-
-	@Override
-	public BufferedReader getReader() throws IOException {
-		// TODO Auto-generated method stub
-		return null;
 	}
 
 	@Override
@@ -322,51 +315,42 @@ public class ServletRequestImpl implements HttpServletRequest {
 		return null;
 	}
 
-	private static String getAddr(InetSocketAddress a) {
-		if (a == null)
-			return "127.0.0.1";
-		InetAddress address = a.getAddress();
-		if (address == null)
-			return "127.0.0.1";
-		return address.getHostAddress();
-	}
-
 	@Override
 	public String getRemoteAddr() {
 		if (remoteAddr == null)
-			remoteAddr = getAddr(req.remote);
+			remoteAddr = getAddr(req.getRemote());
 		return remoteAddr;
 	}
 
 	@Override
 	public String getRemoteHost() {
 		if (remoteHost == null)
-			remoteHost = req.remote.getHostName();
+			remoteHost = req.getRemote().getHostName();
 		return remoteHost;
 	}
 
 	@Override
 	public int getRemotePort() {
-		return req.remote.getPort();
+		return req.getRemote().getPort();
 	}
 
 	@Override
 	public String getLocalName() {
 		if (localHost == null)
-			localHost = req.local.getHostString();
+			localHost = req.getLocal().getHostString();
 		return localHost;
 	}
 
 	@Override
 	public String getLocalAddr() {
 		if (localAddr == null)
-			localAddr = getAddr(req.local);
+			localAddr = getAddr(req.getLocal());
 		return localAddr;
 	}
 
 	@Override
 	public int getLocalPort() {
-		return req.local.getPort();
+		return req.getLocal().getPort();
 	}
 
 	@Override
@@ -401,35 +385,20 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public DispatcherType getDispatcherType() {
-		return DispatcherType.REQUEST;
+		return type;
 	}
 
 	@Override
 	public String getServletPath() {
-		if (servletPath == null) {
-			int e = infoStart < 0 ? req.path.size() : infoStart;
-			StringBuilder sb = new StringBuilder();
-			for (int i = 0; i < e; i++) {
-				sb.append('/'); // TODO decode
-				BuffersUtils.toString(sb, req.path.get(i), 0, -1);
-			}
-			servletPath = sb.toString();
-		}
+		if (servletPath == null)
+			servletPath = req.parseServletPath();
 		return servletPath;
 	}
 
 	@Override
 	public String getPathInfo() {
-		if (pathInfo == null) {
-			if (infoStart > 0) {
-				StringBuilder sb = new StringBuilder();
-				for (int i = infoStart; i < req.path.size(); i++) {
-					sb.append('/'); // TODO decode
-					BuffersUtils.toString(sb, req.path.get(i), 0, -1);
-				}
-			} else
-				pathInfo = "";
-		}
+		if (pathInfo == null)
+			pathInfo = req.parsePathInfo();
 		return pathInfo == "" ? null : pathInfo;
 	}
 
@@ -555,12 +524,16 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public Collection<Part> getParts() throws IOException, ServletException {
+		if (!getContentType().startsWith("multipart/form-data"))
+			throw new ServletException("not a multipart/form-data");
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public Part getPart(String name) throws IOException, ServletException {
+		if (!getContentType().startsWith("multipart/form-data"))
+			throw new ServletException("not a multipart/form-data");
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -576,11 +549,12 @@ public class ServletRequestImpl implements HttpServletRequest {
 		return ctx;
 	}
 
-	private final StringBuilder sb = new StringBuilder();
-
-	private final String toString(Buffers b, int i, int l) {
-		sb.setLength(0);
-		BuffersUtils.toString(sb, b, i, l);
-		return sb.toString();
+	private static String getAddr(InetSocketAddress a) {
+		if (a == null)
+			return "127.0.0.1";
+		InetAddress address = a.getAddress();
+		if (address == null)
+			return "127.0.0.1";
+		return address.getHostAddress();
 	}
 }

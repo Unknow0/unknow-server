@@ -1,7 +1,7 @@
 /**
  * 
  */
-package unknow.server.maven;
+package unknow.server.maven.descriptor;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -24,18 +24,23 @@ import com.github.javaparser.ast.expr.MemberValuePair;
  */
 public class SD {
 	public final int index;
-	public final ClassOrInterfaceDeclaration e;
+	public String clazz;
+	public String jsp;
 
-	public final String name;
+	public String name;
 	public final List<String> pattern = new ArrayList<>();
 	public final Map<String, String> param = new HashMap<>();
 	public int loadOnStartup = -1;
 	public final List<String> servletNames = new ArrayList<>(0);
 	public final List<DispatcherType> dispatcher = new ArrayList<>(0);
 
+	public SD(int index) {
+		this.index = index;
+	}
+
 	public SD(int index, AnnotationExpr a, ClassOrInterfaceDeclaration e) {
 		this.index = index;
-		this.e = e;
+		this.clazz = e.resolve().getQualifiedName();
 		String ln = null;
 		for (Node n : a.getChildNodes()) {
 			if (!(n instanceof MemberValuePair))
@@ -89,6 +94,6 @@ public class SD {
 
 	@Override
 	public String toString() {
-		return name == null ? e.getNameAsString() : name + (dispatcher.isEmpty() ? "" : dispatcher);
+		return name == null ? clazz : name + (dispatcher.isEmpty() ? "" : dispatcher);
 	}
 }

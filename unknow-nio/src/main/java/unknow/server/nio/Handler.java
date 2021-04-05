@@ -29,6 +29,9 @@ public abstract class Handler {
 	private Out out = new Out(this);
 	SelectionKey key;
 
+	private long lastRead;
+	private long lastWrite;
+
 	/**
 	 * read data from the channel and try to handles it
 	 * 
@@ -38,13 +41,14 @@ public abstract class Handler {
 	 * @throws IOException
 	 */
 	protected final void readFrom(SocketChannel channel, ByteBuffer buf) throws IOException {
+		lastRead = System.currentTimeMillis();
 		buf.clear();
 		if (channel.read(buf) == -1) {
 			channel.close();
 			return;
 		}
 		buf.flip();
-		pendingRead.append(buf);
+		pendingRead.write(buf);
 		handle(in, out);
 	}
 
@@ -56,6 +60,7 @@ public abstract class Handler {
 	 * @throws IOException
 	 */
 	protected final void writeInto(SocketChannel channel, ByteBuffer buf) throws IOException {
+		lastWrite = System.currentTimeMillis();
 		buf.clear();
 		while (pendingWrite.read(buf)) {
 			buf.flip();
@@ -67,6 +72,24 @@ public abstract class Handler {
 			pendingWrite.prepend(buf);
 		if (pendingWrite.isEmpty())
 			key.interestOps(SelectionKey.OP_READ);
+	}
+
+	/**
+	 * timestamp of the last read
+	 * 
+	 * @return time stamp in ms
+	 */
+	public final long lastRead() {
+		return lastRead;
+	}
+
+	/**
+	 * timestamp of the last write
+	 * 
+	 * @return time stamp in ms
+	 */
+	public final long lastWrite() {
+		return lastWrite;
 	}
 
 	/**
@@ -83,12 +106,30 @@ public abstract class Handler {
 		return out;
 	}
 
-	public final InetSocketAddress getRemote() throws IOException {
-		return (InetSocketAddress) ((SocketChannel) key.channel()).getRemoteAddress();
+	/**
+	 * the remote address of the channel is connected to
+	 * 
+	 * @return the remote address
+	 */
+	public final InetSocketAddress getRemote() {
+		try {
+			return (InetSocketAddress) ((SocketChannel) key.channel()).getRemoteAddress();
+		} catch (IOException e) {
+			return null;
+		}
 	}
 
-	public final InetSocketAddress getLocal() throws IOException {
-		return (InetSocketAddress) ((SocketChannel) key.channel()).getLocalAddress();
+	/**
+	 * the local address of the channel this handler has
+	 * 
+	 * @return the local address
+	 */
+	public final InetSocketAddress getLocal() {
+		try {
+			return (InetSocketAddress) ((SocketChannel) key.channel()).getLocalAddress();
+		} catch (IOException e) {
+			return null;
+		}
 	}
 
 	/**
@@ -104,7 +145,10 @@ public abstract class Handler {
 	 * reset this handler
 	 */
 	public void reset() {
-		out.h = null;
+		try {
+			out.close();
+		} catch (IOException e) { // OK
+		}
 		out = new Out(this);
 		pendingWrite.clear();
 		pendingRead.clear();
@@ -112,7 +156,7 @@ public abstract class Handler {
 
 	@Override
 	public String toString() {
-		return key.channel().toString() + " closed: " + (out.h == null) + " pending: " + pendingWrite.size();
+		return key.channel().toString() + " closed: " + (out.h == null) + " pending: " + pendingWrite.length();
 	}
 
 	/**
@@ -128,10 +172,10 @@ public abstract class Handler {
 		}
 
 		@Override
-		public final void write(int b) throws IOException {
+		public synchronized final void write(int b) throws IOException {
 			if (h == null)
 				throw new IOException("already closed");
-			h.pendingWrite.append((byte) b);
+			h.pendingWrite.write(b);
 			h.key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 		}
 
@@ -149,38 +193,45 @@ public abstract class Handler {
 		/**
 		 * write some data
 		 * 
-		 * @param b   data
+		 * @param buf data
 		 * @param off offset
 		 * @param len number of byte to write
 		 * @throws IOException
 		 */
 		@Override
-		public final void write(byte[] b, int off, int len) throws IOException {
+		public synchronized final void write(byte[] buf, int off, int len) throws IOException {
 			if (len == 0)
 				return;
-			if ((off | len | (off + len) | (b.length - (off + len))) < 0)
+			if ((off | len | (off + len) | (buf.length - (off + len))) < 0)
 				throw new IndexOutOfBoundsException();
 			if (h == null)
 				throw new IOException("already closed");
-			h.pendingWrite.append(b, off, len);
+			h.pendingWrite.write(buf, off, len);
 			h.key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 		}
 
 		/**
 		 * request to close the handler
+		 * 
+		 * @throws IOException
 		 */
 		@Override
-		public void close() {
+		public synchronized void close() throws IOException {
 			flush();
 			h = null;
 		}
 
 		/**
 		 * flush pending data
+		 * 
+		 * @throws IOException
 		 */
 		@Override
-		public void flush() {
-			h.key.selector().wakeup();
+		public synchronized void flush() throws IOException {
+			if (h == null)
+				throw new IOException("already closed");
+			if (!h.pendingWrite.isEmpty())
+				h.key.selector().wakeup();
 		}
 	}
 }

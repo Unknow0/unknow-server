@@ -4,13 +4,15 @@
 package unknow.server.http.utils;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Enumeration;
 
 /**
  * @author unknow
  */
-public class ArrayMap<T> {
-	private String[] key;
+public class ObjectArrayMap<K, T> {
+	private final Comparator<K> cmp;
+	private K[] key;
 	private T[] value;
 	private int len;
 
@@ -18,8 +20,9 @@ public class ArrayMap<T> {
 	 * create an empty array map
 	 */
 	@SuppressWarnings("unchecked")
-	public ArrayMap() {
-		key = new String[10];
+	public ObjectArrayMap(Comparator<K> cmp) {
+		this.cmp = cmp;
+		key = (K[]) new Object[10];
 		value = (T[]) new Object[10];
 		len = 0;
 	}
@@ -27,25 +30,28 @@ public class ArrayMap<T> {
 	/**
 	 * create a new arrayMap with these key/value /!\ key should already be sorted
 	 */
-	public ArrayMap(String[] key, T[] value) {
+	public ObjectArrayMap(K[] key, T[] value, Comparator<K> cmp) {
 		if (key.length != value.length)
 			throw new IllegalArgumentException("different number of key and value");
+		this.cmp = cmp;
 		this.key = key;
 		this.value = value;
 		this.len = key.length;
 	}
 
-	public T get(String name) {
-		int i = Arrays.binarySearch(key, 0, len, name);
+	@SuppressWarnings("unchecked")
+	public T get(K name) {
+		int i = Arrays.binarySearch(key, 0, len, name, cmp);
 		return i < 0 ? null : value[i];
 	}
 
-	public Enumeration<String> names() {
+	public Enumeration<K> keys() {
 		return new E();
 	}
 
-	public T set(String name, T o) {
-		int i = Arrays.binarySearch(key, 0, len, name);
+	@SuppressWarnings("unchecked")
+	public T set(K name, T o) {
+		int i = Arrays.binarySearch(key, 0, len, name, cmp);
 		if (i >= 0) {
 			value[i] = o;
 			return null;
@@ -58,8 +64,9 @@ public class ArrayMap<T> {
 		return old;
 	}
 
-	public boolean setOnce(String name, T o) {
-		int i = Arrays.binarySearch(key, 0, len, name);
+	@SuppressWarnings("unchecked")
+	public boolean setOnce(K name, T o) {
+		int i = Arrays.binarySearch(key, 0, len, name, cmp);
 		if (i >= 0)
 			return false;
 		ensure(len++);
@@ -69,7 +76,7 @@ public class ArrayMap<T> {
 		return true;
 	}
 
-	public T remove(String name) {
+	public T remove(K name) {
 		return set(name, null);
 	}
 
@@ -80,7 +87,7 @@ public class ArrayMap<T> {
 		value = Arrays.copyOf(value, l);
 	}
 
-	private class E implements Enumeration<String> {
+	private class E implements Enumeration<K> {
 		private int i = 0;
 
 		@Override
@@ -89,7 +96,7 @@ public class ArrayMap<T> {
 		}
 
 		@Override
-		public String nextElement() {
+		public K nextElement() {
 			return key[i++];
 		}
 

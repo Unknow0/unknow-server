@@ -24,11 +24,11 @@ import com.github.javaparser.ast.type.ClassOrInterfaceType;
 
 import unknow.server.http.utils.EventManager;
 import unknow.server.maven.Builder;
-import unknow.server.maven.Descriptor;
-import unknow.server.maven.Descriptor.LD;
 import unknow.server.maven.Names;
-import unknow.server.maven.SD;
 import unknow.server.maven.TypeCache;
+import unknow.server.maven.descriptor.Descriptor;
+import unknow.server.maven.descriptor.LD;
+import unknow.server.maven.descriptor.SD;
 
 /**
  * @author unknow
@@ -40,11 +40,11 @@ public class CreateEventManager extends Builder {
 		Map<Class<?>, NodeList<Expression>> map = new HashMap<>();
 
 		for (LD l : descriptor.listeners) {
-			ClassOrInterfaceType t = types.get(l.t);
+			ClassOrInterfaceType t = types.get(l.clazz);
 			Expression e = new ObjectCreationExpr(null, t, emptyList());
 
 			for (SD s : descriptor.servlets) {
-				if (s.e == l.t) {
+				if (s.clazz.equals(l.clazz)) {
 					e = new CastExpr(t, new ArrayAccessExpr(new MethodCallExpr(Names.SERVLETS, "getServlets"), new IntegerLiteralExpr(Integer.toString(s.index))));
 					break;
 				}
