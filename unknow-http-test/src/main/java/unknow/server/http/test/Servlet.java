@@ -24,7 +24,7 @@ import unknow.server.http.servlet.ServletRequestImpl;
 /**
  * @author unknow
  */
-@WebServlet(urlPatterns = { "/test/*", "/bla", "/bla/yes/*", "*.test" }, name = "test", loadOnStartup = 1, initParams = @WebInitParam(name = "content", value = "it works"))
+@WebServlet(urlPatterns = { "/404", "/test/*", "/bla", "/bla/yes/*", "*.test" }, name = "test", loadOnStartup = 1, initParams = @WebInitParam(name = "content", value = "it works"))
 @WebListener
 public class Servlet extends HttpServlet implements ServletRequestListener, Filter {
 	private static final long serialVersionUID = 1L;
@@ -36,7 +36,7 @@ public class Servlet extends HttpServlet implements ServletRequestListener, Filt
 
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-//		System.out.println("doGet " + req);
+		System.out.println("doGet " + req);
 
 //		PrintWriter append = resp.getWriter();
 //		append.append("" + req.getContentLength()).append(getInitParameter("content"));

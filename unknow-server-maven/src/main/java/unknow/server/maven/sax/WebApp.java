@@ -21,6 +21,8 @@ public class WebApp extends Handler {
 			ctx.reader.setContentHandler(new ContextParam(ctx));
 		else if ("display-name".equals(localName))
 			ctx.reader.setContentHandler(new DisplayName(ctx));
+		else if ("error-page".equals(localName))
+			ctx.reader.setContentHandler(new ErrorPage(ctx));
 		else if ("filter".equals(localName))
 			ctx.reader.setContentHandler(new Filter(ctx));
 		else if ("filter-mapping".equals(localName))

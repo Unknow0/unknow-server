@@ -23,6 +23,7 @@ import javax.servlet.DispatcherType;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
+import javax.servlet.ServletRequestWrapper;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 
@@ -93,7 +94,9 @@ public class ServletResponseImpl implements HttpServletResponse {
 		headers = new HashMap<>();
 		cookies = new ArrayList<>();
 
-		setHeader("connection", req.getHeader("connection"));
+		String header = req.getHeader("connection");
+		if (header != null)
+			setHeader("connection", header);
 		status = 200;
 	}
 
@@ -189,18 +192,15 @@ public class ServletResponseImpl implements HttpServletResponse {
 
 	public void sendError(int sc, Throwable t, String msg) throws IOException {
 		ServletManager manager = ctx.getServletManager();
-		List<byte[]> path = manager.getError(sc, t);
-		if (path != null) {
+		FilterChain f = manager.getError(sc, t);
+		if (f != null) {
 			ServletRequestImpl r = new ServletRequestImpl(ctx, req, DispatcherType.ERROR);
-			FilterChain find = manager.find(r);
-			if (find != null) {
-				reset();
-				try {
-					find.doFilter(r, this);
-					return;
-				} catch (ServletException e) {
-					log.error("failed to send error", e);
-				}
+			reset();
+			try {
+				f.doFilter(r, this);
+				return;
+			} catch (ServletException e) {
+				log.error("failed to send error", e);
 			}
 		}
 

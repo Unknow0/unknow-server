@@ -11,9 +11,9 @@ import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
@@ -38,8 +38,12 @@ import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
+import com.github.javaparser.ast.comments.JavadocComment;
 import com.github.javaparser.ast.expr.ClassExpr;
+import com.github.javaparser.ast.expr.FieldAccessExpr;
+import com.github.javaparser.ast.expr.IntegerLiteralExpr;
 import com.github.javaparser.ast.expr.MethodCallExpr;
+import com.github.javaparser.ast.expr.StringLiteralExpr;
 import com.github.javaparser.ast.expr.TypeExpr;
 import com.github.javaparser.printer.PrettyPrinterConfiguration;
 import com.github.javaparser.printer.PrettyPrinterConfiguration.IndentType;
@@ -48,6 +52,7 @@ import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSol
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver;
 
+import picocli.CommandLine.Option;
 import unknow.server.http.HttpRawProcessor;
 import unknow.server.http.servlet.ServletContextImpl;
 import unknow.server.http.utils.EventManager;
@@ -143,11 +148,9 @@ public class ServletServerGen extends AbstractMojo {
 			} catch (Exception e) {
 				getLog().error("failed to parse '" + webXml + "'", e);
 			}
-
-			System.out.println(">> " + descriptor);
 		}
 
-		final Set<String> existingClass = new HashSet<>();
+		final Map<String, String> existingClass = new HashMap<>();
 		final Path local = Paths.get(src, packageName == null ? new String[0] : packageName.split("\\."));
 		final int count = local.getNameCount() + 1;
 
@@ -160,7 +163,8 @@ public class ServletServerGen extends AbstractMojo {
 					parser.parse(file).ifSuccessful(descriptor);
 					if (count == file.getNameCount() && file.startsWith(local)) {
 						String string = file.getFileName().toString();
-						existingClass.add(string.substring(0, string.length() - 5));
+						string = string.substring(0, string.length() - 5);
+						existingClass.put(string, packageName + "." + string);
 					}
 					return FileVisitResult.CONTINUE;
 				}
@@ -168,7 +172,7 @@ public class ServletServerGen extends AbstractMojo {
 		} catch (IOException e) {
 			throw new MojoFailureException("failed to get source failed", e);
 		}
-		// TODO read web.xml
+		getLog().info("descriptor:\n" + descriptor);
 
 		// generate class
 		types = new TypeCache(cu, existingClass);
@@ -180,6 +184,25 @@ public class ServletServerGen extends AbstractMojo {
 			cu.setPackageDeclaration(packageName);
 		cl = cu.addClass(className, Modifier.Keyword.FINAL).addExtendedType(NIOServerCli.class).addImplementedType(HttpRawProcessor.class);
 		cl.addFieldWithInitializer(types.get(Logger.class), "log", new MethodCallExpr(new TypeExpr(types.get(LoggerFactory.class)), "getLogger", Builder.list(new ClassExpr(types.get(cl)))), Modifier.Keyword.PRIVATE, Modifier.Keyword.STATIC, Modifier.Keyword.FINAL);
+
+		cl.addFieldWithInitializer(types.get(int.class), "execMin", new IntegerLiteralExpr("0"))
+				.setJavadocComment(new JavadocComment("min number of execution thread to use, default to 0"))
+				.addAndGetAnnotation(Option.class)
+				.addPair("names", new StringLiteralExpr("--exec-min"))
+				.addPair("description", new StringLiteralExpr("min number of exec thread to use, default to 0"))
+				.addPair("descriptionKey", new StringLiteralExpr("exec-min"));
+		cl.addFieldWithInitializer(types.get(int.class), "execMax", new FieldAccessExpr(new TypeExpr(types.get(Integer.class)), "MAX_VALUE"))
+				.setJavadocComment(new JavadocComment("max number of execution thread to use, default to Integer.MAX_VALUE"))
+				.addAndGetAnnotation(Option.class)
+				.addPair("names", new StringLiteralExpr("--exec-max"))
+				.addPair("description", new StringLiteralExpr("max number of exec thread to use, default to Integer.MAX_VALUE"))
+				.addPair("descriptionKey", new StringLiteralExpr("exec-max"));
+		cl.addFieldWithInitializer(types.get(long.class), "execIdle", new IntegerLiteralExpr("60L"))
+				.setJavadocComment(new JavadocComment("max idle time for exec thread, default to 60"))
+				.addAndGetAnnotation(Option.class)
+				.addPair("names", new StringLiteralExpr("--exec-idle"))
+				.addPair("description", new StringLiteralExpr("max idle time for exec thread, default to 60"))
+				.addPair("descriptionKey", new StringLiteralExpr("exec-idle"));
 
 		cl.addField(types.get(ServletManager.class), "SERVLETS", Modifier.Keyword.PRIVATE, Modifier.Keyword.FINAL);
 		cl.addField(types.get(EventManager.class), "EVENTS", Modifier.Keyword.PRIVATE, Modifier.Keyword.FINAL);

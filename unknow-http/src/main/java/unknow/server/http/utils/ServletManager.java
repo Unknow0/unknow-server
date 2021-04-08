@@ -3,14 +3,11 @@
  */
 package unknow.server.http.utils;
 
-import java.util.List;
-
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.Servlet;
 import javax.servlet.ServletException;
 
-import unknow.server.http.HttpHandler;
 import unknow.server.http.servlet.ServletRequestImpl;
 
 /**
@@ -19,15 +16,15 @@ import unknow.server.http.servlet.ServletRequestImpl;
 public final class ServletManager {
 	private Servlet[] servlets;
 	private Filter[] filters;
-	private PathTree tree;
+	private PathTree request;
 
-	private final IntArrayMap<List<byte[]>> errorCode;
-	private final ObjectArrayMap<Class<?>, List<byte[]>> errorClazz;
+	private final IntArrayMap<FilterChain> errorCode;
+	private final ObjectArrayMap<Class<?>, FilterChain> errorClazz;
 
-	public ServletManager(Servlet[] servlets, Filter[] filters, PathTree tree, IntArrayMap<List<byte[]>> errorCode, ObjectArrayMap<Class<?>, List<byte[]>> errorClazz) {
+	public ServletManager(Servlet[] servlets, Filter[] filters, PathTree request, IntArrayMap<FilterChain> errorCode, ObjectArrayMap<Class<?>, FilterChain> errorClazz) {
 		this.servlets = servlets;
 		this.filters = filters;
-		this.tree = tree;
+		this.request = request;
 		this.errorCode = errorCode;
 		this.errorClazz = errorClazz;
 	}
@@ -41,28 +38,24 @@ public final class ServletManager {
 	}
 
 	public FilterChain find(ServletRequestImpl req) {
-		FilterChain[] find = tree.find(req.req);
-		return find == null ? null : find[req.getDispatcherType().ordinal()];
+		switch (req.getDispatcherType()) {
+			case REQUEST:
+				return request.find(req.req);
+			default:
+				return null;
+		}
 	}
 
-	public List<byte[]> getError(Throwable t) {
-		Class<?> cl = t.getClass();
-		List<byte[]> list = errorClazz.get(cl);
-		while (list == null && cl != Throwable.class)
-			list = errorClazz.get((cl = cl.getSuperclass()));
-		return list;
-	}
-
-	public List<byte[]> getError(int code, Throwable t) {
+	public FilterChain getError(int code, Throwable t) {
 		if (t != null) {
-			List<byte[]> list = errorClazz.get(t.getClass());
-			if (list != null)
-				return list;
+			FilterChain f = errorClazz.get(t.getClass());
+			if (f != null)
+				return f;
 			if (t instanceof ServletException) {
 				t = ((ServletException) t).getRootCause();
-				list = errorClazz.get(t.getClass());
-				if (list != null)
-					return list;
+				f = errorClazz.get(t.getClass());
+				if (f != null)
+					return f;
 			}
 		}
 		return errorCode.get(code);

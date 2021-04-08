@@ -39,6 +39,7 @@ public class Buffers {
 		}
 		tail.b[tail.o + tail.l] = (byte) b;
 		tail.l++;
+		len++;
 	}
 
 	/**
@@ -53,6 +54,7 @@ public class Buffers {
 			return;
 		if (tail == null)
 			head = tail = Chunk.get();
+		len += l;
 		writeInto(tail, buf, o, l);
 	}
 
@@ -66,6 +68,7 @@ public class Buffers {
 			return;
 		if (tail == null)
 			head = tail = Chunk.get();
+		len += bb.remaining();
 		writeInto(tail, bb);
 	}
 
@@ -567,21 +570,22 @@ public class Buffers {
 		int j = 0;
 		while (c != null) {
 			for (int i = c.o + o; i < c.o + c.l; i++) {
-				if (c.b[i] != part[j++] || j > part.length)
+				if (c.b[i] != part[j++])
 					return false;
+				if (j == part.length)
+					return true;
 			}
 			c = c.next;
 		}
-		return true;
+		return false;
 	}
 
 	private final Chunk writeInto(Chunk c, ByteBuffer bb) {
 		int l = bb.remaining();
 		for (;;) {
 			int r = Math.min(l, 4096 - c.l - c.o);
-			bb.get(c.b, c.o, r);
+			bb.get(c.b, c.o + c.l, r);
 			c.l += r;
-			len += r;
 			l -= r;
 			if (l == 0)
 				return c;
@@ -593,9 +597,8 @@ public class Buffers {
 	private final Chunk writeInto(Chunk c, byte[] buf, int o, int l) {
 		for (;;) {
 			int r = Math.min(l, 4096 - c.l - c.o);
-			System.arraycopy(buf, o, c.b, c.o, r);
+			System.arraycopy(buf, o, c.b, c.o + c.l, r);
 			c.l += r;
-			len += r;
 			l -= r;
 			o += r;
 			if (l == 0)

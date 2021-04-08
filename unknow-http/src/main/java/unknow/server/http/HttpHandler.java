@@ -299,7 +299,7 @@ public class HttpHandler extends Handler implements Runnable {
 	}
 
 	public int pathStart() {
-		return part[METHOD];
+		return part[METHOD] + 1;
 	}
 
 	public int pathEnd() {

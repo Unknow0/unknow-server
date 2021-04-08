@@ -3,10 +3,11 @@ package unknow.server.http.test;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.ServiceLoader;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -15,6 +16,7 @@ import javax.servlet.ServletException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
+import picocli.CommandLine.Option;
 import unknow.server.http.HttpHandler;
 import unknow.server.http.HttpRawProcessor;
 import unknow.server.http.servlet.FilterChainImpl;
@@ -37,7 +39,25 @@ import unknow.server.nio.cli.NIOServerCli;
 
 final class Server extends NIOServerCli implements HttpRawProcessor {
 
-	private static final Logger log = LoggerFactory.getLogger(unknow.server.http.test.Server.class);
+	private static final Logger log = LoggerFactory.getLogger(Server.class);
+
+	/**
+	 * min number of execution thread to use, default to 0
+	 */
+	@Option(names = "--exec-min", description = "min number of exec thread to use, default to 0", descriptionKey = "exec-min")
+	int execMin = 0;
+
+	/**
+	 * max number of execution thread to use, default to Integer.MAX_VALUE
+	 */
+	@Option(names = "--exec-max", description = "max number of exec thread to use, default to Integer.MAX_VALUE", descriptionKey = "exec-max")
+	int execMax = Integer.MAX_VALUE;
+
+	/**
+	 * max idle time for exec thread, default to 60
+	 */
+	@Option(names = "--exec-idle", description = "max idle time for exec thread, default to 60", descriptionKey = "exec-idle")
+	long execIdle = 60L;
 
 	private final ServletManager SERVLETS;
 
@@ -52,16 +72,14 @@ final class Server extends NIOServerCli implements HttpRawProcessor {
 	}
 
 	private final EventManager createEventManager() {
-		return new EventManager(new ArrayList<>(0), new ArrayList<>(0), new ArrayList<>(Arrays.asList((unknow.server.http.test.Servlet) SERVLETS.getServlets()[0])), new ArrayList<>(0), new ArrayList<>(0), new ArrayList<>(0), new ArrayList<>(0));
+		return new EventManager(new ArrayList<>(0), new ArrayList<>(0), new ArrayList<>(Arrays.asList((Servlet) SERVLETS.getServlets()[0])), new ArrayList<>(0), new ArrayList<>(0), new ArrayList<>(0), new ArrayList<>(0));
 	}
 
 	private final ServletManager createServletManager() {
-		unknow.server.http.test.Servlet s0 = new unknow.server.http.test.Servlet();
-		ServletFilter cs0 = new ServletFilter(s0);
-		FilterChain[] acs0cs0cs0cs0cs0 = new FilterChain[] { cs0, cs0, cs0, cs0, cs0 };
-		FilterChainImpl cs0s0 = new FilterChainImpl(s0, cs0);
-		FilterChain[] acs0cs0cs0s0cs0cs0s0 = new FilterChain[] { cs0, cs0, cs0s0, cs0, cs0s0 };
-		return new ServletManager(new javax.servlet.Servlet[] { s0 }, new Filter[] { s0 }, new PathTree(null, new PathTree[] { new PathTree(new byte[] { 116, 101, 115, 116 }, null, null, acs0cs0cs0s0cs0cs0s0, acs0cs0cs0cs0cs0), new PathTree(new byte[] { 98, 108, 97 }, new PathTree[] { new PathTree(new byte[] { 121, 101, 115 }, null, null, null, acs0cs0cs0cs0cs0) }, null, acs0cs0cs0cs0cs0, null), new PathTree(new byte[] { 102, 111, 111 }, null, null, null, null) }, new EndNode[] { new EndNode(new byte[] { 46, 116, 101, 115, 116 }, acs0cs0cs0cs0cs0) }, null, null), new IntArrayMap<>(new int[] {}, new List[] {}), new ObjectArrayMap<>(new Class[] {}, new List[] {}, (a, b) -> a.getName().compareTo(b.getName())));
+		Servlet s0 = new Servlet();
+		FilterChain cs0 = new ServletFilter(s0);
+		FilterChain cs0s0 = new FilterChainImpl(s0, cs0);
+		return new ServletManager(new javax.servlet.Servlet[] { s0 }, new Filter[] { s0 }, new PathTree(null, new PathTree[] { new PathTree(new byte[] { 116, 101, 115, 116 }, null, null, cs0s0, cs0), new PathTree(new byte[] { 98, 108, 97 }, new PathTree[] { new PathTree(new byte[] { 121, 101, 115 }, null, null, null, cs0) }, null, cs0, null), new PathTree(new byte[] { 102, 111, 111 }, null, null, null, null), new PathTree(new byte[] { 52, 48, 52 }, null, null, cs0, null) }, new EndNode[] { new EndNode(new byte[] { 46, 116, 101, 115, 116 }, cs0) }, null, null), new IntArrayMap<>(new int[] { 404 }, new FilterChain[] { cs0 }), new ObjectArrayMap<>(new Class[] {}, new FilterChain[] {}, (a, b) -> a.getName().compareTo(b.getName())));
 	}
 
 	private final ServletContextImpl createContext() {
@@ -103,6 +121,18 @@ final class Server extends NIOServerCli implements HttpRawProcessor {
 
 	@Override()
 	public final Integer call() throws Exception {
+		ExecutorService executor = new ThreadPoolExecutor(execMin, execMax, execIdle, TimeUnit.SECONDS, new SynchronousQueue<Runnable>(), r -> {
+			Thread t = new Thread(r);
+			t.setDaemon(true);
+			return t;
+		});
+		handler = new HandlerFactory() {
+
+			@Override()
+			protected final Handler create() {
+				return new HttpHandler(executor, Server.this);
+			}
+		};
 		loadInitializer();
 		initialize();
 		EVENTS.fireContextInitialized(CTX);
@@ -112,19 +142,6 @@ final class Server extends NIOServerCli implements HttpRawProcessor {
 	}
 
 	public static void main(String[] arg) {
-		unknow.server.http.test.Server c = new unknow.server.http.test.Server();
-		ExecutorService executor = Executors.newCachedThreadPool(r -> {
-			Thread t = new Thread(r);
-			t.setDaemon(true);
-			return t;
-		});
-		c.handler = new HandlerFactory() {
-
-			@Override()
-			protected final Handler create() {
-				return new HttpHandler(executor, c);
-			}
-		};
-		System.exit(new CommandLine(c).execute(arg));
+		System.exit(new CommandLine(new Server()).execute(arg));
 	}
 }

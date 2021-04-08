@@ -4,14 +4,17 @@
 package unknow.server.http;
 
 import java.io.IOException;
-import java.io.OutputStream;
 
 /**
  * @author unknow
  */
 public interface HttpRawProcessor {
-	default void process(HttpRawRequest request, OutputStream out) throws IOException {
-	}
-
+	/**
+	 * called when we have to process a new request
+	 * /!\ should be thread safe 
+	 * 
+	 * @param handler
+	 * @throws IOException
+	 */
 	void process(HttpHandler handler) throws IOException;
 }

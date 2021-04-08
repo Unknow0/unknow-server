@@ -13,6 +13,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 
+import javax.servlet.DispatcherType;
 import javax.servlet.ServletContextAttributeListener;
 import javax.servlet.ServletContextListener;
 import javax.servlet.ServletRequestAttributeListener;
@@ -79,12 +80,52 @@ public class Descriptor implements Consumer<CompilationUnit> {
 		listeners.add(new LD(t.resolve().getQualifiedName(), listener));
 	}
 
+	public List<SD> findFilters(String path, DispatcherType type) {
+		List<SD> matching = new ArrayList<>();
+		for (SD f : filters) {
+			if (!f.dispatcher.contains(type))
+				continue;
+			for (String p : f.pattern) {
+				if (p.endsWith("/*") && path.startsWith(p.substring(0, p.length() - 2))) {
+					matching.add(f);
+					break;
+				} else if (p.startsWith("*") && path.endsWith(p.substring(1))) {
+					matching.add(f);
+					break;
+				} else if (path.equals(p)) {
+					matching.add(f);
+					break;
+				}
+			}
+		}
+		return matching;
+	}
+
+	public SD findServlet(String path) {
+		int l = 0;
+		SD best = null;
+		for (SD s : servlets) {
+			for (String p : s.pattern) {
+				if (p.endsWith("/*") && path.startsWith(p.substring(0, p.length() - 2)) && l < p.length() - 2) {
+					best = s;
+					l = p.length() - 2;
+				} else if (p.startsWith("*") && path.endsWith(p.substring(1)) && l == 0)
+					best = s;
+				else if (path.equals(p))
+					return s;
+			}
+		}
+		return best;
+	}
+
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		sb.append(name).append("\n");
-		sb.append(servlets).append("\n");
-		sb.append(filters).append("\n");
+		sb.append("name:\t").append(name).append("\n");
+		sb.append("servlets:\t").append(servlets).append("\n");
+		sb.append("filters:\t").append(filters).append("\n");
+		sb.append("errorClass:\t").append(errorClass).append("\n");
+		sb.append("errorCodes:\t").append(errorCode).append("\n");
 		return sb.toString();
 	}
 }

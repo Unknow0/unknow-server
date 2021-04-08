@@ -20,8 +20,8 @@ public class PathTree {
 	private final PathTree[] nexts;
 	// TODO add pattern
 	private final EndNode[] ends;
-	private final FilterChain[] exact;
-	private final FilterChain[] def;
+	private final FilterChain exact;
+	private final FilterChain def;
 
 	/**
 	 * create a new PathTree
@@ -32,7 +32,7 @@ public class PathTree {
 	 * @param exact the "" pattern chains
 	 * @param def   the "/*" pattern
 	 */
-	public PathTree(byte[] part, PathTree[] nexts, EndNode[] ends, FilterChain[] exact, FilterChain[] def) {
+	public PathTree(byte[] part, PathTree[] nexts, EndNode[] ends, FilterChain exact, FilterChain def) {
 		this.part = part;
 		this.nexts = nexts;
 		this.ends = ends;
@@ -40,7 +40,7 @@ public class PathTree {
 		this.def = def;
 	}
 
-	public FilterChain[] find(HttpHandler req) {
+	public FilterChain find(HttpHandler req) {
 		Buffers path = req.meta;
 		int o = req.pathStart() + 1;
 		int e = req.pathEnd();
@@ -93,7 +93,7 @@ public class PathTree {
 
 	public static final class EndNode {
 		private final byte[] ext; // .jsp
-		private final FilterChain[] chain;
+		private final FilterChain chain;
 
 		/**
 		 * create new EndNode
@@ -101,7 +101,7 @@ public class PathTree {
 		 * @param ext
 		 * @param chain
 		 */
-		public EndNode(byte[] ext, FilterChain[] chain) {
+		public EndNode(byte[] ext, FilterChain chain) {
 			this.ext = ext;
 			this.chain = chain;
 		}

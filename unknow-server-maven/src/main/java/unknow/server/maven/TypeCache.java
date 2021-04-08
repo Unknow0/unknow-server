@@ -5,7 +5,6 @@ package unknow.server.maven;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.NodeList;
@@ -14,7 +13,6 @@ import com.github.javaparser.ast.type.ArrayType;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.Type;
 import com.github.javaparser.ast.type.UnknownType;
-import com.github.javaparser.ast.type.VarType;
 import com.github.javaparser.resolution.declarations.ResolvedReferenceTypeDeclaration;
 
 /**
@@ -26,11 +24,11 @@ public class TypeCache {
 	private final Map<String, ClassOrInterfaceType> types;
 
 	private final CompilationUnit cu;
-	private final Set<String> existingClass;
+	private final Map<String, String> existingClass;
 
 	private final StringBuilder sb;
 
-	public TypeCache(CompilationUnit cu, Set<String> existingClass) {
+	public TypeCache(CompilationUnit cu, Map<String, String> existingClass) {
 		this.cu = cu;
 		this.existingClass = existingClass;
 
@@ -47,8 +45,10 @@ public class TypeCache {
 		String n = resolve.getQualifiedName();
 		ClassOrInterfaceType t = types.get(n);
 		if (t == null) {
-			if (!existingClass.contains(decl.getNameAsString())) {
-				cu.addImport(n);
+			String string = existingClass.get(decl.getNameAsString());
+			if (string == null || string.equals(n)) {
+				if (string == null)
+					cu.addImport(n);
 				t = new ClassOrInterfaceType(null, decl.getName(), null);
 			} else {
 				for (String s : n.split("\\."))
@@ -87,7 +87,8 @@ public class TypeCache {
 
 		String[] split = cl.split("\\.");
 		String last = split[split.length - 1];
-		if (existingClass.contains(last)) {
+		String string = existingClass.get(last);
+		if (string != null && !cl.equals(string)) {
 			for (int i = 0; i < split.length; i++)
 				t = new ClassOrInterfaceType(t, split[i]);
 		} else
@@ -99,13 +100,15 @@ public class TypeCache {
 	@SuppressWarnings("null")
 	private ClassOrInterfaceType create(Class<?> cl, Type... param) {
 		ClassOrInterfaceType r = null;
-		if (existingClass.contains(cl.getSimpleName())) { // need to fully qualify
+		String string = existingClass.get(cl.getSimpleName());
+		if (string == null || string.equals(cl.getName())) {
+			if (string == null)
+				cu.addImport(cl);
+			r = new ClassOrInterfaceType(null, cl.getSimpleName());
+		} else {
 			for (String s : cl.getName().split("\\.")) {
 				r = new ClassOrInterfaceType(r, s);
 			}
-		} else {
-			cu.addImport(cl);
-			r = new ClassOrInterfaceType(null, cl.getSimpleName());
 		}
 		NodeList<Type> p = null;
 		if (param.length > 0) {

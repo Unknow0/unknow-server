@@ -28,7 +28,7 @@ public class ErrorPage extends Handler {
 		else if ("error-page".equals(localName)) {
 			if (code > 0)
 				ctx.descriptor.errorCode.put(code, location);
-			if (location != null)
+			if (clazz != null)
 				ctx.descriptor.errorClass.put(clazz, location);
 			code = -1;
 			clazz = null;
