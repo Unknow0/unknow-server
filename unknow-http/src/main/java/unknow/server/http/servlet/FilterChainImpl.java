@@ -64,4 +64,21 @@ public final class FilterChainImpl implements FilterChain {
 			return servlet.getServletConfig().getServletName();
 		}
 	}
+
+	public static class ChangePath implements FilterChain {
+		private final String path;
+		private final FilterChain next;
+
+		public ChangePath(String path, FilterChain next) {
+			this.path = path;
+			this.next = next;
+		}
+
+		@Override
+		public void doFilter(ServletRequest request, ServletResponse response) throws IOException, ServletException {
+			((ServletRequestImpl) request).setServletPath(path);
+			next.doFilter(request, response);
+		}
+
+	}
 }

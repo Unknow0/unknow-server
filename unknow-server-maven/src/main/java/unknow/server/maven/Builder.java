@@ -21,6 +21,7 @@ import com.github.javaparser.ast.expr.IntegerLiteralExpr;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
 import com.github.javaparser.ast.expr.StringLiteralExpr;
 import com.github.javaparser.ast.expr.VariableDeclarationExpr;
+import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.PrimitiveType;
 import com.github.javaparser.ast.type.Type;
 
@@ -31,7 +32,7 @@ import unknow.server.maven.descriptor.Descriptor;
  * @author unknow
  */
 public abstract class Builder {
-	public abstract void add(ClassOrInterfaceDeclaration cl, Descriptor descriptor, TypeCache types);
+	public abstract void add(BuilderContext ctx);
 
 	@SuppressWarnings("rawtypes")
 	static final NodeList EMPTYLIST = new NodeList<>();
@@ -72,5 +73,16 @@ public abstract class Builder {
 			v.add(new StringLiteralExpr(map.get(key)));
 		}
 		return new ObjectCreationExpr(null, types.get(ArrayMap.class, TypeCache.EMPTY), list(array(types.get(String.class), k), array(types.get(String.class), v)));
+	}
+
+	public static interface BuilderContext {
+		ClassOrInterfaceDeclaration self();
+
+		Descriptor descriptor();
+
+		TypeCache type();
+
+		String sessionFactory();
+
 	}
 }

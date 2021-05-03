@@ -14,6 +14,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
@@ -48,15 +49,19 @@ import com.github.javaparser.ast.expr.TypeExpr;
 import com.github.javaparser.printer.PrettyPrinterConfiguration;
 import com.github.javaparser.printer.PrettyPrinterConfiguration.IndentType;
 import com.github.javaparser.symbolsolver.JavaSymbolSolver;
+import com.github.javaparser.symbolsolver.model.resolution.TypeSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver;
 
 import picocli.CommandLine.Option;
 import unknow.server.http.HttpRawProcessor;
+import unknow.server.http.servlet.DefaultServlet;
 import unknow.server.http.servlet.ServletContextImpl;
 import unknow.server.http.utils.EventManager;
+import unknow.server.http.utils.Resource;
 import unknow.server.http.utils.ServletManager;
+import unknow.server.maven.Builder.BuilderContext;
 import unknow.server.maven.builder.Call;
 import unknow.server.maven.builder.Constructor;
 import unknow.server.maven.builder.CreateContext;
@@ -67,6 +72,7 @@ import unknow.server.maven.builder.LoadInitializer;
 import unknow.server.maven.builder.Main;
 import unknow.server.maven.builder.Process;
 import unknow.server.maven.descriptor.Descriptor;
+import unknow.server.maven.descriptor.SD;
 import unknow.server.maven.sax.HandlerContext;
 import unknow.server.maven.sax.WebApp;
 import unknow.server.nio.cli.NIOServerCli;
@@ -75,7 +81,7 @@ import unknow.server.nio.cli.NIOServerCli;
  * @author unknow
  */
 @Mojo(defaultPhase = LifecyclePhase.GENERATE_SOURCES, name = "servlet-generator")
-public class ServletServerGen extends AbstractMojo {
+public class ServletServerGen extends AbstractMojo implements BuilderContext {
 	private static final List<Builder> BUILDER = Arrays.asList(new Constructor(), new CreateEventManager(), new CreateServletManager(), new CreateContext(), new LoadInitializer(), new Initialize(), new Process(), new Call(), new Main());
 
 	private final CompilationUnit cu = new CompilationUnit();
@@ -95,16 +101,22 @@ public class ServletServerGen extends AbstractMojo {
 	private String className;
 
 	@Parameter(name = "packageName")
-	private String packageName = "unknow.server.http.test";
+	private String packageName;
 
 	@Parameter(name = "output")
 	private String output;
 
-	@Parameter(name = "web-xml")
+	@Parameter(name = "web-xml", defaultValue = "${project.basedir}/src/main/resources/WEB-INF/web.xml")
 	private String webXml;
 
 	@Parameter(name = "charset", defaultValue = "UTF8")
 	private Charset charset;
+
+	@Parameter(name = "resources", defaultValue = "${project.basedir}/src/main/resources")
+	private String resources;
+
+	@Parameter(name = "sessionFactory", defaultValue = "unknow.server.http.servlet.session.NoSessionFactory")
+	private String sessionFactory;
 
 	public void setCharset(String charset) {
 		this.charset = Charset.forName(charset);
@@ -112,7 +124,8 @@ public class ServletServerGen extends AbstractMojo {
 
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
-		JavaSymbolSolver javaSymbolSolver = new JavaSymbolSolver(new CombinedTypeSolver(new ReflectionTypeSolver(), new JavaParserTypeSolver(src)));
+		TypeSolver resolver = new CombinedTypeSolver(new ReflectionTypeSolver(), new JavaParserTypeSolver(src));
+		JavaSymbolSolver javaSymbolSolver = new JavaSymbolSolver(resolver);
 		parser = new JavaParser(new ParserConfiguration().setStoreTokens(true).setSymbolResolver(javaSymbolSolver));
 		cu.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolSolver);
 
@@ -125,7 +138,7 @@ public class ServletServerGen extends AbstractMojo {
 				newInstance.setNamespaceAware(true);
 				SAXParser parser = newInstance.newSAXParser();
 				XMLReader xmlReader = parser.getXMLReader();
-				xmlReader.setContentHandler(new WebApp(new HandlerContext(new StringBuilder(), descriptor, xmlReader)));
+				xmlReader.setContentHandler(new WebApp(new HandlerContext(new StringBuilder(), descriptor, xmlReader, resolver)));
 				xmlReader.setErrorHandler(new ErrorHandler() {
 					@Override
 					public void warning(SAXParseException exception) throws SAXException {
@@ -149,6 +162,25 @@ public class ServletServerGen extends AbstractMojo {
 				getLog().error("failed to parse '" + webXml + "'", e);
 			}
 		}
+		try { // collecting resources files
+			Path path = Paths.get(resources);
+			Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
+				@Override
+				public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+					dir = path.relativize(dir);
+					String path = dir.getName(0).toString().toUpperCase();
+					return "WEB-INF".equals(path) || "META-INF".equals(path) ? FileVisitResult.SKIP_SUBTREE : FileVisitResult.CONTINUE;
+				}
+
+				@Override
+				public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+					descriptor.resources.put("/" + path.relativize(file).toString().replace('\\', '/'), new Resource(Files.getLastModifiedTime(file).to(TimeUnit.MILLISECONDS), Files.size(file)));
+					return FileVisitResult.CONTINUE;
+				}
+			});
+		} catch (IOException e) {
+			throw new MojoFailureException("failed to get source failed", e);
+		}
 
 		final Map<String, String> existingClass = new HashMap<>();
 		final Path local = Paths.get(src, packageName == null ? new String[0] : packageName.split("\\."));
@@ -171,6 +203,15 @@ public class ServletServerGen extends AbstractMojo {
 			});
 		} catch (IOException e) {
 			throw new MojoFailureException("failed to get source failed", e);
+		}
+		SD d = descriptor.findServlet("/");
+		if (d == null) {
+			d = new SD(descriptor.servlets.size());
+			d.clazz = DefaultServlet.class.getName();
+			System.out.println(">> " + d.clazz);
+			d.name = "default";
+			d.pattern.add("/");
+			descriptor.servlets.add(d);
 		}
 		getLog().info("descriptor:\n" + descriptor);
 
@@ -209,7 +250,7 @@ public class ServletServerGen extends AbstractMojo {
 		cl.addField(types.get(ServletContextImpl.class), "CTX", Modifier.Keyword.PRIVATE, Modifier.Keyword.FINAL);
 
 		for (Builder b : BUILDER)
-			b.add(cl, descriptor, types);
+			b.add(this);
 
 		PrettyPrinterConfiguration pp = new PrettyPrinterConfiguration();
 		pp.setIndentType(IndentType.TABS).setIndentSize(1);
@@ -224,5 +265,25 @@ public class ServletServerGen extends AbstractMojo {
 		} catch (IOException e) {
 			throw new MojoFailureException("failed to write output class", e);
 		}
+	}
+
+	@Override
+	public ClassOrInterfaceDeclaration self() {
+		return cl;
+	}
+
+	@Override
+	public Descriptor descriptor() {
+		return descriptor;
+	}
+
+	@Override
+	public TypeCache type() {
+		return types;
+	}
+
+	@Override
+	public String sessionFactory() {
+		return sessionFactory;
 	}
 }

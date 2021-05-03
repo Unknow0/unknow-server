@@ -4,13 +4,11 @@
 package unknow.server.maven.builder;
 
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import com.github.javaparser.ast.Modifier;
-import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.expr.AssignExpr;
@@ -33,7 +31,6 @@ import unknow.server.http.HttpHandler;
 import unknow.server.maven.Builder;
 import unknow.server.maven.Names;
 import unknow.server.maven.TypeCache;
-import unknow.server.maven.descriptor.Descriptor;
 import unknow.server.nio.Handler;
 import unknow.server.nio.HandlerFactory;
 
@@ -42,28 +39,29 @@ import unknow.server.nio.HandlerFactory;
  */
 public class Call extends Builder {
 	@Override
-	public void add(ClassOrInterfaceDeclaration cl, Descriptor descriptor, TypeCache types) {
-		cl.addMethod("call", Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL).setType(Integer.class).addAnnotation(Override.class).addThrownException(Exception.class)
+	public void add(BuilderContext ctx) {
+		TypeCache t = ctx.type();
+		ctx.self().addMethod("call", Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL).setType(Integer.class).addAnnotation(Override.class).addThrownException(Exception.class)
 				.getBody().get()
-				.addStatement(assign(types.get(ExecutorService.class), "executor",
-						new ObjectCreationExpr(null, types.get(ThreadPoolExecutor.class), list(
+				.addStatement(assign(t.get(ExecutorService.class), "executor",
+						new ObjectCreationExpr(null, t.get(ThreadPoolExecutor.class), list(
 								new NameExpr("execMin"), new NameExpr("execMax"), new NameExpr("execIdle"),
-								new FieldAccessExpr(new TypeExpr(types.get(TimeUnit.class)), "SECONDS"),
-								new ObjectCreationExpr(null, types.get(SynchronousQueue.class, types.get(Runnable.class)), emptyList()),
+								new FieldAccessExpr(new TypeExpr(t.get(TimeUnit.class)), "SECONDS"),
+								new ObjectCreationExpr(null, t.get(SynchronousQueue.class, t.get(Runnable.class)), emptyList()),
 								new LambdaExpr(new Parameter(new UnknownType(), "r"),
 										new BlockStmt()
-												.addStatement(assign(types.get(Thread.class), "t", new ObjectCreationExpr(null, types.get(Thread.class), list(new NameExpr("r")))))
+												.addStatement(assign(t.get(Thread.class), "t", new ObjectCreationExpr(null, t.get(Thread.class), list(new NameExpr("r")))))
 												.addStatement(new MethodCallExpr(new NameExpr("t"), "setDaemon", list(new BooleanLiteralExpr(true))))
 												.addStatement(new ReturnStmt(new NameExpr("t"))))))))
-				.addStatement(new AssignExpr(new NameExpr("handler"), new ObjectCreationExpr(null, types.get(HandlerFactory.class), null, emptyList(), list(
-						new MethodDeclaration(Modifier.createModifierList(Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL), types.get(Handler.class), "create").addAnnotation(Override.class)
+				.addStatement(new AssignExpr(new NameExpr("handler"), new ObjectCreationExpr(null, t.get(HandlerFactory.class), null, emptyList(), list(
+						new MethodDeclaration(Modifier.createModifierList(Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL), t.get(Handler.class), "create").addAnnotation(Override.class)
 								.setBody(new BlockStmt()
-										.addStatement(new ReturnStmt(new ObjectCreationExpr(null, types.get(HttpHandler.class), list(new NameExpr("executor"), new ThisExpr(new Name(cl.getName().getIdentifier()))))))))),
+										.addStatement(new ReturnStmt(new ObjectCreationExpr(null, t.get(HttpHandler.class), list(new NameExpr("executor"), new ThisExpr(new Name(ctx.self().getName().getIdentifier()))))))))),
 						Operator.ASSIGN))
 				.addStatement(new MethodCallExpr("loadInitializer"))
 				.addStatement(new MethodCallExpr("initialize"))
 				.addStatement(new MethodCallExpr(Names.EVENTS, "fireContextInitialized", list(Names.CTX)))
-				.addStatement(assign(types.get(Integer.class), "err", new MethodCallExpr(new SuperExpr(), "call")))
+				.addStatement(assign(t.get(Integer.class), "err", new MethodCallExpr(new SuperExpr(), "call")))
 				.addStatement(new MethodCallExpr(Names.EVENTS, "fireContextDestroyed", list(Names.CTX)))
 				.addStatement(new ReturnStmt(new NameExpr("err")));
 	}

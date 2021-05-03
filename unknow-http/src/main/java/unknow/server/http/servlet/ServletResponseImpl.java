@@ -10,6 +10,7 @@ import java.io.Writer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -23,7 +24,6 @@ import javax.servlet.DispatcherType;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
-import javax.servlet.ServletRequestWrapper;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 
@@ -59,6 +59,8 @@ public class ServletResponseImpl implements HttpServletResponse {
 	private static final byte[] ERROR_START = new byte[] { '<', 'h', 't', 'm', 'l', '>', '<', 'b', 'o', 'd', 'y', '>', '<', 'h', '1', '>' };
 	private static final byte[] ERROR_END = new byte[] { '<', '/', 'h', '1', '>', '<', '/', 'b', 'o', 'd', 'y', '>', '<', '/', 'h', 't', 'm', 'l', '>' };
 
+	private static final DateTimeFormatter RFC1123 = DateTimeFormatter.RFC_1123_DATE_TIME.withZone(ZoneOffset.UTC);
+
 	private final ServletContextImpl ctx;
 	private final OutputStream out;
 	private final HttpHandler req;
@@ -86,17 +88,14 @@ public class ServletResponseImpl implements HttpServletResponse {
 	 * @param out the raw output
 	 * @param req the original request
 	 */
-	public ServletResponseImpl(ServletContextImpl ctx, OutputStream out, ServletRequestImpl req) {
+	public ServletResponseImpl(ServletContextImpl ctx, OutputStream out, HttpHandler req) {
 		this.ctx = ctx;
 		this.out = out;
-		this.req = req.req;
+		this.req = req;
 
 		headers = new HashMap<>();
 		cookies = new ArrayList<>();
-
-		String header = req.getHeader("connection");
-		if (header != null)
-			setHeader("connection", header);
+		
 		status = 200;
 	}
 
@@ -194,7 +193,15 @@ public class ServletResponseImpl implements HttpServletResponse {
 		ServletManager manager = ctx.getServletManager();
 		FilterChain f = manager.getError(sc, t);
 		if (f != null) {
-			ServletRequestImpl r = new ServletRequestImpl(ctx, req, DispatcherType.ERROR);
+			ServletRequestImpl r = new ServletRequestImpl(ctx, req, DispatcherType.ERROR, this);
+			r.setAttribute("javax.servlet.error.status_code", sc);
+			if (t != null) {
+				r.setAttribute("javax.servlet.error.exception_type", t.getClass());
+				r.setAttribute("javax.servlet.error.message", t.getMessage());
+				r.setAttribute("javax.servlet.error.exception", t);
+			}
+			r.setAttribute("javax.servlet.error.request_uri", r.getRequestURI());
+			r.setAttribute("javax.servlet.error.servlet_name", "");
 			reset();
 			try {
 				f.doFilter(r, this);
@@ -337,6 +344,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 	@Override
 	public void setLocale(Locale loc) {
 		// TODO check encoding list
+		ctx.getEncoding(loc);
 		this.locale = loc;
 	}
 
@@ -445,12 +453,12 @@ public class ServletResponseImpl implements HttpServletResponse {
 
 	@Override
 	public void setDateHeader(String name, long date) {
-		setHeader(name, DateTimeFormatter.RFC_1123_DATE_TIME.format(Instant.ofEpochMilli(date)));
+		setHeader(name, RFC1123.format(Instant.ofEpochMilli(date)));
 	}
 
 	@Override
 	public void addDateHeader(String name, long date) {
-		addHeader(name, DateTimeFormatter.RFC_1123_DATE_TIME.format(Instant.ofEpochMilli(date)));
+		addHeader(name, RFC1123.format(Instant.ofEpochMilli(date)));
 	}
 
 	@Override

@@ -4,10 +4,12 @@
 package unknow.server.http.servlet;
 
 import java.io.InputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Enumeration;
 import java.util.EventListener;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -23,6 +25,7 @@ import javax.servlet.SessionCookieConfig;
 import javax.servlet.SessionTrackingMode;
 import javax.servlet.descriptor.JspConfigDescriptor;
 
+import unknow.server.http.servlet.session.SessionFactory;
 import unknow.server.http.utils.ArrayMap;
 import unknow.server.http.utils.EventManager;
 import unknow.server.http.utils.ServletManager;
@@ -38,6 +41,10 @@ public class ServletContextImpl implements ServletContext {
 
 	private final ServletManager servlets;
 	private final EventManager events;
+	private final SessionFactory sessions;
+
+	private final ArrayMap<String> localeEncodings;
+	private final ArrayMap<String> mimeTypes;
 
 	private String requestEncoding = "UTF8";
 	private String responseEncoding = "UTF8";
@@ -50,13 +57,16 @@ public class ServletContextImpl implements ServletContext {
 	 * @param servlets   the servlet manager
 	 * @param events     the event manager
 	 */
-	public ServletContextImpl(String name, ArrayMap<String> parameters, ServletManager servlets, EventManager events) {
+	public ServletContextImpl(String name, ArrayMap<String> parameters, ServletManager servlets, EventManager events, SessionFactory sessions, ArrayMap<String> localeEncodings, ArrayMap<String> mimeTypes) {
 		this.name = name;
 		this.parameters = parameters;
 		this.attributes = new ArrayMap<>();
 
 		this.servlets = servlets;
 		this.events = events;
+		this.sessions = sessions;
+		this.localeEncodings = localeEncodings;
+		this.mimeTypes = mimeTypes;
 	}
 
 	/**
@@ -66,8 +76,37 @@ public class ServletContextImpl implements ServletContext {
 		return events;
 	}
 
+	/**
+	 * @return the servlet manager
+	 */
 	public ServletManager getServletManager() {
 		return servlets;
+	}
+
+	/**
+	 * @return the session factory
+	 */
+	public SessionFactory getSessionFactory() {
+		return sessions;
+	}
+
+	/**
+	 * get encoding from a locale
+	 * 
+	 * @param loc the locale
+	 * @return the encoding to use
+	 */
+	public String getEncoding(Locale loc) {
+		String l = loc.toLanguageTag();
+		for (;;) {
+			String e = localeEncodings.get(l);
+			if (e != null)
+				return e;
+			int i = l.lastIndexOf('-');
+			if (i < 0)
+				return responseEncoding;
+			l = l.substring(i);
+		}
 	}
 
 	@Override
@@ -123,8 +162,8 @@ public class ServletContextImpl implements ServletContext {
 
 	@Override
 	public String getMimeType(String file) {
-		// TODO Auto-generated method stub
-		return null;
+		int i = file.lastIndexOf('.');
+		return i < 0 ? null : mimeTypes.get(file.substring(i + 1));
 	}
 
 	@Override
@@ -135,14 +174,12 @@ public class ServletContextImpl implements ServletContext {
 
 	@Override
 	public URL getResource(String path) throws MalformedURLException {
-		// TODO Auto-generated method stub
-		return null;
+		return getClassLoader().getResource(path.substring(1));
 	}
 
 	@Override
 	public InputStream getResourceAsStream(String path) {
-		// TODO Auto-generated method stub
-		return null;
+		return getClassLoader().getResourceAsStream(path.substring(1));
 	}
 
 	@Override
@@ -386,8 +423,8 @@ public class ServletContextImpl implements ServletContext {
 	@Override
 	public <T extends EventListener> T createListener(Class<T> clazz) throws ServletException {
 		try {
-			return clazz.newInstance();
-		} catch (IllegalAccessException | InstantiationException e) {
+			return clazz.getDeclaredConstructor().newInstance();
+		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException e) {
 			throw new ServletException(e);
 		}
 	}

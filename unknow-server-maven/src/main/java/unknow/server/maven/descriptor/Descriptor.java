@@ -30,6 +30,8 @@ import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.resolution.types.ResolvedReferenceType;
 
+import unknow.server.http.utils.Resource;
+
 /**
  * @author unknow
  */
@@ -43,9 +45,64 @@ public class Descriptor implements Consumer<CompilationUnit> {
 	public final List<LD> listeners = new ArrayList<>();
 	public final List<SD> servlets = new ArrayList<>();
 	public final List<SD> filters = new ArrayList<>();
+	public final Map<String, Resource> resources = new HashMap<>();
 
 	public final Map<String, String> errorClass = new HashMap<>();
 	public final Map<Integer, String> errorCode = new HashMap<>();
+
+	public final Map<String, String> localeMapping = new HashMap<>();
+	public final Map<String, String> mimeTypes = new HashMap<>();
+
+	/**
+	 * create new Descriptor
+	 */
+	public Descriptor() {
+		mimeTypes.put("aac", "audio/aac");
+		mimeTypes.put("avi", "video/x-msvideo");
+		mimeTypes.put("bmp", "image/bmp");
+		mimeTypes.put("bz", "application/x-bzip");
+		mimeTypes.put("bz2", "application/x-bzip2");
+		mimeTypes.put("css", "text/css");
+		mimeTypes.put("csv", "text/csc");
+		mimeTypes.put("gif", "image/gif");
+		mimeTypes.put("htm", "text/html");
+		mimeTypes.put("html", "text/html");
+		mimeTypes.put("ico", "image/x-icon");
+		mimeTypes.put("ics", "text/calendar");
+		mimeTypes.put("jar", "application/java-archive");
+		mimeTypes.put("jpg", "image/jpeg");
+		mimeTypes.put("jpeg", "image/jpeg");
+		mimeTypes.put("js", "application/javascript");
+		mimeTypes.put("json", "application/json");
+		mimeTypes.put("mid", "audio/midi");
+		mimeTypes.put("midi", "audio/midi");
+		mimeTypes.put("mpeg", "video/mpeg");
+		mimeTypes.put("oga", "audio/ogg");
+		mimeTypes.put("ogv", "video/ogg");
+		mimeTypes.put("ogx", "application/ogg");
+		mimeTypes.put("otf", "font/otf");
+		mimeTypes.put("png", "image/png");
+		mimeTypes.put("pdf", "application/pdf");
+		mimeTypes.put("rar", "application/x-rar-compressed");
+		mimeTypes.put("rtf", "application/rtf");
+		mimeTypes.put("sh", "application/x-sh");
+		mimeTypes.put("svg", "image/svg+xml");
+		mimeTypes.put("tar", "application/x-tar");
+		mimeTypes.put("tif", "image/tiff");
+		mimeTypes.put("tiff", "image/tiff");
+		mimeTypes.put("ts", "application/typescript");
+		mimeTypes.put("ttf", "font/ttf");
+		mimeTypes.put("wav", "audio/x-wav");
+		mimeTypes.put("weba", "audio/webm");
+		mimeTypes.put("webm", "video/webm");
+		mimeTypes.put("webp", "image/webp");
+		mimeTypes.put("woff", "font/woff");
+		mimeTypes.put("woff2", "font/woff2");
+		mimeTypes.put("xhtml", "application/xhtml+xml");
+		mimeTypes.put("xml", "application/xml");
+		mimeTypes.put("zip", "application/zip");
+		mimeTypes.put("7z", "application/x-7z-compressed");
+	}
 
 	@Override
 	public void accept(CompilationUnit c) {
@@ -104,6 +161,7 @@ public class Descriptor implements Consumer<CompilationUnit> {
 	public SD findServlet(String path) {
 		int l = 0;
 		SD best = null;
+		SD def = null;
 		for (SD s : servlets) {
 			for (String p : s.pattern) {
 				if (p.endsWith("/*") && path.startsWith(p.substring(0, p.length() - 2)) && l < p.length() - 2) {
@@ -113,9 +171,11 @@ public class Descriptor implements Consumer<CompilationUnit> {
 					best = s;
 				else if (path.equals(p))
 					return s;
+				else if (p.equals("/"))
+					def = s;
 			}
 		}
-		return best;
+		return best == null ? def : best;
 	}
 
 	@Override

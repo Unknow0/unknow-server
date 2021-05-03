@@ -20,7 +20,8 @@
 						</goals>
 						<phase>generate-sources</phase>
 						<configuration>
-							<web-xml>${project.basedir}/web.xml</web-xml>
+							<packageName>unknow.server.http.test</packageName>
+							<!--sessionFactory>bla</sessionFactory-->
 						</configuration>
 					</execution>
 				</executions>
@@ -40,7 +41,23 @@
 								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
 									<mainClass>unknow.server.http.test.Server</mainClass>
 								</transformer>
-								</transformers>
+							</transformers>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-war-plugin</artifactId>
+				<version>2.6</version>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>war</goal>
+						</goals>
+						<configuration>
+							<warSourceDirectory>src/main/resources</warSourceDirectory>
 						</configuration>
 					</execution>
 				</executions>

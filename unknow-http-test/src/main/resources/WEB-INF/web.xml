@@ -27,23 +27,42 @@
 
 	<error-page>
 		<error-code>404</error-code>
-		<location>/404</location>
+		<location>/404.html</location>
 	</error-page>
 	<error-page>
 		<exception-type></exception-type>
 		<location>/</location>
 	</error-page>
-	<error-page>
-		<location>/</location>
-	</error-page>
 
 
 
-	<!--jsp-config></jsp-config>
-	<listener></listener>
+	<!--jsp-config>
+		<jsp-property-group>
+		</jsp-property-group>
+	</jsp-config>
+	<jsp-config>
+		<taglib>
+			<taglib-uri>http://bla.com</taglib-uri>
+			<taglib-location></taglib-location>
+		</taglib>
+	</jsp-config-->
 
-	<locale-encoding-mapping-list></locale-encoding-mapping-list>
-	<mime-mapping></mime-mapping>
+	<listener>
+		<listener-class>unknow.server.http.test.Servlet</listener-class>
+	</listener>
+
+	<locale-encoding-mapping-list>
+		<locale-encoding-mapping>
+			<locale>fr_FR</locale>
+			<encoding>utf8</encoding>
+		</locale-encoding-mapping>
+	</locale-encoding-mapping-list>
+
+	<mime-mapping>
+		<extension>jsp</extension>
+		<mime-type>text/html</mime-type>
+	</mime-mapping>
+	<!-- 
 	<module-name></module-name>
 	<servlet>
 		<servlet-name></servlet-name>
@@ -55,5 +74,6 @@
 	</servlet>
 	<servlet-mapping></servlet-mapping>
 	<session-config></session-config>
-	<welcome-file-list></welcome-file-list-->
+	<welcome-file-list>
+	</welcome-file-list-->
 </web-app>

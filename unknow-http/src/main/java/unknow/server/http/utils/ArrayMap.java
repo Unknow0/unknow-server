@@ -50,8 +50,12 @@ public class ArrayMap<T> {
 			value[i] = o;
 			return null;
 		}
-		ensure(len++);
 		i = -i - 1;
+		if (i < len) {
+			System.arraycopy(key, i, key, i + 1, len - i);
+			System.arraycopy(value, i, value, i + 1, len - i);
+		}
+		ensure(len++);
 		T old = value[i];
 		key[i] = name;
 		value[i] = o;
@@ -62,8 +66,12 @@ public class ArrayMap<T> {
 		int i = Arrays.binarySearch(key, 0, len, name);
 		if (i >= 0)
 			return false;
-		ensure(len++);
 		i = -i - 1;
+		if (i < len) {
+			System.arraycopy(key, i, key, i + 1, len - i);
+			System.arraycopy(value, i, value, i + 1, len - i);
+		}
+		ensure(len++);
 		key[i] = name;
 		value[i] = o;
 		return true;

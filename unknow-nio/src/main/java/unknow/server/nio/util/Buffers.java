@@ -646,7 +646,7 @@ public class Buffers {
 			b = b.next;
 		}
 		while (len > 0 && b != null) {
-			int e = b.o + b.l < len ? b.l : len;
+			int e = b.o + (b.l < len ? b.l : len);
 			for (int i = b.o; i < e; i++)
 				c[i - b.o] = (char) b.b[i];
 			int l = e - b.o;

@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.servlet.AsyncContext;
 import javax.servlet.DispatcherType;
@@ -28,6 +29,7 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletInputStream;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
+import javax.servlet.SessionCookieConfig;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -36,6 +38,7 @@ import javax.servlet.http.HttpUpgradeHandler;
 import javax.servlet.http.Part;
 
 import unknow.server.http.HttpHandler;
+import unknow.server.http.servlet.session.SessionFactory;
 import unknow.server.http.utils.ArrayMap;
 
 /**
@@ -47,6 +50,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 	private final ServletContextImpl ctx;
 	public final HttpHandler req;
 	private final DispatcherType type;
+	private final ServletResponseImpl res;
 
 	private String protocol = null;
 	private String method = null;
@@ -57,6 +61,9 @@ public class ServletRequestImpl implements HttpServletRequest {
 	private String encoding = null;
 	private long contentLength = -2;
 
+	private String sessionFromCookie;
+	private String sessionFromUrl;
+
 	private Map<String, List<String>> headers;
 	private Map<String, String[]> parameter;
 
@@ -65,47 +72,45 @@ public class ServletRequestImpl implements HttpServletRequest {
 	private String localAddr;
 	private String localHost;
 
+	private HttpSession session;
+
+	private Cookie[] cookies;
+
 	/**
 	 * create new ServletRequestImpl
 	 * 
 	 * @param ctx  the context
 	 * @param req  the raw request
 	 * @param type dispatcher type of this request
+	 * @param res  the response
 	 */
-	public ServletRequestImpl(ServletContextImpl ctx, HttpHandler req, DispatcherType type) {
+	public ServletRequestImpl(ServletContextImpl ctx, HttpHandler req, DispatcherType type, ServletResponseImpl res) {
 		this.ctx = ctx;
 		this.req = req;
 		this.type = type;
+		this.res = res;
 	}
 
 	private void parseParam() {
 		if (parameter != null)
 			return;
 		parameter = new HashMap<>();
-//		Map<String, List<String>> p = new HashMap<>();
-//		if (!req.query.isEmpty()) {
-//			int i, j = 0;
-//			do {
-//				i = req.query.indexOf((byte) '&', j, -1);
-//				int k = req.query.indexOf((byte) '=', j, i);
-//				sb.setLength(0);
-//				req.query.toString(sb, j, k);
-//				String key = sb.toString();
-//				List<String> list = p.get(key);
-//				if (list == null)
-//					p.put(key, list = new ArrayList<>());
-//				if (k > 0) {
-//					sb.setLength(0);
-//					req.query.toString(sb, k, i);
-//					list.add(sb.toString());
-//				}
-//			} while (i > 0);
-//		}
-//		// TODO content-type application/x-www-form-urlencoded
-//
-//		String[] s = new String[0];
-//		for (Entry<String, List<String>> e : p.entrySet())
-//			parameter.put(e.getKey(), e.getValue().toArray(s));
+		Map<String, List<String>> p = new HashMap<>();
+		req.parseQueryParam(p);
+
+		if ("POST".equals(getMethod()) && "application/x-www-form-urlencoded".equalsIgnoreCase(getContentType()))
+			req.parseContentParam(p);
+
+		String[] s = new String[0];
+		for (Entry<String, List<String>> e : p.entrySet())
+			parameter.put(e.getKey(), e.getValue().toArray(s));
+	}
+
+	/**
+	 * @param servletPath the servletPath to set
+	 */
+	public void setServletPath(String servletPath) {
+		this.servletPath = servletPath;
 	}
 
 	@Override
@@ -132,7 +137,8 @@ public class ServletRequestImpl implements HttpServletRequest {
 	@Override
 	public String getCharacterEncoding() {
 		if (encoding == null) {
-			// TODO get from request
+			String header = getHeader("content-type");
+			// TODO ";encoding="
 			if (encoding == null)
 				encoding = ctx.getRequestCharacterEncoding();
 		}
@@ -420,7 +426,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public StringBuffer getRequestURL() {
-		StringBuffer append = new StringBuffer("http://").append(getServerName()).append(':').append(getServerPort()).append(getServletPath());
+		StringBuffer append = new StringBuffer(getScheme()).append("://").append(getServerName()).append(':').append(getServerPort()).append(getServletPath());
 		if (getPathInfo() != null)
 			append.append(getPathInfo());
 		return append;
@@ -428,8 +434,9 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public Cookie[] getCookies() {
-		// TODO Auto-generated method stub
-		return null;
+		if (cookies == null)
+			cookies = req.parseCookie();
+		return cookies;
 	}
 
 	@Override
@@ -458,44 +465,64 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public String getRequestedSessionId() {
-		// TODO Auto-generated method stub
+		if (sessionFromCookie != null)
+			return sessionFromCookie;
+		if (sessionFromUrl != null)
+			return sessionFromUrl;
+//		ctx.getEffectiveSessionTrackingModes() TODO
+		SessionCookieConfig cookieCfg = ctx.getSessionCookieConfig();
+		if (cookieCfg != null) {
+			String name = cookieCfg.getName();
+			Cookie[] c = getCookies();
+			for (int i = 0; i < c.length; i++) {
+				if (name.equals(c[i].getName()))
+					return sessionFromCookie = c[i].getValue();
+			}
+		}
+		// else look in url
 		return null;
 	}
 
 	@Override
 	public HttpSession getSession(boolean create) {
-		// TODO Auto-generated method stub
-		return null;
+		if (session != null)
+			return session;
+		String sessionId = getRequestedSessionId();
+		SessionFactory sessionFactory = ctx.getSessionFactory();
+//		ctx.getSessionCookieConfig().
+		if (sessionId == null && create) {
+			sessionId = sessionFactory.generateId();
+			res.addCookie(new Cookie("JSESSIONID", sessionId)); // TODO add httpOnly
+		}
+		return session = sessionFactory.get(sessionId, create);
 	}
 
 	@Override
 	public HttpSession getSession() {
-		// TODO Auto-generated method stub
-		return null;
+		return getSession(true);
 	}
 
 	@Override
 	public String changeSessionId() {
+		if (session == null)
+			return null;
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public boolean isRequestedSessionIdValid() {
-		// TODO Auto-generated method stub
-		return false;
+		return getSession(false) != null;
 	}
 
 	@Override
 	public boolean isRequestedSessionIdFromCookie() {
-		// TODO Auto-generated method stub
-		return false;
+		return sessionFromCookie != null;
 	}
 
 	@Override
 	public boolean isRequestedSessionIdFromURL() {
-		// TODO Auto-generated method stub
-		return false;
+		return sessionFromUrl != null;
 	}
 
 	@Deprecated

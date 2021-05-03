@@ -39,7 +39,6 @@ public class ObjectArrayMap<K, T> {
 		this.len = key.length;
 	}
 
-	@SuppressWarnings("unchecked")
 	public T get(K name) {
 		int i = Arrays.binarySearch(key, 0, len, name, cmp);
 		return i < 0 ? null : value[i];
@@ -49,12 +48,15 @@ public class ObjectArrayMap<K, T> {
 		return new E();
 	}
 
-	@SuppressWarnings("unchecked")
 	public T set(K name, T o) {
 		int i = Arrays.binarySearch(key, 0, len, name, cmp);
 		if (i >= 0) {
 			value[i] = o;
 			return null;
+		}
+		if (i < len) {
+			System.arraycopy(key, i, key, i + 1, len - i);
+			System.arraycopy(value, i, value, i + 1, len - i);
 		}
 		ensure(len++);
 		i = -i - 1;
@@ -64,11 +66,14 @@ public class ObjectArrayMap<K, T> {
 		return old;
 	}
 
-	@SuppressWarnings("unchecked")
 	public boolean setOnce(K name, T o) {
 		int i = Arrays.binarySearch(key, 0, len, name, cmp);
 		if (i >= 0)
 			return false;
+		if (i < len) {
+			System.arraycopy(key, i, key, i + 1, len - i);
+			System.arraycopy(value, i, value, i + 1, len - i);
+		}
 		ensure(len++);
 		i = -i - 1;
 		key[i] = name;

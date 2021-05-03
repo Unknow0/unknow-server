@@ -3,6 +3,8 @@
  */
 package unknow.server.nio.cli;
 
+import java.lang.reflect.InvocationTargetException;
+
 import picocli.CommandLine.ITypeConverter;
 import picocli.CommandLine.TypeConversionException;
 import unknow.server.nio.NIOServerListener;
@@ -22,7 +24,7 @@ public class NIOListenerConverter implements ITypeConverter<NIOServerListener> {
 		return new NIOServerListener.Composite(listeners);
 	}
 
-	private static NIOServerListener get(String s) throws ClassNotFoundException, InstantiationException, IllegalAccessException {
+	private static NIOServerListener get(String s) throws ClassNotFoundException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
 		if ("NOP".equals(s))
 			return NIOServerListener.NOP;
 		if ("LOG".equals(s))
@@ -30,6 +32,6 @@ public class NIOListenerConverter implements ITypeConverter<NIOServerListener> {
 		Class<?> forName = Class.forName(s);
 		if (!NIOServerListener.class.isAssignableFrom(forName))
 			throw new TypeConversionException("class '" + forName + "' doesn't implements NIOServerListener");
-		return (NIOServerListener) forName.newInstance();
+		return (NIOServerListener) forName.getDeclaredConstructor().newInstance();
 	}
 }

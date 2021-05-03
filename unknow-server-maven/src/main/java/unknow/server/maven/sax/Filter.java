@@ -29,7 +29,6 @@ public class Filter extends Handler {
 
 	@Override
 	public void endElement(String uri, String localName, String qName) throws SAXException {
-		System.out.println("Filter: '" + localName + "'");
 		if ("filter-name".equals(localName))
 			filter.name = lastContent();
 		else if ("filter-class".equals(localName))

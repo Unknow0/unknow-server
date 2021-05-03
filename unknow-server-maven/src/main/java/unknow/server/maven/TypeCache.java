@@ -47,8 +47,10 @@ public class TypeCache {
 		if (t == null) {
 			String string = existingClass.get(decl.getNameAsString());
 			if (string == null || string.equals(n)) {
-				if (string == null)
+				if (string == null) {
 					cu.addImport(n);
+					existingClass.put(decl.getNameAsString(), n);
+				}
 				t = new ClassOrInterfaceType(null, decl.getName(), null);
 			} else {
 				for (String s : n.split("\\."))
@@ -91,8 +93,13 @@ public class TypeCache {
 		if (string != null && !cl.equals(string)) {
 			for (int i = 0; i < split.length; i++)
 				t = new ClassOrInterfaceType(t, split[i]);
-		} else
+		} else {
+			if (string == null) {
+				cu.addImport(cl);
+				existingClass.put(last, cl);
+			}
 			t = new ClassOrInterfaceType(null, last);
+		}
 		types.put(cl, t);
 		return t;
 	}
@@ -102,8 +109,10 @@ public class TypeCache {
 		ClassOrInterfaceType r = null;
 		String string = existingClass.get(cl.getSimpleName());
 		if (string == null || string.equals(cl.getName())) {
-			if (string == null)
+			if (string == null) {
 				cu.addImport(cl);
+				existingClass.put(cl.getSimpleName(), cl.getName());
+			}
 			r = new ClassOrInterfaceType(null, cl.getSimpleName());
 		} else {
 			for (String s : cl.getName().split("\\.")) {

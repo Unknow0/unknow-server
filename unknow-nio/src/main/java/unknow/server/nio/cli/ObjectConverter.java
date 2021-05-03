@@ -11,6 +11,6 @@ import picocli.CommandLine.ITypeConverter;
 public class ObjectConverter implements ITypeConverter<Object> {
 	@Override
 	public Object convert(String value) throws Exception {
-		return Class.forName(value).newInstance();
+		return Class.forName(value).getDeclaredConstructor().newInstance();
 	}
 }

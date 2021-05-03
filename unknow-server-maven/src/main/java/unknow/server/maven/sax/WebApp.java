@@ -27,6 +27,12 @@ public class WebApp extends Handler {
 			ctx.reader.setContentHandler(new Filter(ctx));
 		else if ("filter-mapping".equals(localName))
 			ctx.reader.setContentHandler(new FilterMapping(ctx));
+		else if ("listener".equals(localName))
+			ctx.reader.setContentHandler(new Listener(ctx));
+		else if ("locale-encoding-mapping".equals(localName))
+			ctx.reader.setContentHandler(new LocalEncoding(ctx));
+		else if ("mime-mapping".equals(localName))
+			ctx.reader.setContentHandler(new MimeType(ctx));
 
 		else if ("servlet".equals(localName))
 			ctx.reader.setContentHandler(new Servlet(ctx));
