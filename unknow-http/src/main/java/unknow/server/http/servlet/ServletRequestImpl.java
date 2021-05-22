@@ -5,6 +5,7 @@ package unknow.server.http.servlet;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -12,6 +13,7 @@ import java.security.Principal;
 import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -38,6 +40,8 @@ import javax.servlet.http.HttpUpgradeHandler;
 import javax.servlet.http.Part;
 
 import unknow.server.http.HttpHandler;
+import unknow.server.http.servlet.in.EmptyInputStream;
+import unknow.server.http.servlet.in.LengthInputStream;
 import unknow.server.http.servlet.session.SessionFactory;
 import unknow.server.http.utils.ArrayMap;
 
@@ -75,6 +79,11 @@ public class ServletRequestImpl implements HttpServletRequest {
 	private HttpSession session;
 
 	private Cookie[] cookies;
+
+	private List<Locale> locales;
+
+	private BufferedReader reader;
+	private ServletInputStream input;
 
 	/**
 	 * create new ServletRequestImpl
@@ -138,7 +147,15 @@ public class ServletRequestImpl implements HttpServletRequest {
 	public String getCharacterEncoding() {
 		if (encoding == null) {
 			String header = getHeader("content-type");
-			// TODO ";encoding="
+			if (header != null) {
+				int i = header.indexOf(";encoding=");
+				if (i > 0) {
+					int e = header.indexOf(';', i);
+					if (e < 0)
+						e = header.length();
+					encoding = header.substring(i + 10, e);
+				}
+			}
 			if (encoding == null)
 				encoding = ctx.getRequestCharacterEncoding();
 		}
@@ -199,17 +216,27 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public Locale getLocale() {
-		// Accept-Language
-		// TODO Auto-generated method stub
-		return null;
+		return getLocales().nextElement();
 	}
 
 	@Override
 	public Enumeration<Locale> getLocales() {
-		// TODO Auto-generated method stub
-		// Accept-Language
-		// or default Local
-		return null;
+		if (locales == null) {
+			locales = new ArrayList<>();
+			Enumeration<String> langs = getHeaders("Accept-Language");
+			while (langs.hasMoreElements()) {
+				String l = langs.nextElement();
+				int i = l.indexOf(';');
+				if (i > 0) // TODO support quality ?
+					l = l.substring(0, i);
+				if ("*".equals(l))
+					continue;
+				locales.add(Locale.forLanguageTag(l));
+			}
+			if (locales.isEmpty())
+				locales.add(Locale.getDefault());
+		}
+		return Collections.enumeration(locales);
 	}
 
 	@Override
@@ -229,14 +256,16 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public ServletInputStream getInputStream() throws IOException {
-		// TODO Auto-generated method stub
-		return null;
+		if (reader != null)
+			throw new IllegalStateException("getReader() called");
+		return input = createInput();
 	}
 
 	@Override
 	public BufferedReader getReader() throws IOException {
-		// TODO Auto-generated method stub
-		return null;
+		if (input != null)
+			throw new IllegalStateException("getInputStream() called");
+		return reader = new BufferedReader(new InputStreamReader(createInput(), getCharacterEncoding()));
 	}
 
 	@Override
@@ -505,9 +534,11 @@ public class ServletRequestImpl implements HttpServletRequest {
 	@Override
 	public String changeSessionId() {
 		if (session == null)
-			return null;
-		// TODO Auto-generated method stub
-		return null;
+			throw new IllegalStateException("no session");
+		SessionFactory sessionFactory = ctx.getSessionFactory();
+		String newId = sessionFactory.generateId();
+		sessionFactory.changeId(session, newId);
+		return newId;
 	}
 
 	@Override
@@ -574,6 +605,16 @@ public class ServletRequestImpl implements HttpServletRequest {
 	@Override
 	public ServletContext getServletContext() {
 		return ctx;
+	}
+
+	private ServletInputStream createInput() {
+//		String tr = getHeader("transfert-encoding"); // TODO
+//		if ("chunked".equalsIgnoreCase(tr))
+//			return new ChunckedInputStream(req.getIn());
+		long l = getContentLengthLong();
+		if (l > 0)
+			return new LengthInputStream(req.getIn(), l);
+		return EmptyInputStream.INSTANCE;
 	}
 
 	private static String getAddr(InetSocketAddress a) {

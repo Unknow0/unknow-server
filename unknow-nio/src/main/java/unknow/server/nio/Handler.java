@@ -27,10 +27,16 @@ public abstract class Handler {
 	private final InputStream in = new BuffersInputStream(pendingRead);
 
 	private Out out = new Out(this);
-	SelectionKey key;
+	private SelectionKey key;
 
 	private long lastRead;
 	private long lastWrite;
+
+	void attach(SelectionKey key) {
+		key.attach(this);
+		this.key = key;
+		lastRead = lastWrite = System.currentTimeMillis();
+	}
 
 	/**
 	 * read data from the channel and try to handles it

@@ -19,4 +19,9 @@ public class NoSessionFactory implements SessionFactory {
 	public String generateId() {
 		return null;
 	}
+
+	@Override
+	public void changeId(HttpSession session, String newId) {
+		throw new UnsupportedOperationException();
+	}
 }

@@ -191,4 +191,9 @@ public final class HttpError {
 				return SERVER_ERROR;
 		}
 	}
+
+	@Override
+	public String toString() {
+		return code + " " + message;
+	}
 }

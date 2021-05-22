@@ -40,6 +40,7 @@ public class Buffers {
 		tail.b[tail.o + tail.l] = (byte) b;
 		tail.l++;
 		len++;
+		this.notifyAll();
 	}
 
 	/**
@@ -56,6 +57,7 @@ public class Buffers {
 			head = tail = Chunk.get();
 		len += l;
 		writeInto(tail, buf, o, l);
+		this.notifyAll();
 	}
 
 	/**
@@ -70,6 +72,7 @@ public class Buffers {
 			head = tail = Chunk.get();
 		len += bb.remaining();
 		writeInto(tail, bb);
+		this.notifyAll();
 	}
 
 	public synchronized void prepend(byte b) {
@@ -226,6 +229,7 @@ public class Buffers {
 			Chunk n = Chunk.get();
 			System.arraycopy(c.b, c.o, n.b, 0, l);
 			c.o += l;
+			c.l -= l;
 			n.l = l;
 			read += l;
 			if (last != null)

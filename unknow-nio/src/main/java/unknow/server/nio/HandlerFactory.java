@@ -25,10 +25,7 @@ public abstract class HandlerFactory {
 		Handler h = cache.poll();
 		if (h == null)
 			h = create();
-
-		key.attach(h);
-		h.key = key;
-
+		h.attach(key);
 		return h;
 	}
 

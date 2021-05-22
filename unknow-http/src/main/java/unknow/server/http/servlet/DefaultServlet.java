@@ -5,11 +5,6 @@ package unknow.server.http.servlet;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.JarURLConnection;
-import java.net.URL;
-import java.net.URLConnection;
-import java.util.concurrent.TimeUnit;
-import java.util.jar.JarEntry;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
@@ -29,14 +24,21 @@ public class DefaultServlet extends HttpServlet {
 
 	private final ArrayMap<Resource> resources;
 
+	/**
+	 * create new DefaultServlet
+	 * 
+	 * @param resources all accessible resources
+	 */
 	public DefaultServlet(ArrayMap<Resource> resources) {
 		this.resources = resources;
 	}
 
 	/**
-	 * @param req
-	 * @param resp
-	 * @param b
+	 * process a request
+	 * 
+	 * @param req     the request
+	 * @param resp    the response
+	 * @param content if true file content will be sent
 	 * @throws IOException
 	 */
 	private void process(HttpServletRequest req, HttpServletResponse resp, boolean content) throws IOException {

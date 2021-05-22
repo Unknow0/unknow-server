@@ -63,6 +63,12 @@ final class Server extends NIOServerCli implements HttpRawProcessor {
 	@Option(names = "--exec-idle", description = "max idle time for exec thread, default to 60", descriptionKey = "exec-idle")
 	long execIdle = 60L;
 
+	/**
+	 * max time to keep idle keepalive connection, default to -1
+	 */
+	@Option(names = "--keep-alive-idle", description = "max time to keep idle keepalive connection, default to -1", descriptionKey = "keep-alive-idle")
+	int keepAliveIdle = -1;
+
 	private final ServletManager SERVLETS;
 
 	private final EventManager EVENTS;
@@ -140,7 +146,7 @@ final class Server extends NIOServerCli implements HttpRawProcessor {
 
 			@Override()
 			protected final Handler create() {
-				return new HttpHandler(executor, Server.this);
+				return new HttpHandler(executor, Server.this, keepAliveIdle);
 			}
 		};
 		loadInitializer();

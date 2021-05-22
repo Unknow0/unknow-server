@@ -1,5 +1,6 @@
 package unknow.server.http.test;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Enumeration;
@@ -68,6 +69,15 @@ public class Servlet extends HttpServlet implements ServletRequestListener, Filt
 				w.write(" '" + v[i] + "'");
 			w.write('\n');
 		}
+		w.write("Content:\n");
+		try (BufferedReader r = req.getReader()) {
+			char[] c = new char[2048];
+			int l;
+			while ((l = r.read(c)) > 0)
+				w.write(c, 0, l);
+		}
+		w.write("\n--------------\n");
+		w.close();
 	}
 
 	@Override

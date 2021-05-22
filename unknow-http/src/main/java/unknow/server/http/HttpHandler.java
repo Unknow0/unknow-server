@@ -58,6 +58,7 @@ public class HttpHandler extends Handler implements Runnable {
 
 	private final ExecutorService executor;
 	private final HttpRawProcessor processor;
+	private final int keepAliveIdle;
 
 	private int step = METHOD;
 	private int last = 0;
@@ -73,9 +74,10 @@ public class HttpHandler extends Handler implements Runnable {
 	/**
 	 * create new RequestBuilder
 	 */
-	public HttpHandler(ExecutorService executor, HttpRawProcessor processor) {
+	public HttpHandler(ExecutorService executor, HttpRawProcessor processor, int keepAliveIdle) {
 		this.executor = executor;
 		this.processor = processor;
+		this.keepAliveIdle = keepAliveIdle;
 		meta = new Buffers();
 		sb = new StringBuilder();
 	}
@@ -378,9 +380,15 @@ public class HttpHandler extends Handler implements Runnable {
 
 	@Override
 	public boolean isClosed() {
-		// TODO check keep alive max time
+		if (super.isClosed())
+			return true;
+		if (keepAliveIdle > 0) {
+			long e = System.currentTimeMillis() - keepAliveIdle;
+			if (lastRead() < e && lastWrite() < e)
+				return true;
+		}
 		// TODO check request timeout
-		return super.isClosed();
+		return false;
 	}
 
 	@Override

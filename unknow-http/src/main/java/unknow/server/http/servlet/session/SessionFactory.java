@@ -24,4 +24,12 @@ public interface SessionFactory {
 	 * @return a new sessionId
 	 */
 	String generateId();
+
+	/**
+	 * change the id of a session
+	 * 
+	 * @param session the session to change
+	 * @param newId   the new session id
+	 */
+	void changeId(HttpSession session, String newId);
 }

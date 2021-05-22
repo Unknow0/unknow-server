@@ -22,6 +22,7 @@ public class BuffersInputStream extends InputStream {
 
 	@Override
 	public int read() throws IOException {
+		waitData();
 		int b = buffers.read();
 		if (mark != null && b > 0)
 			mark[l++] = (byte) b;
@@ -35,6 +36,7 @@ public class BuffersInputStream extends InputStream {
 
 	@Override
 	public int read(byte[] b, int off, int len) throws IOException {
+		waitData();
 		len = buffers.read(b, off, len);
 		if (mark != null && len >= 0) {
 			ensureMark(l + len);
@@ -72,5 +74,16 @@ public class BuffersInputStream extends InputStream {
 	@Override
 	public int available() throws IOException {
 		return buffers.length();
+	}
+
+	private void waitData() throws IOException {
+		synchronized (buffers) {
+			try {
+				while (buffers.length() == 0)
+					buffers.wait();
+			} catch (InterruptedException e) {
+				throw new IOException("interrupted");
+			}
+		}
 	}
 }
