@@ -22,7 +22,7 @@ public class DefaultOptionProvider implements IDefaultValueProvider {
 	/**
 	 * create new DefaultOptionProvider
 	 * 
-	 * @throws IOException
+	 * @throws IOException in case of error
 	 */
 	public DefaultOptionProvider() throws IOException {
 		prop = new Properties();

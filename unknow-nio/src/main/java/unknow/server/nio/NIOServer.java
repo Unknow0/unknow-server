@@ -54,7 +54,7 @@ public class NIOServer implements Runnable {
 	}
 
 	/**
-	 * wait & accept new connection
+	 * wait and accept new connection
 	 */
 	@Override
 	public void run() {
@@ -76,9 +76,9 @@ public class NIOServer implements Runnable {
 	/**
 	 * register a client socket to one ioworker
 	 * 
-	 * @param socket
+	 * @param socket socket to register
 	 * @return the handler
-	 * @throws IOException
+	 * @throws IOException in case of error
 	 */
 	public synchronized Handler register(SocketChannel socket) throws IOException {
 		Handler register = workers[i++].register(socket);

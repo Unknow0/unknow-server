@@ -41,10 +41,9 @@ public abstract class Handler {
 	/**
 	 * read data from the channel and try to handles it
 	 * 
-	 * @param channel
-	 * @param buf
-	 * @param executors
-	 * @throws IOException
+	 * @param channel source channel
+	 * @param buf     output buffer
+	 * @throws IOException in case of error
 	 */
 	protected final void readFrom(SocketChannel channel, ByteBuffer buf) throws IOException {
 		lastRead = System.currentTimeMillis();
@@ -63,7 +62,7 @@ public abstract class Handler {
 	 * 
 	 * @param channel where to write
 	 * @param buf     local cache
-	 * @throws IOException
+	 * @throws IOException in case of error
 	 */
 	protected final void writeInto(SocketChannel channel, ByteBuffer buf) throws IOException {
 		lastWrite = System.currentTimeMillis();
@@ -83,7 +82,7 @@ public abstract class Handler {
 	/**
 	 * timestamp of the last read
 	 * 
-	 * @return time stamp in ms
+	 * @return timestamp in ms
 	 */
 	public final long lastRead() {
 		return lastRead;
@@ -92,7 +91,7 @@ public abstract class Handler {
 	/**
 	 * timestamp of the last write
 	 * 
-	 * @return time stamp in ms
+	 * @return timestamp in ms
 	 */
 	public final long lastWrite() {
 		return lastWrite;
