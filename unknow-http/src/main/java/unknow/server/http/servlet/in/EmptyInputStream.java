@@ -4,7 +4,6 @@
 package unknow.server.http.servlet.in;
 
 import java.io.IOException;
-import java.io.OutputStream;
 
 import javax.servlet.ReadListener;
 import javax.servlet.ServletInputStream;
@@ -43,21 +42,6 @@ public class EmptyInputStream extends ServletInputStream {
 	}
 
 	@Override
-	public byte[] readAllBytes() throws IOException {
-		return new byte[0];
-	}
-
-	@Override
-	public int readNBytes(byte[] b, int off, int len) throws IOException {
-		return -1;
-	}
-
-	@Override
-	public byte[] readNBytes(int len) throws IOException {
-		return new byte[0];
-	}
-
-	@Override
 	public int readLine(byte[] b, int off, int len) throws IOException {
 		return -1;
 	}
@@ -75,10 +59,5 @@ public class EmptyInputStream extends ServletInputStream {
 	@Override
 	public int read() throws IOException {
 		return -1;
-	}
-
-	@Override
-	public long transferTo(OutputStream out) throws IOException {
-		return 0;
 	}
 }
