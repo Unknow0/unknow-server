@@ -40,6 +40,7 @@ import javax.servlet.http.HttpUpgradeHandler;
 import javax.servlet.http.Part;
 
 import unknow.server.http.HttpHandler;
+import unknow.server.http.servlet.in.ChunckedInputStream;
 import unknow.server.http.servlet.in.EmptyInputStream;
 import unknow.server.http.servlet.in.LengthInputStream;
 import unknow.server.http.servlet.session.SessionFactory;
@@ -608,9 +609,9 @@ public class ServletRequestImpl implements HttpServletRequest {
 	}
 
 	private ServletInputStream createInput() {
-//		String tr = getHeader("transfert-encoding"); // TODO
-//		if ("chunked".equalsIgnoreCase(tr))
-//			return new ChunckedInputStream(req.getIn());
+		String tr = getHeader("transfert-encoding"); // TODO
+		if ("chunked".equalsIgnoreCase(tr))
+			return new ChunckedInputStream(req.getIn());
 		long l = getContentLengthLong();
 		if (l > 0)
 			return new LengthInputStream(req.getIn(), l);

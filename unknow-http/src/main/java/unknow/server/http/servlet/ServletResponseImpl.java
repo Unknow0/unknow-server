@@ -95,7 +95,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 
 		headers = new HashMap<>();
 		cookies = new ArrayList<>();
-		
+
 		status = 200;
 	}
 
@@ -117,9 +117,9 @@ public class ServletResponseImpl implements HttpServletResponse {
 		out.write(http == null ? HttpError.encodeStatusLine(status, "Unknown") : http.encoded);
 		for (Entry<String, List<String>> e : headers.entrySet())
 			writeHeader(e.getKey(), e.getValue());
-		if (servletOut.isChuncked())
+		if (servletOut != null && servletOut.isChuncked())
 			out.write(CHUNKED);
-		else if (contentLength == 0)
+		else if (servletOut == null || contentLength == 0)
 			out.write(CONTENT_LENGTH0);
 		else {
 			out.write(CONTENT_LENGTH);
@@ -183,6 +183,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 	public void close() throws IOException {
 		if (servletOut != null)
 			servletOut.close();
+		commit();
 		if (shouldClose)
 			out.close();
 		else

@@ -30,7 +30,7 @@ public class TypeCache {
 
 	public TypeCache(CompilationUnit cu, Map<String, String> existingClass) {
 		this.cu = cu;
-		this.existingClass = existingClass;
+		this.existingClass = new HashMap<>(existingClass);
 
 		this.types = new HashMap<>();
 		this.sb = new StringBuilder();
@@ -53,7 +53,7 @@ public class TypeCache {
 				}
 				t = new ClassOrInterfaceType(null, decl.getName(), null);
 			} else {
-				for (String s : n.split("\\."))
+				for (String s : n.split("[.$]"))
 					t = new ClassOrInterfaceType(t, s);
 			}
 			types.put(n, t);
@@ -87,15 +87,15 @@ public class TypeCache {
 		if (t != null)
 			return t;
 
-		String[] split = cl.split("\\.");
+		String[] split = cl.split("[.$]");
 		String last = split[split.length - 1];
 		String string = existingClass.get(last);
 		if (string != null && !cl.equals(string)) {
 			for (int i = 0; i < split.length; i++)
 				t = new ClassOrInterfaceType(t, split[i]);
 		} else {
-			if (string == null) {
-				cu.addImport(cl);
+			if (split.length > 1 && string == null) {
+				cu.addImport(cl.replace('$', '.'));
 				existingClass.put(last, cl);
 			}
 			t = new ClassOrInterfaceType(null, last);
@@ -115,7 +115,7 @@ public class TypeCache {
 			}
 			r = new ClassOrInterfaceType(null, cl.getSimpleName());
 		} else {
-			for (String s : cl.getName().split("\\.")) {
+			for (String s : cl.getName().split("[.$]")) {
 				r = new ClassOrInterfaceType(r, s);
 			}
 		}

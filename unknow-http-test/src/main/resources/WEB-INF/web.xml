@@ -63,7 +63,6 @@
 		<mime-type>text/html</mime-type>
 	</mime-mapping>
 	<!-- 
-	<module-name></module-name>
 	<servlet>
 		<servlet-name></servlet-name>
 		<enabled></enabled>
@@ -72,8 +71,14 @@
 		<load-on-startup></load-on-startup>
 		<servlet-class></servlet-class>
 	</servlet>
-	<servlet-mapping></servlet-mapping>
-	<session-config></session-config>
-	<welcome-file-list>
+	<servlet-mapping></servlet-mapping-->
+	<session-config>
+		<cookie-config>
+			
+		</cookie-config>
+		<tracking-mode></tracking-mode>
+		<session-timeout></session-timeout>
+	</session-config>
+	<!--welcome-file-list>
 	</welcome-file-list-->
 </web-app>
