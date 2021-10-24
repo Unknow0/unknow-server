@@ -26,6 +26,8 @@ jobs:
     - name: build
       run: mvn -B package
 
+    - name: install xmllint
+      run: sudo apt-get install libxml2-utils
     - name: validate
       run: bash .github/http_test.sh
 
