@@ -22,13 +22,14 @@ import javax.servlet.http.HttpServletResponse;
 /**
  * @author unknow
  */
-@WebServlet(urlPatterns = { "/404", "/test/*", "/bla", "/bla/yes/*", "*.test" }, name = "test", loadOnStartup = 1, initParams = @WebInitParam(name = "content", value = "it works"))
+@WebServlet(urlPatterns = { "/test", "/debug/*" }, name = "test", loadOnStartup = 1, initParams = @WebInitParam(name = "content", value = "it works"))
 public class Servlet extends HttpServlet implements ServletRequestListener, Filter {
 	private static final long serialVersionUID = 1L;
 
 	@Override
 	public void init() throws ServletException {
-//		System.out.println(getInitParameter("content"));
+		if (!"it works".equals(getInitParameter("content")))
+			throw new ServletException("wrong init-param content; " + getInitParameter("content"));
 	}
 
 	@Override

@@ -5,8 +5,6 @@ package unknow.server.maven.jaxws;
 
 import java.util.function.Function;
 
-import javax.swing.tree.VariableHeightLayoutCache;
-
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 
@@ -119,7 +117,7 @@ public class JaxSaxHandlerBuilder {
 	public void setValue(XmlElem value) {
 		last = new BlockStmt()
 				.addStatement(new MethodCallExpr(
-						new EnclosedExpr(new CastExpr(types.get(clazz), new MethodCallExpr(CONTEXT, "pop"))),
+						new EnclosedExpr(new CastExpr(types.get(clazz), new MethodCallExpr(CONTEXT, "peek"))),
 						value.setter,
 						new NodeList<>(value.type.convert(types, new MethodCallExpr(CONTEXT, "textContent")))))
 				.addStatement(new MethodCallExpr(CONTEXT, "previous"));

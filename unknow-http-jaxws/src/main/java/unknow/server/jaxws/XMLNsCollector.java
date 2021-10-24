@@ -28,7 +28,8 @@ public class XMLNsCollector implements XMLWriter {
 
 	@Override
 	public void attribute(String name, String nsUri, String value) throws IOException {
-		ns.merge(nsUri, 1, Integer::sum);
+		if (!nsUri.isEmpty())
+			ns.merge(nsUri, 1, Integer::sum);
 	}
 
 	@Override
@@ -37,20 +38,26 @@ public class XMLNsCollector implements XMLWriter {
 
 	@Override
 	public void endElement(String name, String nsUri) throws IOException {
-		ns.merge(nsUri, 1, Integer::sum);
 	}
 
 	public Map<String, String> buildNsMapping() {
 		if (ns.isEmpty())
 			return Collections.emptyMap();
 		Map<String, String> map = new HashMap<>();
+
+		if (ns.containsKey("")) {
+			map.put("", "");
+			ns.remove("");
+		}
 		List<String> list = new ArrayList<>(ns.keySet());
-		Collections.sort(list, (a, b) -> ns.get(a) - ns.get(b));
+		Collections.sort(list, (a, b) -> ns.get(b) - ns.get(a));
 		Iterator<String> it = list.iterator();
-		map.put(it.next(), "");
+		if (map.isEmpty())
+			map.put(it.next(), "");
 		int i = 0;
 		while (it.hasNext())
 			map.put(it.next(), prefix(i++));
+		map.remove("", "");
 		return map;
 	}
 

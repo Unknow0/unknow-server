@@ -255,10 +255,11 @@ public class JaxwsServletBuilder {
 //			TODO if(o.result.header)
 			Expression e = new ObjectCreationExpr(null, types.get(Element.class), new NodeList<>(new StringLiteralExpr(o.result.ns), new StringLiteralExpr(o.result.name), new NameExpr("ro")));
 			if (o.paramStyle == ParameterStyle.WRAPPED) {
-				NodeList<Expression> p = new NodeList<>(new StringLiteralExpr(o.name), new StringLiteralExpr(o.ns), e);
+				NodeList<Expression> p = new NodeList<>(new StringLiteralExpr(o.ns), new StringLiteralExpr(o.name), e);
 				// TODO out param
 				e = new ObjectCreationExpr(null, types.get(OperationWrapper.class), p);
 			} else {
+				// TODO out param
 			}
 			b.addStatement(new MethodCallExpr(new NameExpr("r"), "addBody", new NodeList<>(e)));
 			b.addStatement(new ReturnStmt(new NameExpr("r")));
@@ -308,9 +309,9 @@ public class JaxwsServletBuilder {
 																				new MethodCallExpr(
 																						new MethodCallExpr(new NameExpr("res"), "getWriter"),
 																						"append",
-																						new NodeList<>(new StringLiteralExpr("<s:Envelope  xmlns:s=\\\"http://schemas.xmlsoap.org/soap/envelope/\\\"><s:Body><s:Fault><faultcode>Client</faultcode><faultstring>"))),
+																						new NodeList<>(new StringLiteralExpr("<e:Envelope xmlns:e=\\\"http://schemas.xmlsoap.org/soap/envelope/\\\"><e:Body><e:Fault><faultcode>Client</faultcode><faultstring>"))),
 																				"append", new NodeList<>(new MethodCallExpr(new NameExpr("e"), "getMessage"))),
-																		"append", new NodeList<>(new StringLiteralExpr("</faultstring></s:Fault><s:Body></s:Envelope>")))),
+																		"append", new NodeList<>(new StringLiteralExpr("</faultstring></e:Fault></e:Body></e:Envelope>")))),
 														new NodeList<>(new CatchClause(new Parameter(types.get(Exception.class), "ignore"), new BlockStmt())), null))
 												.addStatement(new MethodCallExpr(new NameExpr("log"), "warn", new NodeList<>(new StringLiteralExpr("failed to service request"), new NameExpr("e")))))),
 								null)));

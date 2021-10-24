@@ -24,9 +24,12 @@ jobs:
       run: mvn -B versions:set -DnewVersion=${GITHUB_REF##*/}
 
     - name: build
-      run: mvn -B javadoc:jar source:jar package
+      run: mvn -B package
 
-    - name: Publish to GitHub Packages Apache Maven
+    - name: validate
+      run: .github/http_test.sh
+
+    - name: publish
       run: mvn -B deploy
       env:
         MVN_USER: ${{secrets.REPSY_USER}}

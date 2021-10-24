@@ -33,6 +33,11 @@ public final class Envelope {
 		return body.size();
 	}
 
+	@Override
+	public String toString() {
+		return "Envelope [sig=" + sig() + "header=" + header + ", body=" + body + "]";
+	}
+
 	public String sig() {
 		if (body.size() == 1 & body.get(0) instanceof Operation)
 			return ((Operation) body.get(0)).qname;

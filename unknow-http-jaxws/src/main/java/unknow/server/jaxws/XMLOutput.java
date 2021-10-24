@@ -121,6 +121,8 @@ public class XMLOutput implements XMLWriter {
 	}
 
 	private String getPrefix(String nsUri) throws IOException {
+		if (nsUri.isEmpty())
+			return "";
 		String nsPrefix = ns.get(nsUri);
 		if (nsPrefix == null)
 			throw new IOException("missing ns mapping for '" + nsUri + "'");

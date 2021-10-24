@@ -3,6 +3,8 @@
  */
 package unknow.server.maven.jaxws.model;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -24,10 +26,15 @@ import com.github.javaparser.ast.body.FieldDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.VariableDeclarator;
 import com.github.javaparser.ast.expr.AnnotationExpr;
+import com.github.javaparser.ast.expr.BinaryExpr;
+import com.github.javaparser.ast.expr.BinaryExpr.Operator;
+import com.github.javaparser.ast.expr.CastExpr;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.MemberValuePair;
 import com.github.javaparser.ast.expr.MethodCallExpr;
+import com.github.javaparser.ast.expr.ObjectCreationExpr;
 import com.github.javaparser.ast.expr.SingleMemberAnnotationExpr;
+import com.github.javaparser.ast.expr.StringLiteralExpr;
 import com.github.javaparser.ast.expr.TypeExpr;
 import com.github.javaparser.ast.type.Type;
 
@@ -57,7 +64,7 @@ public interface XmlType {
 	 * @param v     string expression
 	 * @return and expression to the right type
 	 */
-	default Expression toString(TypeCache types, Expression v) {
+	default Expression toString(@SuppressWarnings("unused") TypeCache types, Expression v) {
 		return v;
 	}
 
@@ -75,7 +82,7 @@ public interface XmlType {
 		return true;
 	}
 
-	public static class XmlString implements XmlType {
+	public static final XmlType XmlString = new XmlType() {
 		@Override
 		public Expression convert(TypeCache types, Expression v) {
 			return v;
@@ -83,35 +90,119 @@ public interface XmlType {
 
 		@Override
 		public String binaryName() {
-			return "Ljava.lang.String;";
+			return "java.lang.String";
+		}
+
+		@Override
+		public String toString() {
+			return "string";
+		}
+	};
+	public static final XmlType XmlBigDecimal = new XmlType() {
+		@Override
+		public Expression convert(TypeCache types, Expression v) {
+			return new ObjectCreationExpr(null, types.get(BigDecimal.class), new NodeList<>(v));
+		}
+
+		@Override
+		public Expression toString(TypeCache types, Expression v) {
+			return new MethodCallExpr(v, "toString");
+		}
+
+		@Override
+		public String binaryName() {
+			return BigDecimal.class.getCanonicalName();
+		}
+
+		@Override
+		public String toString() {
+			return "bigDecimal";
+		}
+	};
+	public static final XmlType XmlBigInteger = new XmlType() {
+		@Override
+		public Expression convert(TypeCache types, Expression v) {
+			return new ObjectCreationExpr(null, types.get(BigInteger.class), new NodeList<>(v));
+		}
+
+		@Override
+		public Expression toString(TypeCache types, Expression v) {
+			return new MethodCallExpr(v, "toString");
+		}
+
+		@Override
+		public String binaryName() {
+			return BigInteger.class.getCanonicalName();
+		}
+
+		@Override
+		public String toString() {
+			return "bigInteger";
+		}
+	};
+	public static final XmlType XmlBoolean = new XmlType() {
+		@Override
+		public Expression convert(TypeCache types, Expression v) {
+			return new BinaryExpr(
+					new MethodCallExpr(new StringLiteralExpr("true"), "equalsIgnoreCase", new NodeList<>(v)),
+					new MethodCallExpr(new StringLiteralExpr("1"), "equals", new NodeList<>(v)),
+					Operator.OR);
+		}
+
+		@Override
+		public String binaryName() {
+			return "java.lang.Boolean";
 		}
 
 		@Override
 		public String toString() {
 			return "XmlString";
 		}
-	}
+	};
 
-	public static class XmlInt implements XmlType {
+	public static final XmlType XmlByte = new XmlPrimitive(byte.class, Integer.class, "parseInt");
+	public static final XmlType XmlChar = new XmlPrimitive(char.class, Integer.class, "parseInt");
+	public static final XmlType XmlShort = new XmlPrimitive(short.class, Integer.class, "parseInt");
+	public static final XmlType XmlInt = new XmlPrimitive(int.class, Integer.class, "parseInt");
+	public static final XmlType XmlLong = new XmlPrimitive(long.class, Long.class, "parseLong");
+	public static final XmlType XmlFloat = new XmlPrimitive(float.class, Float.class, "parseFloat");
+	public static final XmlType XmlDouble = new XmlPrimitive(double.class, Double.class, "parseDouble");
+
+	public static class XmlPrimitive implements XmlType {
+		private final Class<?> clazz;
+		private final Class<?> parser;
+		private final String parse;
+
+		/**
+		 * create new XmlType.XmlPrimitive
+		 */
+		public XmlPrimitive(Class<?> clazz, Class<?> parser, String parse) {
+			this.clazz = clazz;
+			this.parser = parser;
+			this.parse = parse;
+		}
 
 		@Override
 		public Expression convert(TypeCache types, Expression v) {
-			return new MethodCallExpr(new TypeExpr(types.get(Integer.class)), "parseInt", new NodeList<>(v));
+			Expression e = new MethodCallExpr(new TypeExpr(types.get(parser)), parse, new NodeList<>(v));
+			if (parser == Integer.class && clazz != int.class)
+				e = new CastExpr(types.get(clazz), e);
+			return e;
 		}
 
 		@Override
 		public Expression toString(TypeCache types, Expression v) {
-			return new MethodCallExpr(new TypeExpr(types.get(Integer.class)), "toString", new NodeList<>(v));
+			return new MethodCallExpr(new TypeExpr(types.get(parser)), "toString", new NodeList<>(v));
 		}
 
 		@Override
 		public String binaryName() {
-			return "java.lang.Integer;";
+			return clazz.getName();
 		}
 
 		@Override
 		public String toString() {
-			return "XmlInt";
+			return clazz.getName();
 		}
 	}
 
@@ -146,31 +237,57 @@ public interface XmlType {
 	public static XmlType get(Type type, Map<String, ClassOrInterfaceDeclaration> classes) {
 		if (type.isArrayType())
 			return new XmlList(get(type.asArrayType().getComponentType(), classes));
-		if (type.isPrimitiveType()) { // TODO
+		if (type.isPrimitiveType()) {
 			switch (type.asPrimitiveType().getType()) {
-				case BYTE:
-				case SHORT:
-				case INT:
-				case LONG:
-					return new XmlInt();
-				case FLOAT:
-				case DOUBLE:
-					// TODO
 				case BOOLEAN:
-					// TODO
+					return XmlBoolean;
+				case BYTE:
+					return XmlByte;
 				case CHAR:
-					// TODO
+					return XmlChar;
+				case SHORT:
+					return XmlShort;
+				case INT:
+					return XmlInt;
+				case LONG:
+					return XmlLong;
+				case FLOAT:
+					return XmlFloat;
+				case DOUBLE:
+					return XmlDouble;
 				default:
 					return null;
 			}
 		}
 		if (!type.isClassOrInterfaceType())
 			throw new RuntimeException("unknown type: '" + type + "'");
-		// TODO Collection
-		// TODO Map ?
+
 		String describe = type.asClassOrInterfaceType().resolve().describe();
 		if ("java.lang.String".equals(describe))
-			return new XmlString();
+			return XmlString;
+		if ("java.lang.Boolean".equals(describe))
+			return XmlBoolean;
+		if ("java.lang.Byte".equals(describe))
+			return XmlByte;
+		if ("java.lang.Character".equals(describe))
+			return XmlChar;
+		if ("java.lang.Short".equals(describe))
+			return XmlShort;
+		if ("java.lang.Integer".equals(describe))
+			return XmlInt;
+		if ("java.lang.Long".equals(describe))
+			return XmlLong;
+		if ("java.lang.Float".equals(describe))
+			return XmlFloat;
+		if ("java.lang.Double".equals(describe))
+			return XmlDouble;
+		if (BigInteger.class.getCanonicalName().equals(describe))
+			return XmlBigInteger;
+		if (BigDecimal.class.getCanonicalName().equals(describe))
+			return XmlBigDecimal;
+
+		// TODO Collection
+		// TODO Map ?
 
 		ClassOrInterfaceDeclaration c = classes.get(describe);
 		if (c != null)

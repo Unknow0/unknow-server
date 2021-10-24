@@ -36,14 +36,7 @@
 		<dependency>
 			<groupId>unknow.sax</groupId>
 			<artifactId>unknow-sax</artifactId>
-			<version>0.0.1</version>
-		</dependency>
-
-		<dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-			<version>4.13.1</version>
-			<scope>test</scope>
+			<version>${unknow-sax.version}</version>
 		</dependency>
 
 		<dependency>

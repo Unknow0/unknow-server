@@ -24,9 +24,8 @@ import unknow.server.maven.jaxws.model.XmlType;
  */
 public class JaxSaxHandlerBuilderTest {
 
-	@Test
 	public void test() {
-		XmlObject xml = new XmlObject(this.getClass().getName(), null, Arrays.asList(new XmlField(new XmlType.XmlInt(), "getI", "setI", "i", "")), Arrays.asList(), new XmlElem(new XmlType.XmlString(), "getValue", "setValue"));
+		XmlObject xml = new XmlObject(this.getClass().getName(), null, Arrays.asList(new XmlField(XmlType.XmlInt, "getI", "setI", "i", "")), Arrays.asList(), new XmlElem(XmlType.XmlString, "getValue", "setValue"));
 
 		CompilationUnit cu = new CompilationUnit();
 		TypeCache types = new TypeCache(cu, new HashMap<>());

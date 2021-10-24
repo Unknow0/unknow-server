@@ -1,0 +1,9 @@
++{http://www.w3.org/2001/12/soap-envelope}Envelope
++{http://www.w3.org/2001/12/soap-envelope}Body
++{unknow.test}mixedResponse
++elem
+content
+-elem
+4
+-{unknow.test}mixedResponse
+-{http://www.w3.org/2001/12/soap-envelope}Body
