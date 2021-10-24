@@ -60,6 +60,7 @@ xml_parse()
 java -jar unknow-http-test/target/server.jar &
 pid=$!
 trap "kill -9 $pid" EXIT
+sleep 5
 
 [ "$(http_code "/error")" = "500" ] || die 'get /error'
 [ "$(http_code "/error?code=503")" = "503" ] || die 'get /error?code'
