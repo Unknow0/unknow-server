@@ -25,9 +25,17 @@ jobs:
 
     - name: build
       run: mvn -B package
+    - name: test
+	  run: |
+	    java -jar unknow-http-test/target/server.jar &
+		pid=$?
+		sleep 10
+		kill $pid
 
-#    - name: validate
-#     run: bash .github/http_test.sh
+    - name: echo
+	  run: echo ok
+    - name: validate
+      run: bash .github/http_test.sh
 
     - name: publish
       run: mvn -B deploy
