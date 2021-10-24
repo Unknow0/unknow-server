@@ -27,7 +27,7 @@ jobs:
       run: mvn -B package
 
     - name: validate
-      run: .github/http_test.sh
+      run: bash .github/http_test.sh
 
     - name: publish
       run: mvn -B deploy
