@@ -28,7 +28,7 @@ jobs:
     - name: test
       run: |
         java -jar unknow-http-test/target/server.jar &
-        pid=$?
+        pid=$!
         sleep 10
         kill $pid
 

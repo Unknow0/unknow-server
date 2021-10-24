@@ -58,7 +58,7 @@ xml_parse()
 	}
 
 java -jar unknow-http-test/target/server.jar &
-pid=$?
+pid=$!
 trap "kill -9 $pid" EXIT
 
 [ "$(http_code "/error")" = "500" ] || die 'get /error'
