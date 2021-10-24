@@ -139,7 +139,7 @@ public class JaxwsServletBuilder {
 	private void collectOperation(ClassOrInterfaceDeclaration cl) {
 		for (MethodDeclaration m : cl.getMethods()) {
 			Optional<AnnotationExpr> o = m.getAnnotationByClass(WebMethod.class);
-			if (o.isEmpty())
+			if (!o.isPresent())
 				continue;
 			MemberValuePair orElse = o.get().findFirst(MemberValuePair.class, v -> "exclude".equals(v.getNameAsString())).orElse(null);
 			if (orElse != null && orElse.getValue().asBooleanLiteralExpr().getValue())

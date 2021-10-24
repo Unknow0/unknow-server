@@ -234,7 +234,7 @@ public class CreateServletManager extends Builder {
 		for (String e : l) {
 			String path = descriptor.errorClass.get(e);
 			SD s = descriptor.findServlet(path);
-			if (s == null || e.isBlank())
+			if (s == null || e.isEmpty())
 				continue;
 			k.add(new ClassExpr(t.get(e.toString())));
 			v.add(new ObjectCreationExpr(null, t.get(FilterChainImpl.ChangePath.class), list(new StringLiteralExpr(path),

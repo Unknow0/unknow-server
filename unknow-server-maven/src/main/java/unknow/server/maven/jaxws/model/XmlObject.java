@@ -110,7 +110,7 @@ public class XmlObject implements XmlType {
 		}
 
 		public String qname() {
-			return (ns == null || ns.isBlank() ? "" : '{' + ns + '}') + name;
+			return (ns == null || ns.isEmpty() ? "" : '{' + ns + '}') + name;
 		}
 
 		@Override

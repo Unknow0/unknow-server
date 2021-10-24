@@ -238,9 +238,9 @@ public interface XmlType {
 
 					Optional<MethodDeclaration> s = c.getMethods().stream().filter(m -> m.getNameAsString().equals(setter)).filter(m -> m.getParameters().size() == 1 && m.getParameter(0).getType().resolve().describe().equals(v.getType().resolve().describe())).findFirst();
 					Optional<MethodDeclaration> g = c.getMethods().stream().filter(m -> m.getNameAsString().equals(getter)).filter(m -> m.getParameters().size() == 0).findFirst();
-					if (s.isEmpty())
+					if (!s.isPresent())
 						throw new RuntimeException("missing setter for '" + v.getNameAsString() + "' field in '" + c.getNameAsString() + "' class");
-					if (g.isEmpty()) // TODO check is* if boolean
+					if (!g.isPresent()) // TODO check is* if boolean
 						throw new RuntimeException("missing setter for '" + v.getNameAsString() + "' field in '" + c.getNameAsString() + "' class");
 
 					fields.put(v.getNameAsString(), new D(f, v));
@@ -274,7 +274,7 @@ public interface XmlType {
 				String setter = "set" + m.getNameAsString().substring(3);
 
 				Optional<MethodDeclaration> s = c.getMethods().stream().filter(e -> e.getNameAsString().equals(setter)).filter(e -> e.getParameters().size() == 1 && e.getParameter(0).getType().resolve().describe().equals(m.getType().resolve().describe())).findFirst();
-				if (s.isEmpty())
+				if (!s.isPresent())
 					throw new RuntimeException("missing setter for '" + n + "' field in '" + c.getNameAsString() + "' class");
 
 				XmlType t = XmlType.get(d.v.getType(), classes);
@@ -300,13 +300,13 @@ public interface XmlType {
 	}
 
 	static String getName(Optional<AnnotationExpr> a, String def) {
-		if (a.isEmpty())
+		if (!a.isPresent())
 			return def;
 		return a.get().findFirst(MemberValuePair.class, m -> "name".equals(m.getNameAsString())).map(e -> e.getValue().asStringLiteralExpr().getValue()).map(v -> "##default".equals(v) ? def : v).orElse(def);
 	}
 
 	static String getNs(Optional<AnnotationExpr> a, String def) {
-		if (a.isEmpty())
+		if (!a.isPresent())
 			return def;
 		return a.get().findFirst(MemberValuePair.class, m -> "namespace".equals(m.getNameAsString())).map(e -> e.getValue().asStringLiteralExpr().getValue()).map(v -> "##default".equals(v) ? def : v).orElse(def);
 	}
