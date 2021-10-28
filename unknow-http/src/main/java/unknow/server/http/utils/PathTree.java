@@ -48,7 +48,7 @@ public class PathTree {
 			return exact == null ? def : exact;
 
 		PathTree last = this;
-		do {
+		while (last.nexts != null) {
 			int i = path.indexOf((byte) '/', o, e - o);
 			if (i < 0)
 				i = e;
@@ -58,7 +58,7 @@ public class PathTree {
 			if (i == e)
 				return n.exact == null ? n.def : n.exact;
 			o = i + 1;
-		} while (last.nexts != null);
+		}
 
 		EndNode[] end = last.ends == null ? ends : last.ends;
 		if (end != null) {
