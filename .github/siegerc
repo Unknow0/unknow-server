@@ -1,4 +1,4 @@
-json_output = true
+verbose = true
 logging = false
 parser = false
 concurrent = 25
