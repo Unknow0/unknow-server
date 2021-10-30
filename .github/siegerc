@@ -1,6 +1,7 @@
-verbose = true
+quiet = true
 logging = true
 logfile = log
 parser = false
 concurrent = 25
 benchmark = true
+csv = true
