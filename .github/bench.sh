@@ -40,12 +40,12 @@ tomcat_stop() {
 declare -a results
 for i in ${SERVER[@]}
 do
-	$i_start
+	${i}_start
 	echo "warmup $i"
 	dotests > /dev/null
 	echo "testing $i"
 	results+=("$(dotests)")
-	$i_stop
+	${i}_stop
 done
 
 printf '%-10s' 'server'
