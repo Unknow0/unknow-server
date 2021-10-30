@@ -9,7 +9,7 @@ SERVER=(unknow tomcat)
 
 run() {
 	[[ '$1' = 'Webservice POST <.github/bare.xml' ]] && return
-	siege -c 25 -t10s --no-parser -j "http://127.0.0.1:8080/$1" 
+	siege -c 25 -t10s --no-parser -l log "http://127.0.0.1:8080/$1" 
 	grep 'Transaction rate' log | sed  's/[0-9]*\([0-9.]*\).*/\1/'
 }
 
