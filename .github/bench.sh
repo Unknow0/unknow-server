@@ -9,13 +9,13 @@ SERVER=(unknow tomcat)
 
 run() {
 	[[ '$1' = 'Webservice POST <.github/bare.xml' ]] && return
-	siege -R .github/siegerc -t10s "http://127.0.0.1:8080/$1" 
-	cat log
-	#grep 'Transaction rate' log | sed  's/[0-9]*\([0-9.]*\).*/\1/'
+	siege -R .github/siegerc -t10s "http://127.0.0.1:8080/$1" 2>/dev/null
 }
 
 dotests() {
 	for t in ${TESTS[@]}; do run "$t"; done
+	tail -n +2 log | cut -d ',' -f 7
+	rm log
 }
 
 unknow_start() {
@@ -45,8 +45,7 @@ do
 	echo "warmup $i"
 	dotests > /dev/null
 	echo "testing $i"
-#	results+=("$(dotests)")
-	dotests
+	results+=("$(dotests)")
 	${i}_stop
 done
 
