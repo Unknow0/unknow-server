@@ -18,10 +18,10 @@ dotests() {
 }
 
 unknow_start() {
-	java -jar unknow-http-test/target/server.jar >/dev/null 2>/dev/null &
+	java -jar unknow-http-test/target/server.jar &
 	pid=$!
 	trap "kill -9 $pid" EXIT
-	sleep 2
+	sleep 55555
 }
 unknow_stop() {
 	kill -9 $pid
@@ -31,7 +31,7 @@ tomcat_start() {
 	/usr/share/tomcat9/bin/catalina.sh run >/dev/null 2>/dev/null &
 	pid=$!
 	trap "kill -9 $pid" EXIT
-	sleep 2
+	sleep 5
 }
 tomcat_stop() {
 	/usr/share/tomcat9/bin/shutdown.sh
