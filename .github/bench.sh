@@ -9,7 +9,7 @@ SERVER=(unknow tomcat)
 
 run() {
 	[[ '$1' = 'Webservice POST <.github/bare.xml' ]] && return
-	siege -v --no-parser -b -c 2 -t10s "http://127.0.0.1:8080/$1" 
+	siege -R .github/siegerc -t10s "http://127.0.0.1:8080/$1" | jq .transaction_rate
 }
 
 dotests() {
