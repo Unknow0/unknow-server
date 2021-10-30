@@ -27,14 +27,14 @@ unknow_stop() {
 	kill -9 $pid
 }
 tomcat_start() {
-	cp unknow-http-test/target/*.war /usr/share/tomcat9/webapps/ROOT.war
-	/usr/share/tomcat9/bin/catalina.sh run >/dev/null 2>/dev/null &
+	cp unknow-http-test/target/*.war /var/lib/tomcat9/webapps/ROOT.war
+	/var/lib/tomcat9/bin/catalina.sh run >/dev/null 2>/dev/null &
 	pid=$!
 	trap "kill -9 $pid" EXIT
 	sleep 5
 }
 tomcat_stop() {
-	/usr/share/tomcat9/bin/shutdown.sh
+	/var/lib/tomcat9/bin/shutdown.sh
 }
 
 declare -a results
