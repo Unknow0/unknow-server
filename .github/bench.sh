@@ -10,7 +10,8 @@ SERVER=(unknow tomcat)
 run() {
 	[[ '$1' = 'Webservice POST <.github/bare.xml' ]] && return
 	siege -R .github/siegerc -t10s "http://127.0.0.1:8080/$1" 
-	grep 'Transaction rate' log | sed  's/[0-9]*\([0-9.]*\).*/\1/'
+	cat log
+	#grep 'Transaction rate' log | sed  's/[0-9]*\([0-9.]*\).*/\1/'
 }
 
 dotests() {
@@ -27,14 +28,14 @@ unknow_stop() {
 	kill -9 $pid
 }
 tomcat_start() {
-	cp unknow-http-test/target/*.war /var/lib/tomcat9/webapps/ROOT.war
-	/var/lib/tomcat9/bin/catalina.sh run >/dev/null 2>/dev/null &
+	sudo cp unknow-http-test/target/*.war /var/lib/tomcat9/webapps/ROOT.war
+	sudo /var/lib/tomcat9/bin/catalina.sh run >/dev/null 2>/dev/null &
 	pid=$!
 	trap "kill -9 $pid" EXIT
 	sleep 5
 }
 tomcat_stop() {
-	/var/lib/tomcat9/bin/shutdown.sh
+	sudo /var/lib/tomcat9/bin/shutdown.sh
 }
 
 declare -a results
@@ -44,7 +45,8 @@ do
 	echo "warmup $i"
 	dotests > /dev/null
 	echo "testing $i"
-	results+=("$(dotests)")
+#	results+=("$(dotests)")
+	dotests
 	${i}_stop
 done
 
