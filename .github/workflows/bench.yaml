@@ -21,4 +21,4 @@ jobs:
       run: sudo apt-get install siege tomcat9
 
     - name: run bench
-      run: bash .github/bench.sh
+      run: bash -x .github/bench.sh

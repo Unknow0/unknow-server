@@ -21,7 +21,7 @@ unknow_start() {
 	java -jar unknow-http-test/target/server.jar &
 	pid=$!
 	trap "kill -9 $pid" EXIT
-	sleep 55555
+	sleep 5
 }
 unknow_stop() {
 	kill -9 $pid
