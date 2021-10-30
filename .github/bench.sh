@@ -9,7 +9,7 @@ SERVER=(unknow tomcat)
 
 run() {
 	[[ '$1' = 'Webservice POST <.github/bare.xml' ]] && return
-	siege -R .github/siegerc -t10s "http://127.0.0.1:8080/$1" 
+	siege -c 25 -t10s --no-parser -j "http://127.0.0.1:8080/$1" 
 	grep 'Transaction rate' log | sed  's/[0-9]*\([0-9.]*\).*/\1/'
 }
 
@@ -21,6 +21,7 @@ unknow_start() {
 	java -jar unknow-http-test/target/server.jar >/dev/null 2>/dev/null &
 	pid=$!
 	trap "kill -9 $pid" EXIT
+	sleep 2
 }
 unknow_stop() {
 	kill -9 $pid
@@ -30,6 +31,7 @@ tomcat_start() {
 	/usr/share/tomcat9/bin/catalina.sh run >/dev/null 2>/dev/null &
 	pid=$!
 	trap "kill -9 $pid" EXIT
+	sleep 2
 }
 tomcat_stop() {
 	/usr/share/tomcat9/bin/shutdown.sh
