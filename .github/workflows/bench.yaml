@@ -1,4 +1,4 @@
-name: Maven Package
+name: benchmark
 
 on: workflow_dispatch
 
@@ -21,4 +21,4 @@ jobs:
       run: sudo apt-get install siege tomcat9
 
     - name: run bench
-      run: .github/bench.sh
+      run: bash .github/bench.sh
