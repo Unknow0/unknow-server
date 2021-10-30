@@ -19,7 +19,7 @@ dotests() {
 }
 
 unknow_start() {
-	java -jar unknow-http-test/target/server.jar &
+	java -jar unknow-http-test/target/server.jar >/dev/null 2>/dev/null &
 	pid=$!
 	trap "kill -9 $pid" EXIT
 	sleep 5
