@@ -14,7 +14,7 @@ run() {
 
 dotests() {
 	for t in ${TESTS[@]}; do run "$t"; done
-	tail -n +2 log | cut -d ',' -f 7
+	tail -n +2 log | cut -d ',' -f 6
 	rm log
 }
 
@@ -29,13 +29,13 @@ unknow_stop() {
 }
 tomcat_start() {
 	sudo cp unknow-http-test/target/*.war /var/lib/tomcat9/webapps/ROOT.war
-	sudo /var/lib/tomcat9/bin/catalina.sh run >/dev/null 2>/dev/null &
+	sudo /usr/share/tomcat9/bin/catalina.sh run >/dev/null 2>/dev/null &
 	pid=$!
 	trap "kill -9 $pid" EXIT
 	sleep 5
 }
 tomcat_stop() {
-	sudo /var/lib/tomcat9/bin/shutdown.sh
+	sudo /usr/share/tomcat9/bin/shutdown.sh
 }
 
 declare -a results

@@ -320,6 +320,7 @@ public interface XmlType {
 				else
 					factory = new Factory(cl, method);
 			}
+			// TODO prop order
 			namespace = getNs(a, namespace);
 		}
 		a = c.getAnnotationByClass(javax.xml.bind.annotation.XmlRootElement.class);
@@ -348,7 +349,6 @@ public interface XmlType {
 			AnnotationExpr annot = eleme.orElse(attri.orElse(value.orElse(null)));
 			if (annot != null || type == XmlAccessType.FIELD || type == XmlAccessType.PUBLIC_MEMBER && f.hasModifier(Keyword.PUBLIC)) {
 				for (VariableDeclarator v : f.getVariables()) {
-					fields.put(v.getNameAsString(), new D(f, v));
 					String setter = "set" + Character.toUpperCase(v.getNameAsString().charAt(0)) + v.getNameAsString().substring(1);
 					String getter = "get" + Character.toUpperCase(v.getNameAsString().charAt(0)) + v.getNameAsString().substring(1);
 					// TODO check also is* for boolean

@@ -41,6 +41,10 @@ public class XMLNsCollector implements XMLWriter {
 	}
 
 	public Map<String, String> buildNsMapping() {
+		return buildNsMapping(ns);
+	}
+
+	public static Map<String, String> buildNsMapping(Map<String, Integer> ns) {
 		if (ns.isEmpty())
 			return Collections.emptyMap();
 		Map<String, String> map = new HashMap<>();
