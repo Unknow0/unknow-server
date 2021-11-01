@@ -8,12 +8,13 @@ TESTS=(
 SERVER=(unknow tomcat)
 
 run() {
+	echo "test $1"
 	[[ '$1' = 'Webservice POST <.github/bare.xml' ]] && return
-	siege -R .github/siegerc -t10s "http://127.0.0.1:8080/$1" 2>/dev/null
+	siege -R .github/siegerc -t$2 "http://127.0.0.1:8080/$1" 2>/dev/null
 }
 
 dotests() {
-	for t in ${TESTS[@]}; do run "$t"; done
+	for t in ${TESTS[@]}; do run "$t" "$1"; done
 	tail -n +2 log | cut -d ',' -f 6
 	rm log
 }
@@ -43,9 +44,9 @@ for i in ${SERVER[@]}
 do
 	${i}_start
 	echo "warmup $i"
-	dotests > /dev/null
+	dotests 10s > /dev/null
 	echo "testing $i"
-	results+=("$(dotests)")
+	results+=("$(dotests 60s)")
 	${i}_stop
 done
 
