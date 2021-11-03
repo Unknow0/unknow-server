@@ -8,7 +8,7 @@ TESTS=(
 SERVER=(unknow tomcat)
 
 run() {
-	echo "test $1"
+	echo "test $1" >2
 	[[ '$1' = 'Webservice POST <.github/bare.xml' ]] && return
 	siege -R .github/siegerc -t$2 "http://127.0.0.1:8080/$1" 2>/dev/null
 }
@@ -30,13 +30,13 @@ unknow_stop() {
 }
 tomcat_start() {
 	sudo cp unknow-http-test/target/*.war /var/lib/tomcat9/webapps/ROOT.war
-	sudo /usr/share/tomcat9/bin/catalina.sh run >/dev/null 2>/dev/null &
+	sudo systemctl start tomcat9
 	pid=$!
 	trap "kill -9 $pid" EXIT
-	sleep 5
+	sleep 10
 }
 tomcat_stop() {
-	sudo /usr/share/tomcat9/bin/shutdown.sh
+	sudo systemctl stop tomcat9
 }
 
 declare -a results
@@ -44,7 +44,7 @@ for i in ${SERVER[@]}
 do
 	${i}_start
 	echo "warmup $i"
-	dotests 10s > /dev/null
+	dotests 10s >/dev/null
 	echo "testing $i"
 	results+=("$(dotests 60s)")
 	${i}_stop
