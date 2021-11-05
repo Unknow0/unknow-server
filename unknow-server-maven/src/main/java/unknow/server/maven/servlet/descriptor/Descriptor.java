@@ -121,6 +121,8 @@ public class Descriptor implements Consumer<CompilationUnit> {
 			o = t.getAnnotationByClass(WebFilter.class);
 			if (o.isPresent()) {
 				SD sd = new SD(filters.size(), o.get(), t);
+				if(sd.dispatcher.isEmpty())
+					sd.dispatcher.add(DispatcherType.REQUEST);
 				filters.add(sd);
 			}
 			o = t.getAnnotationByClass(WebListener.class);

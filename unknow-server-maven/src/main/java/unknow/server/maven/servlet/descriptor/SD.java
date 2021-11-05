@@ -43,25 +43,31 @@ public class SD {
 		this.index = index;
 		this.clazz = e.resolve().getQualifiedName();
 		String ln = null;
-		for (Node n : a.getChildNodes()) {
-			if (!(n instanceof MemberValuePair))
-				continue;
-			MemberValuePair m = (MemberValuePair) n;
-			String k = m.getName().getIdentifier();
-			if ("value".equals(k) || "urlPatterns".equals(k))
-				add(pattern, m.getValue());
-			else if ("loadOnStartup".equals(k))
-				loadOnStartup = m.getValue().asIntegerLiteralExpr().asNumber().intValue();
-			else if ("initParams".equals(k)) {
-				String key = m.getValue().asAnnotationExpr().findFirst(MemberValuePair.class, w -> "name".equals(w.getName().getIdentifier())).get().getValue().asStringLiteralExpr().getValue();
-				String value = m.getValue().asAnnotationExpr().findFirst(MemberValuePair.class, w -> "value".equals(w.getName().getIdentifier())).get().getValue().asStringLiteralExpr().getValue();
-				param.put(key, value);
-			} else if ("name".equals(k) || "filterName".equals(k))
-				ln = m.getValue().asStringLiteralExpr().getValue();
-			else if ("servletNames".equals(k))
-				add(servletNames, m.getValue());
-			else if ("dispatcherTypes".equals(k))
-				parseDispatcher(m.getValue());
+		if (a.isSingleMemberAnnotationExpr()) {
+			add(pattern, a.asSingleMemberAnnotationExpr().getMemberValue());
+		} else {
+			for (Node n : a.getChildNodes()) {
+				if (!(n instanceof MemberValuePair))
+					continue;
+				MemberValuePair m = (MemberValuePair) n;
+				String k = m.getName().getIdentifier();
+				if ("value".equals(k) || "urlPatterns".equals(k))
+					add(pattern, m.getValue());
+				else if ("loadOnStartup".equals(k))
+					loadOnStartup = m.getValue().asIntegerLiteralExpr().asNumber().intValue();
+				else if ("initParams".equals(k)) {
+					String key = m.getValue().asAnnotationExpr().findFirst(MemberValuePair.class, w -> "name".equals(w.getName().getIdentifier())).get().getValue()
+							.asStringLiteralExpr().getValue();
+					String value = m.getValue().asAnnotationExpr().findFirst(MemberValuePair.class, w -> "value".equals(w.getName().getIdentifier())).get().getValue()
+							.asStringLiteralExpr().getValue();
+					param.put(key, value);
+				} else if ("name".equals(k) || "filterName".equals(k))
+					ln = m.getValue().asStringLiteralExpr().getValue();
+				else if ("servletNames".equals(k))
+					add(servletNames, m.getValue());
+				else if ("dispatcherTypes".equals(k))
+					parseDispatcher(m.getValue());
+			}
 		}
 		this.name = ln != null ? ln : e.resolve().getQualifiedName();
 	}
