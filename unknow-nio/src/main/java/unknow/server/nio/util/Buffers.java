@@ -56,7 +56,7 @@ public class Buffers {
 		if (tail == null)
 			head = tail = Chunk.get();
 		len += l;
-		writeInto(tail, buf, o, l);
+		tail=writeInto(tail, buf, o, l);
 		this.notifyAll();
 	}
 
