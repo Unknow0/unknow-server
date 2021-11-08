@@ -4,10 +4,13 @@
 package unknow.server.maven.servlet;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import unknow.server.maven.servlet.descriptor.SD;
 
@@ -21,7 +24,8 @@ public class TreePathBuilder {
 	public SD def;
 
 	public final List<SD> exactsFilter;
-	public final List<SD> defFilter;
+	public final Set<SD> defFilter;
+	/** only set on root part */
 	public final Map<String, List<SD>> endingFilter;
 
 	public TreePathBuilder() {
@@ -32,7 +36,7 @@ public class TreePathBuilder {
 		nexts = new HashMap<>();
 		ending = root ? new HashMap<>() : null;
 		exactsFilter = new ArrayList<>();
-		defFilter = new ArrayList<>();
+		defFilter = new HashSet<>();
 		endingFilter = root ? new HashMap<>() : null;
 	}
 
@@ -59,13 +63,13 @@ public class TreePathBuilder {
 				if (list == null)
 					endingFilter.put(p.substring(1), list = new ArrayList<>());
 				list.add(f);
+			} else if (p.equals("/") || p.equals("/*")) {
+				addDefFilter(f);
+				exactsFilter.add(f);
 			} else if (p.endsWith("/*")) {
 				TreePathBuilder n = addPath(p.substring(1, p.length() - 2).split("/"));
 				n.exactsFilter.add(f);
 				n.addDefFilter(f);
-			} else if (p.equals("/")) {
-				addDefFilter(f);
-				exactsFilter.add(f);
 			} else if (p.equals(""))
 				exactsFilter.add(f);
 			else if (p.startsWith("/"))
@@ -94,14 +98,15 @@ public class TreePathBuilder {
 	}
 
 	public void normalize() {
-		normalize(def);
+		normalize(def, defFilter);
 	}
 
-	private void normalize(SD def) {
+	private void normalize(SD def, Collection<SD> defFilter) {
 		if (this.def == null)
 			this.def = def;
+		this.defFilter.addAll(defFilter);
 		for (TreePathBuilder n : nexts.values())
-			n.normalize(this.def);
+			n.normalize(this.def, this.defFilter);
 	}
 
 	@Override

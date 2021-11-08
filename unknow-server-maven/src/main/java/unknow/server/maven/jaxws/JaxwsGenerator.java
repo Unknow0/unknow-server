@@ -102,7 +102,7 @@ public class JaxwsGenerator extends AbstractMojo {
 		marshallers.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolSolver);
 		TypeCache types = new TypeCache(marshallers, existingClass);
 		JaxMarshallerBuilder mbuilder = new JaxMarshallerBuilder(marshallers, types);
-
+		boolean find = false;
 		for (ClassOrInterfaceDeclaration c : classes.values()) {
 			Optional<AnnotationExpr> a = c.getAnnotationByClass(WebService.class);
 			if (!a.isPresent())
@@ -114,14 +114,17 @@ public class JaxwsGenerator extends AbstractMojo {
 			new JaxwsServletBuilder(c, classes, mbuilder).generate(cu, types);
 			try {
 				out.save(cu);
+				find = true;
 			} catch (IOException e) {
 				throw new MojoFailureException("failed to save output class", e);
 			}
 		}
-		try {
-			out.save(marshallers);
-		} catch (IOException e) {
-			throw new MojoFailureException("failed to save output class", e);
+		if (find) {
+			try {
+				out.save(marshallers);
+			} catch (IOException e) {
+				throw new MojoFailureException("failed to save output class", e);
+			}
 		}
 	}
 }

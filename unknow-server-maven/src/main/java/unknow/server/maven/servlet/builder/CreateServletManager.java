@@ -4,6 +4,7 @@
 package unknow.server.maven.servlet.builder;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -44,14 +45,14 @@ import unknow.server.http.utils.IntArrayMap;
 import unknow.server.http.utils.ObjectArrayMap;
 import unknow.server.http.utils.PathTree;
 import unknow.server.http.utils.PathTree.EndNode;
+import unknow.server.http.utils.Resource;
+import unknow.server.http.utils.ServletManager;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.servlet.Builder;
 import unknow.server.maven.servlet.Names;
 import unknow.server.maven.servlet.TreePathBuilder;
 import unknow.server.maven.servlet.descriptor.Descriptor;
 import unknow.server.maven.servlet.descriptor.SD;
-import unknow.server.http.utils.Resource;
-import unknow.server.http.utils.ServletManager;
 
 /**
  * @author unknow
@@ -81,12 +82,11 @@ public class CreateServletManager extends Builder {
 				for (String key : list) {
 					Resource r = descriptor.resources.get(key);
 					k.add(new StringLiteralExpr(key));
-					v.add(new ObjectCreationExpr(null,
-							types.get(Resource.class),
+					v.add(new ObjectCreationExpr(null, types.get(Resource.class),
 							list(new LongLiteralExpr(r.getLastModified() + "L"), new LongLiteralExpr(r.getSize() + "L"))));
 				}
-				b.addStatement(assign(t, n, new ObjectCreationExpr(null, t, list(
-						new ObjectCreationExpr(null, types.get(ArrayMap.class, TypeCache.EMPTY), list(array(types.get(String.class), k), array(types.get(Resource.class), v)))))));
+				b.addStatement(assign(t, n, new ObjectCreationExpr(null, t, list(new ObjectCreationExpr(null, types.get(ArrayMap.class, TypeCache.EMPTY),
+						list(array(types.get(String.class), k), array(types.get(Resource.class), v)))))));
 			} else
 				b.addStatement(assign(t, n, new ObjectCreationExpr(null, t, emptyList())));
 
@@ -111,12 +111,10 @@ public class CreateServletManager extends Builder {
 
 		Set<String> created = new HashSet<>();
 
-		b.addStatement(new ReturnStmt(new ObjectCreationExpr(null, types.get(ServletManager.class), list(
-				array(types.get(Servlet.class), servlets),
-				array(types.get(Filter.class), filters),
-				buildTree(descriptor, DispatcherType.REQUEST, b, types, names, created),
-				errorCode(b, descriptor, types, names, created),
-				errorClass(b, descriptor, types, names, created)))));
+		b.addStatement(new ReturnStmt(new ObjectCreationExpr(null, types.get(ServletManager.class),
+				list(array(types.get(Servlet.class), servlets), array(types.get(Filter.class), filters),
+						buildTree(descriptor, DispatcherType.REQUEST, b, types, names, created), errorCode(b, descriptor, types, names, created),
+						errorClass(b, descriptor, types, names, created)))));
 	}
 
 	private static Expression buildTree(Descriptor descriptor, DispatcherType type, BlockStmt b, TypeCache types, Map<Object, NameExpr> names, Set<String> created) {
@@ -128,10 +126,12 @@ public class CreateServletManager extends Builder {
 				tree.addFilter(f);
 		}
 		tree.normalize();
+		System.err.println("tree:\n" + tree);
 		return treePath(b, type, tree, null, tree.endingFilter, types, names, created);
 	}
 
-	private static Expression treePath(BlockStmt b, DispatcherType type, TreePathBuilder tree, String path, Map<String, List<SD>> endingFilter, TypeCache t, Map<Object, NameExpr> names, Set<String> created) {
+	private static Expression treePath(BlockStmt b, DispatcherType type, TreePathBuilder tree, String path, Map<String, List<SD>> endingFilter, TypeCache t,
+			Map<Object, NameExpr> names, Set<String> created) {
 		NodeList<Expression> childs = new NodeList<>();
 		NodeList<Expression> ends = new NodeList<>();
 		Expression exact = new NullLiteralExpr();
@@ -165,15 +165,14 @@ public class CreateServletManager extends Builder {
 		for (Entry<String, TreePathBuilder> n : tree.nexts.entrySet())
 			childs.add(treePath(b, type, n.getValue(), n.getKey(), endingFilter, t, names, created));
 
-		return new ObjectCreationExpr(null, t.get(PathTree.class), list(
-				path == null ? new NullLiteralExpr() : byteArray(PathTree.encodePart(path)),
-				childs.isEmpty() ? new NullLiteralExpr() : array(t.get(PathTree.class), childs),
-				ends.isEmpty() ? new NullLiteralExpr() : array(t.get(EndNode.class), ends),
-				exact, def));
+		return new ObjectCreationExpr(null, t.get(PathTree.class),
+				list(path == null ? new NullLiteralExpr() : byteArray(PathTree.encodePart(path)),
+						childs.isEmpty() ? new NullLiteralExpr() : array(t.get(PathTree.class), childs),
+						ends.isEmpty() ? new NullLiteralExpr() : array(t.get(EndNode.class), ends), exact, def));
 
 	}
 
-	private static String buildChains(BlockStmt b, List<SD> chains, SD s, TypeCache t, Map<Object, NameExpr> names, Set<String> created) {
+	private static String buildChains(BlockStmt b, Collection<SD> chains, SD s, TypeCache t, Map<Object, NameExpr> names, Set<String> created) {
 		String n = name(names, chains.size(), chains, s);
 		if (!created.contains(n)) {
 			created.add(n);
@@ -181,25 +180,30 @@ public class CreateServletManager extends Builder {
 		}
 
 		int size = b.getStatements().size();
-		for (int i = 0; i < chains.size(); i++) {
-			String name = name(names, i, chains, s);
+		int i = 0;
+		for (SD c : chains) {
+			String name = name(names, i++, chains, s);
 			if (created.contains(name))
 				break;
 			created.add(name);
-			b.addStatement(size, assign(t.get(FilterChain.class), name, new ObjectCreationExpr(null, t.get(FilterChainImpl.class), list(names.get(chains.get(i).clazz), new NameExpr(name(names, i + 1, chains, s))))));
+			b.addStatement(size, assign(t.get(FilterChain.class), name,
+					new ObjectCreationExpr(null, t.get(FilterChainImpl.class), list(names.get(c.clazz), new NameExpr(name(names, i, chains, s))))));
 		}
 		return name(names, 0, chains, s);
 	}
 
-	private static String name(Map<Object, NameExpr> names, int i, List<SD> chains, SD s) {
+	private static String name(Map<Object, NameExpr> names, int i, Collection<SD> chains, SD s) {
 		StringBuilder sb = new StringBuilder("c");
-		for (; i < chains.size(); i++)
-			sb.append(names.get(chains.get(i).clazz).getNameAsString());
+		Iterator<SD> it = chains.iterator();
+		while (i-- > 0)
+			it.next();
+		while (it.hasNext())
+			sb.append(names.get(it.next().clazz).getNameAsString());
 		sb.append(names.get(s.clazz).getNameAsString());
 		return sb.toString();
 	}
 
-	private static List<SD> actualFilters(List<SD> filters, DispatcherType t) {
+	private static Collection<SD> actualFilters(Collection<SD> filters, DispatcherType t) {
 		filters = new ArrayList<>(filters);
 		Iterator<SD> it = filters.iterator();
 		while (it.hasNext()) {
@@ -220,8 +224,8 @@ public class CreateServletManager extends Builder {
 			if (s == null)
 				continue;
 			k.add(new IntegerLiteralExpr(e.toString()));
-			v.add(new ObjectCreationExpr(null, t.get(FilterChainImpl.ChangePath.class), list(new StringLiteralExpr(path),
-					new NameExpr(buildChains(b, descriptor.findFilters(path, DispatcherType.ERROR), s, t, names, created)))));
+			v.add(new ObjectCreationExpr(null, t.get(FilterChainImpl.ChangePath.class),
+					list(new StringLiteralExpr(path), new NameExpr(buildChains(b, descriptor.findFilters(path, DispatcherType.ERROR), s, t, names, created)))));
 		}
 		return new ObjectCreationExpr(null, t.get(IntArrayMap.class, TypeCache.EMPTY), list(array(PrimitiveType.intType(), k), array(t.get(FilterChain.class), v)));
 	}
@@ -237,10 +241,11 @@ public class CreateServletManager extends Builder {
 			if (s == null || e.isEmpty())
 				continue;
 			k.add(new ClassExpr(t.get(e.toString())));
-			v.add(new ObjectCreationExpr(null, t.get(FilterChainImpl.ChangePath.class), list(new StringLiteralExpr(path),
-					new NameExpr(buildChains(b, descriptor.findFilters(path, DispatcherType.ERROR), s, t, names, created)))));
+			v.add(new ObjectCreationExpr(null, t.get(FilterChainImpl.ChangePath.class),
+					list(new StringLiteralExpr(path), new NameExpr(buildChains(b, descriptor.findFilters(path, DispatcherType.ERROR), s, t, names, created)))));
 		}
-		LambdaExpr cmp = new LambdaExpr(list(new Parameter(TypeCache.EMPTY, "a"), new Parameter(TypeCache.EMPTY, "b")), new MethodCallExpr(new MethodCallExpr(Names.a, "getName"), "compareTo", list(new MethodCallExpr(Names.b, "getName"))));
+		LambdaExpr cmp = new LambdaExpr(list(new Parameter(TypeCache.EMPTY, "a"), new Parameter(TypeCache.EMPTY, "b")),
+				new MethodCallExpr(new MethodCallExpr(Names.a, "getName"), "compareTo", list(new MethodCallExpr(Names.b, "getName"))));
 		return new ObjectCreationExpr(null, t.get(ObjectArrayMap.class, TypeCache.EMPTY), list(array(t.get(Class.class), k), array(t.get(FilterChain.class), v), cmp));
 	}
 }
