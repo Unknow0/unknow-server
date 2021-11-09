@@ -28,6 +28,7 @@ import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.expr.ArrayAccessExpr;
+import com.github.javaparser.ast.expr.ArrayInitializerExpr;
 import com.github.javaparser.ast.expr.AssignExpr;
 import com.github.javaparser.ast.expr.AssignExpr.Operator;
 import com.github.javaparser.ast.expr.BinaryExpr;
@@ -104,15 +105,19 @@ public class JaxwsServletBuilder {
 
 	public void generate(CompilationUnit cu, TypeCache types) {
 		String name = service.name;
+		NodeList<Expression> list = new NodeList<>();
+		for (String s : service.urls)
+			list.add(new StringLiteralExpr(s));
+
 		servlet = cu.addClass(Character.toUpperCase(name.charAt(0)) + name.substring(1) + "Servlet", PF).addExtendedType(types.get(HttpServlet.class));
-		servlet.addAndGetAnnotation(WebServlet.class).addPair("urlPatterns", Utils.stringArray(service.urls)).addPair("name", new StringLiteralExpr(name));
+		servlet.addAndGetAnnotation(WebServlet.class).addPair("urlPatterns", new ArrayInitializerExpr(list)).addPair("name", new StringLiteralExpr(name));
 
 		servlet.addFieldWithInitializer(types.get(long.class), "serialVersionUID", new LongLiteralExpr("1"), PSF);
 
 		servlet.addFieldWithInitializer(types.get(Logger.class), "log", new MethodCallExpr(
 				new TypeExpr(types.get(LoggerFactory.class)),
 				"getLogger",
-				new NodeList<>(new ClassExpr(types.get(servlet)))), PSF);
+				Utils.list(new ClassExpr(types.get(servlet)))), PSF);
 
 		servlet.addFieldWithInitializer(types.get(serviceClass), "WS", new ObjectCreationExpr(null, types.get(serviceClass), new NodeList<>()), PSF);
 		// TODO life cycle @PostConstruct, @PreDestroy

@@ -37,7 +37,8 @@ import unknow.server.http.utils.Resource;
  * @author unknow
  */
 public class Descriptor implements Consumer<CompilationUnit> {
-	public static final List<Class<?>> LISTENERS = Arrays.asList(ServletContextListener.class, ServletContextAttributeListener.class, ServletRequestListener.class, ServletRequestAttributeListener.class, HttpSessionListener.class, HttpSessionAttributeListener.class, HttpSessionIdListener.class);
+	public static final List<Class<?>> LISTENERS = Arrays.asList(ServletContextListener.class, ServletContextAttributeListener.class, ServletRequestListener.class,
+			ServletRequestAttributeListener.class, HttpSessionListener.class, HttpSessionAttributeListener.class, HttpSessionIdListener.class);
 
 	public String name = "/";
 
@@ -121,6 +122,8 @@ public class Descriptor implements Consumer<CompilationUnit> {
 			o = t.getAnnotationByClass(WebFilter.class);
 			if (o.isPresent()) {
 				SD sd = new SD(filters.size(), o.get(), t);
+				if (sd.dispatcher.isEmpty())
+					sd.dispatcher.add(DispatcherType.REQUEST);
 				filters.add(sd);
 			}
 			o = t.getAnnotationByClass(WebListener.class);
@@ -149,7 +152,7 @@ public class Descriptor implements Consumer<CompilationUnit> {
 			if (!f.dispatcher.contains(type))
 				continue;
 			for (String p : f.pattern) {
-				if (p.endsWith("/*") && path.startsWith(p.substring(0, p.length() - 2))) {
+				if (p.endsWith("/*") && (p.length() == 2 || path.startsWith(p.substring(0, p.length() - 2)))) {
 					matching.add(f);
 					break;
 				} else if (p.startsWith("*") && path.endsWith(p.substring(1))) {

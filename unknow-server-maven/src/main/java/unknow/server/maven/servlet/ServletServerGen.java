@@ -123,35 +123,38 @@ public class ServletServerGen extends AbstractMojo implements BuilderContext {
 			output = src;
 
 		if (webXml != null) {
-			try {
-				Path path = Paths.get(webXml);
-				if (Files.exists(path)) {
-					try (InputStream r = Files.newInputStream(path)) {
-						SaxParser.parse(new Context(descriptor, resolver), new InputSource(r));
-					}
+			Path path = Paths.get(webXml);
+			if (Files.exists(path)) {
+				try (InputStream r = Files.newInputStream(path)) {
+					SaxParser.parse(new Context(descriptor, resolver), new InputSource(r));
+				} catch (Exception e) {
+					getLog().error("failed to parse '" + webXml + "'", e);
 				}
-			} catch (Exception e) {
-				getLog().error("failed to parse '" + webXml + "'", e);
-			}
+			} else
+				getLog().warn("missing '" + webXml + "'");
 		}
 		try { // collecting resources files
 			Path path = Paths.get(resources);
-			Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
-				@Override
-				public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-					dir = path.relativize(dir);
-					String path = dir.getName(0).toString().toUpperCase();
-					return "WEB-INF".equals(path) || "META-INF".equals(path) ? FileVisitResult.SKIP_SUBTREE : FileVisitResult.CONTINUE;
-				}
+			if (Files.isDirectory(path)) {
+				Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
+					@Override
+					public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+						dir = path.relativize(dir);
+						String path = dir.getName(0).toString().toUpperCase();
+						return "WEB-INF".equals(path) || "META-INF".equals(path) ? FileVisitResult.SKIP_SUBTREE : FileVisitResult.CONTINUE;
+					}
 
-				@Override
-				public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-					descriptor.resources.put("/" + path.relativize(file).toString().replace('\\', '/'), new Resource(Files.getLastModifiedTime(file).to(TimeUnit.MILLISECONDS), Files.size(file)));
-					return FileVisitResult.CONTINUE;
-				}
-			});
+					@Override
+					public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+						descriptor.resources.put("/" + path.relativize(file).toString().replace('\\', '/'),
+								new Resource(Files.getLastModifiedTime(file).to(TimeUnit.MILLISECONDS), Files.size(file)));
+						return FileVisitResult.CONTINUE;
+					}
+				});
+			} else
+				getLog().warn("no resource found '" + resources + "'");
 		} catch (IOException e) {
-			throw new MojoFailureException("failed to get source failed", e);
+			throw new MojoFailureException("failed to get resources", e);
 		}
 
 		final Map<String, String> existingClass = new HashMap<>();
@@ -207,26 +210,20 @@ public class ServletServerGen extends AbstractMojo implements BuilderContext {
 		cl.addFieldWithInitializer(types.get(Logger.class), "log", new MethodCallExpr(new TypeExpr(types.get(LoggerFactory.class)), "getLogger", Utils.list(new ClassExpr(types.get(cl)))), Modifier.Keyword.PRIVATE, Modifier.Keyword.STATIC, Modifier.Keyword.FINAL);
 
 		cl.addFieldWithInitializer(types.get(int.class), "execMin", new IntegerLiteralExpr("0"))
-				.setJavadocComment(new JavadocComment("min number of execution thread to use, default to 0"))
-				.addAndGetAnnotation(Option.class)
-				.addPair("names", new StringLiteralExpr("--exec-min"))
-				.addPair("description", new StringLiteralExpr("min number of exec thread to use, default to 0"))
+				.setJavadocComment(new JavadocComment("min number of execution thread to use, default to 0")).addAndGetAnnotation(Option.class)
+				.addPair("names", new StringLiteralExpr("--exec-min")).addPair("description", new StringLiteralExpr("min number of exec thread to use, default to 0"))
 				.addPair("descriptionKey", new StringLiteralExpr("exec-min"));
 		cl.addFieldWithInitializer(types.get(int.class), "execMax", new FieldAccessExpr(new TypeExpr(types.get(Integer.class)), "MAX_VALUE"))
-				.setJavadocComment(new JavadocComment("max number of execution thread to use, default to Integer.MAX_VALUE"))
-				.addAndGetAnnotation(Option.class)
+				.setJavadocComment(new JavadocComment("max number of execution thread to use, default to Integer.MAX_VALUE")).addAndGetAnnotation(Option.class)
 				.addPair("names", new StringLiteralExpr("--exec-max"))
 				.addPair("description", new StringLiteralExpr("max number of exec thread to use, default to Integer.MAX_VALUE"))
 				.addPair("descriptionKey", new StringLiteralExpr("exec-max"));
 		cl.addFieldWithInitializer(types.get(long.class), "execIdle", new IntegerLiteralExpr("60L"))
-				.setJavadocComment(new JavadocComment("max idle time for exec thread, default to 60"))
-				.addAndGetAnnotation(Option.class)
-				.addPair("names", new StringLiteralExpr("--exec-idle"))
-				.addPair("description", new StringLiteralExpr("max idle time for exec thread, default to 60"))
+				.setJavadocComment(new JavadocComment("max idle time for exec thread, default to 60")).addAndGetAnnotation(Option.class)
+				.addPair("names", new StringLiteralExpr("--exec-idle")).addPair("description", new StringLiteralExpr("max idle time for exec thread, default to 60"))
 				.addPair("descriptionKey", new StringLiteralExpr("exec-idle"));
 		cl.addFieldWithInitializer(types.get(int.class), "keepAliveIdle", new IntegerLiteralExpr("-1"))
-				.setJavadocComment(new JavadocComment("max time to keep idle keepalive connection, default to -1"))
-				.addAndGetAnnotation(Option.class)
+				.setJavadocComment(new JavadocComment("max time to keep idle keepalive connection, default to -1")).addAndGetAnnotation(Option.class)
 				.addPair("names", new StringLiteralExpr("--keep-alive-idle"))
 				.addPair("description", new StringLiteralExpr("max time to keep idle keepalive connection, default to -1"))
 				.addPair("descriptionKey", new StringLiteralExpr("keep-alive-idle"));

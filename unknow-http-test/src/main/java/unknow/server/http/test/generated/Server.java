@@ -90,8 +90,7 @@ final class Server extends NIOServerCli implements HttpRawProcessor {
 		FilterChain cs3 = new ServletFilter(s3);
 		FilterChain cs2 = new ServletFilter(s2);
 		FilterChain cs0 = new ServletFilter(s0);
-		FilterChain cs1 = new ServletFilter(s1);
-		return new ServletManager(new javax.servlet.Servlet[] { s0, s1, s2, s3 }, new Filter[] {}, new PathTree(null, new PathTree[] { new PathTree(new byte[] { 100, 101, 98, 117, 103 }, null, null, null, cs2), new PathTree(new byte[] { 116, 101, 115, 116 }, null, null, cs2, cs3), new PathTree(new byte[] { 101, 114, 114, 111, 114 }, null, null, cs0, cs3), new PathTree(new byte[] { 87, 101, 98, 115, 101, 114, 118, 105, 99, 101 }, null, null, cs1, cs3) }, null, null, cs3), new IntArrayMap<>(new int[] {}, new FilterChain[] {}), new ObjectArrayMap<>(new Class[] {}, new FilterChain[] {}, (a, b) -> a.getName().compareTo(b.getName())));
+		return new ServletManager(new javax.servlet.Servlet[] { s0, s1, s2, s3 }, new Filter[] {}, new PathTree(null, new PathTree[] { new PathTree(new byte[] { 100, 101, 98, 117, 103 }, null, null, null, cs2), new PathTree(new byte[] { 116, 101, 115, 116 }, null, null, cs2, cs3), new PathTree(new byte[] { 101, 114, 114, 111, 114 }, null, null, cs0, cs3) }, null, null, cs3), new IntArrayMap<>(new int[] {}, new FilterChain[] {}), new ObjectArrayMap<>(new Class[] {}, new FilterChain[] {}, (a, b) -> a.getName().compareTo(b.getName())));
 	}
 
 	private final ServletContextImpl createContext() {

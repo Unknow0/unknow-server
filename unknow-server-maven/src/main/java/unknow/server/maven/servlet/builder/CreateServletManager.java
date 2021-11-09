@@ -4,6 +4,7 @@
 package unknow.server.maven.servlet.builder;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -129,10 +130,12 @@ public class CreateServletManager extends Builder {
 				tree.addFilter(f);
 		}
 		tree.normalize();
+		System.err.println("tree:\n" + tree);
 		return treePath(b, type, tree, null, tree.endingFilter, types, names, created);
 	}
 
-	private static Expression treePath(BlockStmt b, DispatcherType type, TreePathBuilder tree, String path, Map<String, List<SD>> endingFilter, TypeCache t, Map<Object, NameExpr> names, Set<String> created) {
+	private static Expression treePath(BlockStmt b, DispatcherType type, TreePathBuilder tree, String path, Map<String, List<SD>> endingFilter, TypeCache t,
+			Map<Object, NameExpr> names, Set<String> created) {
 		NodeList<Expression> childs = new NodeList<>();
 		NodeList<Expression> ends = new NodeList<>();
 		Expression exact = new NullLiteralExpr();
@@ -171,10 +174,9 @@ public class CreateServletManager extends Builder {
 				childs.isEmpty() ? new NullLiteralExpr() : Utils.array(t.get(PathTree.class), childs),
 				ends.isEmpty() ? new NullLiteralExpr() : Utils.array(t.get(EndNode.class), ends),
 				exact, def));
-
 	}
 
-	private static String buildChains(BlockStmt b, List<SD> chains, SD s, TypeCache t, Map<Object, NameExpr> names, Set<String> created) {
+	private static String buildChains(BlockStmt b, Collection<SD> chains, SD s, TypeCache t, Map<Object, NameExpr> names, Set<String> created) {
 		String n = name(names, chains.size(), chains, s);
 		if (!created.contains(n)) {
 			created.add(n);
@@ -182,25 +184,30 @@ public class CreateServletManager extends Builder {
 		}
 
 		int size = b.getStatements().size();
-		for (int i = 0; i < chains.size(); i++) {
-			String name = name(names, i, chains, s);
+		int i = 0;
+		for (SD c : chains) {
+			String name = name(names, i++, chains, s);
 			if (created.contains(name))
 				break;
 			created.add(name);
-			b.addStatement(size, Utils.assign(t.get(FilterChain.class), name, new ObjectCreationExpr(null, t.get(FilterChainImpl.class), Utils.list(names.get(chains.get(i).clazz), new NameExpr(name(names, i + 1, chains, s))))));
+			b.addStatement(size, Utils.assign(t.get(FilterChain.class), name,
+					new ObjectCreationExpr(null, t.get(FilterChainImpl.class), Utils.list(names.get(c.clazz), new NameExpr(name(names, i, chains, s))))));
 		}
 		return name(names, 0, chains, s);
 	}
 
-	private static String name(Map<Object, NameExpr> names, int i, List<SD> chains, SD s) {
+	private static String name(Map<Object, NameExpr> names, int i, Collection<SD> chains, SD s) {
 		StringBuilder sb = new StringBuilder("c");
-		for (; i < chains.size(); i++)
-			sb.append(names.get(chains.get(i).clazz).getNameAsString());
+		Iterator<SD> it = chains.iterator();
+		while (i-- > 0)
+			it.next();
+		while (it.hasNext())
+			sb.append(names.get(it.next().clazz).getNameAsString());
 		sb.append(names.get(s.clazz).getNameAsString());
 		return sb.toString();
 	}
 
-	private static List<SD> actualFilters(List<SD> filters, DispatcherType t) {
+	private static Collection<SD> actualFilters(Collection<SD> filters, DispatcherType t) {
 		filters = new ArrayList<>(filters);
 		Iterator<SD> it = filters.iterator();
 		while (it.hasNext()) {
@@ -221,8 +228,8 @@ public class CreateServletManager extends Builder {
 			if (s == null)
 				continue;
 			k.add(new IntegerLiteralExpr(e.toString()));
-			v.add(new ObjectCreationExpr(null, t.get(FilterChainImpl.ChangePath.class), Utils.list(new StringLiteralExpr(path),
-					new NameExpr(buildChains(b, descriptor.findFilters(path, DispatcherType.ERROR), s, t, names, created)))));
+			v.add(new ObjectCreationExpr(null, t.get(FilterChainImpl.ChangePath.class),
+					Utils.list(new StringLiteralExpr(path), new NameExpr(buildChains(b, descriptor.findFilters(path, DispatcherType.ERROR), s, t, names, created)))));
 		}
 		return new ObjectCreationExpr(null, t.get(IntArrayMap.class, TypeCache.EMPTY), Utils.list(Utils.array(PrimitiveType.intType(), k), Utils.array(t.get(FilterChain.class), v)));
 	}

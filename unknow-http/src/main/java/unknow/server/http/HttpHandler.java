@@ -367,7 +367,12 @@ public class HttpHandler extends Handler implements Runnable {
 	public void run() {
 		try {
 			processor.process(this);
-			// TODO prepare for reuse
+			synchronized (this) {
+				pendingRead.clear();
+				meta.clear();
+				headerCount = last = 0;
+				step = METHOD;
+			}
 		} catch (Exception e) {
 			try {
 				getOut().close();
@@ -380,7 +385,7 @@ public class HttpHandler extends Handler implements Runnable {
 
 	@Override
 	public boolean isClosed() {
-		if (super.isClosed())
+		if ((f == null || f.isDone()) && super.isClosed())
 			return true;
 		if (keepAliveIdle > 0) {
 			long e = System.currentTimeMillis() - keepAliveIdle;
@@ -393,13 +398,15 @@ public class HttpHandler extends Handler implements Runnable {
 
 	@Override
 	public void reset() {
-		super.reset();
-		meta.clear();
-		headerCount = last = 0;
-		step = METHOD;
-		if (f != null)
-			f.cancel(true);
-		f = null;
+		synchronized (this) {
+			super.reset();
+			meta.clear();
+			headerCount = last = 0;
+			step = METHOD;
+			if (f != null)
+				f.cancel(true);
+			f = null;
+		}
 	}
 
 	public int pathStart() {
