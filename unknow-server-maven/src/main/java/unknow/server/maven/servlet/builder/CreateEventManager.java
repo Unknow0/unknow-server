@@ -23,6 +23,7 @@ import com.github.javaparser.ast.type.ClassOrInterfaceType;
 
 import unknow.server.http.utils.EventManager;
 import unknow.server.maven.TypeCache;
+import unknow.server.maven.Utils;
 import unknow.server.maven.servlet.Builder;
 import unknow.server.maven.servlet.Names;
 import unknow.server.maven.servlet.descriptor.Descriptor;
@@ -41,7 +42,7 @@ public class CreateEventManager extends Builder {
 
 		for (LD l : ctx.descriptor().listeners) {
 			ClassOrInterfaceType c = t.get(l.clazz);
-			Expression e = new ObjectCreationExpr(null, c, emptyList());
+			Expression e = new ObjectCreationExpr(null, c, Utils.emptyList());
 
 			for (SD s : ctx.descriptor().servlets) {
 				if (s.clazz.equals(l.clazz)) {
@@ -66,7 +67,7 @@ public class CreateEventManager extends Builder {
 			else
 				a = new IntegerLiteralExpr("0");
 
-			list.add(new ObjectCreationExpr(null, t.get(ArrayList.class, TypeCache.EMPTY), list(a)));
+			list.add(new ObjectCreationExpr(null, t.get(ArrayList.class, TypeCache.EMPTY), Utils.list(a)));
 		}
 		init.addStatement(new ReturnStmt(new ObjectCreationExpr(null, t.get(EventManager.class), list)));
 	}

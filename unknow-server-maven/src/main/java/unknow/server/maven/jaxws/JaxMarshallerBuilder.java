@@ -37,6 +37,7 @@ import unknow.server.jaxws.XMLNsCollector;
 import unknow.server.jaxws.XMLOutput;
 import unknow.server.jaxws.XMLWriter;
 import unknow.server.maven.TypeCache;
+import unknow.server.maven.Utils;
 import unknow.server.maven.jaxws.model.XmlObject;
 import unknow.server.maven.jaxws.model.XmlObject.XmlField;
 
@@ -54,17 +55,14 @@ public class JaxMarshallerBuilder {
 		this.types = types;
 		this.clazz = cu.addClass("Marshallers", Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL);
 		this.processed = new HashSet<>();
-		clazz.addFieldWithInitializer(types.get(MarshallerRegistry.class), "R", new ObjectCreationExpr(null, types.get(MarshallerRegistry.class), new NodeList<>()), Modifier.Keyword.PRIVATE, Modifier.Keyword.STATIC, Modifier.Keyword.FINAL);
+		clazz.addFieldWithInitializer(types.get(MarshallerRegistry.class), "R", new ObjectCreationExpr(null, types.get(MarshallerRegistry.class), Utils.emptyList()), Modifier.Keyword.PRIVATE, Modifier.Keyword.STATIC, Modifier.Keyword.FINAL);
 		init = clazz.addStaticInitializer();
 
 		clazz.addMethod("marshall", Keyword.PUBLIC, Keyword.STATIC, Keyword.FINAL).addParameter(types.get(Envelope.class), "e").addParameter(types.get(Writer.class), "w")
 				.addThrownException(types.get(IOException.class))
 				.getBody().get()
-				.addStatement(new AssignExpr(
-						new VariableDeclarationExpr(types.get(XMLNsCollector.class), "c"),
-						new ObjectCreationExpr(null, types.get(XMLNsCollector.class), new NodeList<>()),
-						AssignExpr.Operator.ASSIGN))
-				.addStatement(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(Marshaller.class)), "ENVELOPE"), "marshall", new NodeList<>(R, E, C)))
+				.addStatement(Utils.create(types.get(XMLNsCollector.class), "c", Utils.emptyList()))
+				.addStatement(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(Marshaller.class)), "ENVELOPE"), "marshall", Utils.list(R, E, C)))
 				.addStatement(new TryStmt(new NodeList<>(
 						new AssignExpr(
 								new VariableDeclarationExpr(types.get(XMLWriter.class), "out"), new ObjectCreationExpr(null, types.get(XMLOutput.class), new NodeList<>(new NameExpr("w"), new MethodCallExpr(C, "buildNsMapping"))), AssignExpr.Operator.ASSIGN)),
