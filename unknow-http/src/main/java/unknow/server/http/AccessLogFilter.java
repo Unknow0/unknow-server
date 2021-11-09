@@ -16,12 +16,16 @@ import javax.servlet.http.HttpServletResponse;
 
 /**
  * simple access log filter
+ * TODO: replace Formatter
  */
 public class AccessLogFilter extends Thread implements Filter {
+	/** global fomatter to use */
 	private static final Formatter f = new Formatter(System.out);
+	/** pending entry to write */
 	private final BlockingQueue<Entry> queue = new LinkedBlockingQueue<>();
 
-	private String format = "%1$tFT%1$tT %2$s %3$s \"%4$s\" %5$d %6$d";
+	/** format used to log */
+	private String format = "%1$tFT%1$tT %2$s %3$s \"%4$s\" %5$d %6$d%n";
 
 	/**
 	 * format used by the access log
@@ -36,7 +40,7 @@ public class AccessLogFilter extends Thread implements Filter {
 	protected void setFormat(String format) {
 		this.format = format;
 		// validate format
-		log(new Entry());
+		log(new Formatter(), new Entry());
 	}
 
 	@Override
@@ -70,13 +74,13 @@ public class AccessLogFilter extends Thread implements Filter {
 	public void run() {
 		try {
 			while (!isInterrupted()) {
-				log(queue.take());
+				log(f, queue.take());
 			}
 		} catch (InterruptedException e) { // OK
 		}
 	}
 
-	protected void log(Entry e) {
+	protected void log(Formatter f, Entry e) {
 		f.format(format, e.arg);
 	}
 

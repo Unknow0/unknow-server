@@ -5,12 +5,11 @@ package unknow.server.maven.servlet;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import unknow.server.maven.servlet.descriptor.SD;
 
@@ -24,7 +23,7 @@ public class TreePathBuilder {
 	public SD def;
 
 	public final List<SD> exactsFilter;
-	public final Set<SD> defFilter;
+	public final List<SD> defFilter;
 	/** only set on root part */
 	public final Map<String, List<SD>> endingFilter;
 
@@ -36,7 +35,7 @@ public class TreePathBuilder {
 		nexts = new HashMap<>();
 		ending = root ? new HashMap<>() : null;
 		exactsFilter = new ArrayList<>();
-		defFilter = new HashSet<>();
+		defFilter = new ArrayList<>();
 		endingFilter = root ? new HashMap<>() : null;
 	}
 
@@ -44,12 +43,12 @@ public class TreePathBuilder {
 		for (String p : s.pattern) {
 			if (p.startsWith("*."))
 				ending.put(p.substring(1), s);
+			else if (p.equals("/") || p.equals("/*"))
+				def = s;
 			else if (p.endsWith("/*"))
 				addPath(p.substring(1, p.length() - 2).split("/")).def = s;
 			else if (p.equals(""))
 				exact = s;
-			else if (p.equals("/"))
-				def = s;
 			else if (p.startsWith("/"))
 				addPath(p.substring(1).split("/")).exact = s;
 		}
@@ -64,23 +63,17 @@ public class TreePathBuilder {
 					endingFilter.put(p.substring(1), list = new ArrayList<>());
 				list.add(f);
 			} else if (p.equals("/") || p.equals("/*")) {
-				addDefFilter(f);
+				defFilter.add(f);
 				exactsFilter.add(f);
 			} else if (p.endsWith("/*")) {
 				TreePathBuilder n = addPath(p.substring(1, p.length() - 2).split("/"));
 				n.exactsFilter.add(f);
-				n.addDefFilter(f);
+				n.defFilter.add(f);
 			} else if (p.equals(""))
 				exactsFilter.add(f);
 			else if (p.startsWith("/"))
 				addPath(p.substring(1).split("/")).exactsFilter.add(f);
 		}
-	}
-
-	private void addDefFilter(SD f) {
-		defFilter.add(f);
-		for (TreePathBuilder n : nexts.values())
-			n.addDefFilter(f);
 	}
 
 	private TreePathBuilder addPath(String[] split) {
@@ -104,7 +97,14 @@ public class TreePathBuilder {
 	private void normalize(SD def, Collection<SD> defFilter) {
 		if (this.def == null)
 			this.def = def;
-		this.defFilter.addAll(defFilter);
+		for (SD s : defFilter) {
+			if (!this.defFilter.contains(s))
+				this.defFilter.add(s);
+			if (!this.exactsFilter.contains(s))
+				this.exactsFilter.add(s);
+		}
+		Collections.sort(this.defFilter, (a, b) -> a.index - b.index);
+		Collections.sort(this.exactsFilter, (a, b) -> a.index - b.index);
 		for (TreePathBuilder n : nexts.values())
 			n.normalize(this.def, this.defFilter);
 	}
