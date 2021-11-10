@@ -20,6 +20,8 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.plugins.annotations.ResolutionScope;
+import org.apache.maven.project.MavenProject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.InputSource;
@@ -53,6 +55,7 @@ import unknow.server.http.utils.Resource;
 import unknow.server.http.utils.ServletManager;
 import unknow.server.maven.Output;
 import unknow.server.maven.TypeCache;
+import unknow.server.maven.Utils;
 import unknow.server.maven.servlet.Builder.BuilderContext;
 import unknow.server.maven.servlet.builder.Call;
 import unknow.server.maven.servlet.builder.Constructor;
@@ -71,9 +74,9 @@ import unknow.server.nio.cli.NIOServerCli;
 /**
  * @author unknow
  */
-@Mojo(defaultPhase = LifecyclePhase.GENERATE_SOURCES, name = "servlet-generator")
+@Mojo(defaultPhase = LifecyclePhase.GENERATE_SOURCES, name = "servlet-generator", requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
 public class ServletServerGen extends AbstractMojo implements BuilderContext {
-	private static final List<Builder> BUILDER = Arrays.asList(new Constructor(), new CreateEventManager(), new CreateServletManager(), new CreateContext(),new LoadInitializer(), new Initialize(), new Process(), new Call(), new Main());
+	private static final List<Builder> BUILDER = Arrays.asList(new Constructor(), new CreateEventManager(), new CreateServletManager(), new CreateContext(), new LoadInitializer(), new Initialize(), new Process(), new Call(), new Main());
 
 	private final CompilationUnit cu = new CompilationUnit();
 
@@ -84,6 +87,9 @@ public class ServletServerGen extends AbstractMojo implements BuilderContext {
 	private ClassOrInterfaceDeclaration cl;
 
 	private final Descriptor descriptor = new Descriptor();
+
+	@Parameter(defaultValue = "${project}", readonly = true, required = true)
+	private MavenProject project;
 
 	@Parameter(name = "src", defaultValue = "${project.build.sourceDirectory}")
 	private String src;
@@ -157,6 +163,7 @@ public class ServletServerGen extends AbstractMojo implements BuilderContext {
 
 		try { // Collect annotation
 			Files.walkFileTree(Paths.get(src), new SimpleFileVisitor<Path>() {
+
 				@Override
 				public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
 					if (!file.getFileName().toString().endsWith(".java"))
@@ -182,6 +189,7 @@ public class ServletServerGen extends AbstractMojo implements BuilderContext {
 			d.pattern.add("/");
 			descriptor.servlets.add(d);
 		}
+
 		getLog().info("descriptor:\n" + descriptor);
 
 		// generate class
@@ -199,9 +207,7 @@ public class ServletServerGen extends AbstractMojo implements BuilderContext {
 		if (packageName != null && !packageName.isEmpty())
 			cu.setPackageDeclaration(packageName);
 		cl = cu.addClass(className, Modifier.Keyword.FINAL).addExtendedType(NIOServerCli.class).addImplementedType(HttpRawProcessor.class);
-		cl.addFieldWithInitializer(types.get(Logger.class), "log",
-				new MethodCallExpr(new TypeExpr(types.get(LoggerFactory.class)), "getLogger", Builder.list(new ClassExpr(types.get(cl)))), Modifier.Keyword.PRIVATE,
-				Modifier.Keyword.STATIC, Modifier.Keyword.FINAL);
+		cl.addFieldWithInitializer(types.get(Logger.class), "log", new MethodCallExpr(new TypeExpr(types.get(LoggerFactory.class)), "getLogger", Utils.list(new ClassExpr(types.get(cl)))), Modifier.Keyword.PRIVATE, Modifier.Keyword.STATIC, Modifier.Keyword.FINAL);
 
 		cl.addFieldWithInitializer(types.get(int.class), "execMin", new IntegerLiteralExpr("0"))
 				.setJavadocComment(new JavadocComment("min number of execution thread to use, default to 0")).addAndGetAnnotation(Option.class)

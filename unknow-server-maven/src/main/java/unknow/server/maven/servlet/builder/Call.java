@@ -29,6 +29,7 @@ import com.github.javaparser.ast.type.UnknownType;
 
 import unknow.server.http.HttpHandler;
 import unknow.server.maven.TypeCache;
+import unknow.server.maven.Utils;
 import unknow.server.maven.servlet.Builder;
 import unknow.server.maven.servlet.Names;
 import unknow.server.nio.Handler;
@@ -43,26 +44,26 @@ public class Call extends Builder {
 		TypeCache t = ctx.type();
 		ctx.self().addMethod("call", Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL).setType(Integer.class).addAnnotation(Override.class).addThrownException(Exception.class)
 				.getBody().get()
-				.addStatement(assign(t.get(ExecutorService.class), "executor",
-						new ObjectCreationExpr(null, t.get(ThreadPoolExecutor.class), list(
+				.addStatement(Utils.assign(t.get(ExecutorService.class), "executor",
+						new ObjectCreationExpr(null, t.get(ThreadPoolExecutor.class), Utils.list(
 								new NameExpr("execMin"), new NameExpr("execMax"), new NameExpr("execIdle"),
 								new FieldAccessExpr(new TypeExpr(t.get(TimeUnit.class)), "SECONDS"),
-								new ObjectCreationExpr(null, t.get(SynchronousQueue.class, t.get(Runnable.class)), emptyList()),
+								new ObjectCreationExpr(null, t.get(SynchronousQueue.class, t.get(Runnable.class)), Utils.emptyList()),
 								new LambdaExpr(new Parameter(new UnknownType(), "r"),
 										new BlockStmt()
-												.addStatement(assign(t.get(Thread.class), "t", new ObjectCreationExpr(null, t.get(Thread.class), list(new NameExpr("r")))))
-												.addStatement(new MethodCallExpr(new NameExpr("t"), "setDaemon", list(new BooleanLiteralExpr(true))))
+												.addStatement(Utils.assign(t.get(Thread.class), "t", new ObjectCreationExpr(null, t.get(Thread.class), Utils.list(new NameExpr("r")))))
+												.addStatement(new MethodCallExpr(new NameExpr("t"), "setDaemon", Utils.list(new BooleanLiteralExpr(true))))
 												.addStatement(new ReturnStmt(new NameExpr("t"))))))))
-				.addStatement(new AssignExpr(new NameExpr("handler"), new ObjectCreationExpr(null, t.get(HandlerFactory.class), null, emptyList(), list(
+				.addStatement(new AssignExpr(new NameExpr("handler"), new ObjectCreationExpr(null, t.get(HandlerFactory.class), null, Utils.emptyList(), Utils.list(
 						new MethodDeclaration(Modifier.createModifierList(Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL), t.get(Handler.class), "create").addAnnotation(Override.class)
 								.setBody(new BlockStmt()
-										.addStatement(new ReturnStmt(new ObjectCreationExpr(null, t.get(HttpHandler.class), list(new NameExpr("executor"), new ThisExpr(new Name(ctx.self().getName().getIdentifier())), new NameExpr("keepAliveIdle")))))))),
+										.addStatement(new ReturnStmt(new ObjectCreationExpr(null, t.get(HttpHandler.class), Utils.list(new NameExpr("executor"), new ThisExpr(new Name(ctx.self().getName().getIdentifier())), new NameExpr("keepAliveIdle")))))))),
 						Operator.ASSIGN))
 				.addStatement(new MethodCallExpr("loadInitializer"))
 				.addStatement(new MethodCallExpr("initialize"))
-				.addStatement(new MethodCallExpr(Names.EVENTS, "fireContextInitialized", list(Names.CTX)))
-				.addStatement(assign(t.get(Integer.class), "err", new MethodCallExpr(new SuperExpr(), "call")))
-				.addStatement(new MethodCallExpr(Names.EVENTS, "fireContextDestroyed", list(Names.CTX)))
+				.addStatement(new MethodCallExpr(Names.EVENTS, "fireContextInitialized", Utils.list(Names.CTX)))
+				.addStatement(Utils.assign(t.get(Integer.class), "err", new MethodCallExpr(new SuperExpr(), "call")))
+				.addStatement(new MethodCallExpr(Names.EVENTS, "fireContextDestroyed", Utils.list(Names.CTX)))
 				.addStatement(new ReturnStmt(new NameExpr("err")));
 	}
 }

@@ -22,7 +22,7 @@ import unknow.server.jaxws.Envelope;
 import unknow.server.jaxws.Envelope.Operation;
 import unknow.server.jaxws.OperationWrapper;
 
-@WebServlet(urlPatterns = "/Webservice", name = "Webservice")
+@WebServlet(urlPatterns = { "Webservice" }, name = "Webservice")
 public final class WebserviceServlet extends HttpServlet implements SaxHandler<SaxContext> {
 
 	private static final long serialVersionUID = 1;

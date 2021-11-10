@@ -29,6 +29,7 @@ import unknow.server.http.HttpHandler;
 import unknow.server.http.servlet.ServletRequestImpl;
 import unknow.server.http.servlet.ServletResponseImpl;
 import unknow.server.maven.TypeCache;
+import unknow.server.maven.Utils;
 import unknow.server.maven.servlet.Builder;
 import unknow.server.maven.servlet.Names;
 
@@ -45,30 +46,30 @@ public class Process extends Builder {
 				.addAnnotation(Override.class).addThrownException(t.get(IOException.class))
 				.addParameter(t.get(HttpHandler.class), "request")
 				.getBody().get()
-				.addStatement(assign(t.get(ServletResponseImpl.class), "res", new ObjectCreationExpr(null, t.get(ServletResponseImpl.class), list(Names.CTX, new MethodCallExpr(Names.request, "getOut"), Names.request))))
-				.addStatement(assign(t.get(ServletRequestImpl.class), "req", new ObjectCreationExpr(null, t.get(ServletRequestImpl.class), list(Names.CTX, Names.request, new FieldAccessExpr(new TypeExpr(t.get(DispatcherType.class)), "REQUEST"), Names.res))))
-				.addStatement(new MethodCallExpr(Names.EVENTS, "fireRequestInitialized", list(Names.req)))
-				.addStatement(assign(t.get(FilterChain.class), "s", new MethodCallExpr(Names.SERVLETS, "find", list(Names.req))))
+				.addStatement(Utils.assign(t.get(ServletResponseImpl.class), "res", new ObjectCreationExpr(null, t.get(ServletResponseImpl.class), Utils.list(Names.CTX, new MethodCallExpr(Names.request, "getOut"), Names.request))))
+				.addStatement(Utils.assign(t.get(ServletRequestImpl.class), "req", new ObjectCreationExpr(null, t.get(ServletRequestImpl.class), Utils.list(Names.CTX, Names.request, new FieldAccessExpr(new TypeExpr(t.get(DispatcherType.class)), "REQUEST"), Names.res))))
+				.addStatement(new MethodCallExpr(Names.EVENTS, "fireRequestInitialized", Utils.list(Names.req)))
+				.addStatement(Utils.assign(t.get(FilterChain.class), "s", new MethodCallExpr(Names.SERVLETS, "find", Utils.list(Names.req))))
 				.addStatement(new IfStmt(
 						new BinaryExpr(Names.s, new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS),
 						new TryStmt(
 								new BlockStmt()
-										.addStatement(new MethodCallExpr(Names.s, "doFilter", list(Names.req, Names.res))),
-								list(
+										.addStatement(new MethodCallExpr(Names.s, "doFilter", Utils.list(Names.req, Names.res))),
+								Utils.list(
 										new CatchClause(new Parameter(t.get(Exception.class), "e"), new BlockStmt()
-												.addStatement(new MethodCallExpr(Names.log, "error", list(new StringLiteralExpr("failed to service '{}'"), Names.s, Names.e)))
+												.addStatement(new MethodCallExpr(Names.log, "error", Utils.list(new StringLiteralExpr("failed to service '{}'"), Names.s, Names.e)))
 												.addStatement(new IfStmt(new UnaryExpr(new MethodCallExpr(Names.res, "isCommited"), UnaryExpr.Operator.LOGICAL_COMPLEMENT),
-														new ExpressionStmt(new MethodCallExpr(Names.res, "sendError", list(new IntegerLiteralExpr("500"), new NullLiteralExpr()))),
+														new ExpressionStmt(new MethodCallExpr(Names.res, "sendError", Utils.list(new IntegerLiteralExpr("500"), new NullLiteralExpr()))),
 														null)))),
 								null),
-						new ExpressionStmt(new MethodCallExpr(Names.res, "sendError", list(new IntegerLiteralExpr("404"), new NullLiteralExpr())))))
-				.addStatement(new MethodCallExpr(Names.EVENTS, "fireRequestDestroyed", list(Names.req)))
+						new ExpressionStmt(new MethodCallExpr(Names.res, "sendError", Utils.list(new IntegerLiteralExpr("404"), new NullLiteralExpr())))))
+				.addStatement(new MethodCallExpr(Names.EVENTS, "fireRequestDestroyed", Utils.list(Names.req)))
 				.addStatement(new IfStmt(
 						new BinaryExpr(
-								new BinaryExpr(new MethodCallExpr(Names.res, "getHeader", list(connection)), new NullLiteralExpr(), BinaryExpr.Operator.EQUALS),
-								new BinaryExpr(new MethodCallExpr(Names.req, "getHeader", list(connection)), new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS),
+								new BinaryExpr(new MethodCallExpr(Names.res, "getHeader", Utils.list(connection)), new NullLiteralExpr(), BinaryExpr.Operator.EQUALS),
+								new BinaryExpr(new MethodCallExpr(Names.req, "getHeader", Utils.list(connection)), new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS),
 								BinaryExpr.Operator.AND),
-						new ExpressionStmt(new MethodCallExpr(Names.res, "setHeader", list(connection, new MethodCallExpr(Names.req, "getHeader", list(connection))))),
+						new ExpressionStmt(new MethodCallExpr(Names.res, "setHeader", Utils.list(connection, new MethodCallExpr(Names.req, "getHeader", Utils.list(connection))))),
 						null))
 				.addStatement(new MethodCallExpr(Names.res, "close"));
 	}

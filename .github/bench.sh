@@ -30,13 +30,14 @@ unknow_stop() {
 }
 tomcat_start() {
 	sudo cp unknow-http-test/target/*.war /var/lib/tomcat9/webapps/ROOT.war
-	sudo systemctl start tomcat9
+	sudo /var/lib/tomcat9/bin/catalina.sh run &
 	pid=$!
 	trap "kill -9 $pid" EXIT
 	sleep 10
+	cat /var/lib/tomcat9/logs/catalina.out
 }
 tomcat_stop() {
-	sudo systemctl stop tomcat9
+	/var/lib/tomcat9/bin/shutdown.sh &
 }
 
 declare -a results

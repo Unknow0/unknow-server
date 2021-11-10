@@ -10,6 +10,7 @@ import com.github.javaparser.ast.stmt.ReturnStmt;
 
 import unknow.server.http.servlet.ServletContextImpl;
 import unknow.server.maven.TypeCache;
+import unknow.server.maven.Utils;
 import unknow.server.maven.servlet.Builder;
 import unknow.server.maven.servlet.Names;
 
@@ -24,13 +25,13 @@ public class CreateContext extends Builder {
 
 		ctx.self().addMethod("createContext", Modifier.Keyword.PRIVATE, Modifier.Keyword.FINAL).setType(t.get(ServletContextImpl.class))
 				.getBody().get()
-				.addStatement(new ReturnStmt(new ObjectCreationExpr(null, t.get(ServletContextImpl.class), list(
+				.addStatement(new ReturnStmt(new ObjectCreationExpr(null, t.get(ServletContextImpl.class), Utils.list(
 						new StringLiteralExpr(ctx.descriptor().name),
-						mapString(ctx.descriptor().param, t),
+						Utils.mapString(ctx.descriptor().param, t),
 						Names.SERVLETS,
 						Names.EVENTS,
-						new ObjectCreationExpr(null, t.get(ctx.sessionFactory()), emptyList()),
-						mapString(ctx.descriptor().localeMapping, t),
-						mapString(ctx.descriptor().mimeTypes, t)))));
+						new ObjectCreationExpr(null, t.get(ctx.sessionFactory()), Utils.emptyList()),
+						Utils.mapString(ctx.descriptor().localeMapping, t),
+						Utils.mapString(ctx.descriptor().mimeTypes, t)))));
 	}
 }
