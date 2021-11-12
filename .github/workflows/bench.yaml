@@ -20,6 +20,13 @@ jobs:
     - name: install dependencies
       run: sudo apt-get install siege tomcat9
 
+    - name: test
+      run: |
+        env
+        ls -l /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.312-7/x64
+      env:
+        JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.312-7/x64
+
     - name: run bench
       run: bash .github/bench.sh
       env: 
