@@ -30,7 +30,7 @@ unknow_stop() {
 }
 tomcat_start() {
 	sudo cp unknow-http-test/target/*.war /var/lib/tomcat9/webapps/ROOT.war
-	echo 'export JAVA_HOME=/opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.312-7/x64' | tee -a /etc/default/tomcat9
+	echo 'export JAVA_HOME=/opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.312-7/x64' | sudo tee -a /etc/default/tomcat9
 	sudo systemctl start tomcat9
 	trap "" EXIT
 	sleep 10
