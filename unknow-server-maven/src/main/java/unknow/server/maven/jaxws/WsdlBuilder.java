@@ -119,7 +119,7 @@ public class WsdlBuilder {
 			return "xs:string";
 		// TODO enum
 		XmlObject o = (XmlObject) type;
-		throw new RuntimeException("TODO");
+		return "TODO";
 	}
 
 	private static void collectNs(XmlType type, Set<String> schemaNs) {
