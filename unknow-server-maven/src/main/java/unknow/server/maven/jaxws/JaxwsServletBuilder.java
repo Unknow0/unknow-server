@@ -3,6 +3,7 @@
  */
 package unknow.server.maven.jaxws;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -175,49 +176,55 @@ public class JaxwsServletBuilder {
 
 		generateHandlers(types);
 
-		servlet.addMethod("doGet", PF).addMarkerAnnotation(Override.class)
+		byte[] wsdl = WsdlBuilder.build(service);
+		servlet.addFieldWithInitializer(types.get(byte[].class), "WSDL", Utils.byteArray(wsdl), PSF);
+		servlet.addMethod("doGet", PF).addMarkerAnnotation(Override.class).addThrownException(types.get(IOException.class))
 				.addParameter(types.get(HttpServletRequest.class), "req")
 				.addParameter(types.get(HttpServletResponse.class), "res")
-				.setBody(new BlockStmt());
-		// TODO wsdl
+				.getBody().get()
+				.addStatement(new MethodCallExpr(new NameExpr("res"), "setContentType", Utils.list(new StringLiteralExpr("text/xml"))))
+				.addStatement(new MethodCallExpr(new NameExpr("res"), "setContentLength", Utils.list(new IntegerLiteralExpr(Integer.toString(wsdl.length)))))
+				.addStatement(new MethodCallExpr(
+						new MethodCallExpr(new NameExpr("res"), "getOutputStream"),
+						"write", Utils.list(new NameExpr("WSDL"))));
 
 		servlet.addMethod("doPost", PF).addMarkerAnnotation(Override.class)
 				.addParameter(types.get(HttpServletRequest.class), "req")
 				.addParameter(types.get(HttpServletResponse.class), "res")
-				.setBody(new BlockStmt()
-						.addStatement(new TryStmt(new BlockStmt()
-								.addStatement(
-										new AssignExpr(
-												new VariableDeclarationExpr(types.get(Envelope.class), "e"),
-												new MethodCallExpr(new TypeExpr(types.get(SaxParser.class)), "parse", new NodeList<>(
-														new ThisExpr(),
-														new ObjectCreationExpr(null, types.get(InputSource.class), new NodeList<>(new MethodCallExpr(new NameExpr("req"), "getInputStream"))))),
-												Operator.ASSIGN))
-								.addStatement(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(System.class)), "out"), "println", new NodeList<>(new NameExpr("e"))))
-								.addStatement(new AssignExpr(
-										new VariableDeclarationExpr(types.get(int.class), "i"),
-										new MethodCallExpr(new TypeExpr(types.get(Arrays.class)), "binarySearch", new NodeList<>(new NameExpr("OP_SIG"), new MethodCallExpr(new NameExpr("e"), "sig"))),
+				.getBody().get()
+				.addStatement(new TryStmt(new BlockStmt()
+						.addStatement(
+								new AssignExpr(
+										new VariableDeclarationExpr(types.get(Envelope.class), "e"),
+										new MethodCallExpr(new TypeExpr(types.get(SaxParser.class)), "parse", new NodeList<>(
+												new ThisExpr(),
+												new ObjectCreationExpr(null, types.get(InputSource.class), new NodeList<>(new MethodCallExpr(new NameExpr("req"), "getInputStream"))))),
 										Operator.ASSIGN))
-								// TODO if i<0 return soap fault
-								.addStatement(new MethodCallExpr(new NameExpr("Marshallers"), "marshall", new NodeList<>(
-										new MethodCallExpr(new ArrayAccessExpr(new NameExpr("OP_CALL"), new NameExpr("i")), "apply", new NodeList<>(new NameExpr("e"))),
-										new MethodCallExpr(new NameExpr("res"), "getWriter")))),
-								new NodeList<>(
-										new CatchClause(new Parameter(types.get(Exception.class), "e"), new BlockStmt()
-												.addStatement(new MethodCallExpr(new NameExpr("res"), "setStatus", new NodeList<>(new IntegerLiteralExpr("500"))))
-												.addStatement(new TryStmt(
-														new BlockStmt().addStatement(
+						.addStatement(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(System.class)), "out"), "println", new NodeList<>(new NameExpr("e"))))
+						.addStatement(new AssignExpr(
+								new VariableDeclarationExpr(types.get(int.class), "i"),
+								new MethodCallExpr(new TypeExpr(types.get(Arrays.class)), "binarySearch", new NodeList<>(new NameExpr("OP_SIG"), new MethodCallExpr(new NameExpr("e"), "sig"))),
+								Operator.ASSIGN))
+						// TODO if i<0 return soap fault
+						.addStatement(new MethodCallExpr(new NameExpr("Marshallers"), "marshall", new NodeList<>(
+								new MethodCallExpr(new ArrayAccessExpr(new NameExpr("OP_CALL"), new NameExpr("i")), "apply", new NodeList<>(new NameExpr("e"))),
+								new MethodCallExpr(new NameExpr("res"), "getWriter")))),
+						new NodeList<>(
+								new CatchClause(new Parameter(types.get(Exception.class), "e"), new BlockStmt()
+										.addStatement(new MethodCallExpr(new NameExpr("res"), "setStatus", new NodeList<>(new IntegerLiteralExpr("500"))))
+										.addStatement(new TryStmt(
+												new BlockStmt().addStatement(
+														new MethodCallExpr(
 																new MethodCallExpr(
 																		new MethodCallExpr(
-																				new MethodCallExpr(
-																						new MethodCallExpr(new NameExpr("res"), "getWriter"),
-																						"append",
-																						new NodeList<>(new StringLiteralExpr("<e:Envelope xmlns:e=\\\"http://schemas.xmlsoap.org/soap/envelope/\\\"><e:Body><e:Fault><faultcode>Client</faultcode><faultstring>"))),
-																				"append", new NodeList<>(new MethodCallExpr(new NameExpr("e"), "getMessage"))),
-																		"append", new NodeList<>(new StringLiteralExpr("</faultstring></e:Fault></e:Body></e:Envelope>")))),
-														new NodeList<>(new CatchClause(new Parameter(types.get(Exception.class), "ignore"), new BlockStmt())), null))
-												.addStatement(new MethodCallExpr(new NameExpr("log"), "warn", new NodeList<>(new StringLiteralExpr("failed to service request"), new NameExpr("e")))))),
-								null)));
+																				new MethodCallExpr(new NameExpr("res"), "getWriter"),
+																				"append",
+																				new NodeList<>(new StringLiteralExpr("<e:Envelope xmlns:e=\\\"http://schemas.xmlsoap.org/soap/envelope/\\\"><e:Body><e:Fault><faultcode>Client</faultcode><faultstring>"))),
+																		"append", new NodeList<>(new MethodCallExpr(new NameExpr("e"), "getMessage"))),
+																"append", new NodeList<>(new StringLiteralExpr("</faultstring></e:Fault></e:Body></e:Envelope>")))),
+												new NodeList<>(new CatchClause(new Parameter(types.get(Exception.class), "ignore"), new BlockStmt())), null))
+										.addStatement(new MethodCallExpr(new NameExpr("log"), "warn", new NodeList<>(new StringLiteralExpr("failed to service request"), new NameExpr("e")))))),
+						null));
 	}
 
 	private void generateHandlers(TypeCache types) {
@@ -260,15 +267,6 @@ public class JaxwsServletBuilder {
 														new MethodCallExpr(new StringLiteralExpr("{http://www.w3.org/2001/12/soap-envelope}Envelope"), "equals", new NodeList<>(QNAME)),
 														new ExpressionStmt(new MethodCallExpr(CONTEXT, "push", new NodeList<>(new ObjectCreationExpr(null, types.get(Envelope.class), new NodeList<>())))),
 														new ThrowStmt(new ObjectCreationExpr(null, types.get(SAXException.class), new NodeList<>(new BinaryExpr(new StringLiteralExpr("Invalid tag "), QNAME, BinaryExpr.Operator.PLUS)))))))));
-//		servlet.addMethod("endElement", PF)
-//				.addParameter(types.get(String.class), "qname").addParameter(types.get(String.class), "name").addParameter(types.get(SaxContext.class), "context")
-//				.addMarkerAnnotation(Override.class).addThrownException(types.get(SAXException.class))
-//				.setBody(new BlockStmt()
-//						.addStatement(new IfStmt(
-//								new UnaryExpr(new MethodCallExpr(new StringLiteralExpr("{http://www.w3.org/2001/12/soap-envelope}Envelope"), "equals", new NodeList<>(QNAME)), UnaryExpr.Operator.LOGICAL_COMPLEMENT),
-//								new ExpressionStmt(new MethodCallExpr(new NameExpr("context"), "previous")),
-//								null)));
-
 		servlet.addFieldWithInitializer(t, "HEADER",
 				new ObjectCreationExpr(null, t, null, new NodeList<>(), header.build()),
 				PSF);

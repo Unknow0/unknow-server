@@ -20,7 +20,6 @@ import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.expr.AnnotationExpr;
-import com.github.javaparser.ast.expr.ArrayInitializerExpr;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.MemberValuePair;
 import com.github.javaparser.ast.expr.NameExpr;
@@ -60,7 +59,7 @@ public class Service {
 		String ns = a.findFirst(MemberValuePair.class, m -> "targetNamespace".equals(m.getNameAsString())).map(m -> m.getValue().asStringLiteralExpr().asString()).orElse(serviceClass.resolve().getPackageName());
 
 		Optional<AnnotationExpr> o = serviceClass.getAnnotationByClass(UrlPattern.class);
-		String[] url = { name };
+		String[] url = { "/" + name };
 		if (o.isPresent()) {
 			a = o.get();
 			Expression e;
