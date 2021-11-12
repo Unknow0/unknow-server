@@ -21,9 +21,7 @@ jobs:
       run: sudo apt-get install siege tomcat9
 
     - name: test
-      run: cat /etc/systemd/system/tomcat9.service
+      run: cat /etc/systemd/system/multi-user.target.wants/tomcat9.service
 
     - name: run bench
       run: bash .github/bench.sh
-      env: 
-        JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.312-7/x64
