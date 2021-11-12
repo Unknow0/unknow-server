@@ -45,10 +45,12 @@ public class ServletResponseImpl implements HttpServletResponse {
 	private static final Logger log = LoggerFactory.getLogger(ServletResponseImpl.class);
 	private static final byte[] CRLF = new byte[] { '\r', '\n' };
 	private static final byte[] QUOTE = new byte[] { '\\', '"' };
-	private static final byte[] CHUNKED = new byte[] { 't', 'r', 'a', 'n', 's', 'f', 'e', 'r', '-', 'e', 'n', 'c', 'o', 'd', 'i', 'n', 'g', ':', ' ', 'c', 'h', 'u', 'n', 'k', 'e', 'd', '\r', '\n' };
+	private static final byte[] CHUNKED = new byte[] { 't', 'r', 'a', 'n', 's', 'f', 'e', 'r', '-', 'e', 'n', 'c', 'o', 'd', 'i', 'n', 'g', ':', ' ', 'c', 'h', 'u', 'n', 'k',
+			'e', 'd', '\r', '\n' };
 	private static final byte[] CONTENT_LENGTH = new byte[] { 'c', 'o', 'n', 't', 'e', 'n', 't', '-', 'l', 'e', 'n', 'g', 't', 'h', ':', ' ' };
 	private static final byte[] CONTENT_LENGTH0 = new byte[] { 'c', 'o', 'n', 't', 'e', 'n', 't', '-', 'l', 'e', 'n', 'g', 't', 'h', ':', ' ', '0', '\r', '\n' };
-	private static final byte[] CONTENT_HTML = new byte[] { 'c', 'o', 'n', 't', 'e', 'n', 't', '-', 't', 'y', 'p', 'e', ':', ' ', 't', 'e', 'x', 't', '/', 'h', 't', 'm', 'l', ';', 'c', 'h', 'a', 'r', 's', 'e', 't', '=', 'u', 't', 'f', '8', '\r', '\n' };
+	private static final byte[] CONTENT_HTML = new byte[] { 'c', 'o', 'n', 't', 'e', 'n', 't', '-', 't', 'y', 'p', 'e', ':', ' ', 't', 'e', 'x', 't', '/', 'h', 't', 'm', 'l',
+			';', 'c', 'h', 'a', 'r', 's', 'e', 't', '=', 'u', 't', 'f', '8', '\r', '\n' };
 	private static final byte[] LOCATION = new byte[] { 'l', 'o', 'c', 'a', 't', 'i', 'o', 'n', ':', ' ' };
 	private static final byte[] COOKIE = new byte[] { 's', 'e', 't', '-', 'c', 'o', 'o', 'k', 'i', 'e', ':', ' ' };
 	private static final byte[] PATH = new byte[] { ';', 'p', 'a', 't', 'h', '=' };
@@ -191,6 +193,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 	}
 
 	public void sendError(int sc, Throwable t, String msg) throws IOException {
+		status = sc;
 		ServletManager manager = ctx.getServletManager();
 		FilterChain f = manager.getError(sc, t);
 		if (f != null) {
@@ -498,7 +501,8 @@ public class ServletResponseImpl implements HttpServletResponse {
 		int l = s.length();
 		for (int i = 0; i < l; i++) {
 			char c = s.charAt(i);
-			if (c == ' ' || c == '(' || c == ')' || c == '<' || c == '>' || c == '@' || c == ',' || c == ';' || c == ':' || c == '\\' || c == '"' || c == '/' || c == '[' || c == ']' || c == '?' || c == '=' || c == '{' || c == '}')
+			if (c == ' ' || c == '(' || c == ')' || c == '<' || c == '>' || c == '@' || c == ',' || c == ';' || c == ':' || c == '\\' || c == '"' || c == '/' || c == '['
+					|| c == ']' || c == '?' || c == '=' || c == '{' || c == '}')
 				return true;
 		}
 		return false;
