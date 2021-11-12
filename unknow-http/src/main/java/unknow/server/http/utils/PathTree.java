@@ -57,6 +57,7 @@ public class PathTree {
 				break;
 			if (i == e)
 				return n.exact == null ? n.def : n.exact;
+			last=n;
 			o = i + 1;
 		}
 
