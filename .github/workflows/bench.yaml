@@ -22,5 +22,5 @@ jobs:
 
     - name: run bench
       run: bash .github/bench.sh
-      with: 
+      env: 
         JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.312-7/x64

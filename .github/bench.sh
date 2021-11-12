@@ -35,10 +35,9 @@ tomcat_start() {
 	trap "" EXIT
 	sleep 10
 	sudo journalctl -eu tomcat9
-	cat /var/lib/tomcat9/logs/catalina.out
 }
 tomcat_stop() {
-	/var/lib/tomcat9/bin/shutdown.sh &
+	sudo systemctl stop tomcat9
 }
 
 declare -a results
