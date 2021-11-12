@@ -21,7 +21,10 @@ jobs:
       run: sudo apt-get install siege tomcat9
 
     - name: test
-      run: cat /etc/systemd/system/multi-user.target.wants/tomcat9.service
+      run: |
+        cat /usr/libexec/tomcat9/tomcat-start.sh
+        ls /var/lib/tomcat9
+        ls /usr/share/tomcat9
 
     - name: run bench
       run: bash .github/bench.sh
