@@ -5,9 +5,6 @@ package unknow.server.maven.jaxws;
 
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
-
-import org.junit.Test;
 
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.NodeList;
@@ -25,7 +22,7 @@ import unknow.server.maven.jaxws.model.XmlType;
 public class JaxSaxHandlerBuilderTest {
 
 	public void test() {
-		XmlObject xml = new XmlObject(this.getClass().getName(), null, Arrays.asList(new XmlField(XmlType.XmlInt, "getI", "setI", "i", "")), Arrays.asList(), new XmlElem(XmlType.XmlString, "getValue", "setValue"));
+		XmlObject xml = new XmlObject(this.getClass().getName(), null, Arrays.asList(new XmlField(XmlType.XmlInt, "getI", "setI", "i", "")), Arrays.asList(), new XmlElem(XmlType.XmlString, "getValue", "setValue"), null);
 
 		CompilationUnit cu = new CompilationUnit();
 		TypeCache types = new TypeCache(cu, new HashMap<>());

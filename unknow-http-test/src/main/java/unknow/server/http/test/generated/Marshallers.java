@@ -24,9 +24,9 @@ public final class Marshallers {
 		});
 		R.register(Root.class, (m, t, w) -> {
 			w.attribute("value", "", Integer.toString(t.getValue()));
-			w.startElement("elem", "webservice.unknow");
+			w.startElement("elem", "");
 			w.text(t.getElem());
-			w.endElement("elem", "webservice.unknow");
+			w.endElement("elem", "");
 		});
 	}
 

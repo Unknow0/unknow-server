@@ -8,18 +8,21 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
 import javax.jws.soap.SOAPBinding.ParameterStyle;
 
+import unknow.server.jaxws.XMLNsCollector;
+import unknow.server.maven.jaxws.model.SchemaData;
 import unknow.server.maven.jaxws.model.Service;
 import unknow.server.maven.jaxws.model.Service.Op;
 import unknow.server.maven.jaxws.model.Service.Param;
 import unknow.server.maven.jaxws.model.XmlObject;
 import unknow.server.maven.jaxws.model.XmlObject.XmlField;
 import unknow.server.maven.jaxws.model.XmlType;
+import unknow.server.maven.jaxws.model.XmlType.XmlList;
 
 /**
  * @author unknow
@@ -54,16 +57,62 @@ public class WsdlBuilder {
 	 * @throws IOException
 	 */
 	private static void buildSchemas(Writer sb, Service service) throws IOException {
-		Set<String> schemaNs = new HashSet<>();
-		for (Service.Op o : service.operations) {
-			if (o.paramStyle == ParameterStyle.WRAPPED)
-				schemaNs.add(o.ns);
-			for (Service.Param p : o.params)
-				collectNs(p.type, schemaNs);
-		}
+		Map<String, Integer> ns = collectNs(service, null);
 
-		for (String s : schemaNs)
+		for (String s : ns.keySet())
 			buildSchema(sb, service, s);
+	}
+
+	private static Map<String, Integer> collectNs(Service service, String limit) {
+		Map<String, Integer> ns = new HashMap<>();
+		for (Service.Op o : service.operations) {
+			if (o.paramStyle == ParameterStyle.WRAPPED) {
+				ns.merge(o.ns, 1, Integer::sum);
+				if (limit != null && !limit.equals(o.ns))
+					continue;
+			}
+			for (Service.Param p : o.params) {
+				if (limit != null && !limit.equals(p.ns))
+					continue;
+				collectNs(p, ns, limit);
+			}
+		}
+		return ns;
+	}
+
+	private static void collectNs(Service.Param p, Map<String, Integer> ns, String limit) {
+		ns.merge(p.ns, 1, Integer::sum);
+		collectNs(p.type, ns, limit);
+	}
+
+	/**
+	 * @param type
+	 * @param ns
+	 * @param limit
+	 */
+	private static void collectNs(XmlType type, Map<String, Integer> ns, String limit) {
+		SchemaData schema = type.schema();
+		ns.merge(schema.ns, 1, Integer::sum);
+
+		if (type instanceof XmlList)
+			type = ((XmlList) type).component;
+		if (!(type instanceof XmlObject))
+			return;
+
+		if (limit != null && !limit.equals(schema.rootElement))
+			return;
+
+		XmlObject o = (XmlObject) type;
+		for (XmlField e : o.elems) {
+			ns.merge(e.ns, 1, Integer::sum);
+			collectNs(e.type, ns, limit);
+		}
+		for (XmlField e : o.attrs) {
+			ns.merge(e.ns, 1, Integer::sum);
+			collectNs(e.type, ns, limit);
+		}
+		if (o.value != null)
+			collectNs(o.value.type, ns, limit);
 	}
 
 	/**
@@ -73,10 +122,14 @@ public class WsdlBuilder {
 	 * @throws IOException
 	 */
 	private static void buildSchema(Writer sb, Service service, String ns) throws IOException {
+		Map<String, Integer> collectNs = collectNs(service, ns);
+		Map<String, String> nsPrefix = XMLNsCollector.buildNsMapping(collectNs);
+		nsPrefix.put("http://www.w3.org/2001/XMLSchema", "xs");
+
 		sb.append("<xs:schema xmlns=\"").append(ns).write("\">");
 		for (Service.Op o : service.operations) {
 			if (o.paramStyle == ParameterStyle.WRAPPED && o.ns.equals(ns))
-				appendOperation(sb, o, null);
+				appendOperation(sb, o, nsPrefix);
 			for (Service.Param p : o.params) {
 				if (!p.ns.equals(ns))
 					continue;
@@ -101,38 +154,7 @@ public class WsdlBuilder {
 	}
 
 	private static String getType(XmlType type, Map<String, String> ns) {
-		if (type == XmlType.XmlBigDecimal || type == XmlType.XmlFloat || type == XmlType.XmlDouble)
-			return "xs:decimal";
-		if (type == XmlType.XmlBigInteger)
-			return "xs:integer";
-		if (type == XmlType.XmlBoolean)
-			return "xs:boolean";
-		if (type == XmlType.XmlByte)
-			return "xs:byte";
-		if (type == XmlType.XmlShort)
-			return "xs:short";
-		if (type == XmlType.XmlInt)
-			return "xs:int";
-		if (type == XmlType.XmlLong)
-			return "xs:long";
-		if (type == XmlType.XmlString)
-			return "xs:string";
-		// TODO enum
-		XmlObject o = (XmlObject) type;
-		return "TODO";
-	}
-
-	private static void collectNs(XmlType type, Set<String> schemaNs) {
-		if (type.isSimple())
-			return;
-		XmlObject o = (XmlObject) type;
-		for (XmlField e : o.attrs) {
-			if (!e.ns.isEmpty())
-				schemaNs.add(e.ns);
-		}
-		for (XmlField e : o.elems) {
-			schemaNs.add(e.ns);
-			collectNs(e.type, schemaNs);
-		}
+		SchemaData d = type.schema();
+		return ns.get(d.ns) + ":" + d.name;
 	}
 }

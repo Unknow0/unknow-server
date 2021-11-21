@@ -35,6 +35,18 @@ tomcat_stop() {
 	sleep 2
 }
 
+print() {
+	printf '%-10s' 'server'
+	for i in ${TEST[@]}; do printf '%-10s' "${i## *}"; done
+	echo
+	IFS=$'\n'
+	for s in ${SERVER[@]}
+	do
+		printf '%-10s' "$s"
+		for r in $(tail -n +2 $s | cut -d ',' -f $1); do printf '%-10s' "$r"; done
+	done
+}
+
 for i in ${SERVER[@]}
 do
 	${i}_start
@@ -45,13 +57,8 @@ do
 	${i}_stop
 done
 
-printf '%-10s' 'server'
-for i in ${TEST[@]}; do printf '%-10s' "${i## *}"; done
-echo
-IFS=$'\n'
-for s in ${SERVER[@]}
-do
-	printf '%-10s' "$s"
-#	for r in $(; do printf '%-10s' "$r"; done
-	cat "$s"
-done
+echo "Throughput (higher better)"
+print 7
+
+echo "Failled connection"
+print 10

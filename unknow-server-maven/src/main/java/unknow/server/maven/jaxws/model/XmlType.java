@@ -51,6 +51,13 @@ public interface XmlType {
 	String binaryName();
 
 	/**
+	 * get the schema data
+	 * 
+	 * @return the schema
+	 */
+	SchemaData schema();
+
+	/**
 	 * @return true if this type is simple
 	 */
 	default boolean isSimple() {
@@ -58,6 +65,8 @@ public interface XmlType {
 	}
 
 	public static final XmlType XmlString = new XmlType() {
+		private final SchemaData schema = new SchemaData("string", "http://www.w3.org/2001/XMLSchema", null, null);
+
 		@Override
 		public Expression convert(TypeCache types, Expression v) {
 			return v;
@@ -69,11 +78,18 @@ public interface XmlType {
 		}
 
 		@Override
+		public SchemaData schema() {
+			return schema;
+		}
+
+		@Override
 		public String toString() {
 			return "string";
 		}
 	};
 	public static final XmlType XmlBigDecimal = new XmlType() {
+		private final SchemaData schema = new SchemaData("decimal", "http://www.w3.org/2001/XMLSchema", null, null);
+
 		@Override
 		public Expression convert(TypeCache types, Expression v) {
 			return new ObjectCreationExpr(null, types.get(BigDecimal.class), new NodeList<>(v));
@@ -90,11 +106,18 @@ public interface XmlType {
 		}
 
 		@Override
+		public SchemaData schema() {
+			return schema;
+		}
+
+		@Override
 		public String toString() {
 			return "bigDecimal";
 		}
 	};
 	public static final XmlType XmlBigInteger = new XmlType() {
+		private final SchemaData schema = new SchemaData("integer", "http://www.w3.org/2001/XMLSchema", null, null);
+
 		@Override
 		public Expression convert(TypeCache types, Expression v) {
 			return new ObjectCreationExpr(null, types.get(BigInteger.class), new NodeList<>(v));
@@ -111,11 +134,18 @@ public interface XmlType {
 		}
 
 		@Override
+		public SchemaData schema() {
+			return schema;
+		}
+
+		@Override
 		public String toString() {
 			return "bigInteger";
 		}
 	};
 	public static final XmlType XmlBoolean = new XmlType() {
+		private final SchemaData schema = new SchemaData("boolean", "http://www.w3.org/2001/XMLSchema", null, null);
+
 		@Override
 		public Expression convert(TypeCache types, Expression v) {
 			return new BinaryExpr(
@@ -130,31 +160,38 @@ public interface XmlType {
 		}
 
 		@Override
+		public SchemaData schema() {
+			return schema;
+		}
+
+		@Override
 		public String toString() {
 			return "XmlString";
 		}
 	};
 
-	public static final XmlType XmlByte = new XmlPrimitive(byte.class, Integer.class, "parseInt");
-	public static final XmlType XmlChar = new XmlPrimitive(char.class, Integer.class, "parseInt");
-	public static final XmlType XmlShort = new XmlPrimitive(short.class, Integer.class, "parseInt");
-	public static final XmlType XmlInt = new XmlPrimitive(int.class, Integer.class, "parseInt");
-	public static final XmlType XmlLong = new XmlPrimitive(long.class, Long.class, "parseLong");
-	public static final XmlType XmlFloat = new XmlPrimitive(float.class, Float.class, "parseFloat");
-	public static final XmlType XmlDouble = new XmlPrimitive(double.class, Double.class, "parseDouble");
+	public static final XmlType XmlByte = new XmlPrimitive(byte.class, Integer.class, "parseInt", "byte");
+	public static final XmlType XmlChar = new XmlPrimitive(char.class, Integer.class, "parseInt", "int");
+	public static final XmlType XmlShort = new XmlPrimitive(short.class, Integer.class, "parseInt", "short");
+	public static final XmlType XmlInt = new XmlPrimitive(int.class, Integer.class, "parseInt", "int");
+	public static final XmlType XmlLong = new XmlPrimitive(long.class, Long.class, "parseLong", "long");
+	public static final XmlType XmlFloat = new XmlPrimitive(float.class, Float.class, "parseFloat", "decimal");
+	public static final XmlType XmlDouble = new XmlPrimitive(double.class, Double.class, "parseDouble", "decimal");
 
 	public static class XmlPrimitive implements XmlType {
 		private final Class<?> clazz;
 		private final Class<?> parser;
 		private final String parse;
+		private final SchemaData schema;
 
 		/**
 		 * create new XmlType.XmlPrimitive
 		 */
-		public XmlPrimitive(Class<?> clazz, Class<?> parser, String parse) {
+		public XmlPrimitive(Class<?> clazz, Class<?> parser, String parse, String type) {
 			this.clazz = clazz;
 			this.parser = parser;
 			this.parse = parse;
+			this.schema = new SchemaData(type, "http://www.w3.org/2001/XMLSchema", null, null);
 		}
 
 		@Override
@@ -179,10 +216,15 @@ public interface XmlType {
 		public String toString() {
 			return clazz.getName();
 		}
+
+		@Override
+		public SchemaData schema() {
+			return schema;
+		}
 	}
 
 	public static class XmlList implements XmlType {
-		private final XmlType component;
+		public final XmlType component;
 
 		public XmlList(XmlType component) {
 			this.component = component;
@@ -201,6 +243,11 @@ public interface XmlType {
 		@Override
 		public String binaryName() {
 			return "[" + component.binaryName();
+		}
+
+		@Override
+		public SchemaData schema() {
+			return component.schema();
 		}
 
 		@Override

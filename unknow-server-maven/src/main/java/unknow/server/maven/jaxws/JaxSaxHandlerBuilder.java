@@ -36,6 +36,7 @@ import com.github.javaparser.ast.type.VoidType;
 
 import unknow.sax.SaxContext;
 import unknow.server.maven.TypeCache;
+import unknow.server.maven.jaxws.model.SchemaData;
 import unknow.server.maven.jaxws.model.XmlObject;
 import unknow.server.maven.jaxws.model.XmlObject.XmlElem;
 import unknow.server.maven.jaxws.model.XmlObject.XmlField;
@@ -56,6 +57,11 @@ public class JaxSaxHandlerBuilder {
 		public String binaryName() {
 			return null;
 		}
+
+		@Override
+		public SchemaData schema() {
+			return null;
+		};
 	};
 
 	private final TypeCache types;

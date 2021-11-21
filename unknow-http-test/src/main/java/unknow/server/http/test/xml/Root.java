@@ -10,7 +10,7 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
 @XmlAccessorType(XmlAccessType.FIELD)
-@XmlRootElement(namespace = "webservice.unknow", name = "Root")
+@XmlRootElement(namespace = "http://webservice.unknow", name = "Root")
 public class Root {
 	@XmlAttribute
 	private int value;

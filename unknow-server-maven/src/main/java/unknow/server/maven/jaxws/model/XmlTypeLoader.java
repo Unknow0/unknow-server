@@ -125,6 +125,7 @@ public class XmlTypeLoader {
 //		if (isEnum(resolve)) // TODO XmlEnum/XmlEnumValue
 //			return new XmlType.Enum(describe);
 
+		// TODO date/time
 		// TODO Collection
 		// TODO Map ?
 
@@ -136,7 +137,9 @@ public class XmlTypeLoader {
 	}
 
 	private XmlObject createObject(ClassOrInterfaceDeclaration c) {
+		// TODO get namespace data ?
 		String namespace = "";
+		String name = c.getNameAsString();
 
 		Optional<AnnotationExpr> a = c.getAnnotationByClass(XmlAccessorType.class);
 		XmlAccessType type = XmlAccessType.PUBLIC_MEMBER;
@@ -160,11 +163,9 @@ public class XmlTypeLoader {
 					factory = new Factory(cl, method);
 			}
 			// TODO prop order
+			name = getName(a, name);
 			namespace = getNs(a, namespace);
 		}
-		a = c.getAnnotationByClass(javax.xml.bind.annotation.XmlRootElement.class);
-		if (a.isPresent())
-			namespace = getNs(a, namespace);
 
 		class D {
 			final FieldDeclaration f;
@@ -252,7 +253,33 @@ public class XmlTypeLoader {
 			}
 		}
 
-		return new XmlObject(c.resolve().getQualifiedName(), factory, attrs, elems, value);
+		return new XmlObject(c.resolve().getQualifiedName(), factory, attrs, elems, value, getSchema(c));
+	}
+
+	/**
+	 * @param c
+	 * @return
+	 */
+	private static SchemaData getSchema(ClassOrInterfaceDeclaration c) {
+		// TODO get namespace data ?
+		String ns = "";
+		String name = c.getNameAsString();
+
+		String rootElem = null;
+		String rootNs = null;
+		Optional<AnnotationExpr> a = c.getAnnotationByClass(javax.xml.bind.annotation.XmlRootElement.class);
+		if (a.isPresent()) {
+			rootElem = getName(a, name);
+			rootNs = getNs(a, ns);
+		}
+
+		a = c.getAnnotationByClass(javax.xml.bind.annotation.XmlType.class);
+		if (a.isPresent()) {
+			name = getName(a, name);
+			ns = getNs(a, ns);
+		}
+
+		return new SchemaData(name, ns, rootElem, rootNs);
 	}
 
 	private static boolean isEnum(ResolvedReferenceType t) {

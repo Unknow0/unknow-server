@@ -20,12 +20,15 @@ public class XmlObject implements XmlType {
 	public final List<XmlField> elems;
 	public final XmlElem value;
 
-	public XmlObject(String clazz, Factory factory, List<XmlField> attrs, List<XmlField> elems, XmlElem value) {
+	private final SchemaData schema;
+
+	public XmlObject(String clazz, Factory factory, List<XmlField> attrs, List<XmlField> elems, XmlElem value, SchemaData schema) {
 		this.clazz = clazz;
 		this.factory = factory;
 		this.attrs = attrs;
 		this.elems = elems;
 		this.value = value;
+		this.schema = schema;
 	}
 
 	public String factoryClazz() {
@@ -49,6 +52,11 @@ public class XmlObject implements XmlType {
 	@Override
 	public String binaryName() {
 		return clazz + ";";
+	}
+	
+	@Override
+	public SchemaData schema() {
+		return schema;
 	}
 
 	public static class Factory {

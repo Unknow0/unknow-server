@@ -247,7 +247,7 @@ public class JaxwsServletBuilder {
 					body.addElem(new XmlField(p.type, "", "addBody", p.name, p.ns));
 			}
 			if (o.paramStyle == ParameterStyle.WRAPPED)
-				body.addElem(new XmlField(new XmlObject(OPERATION, null, OP_ATTRS, childs, null), "", "addBody", o.name, service.ns));
+				body.addElem(new XmlField(new XmlObject(OPERATION, null, OP_ATTRS, childs, null, null), "", "addBody", o.name, service.ns));
 		}
 
 		ClassOrInterfaceType t = types.get(SaxHandler.class, types.get(SaxContext.class));
