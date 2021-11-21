@@ -8,9 +8,9 @@ TESTS=(
 SERVER=(unknow tomcat)
 
 run() {
-	echo "test $1" >2
+	echo "test $1"
 	[[ '$1' = 'Webservice POST <.github/bare.xml' ]] && return
-	siege -R .github/siegerc -l "$3" -t$2 "http://127.0.0.1:8080/$1" 2>/dev/null
+	siege -R .github/siegerc -l "$3" -t$2 "http://127.0.0.1:8080/$1"
 }
 
 dotests() {
@@ -40,7 +40,6 @@ tomcat_stop() {
 	sudo systemctl stop tomcat9
 }
 
-declare -a results
 for i in ${SERVER[@]}
 do
 	${i}_start
@@ -55,9 +54,9 @@ printf '%-10s' 'server'
 for i in ${TEST[@]}; do printf '%-10s' "${i## *}"; done
 echo
 IFS=$'\n'
-for((i=0; i<${#SERVER[@]}; i++))
+for s in ${SERVER[@]}
 do
-	printf '%-10s' "${SERVER[$i]}"
-	for r in ${results[$i]}; do printf '%-10s' "$r"; done
-	echo
+	printf '%-10s' "$s"
+#	for r in $(; do printf '%-10s' "$r"; done
+	cat "$s"
 done
