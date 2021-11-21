@@ -1,4 +1,5 @@
 quiet = true
+verbose = false
 logging = true
 logfile = log
 parser = false

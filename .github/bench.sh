@@ -7,16 +7,8 @@ TESTS=(
 	)
 SERVER=(unknow tomcat)
 
-run() {
-	echo "test $1"
-	[[ '$1' = 'Webservice POST <.github/bare.xml' ]] && return
-	siege -R .github/siegerc -l "$3" -t$2 "http://127.0.0.1:8080/$1"
-}
-
 dotests() {
-	for t in ${TESTS[@]}; do run "$t" "$1" "$2"; done
-	#tail -n +2 log | cut -d ',' -f 6
-	#rm log
+	for t in ${TESTS[@]}; do siege -R .github/siegerc --log="$2" -t$1 "http://127.0.0.1:8080/$t"; done
 }
 
 unknow_start() {
@@ -27,17 +19,20 @@ unknow_start() {
 }
 unknow_stop() {
 	kill -9 $pid
+	trap "" EXIT
+	sleep 2
 }
 tomcat_start() {
-	sudo cp unknow-http-test/target/*.war /var/lib/tomcat9/webapps/ROOT.war
-	echo 'export JAVA_HOME=/opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.312-7/x64' | sudo tee -a /etc/default/tomcat9
-	sudo systemctl start tomcat9
-	trap "" EXIT
+	cp unknow-http-test/target/*.war $CATALINA_HOME/webapps/ROOT.war
+	$CATALINA_HOME/bin/catalina.sh run >/dev/null 2>/dev/null || exit 1 &
+	pid=$!
+	trap "kill -9 $pid" EXIT
 	sleep 10
 }
 tomcat_stop() {
-	echo "stoping tomcat"
-	sudo systemctl stop tomcat9
+	kill -9 $pid
+	trap "" EXIT
+	sleep 2
 }
 
 for i in ${SERVER[@]}

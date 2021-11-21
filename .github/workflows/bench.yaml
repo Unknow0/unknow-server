@@ -18,13 +18,11 @@ jobs:
       run: mvn -B package
 
     - name: install dependencies
-      run: sudo apt-get install siege tomcat9
-
-    - name: test
       run: |
-        cat /usr/libexec/tomcat9/tomcat-start.sh
-        ls /var/lib/tomcat9
-        ls /usr/share/tomcat9
+        sudo apt-get install siege
+        wget https://dlcdn.apache.org/tomcat/tomcat-9/v9.0.55/bin/apache-tomcat-9.0.55.tar.gz | tar xzf
 
     - name: run bench
-      run: bash .github/bench.sh
+      run: bash bench.sh
+      env:
+        CATALINA_HOME: apache-tomcat-9.0.55
