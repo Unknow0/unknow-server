@@ -20,7 +20,7 @@ jobs:
     - name: install dependencies
       run: |
         sudo apt-get install siege
-        wget https://dlcdn.apache.org/tomcat/tomcat-9/v9.0.55/bin/apache-tomcat-9.0.55.tar.gz | tar xzf
+        wget -O - https://dlcdn.apache.org/tomcat/tomcat-9/v9.0.55/bin/apache-tomcat-9.0.55.tar.gz | tar xzf
 
     - name: run bench
       run: bash bench.sh

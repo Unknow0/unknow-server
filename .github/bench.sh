@@ -30,6 +30,8 @@ tomcat_start() {
 	sleep 10
 }
 tomcat_stop() {
+	$CATALINA_HOME/bin/shutdown.sh
+	sleep 2
 	kill -9 $pid
 	trap "" EXIT
 	sleep 2
@@ -44,6 +46,7 @@ print() {
 	do
 		printf '%-10s' "$s"
 		for r in $(tail -n +2 $s | cut -d ',' -f $1); do printf '%-10s' "$r"; done
+		echo
 	done
 }
 
@@ -57,8 +60,8 @@ do
 	${i}_stop
 done
 
-echo "Throughput (higher better)"
-print 7
+echo "Transaction per sec"
+print 6
 
 echo "Failled connection"
 print 10
