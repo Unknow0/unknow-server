@@ -70,11 +70,11 @@ sleep 5
 [ "$(post broken)" = '500' ] || die 'Webservice broken'
 xmllint --format out.xml | grep -q '<faultstring>' || die 'Webservice broken content'
 
-[ "$(post bare_req.xml)" = '200' ] || die 'webservice bare'
+[ "$(post xml/bare_req.xml)" = '200' ] || die 'webservice bare'
 cat out.xml | xml_parse | diff - .github/bare_res.xml || die 'webservice base'
 
-[ "$(post wrapped_req.xml)" = '200' ] || die 'webservice wrapped'
+[ "$(post xml/wrapped_req.xml)" = '200' ] || die 'webservice wrapped'
 cat out.xml | xml_parse | tee out | diff - .github/wrapped_res.xml || die 'webservice wrapped'
 
-[ "$(post mixed_req.xml)" = '200' ] || die 'webservice mixed'
+[ "$(post xml/mixed_req.xml)" = '200' ] || die 'webservice mixed'
 cat out.xml | xml_parse | tee out | diff - .github/mixed_res.xml || die 'webservice mixed'

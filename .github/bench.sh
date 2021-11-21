@@ -3,20 +3,20 @@
 TESTS=(
 	'missing'
 	'test'
-	'Webservice POST <.github/bare.xml'
+	'Webservice POST <.github/xml/bare.xml'
 	)
 SERVER=(unknow tomcat)
 
 run() {
 	echo "test $1" >2
 	[[ '$1' = 'Webservice POST <.github/bare.xml' ]] && return
-	siege -R .github/siegerc -t$2 "http://127.0.0.1:8080/$1" 2>/dev/null
+	siege -R .github/siegerc -l "$3" -t$2 "http://127.0.0.1:8080/$1" 2>/dev/null
 }
 
 dotests() {
-	for t in ${TESTS[@]}; do run "$t" "$1"; done
-	tail -n +2 log | cut -d ',' -f 6
-	rm log
+	for t in ${TESTS[@]}; do run "$t" "$1" "$2"; done
+	#tail -n +2 log | cut -d ',' -f 6
+	#rm log
 }
 
 unknow_start() {
@@ -34,9 +34,9 @@ tomcat_start() {
 	sudo systemctl start tomcat9
 	trap "" EXIT
 	sleep 10
-	sudo journalctl -eu tomcat9
 }
 tomcat_stop() {
+	echo "stoping tomcat"
 	sudo systemctl stop tomcat9
 }
 
@@ -45,9 +45,9 @@ for i in ${SERVER[@]}
 do
 	${i}_start
 	echo "warmup $i"
-	dotests 10s >/dev/null
+	dotests 10s "/dev/null"
 	echo "testing $i"
-	results+=("$(dotests 60s)")
+	dotests 60s "$i"
 	${i}_stop
 done
 
