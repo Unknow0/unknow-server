@@ -10,6 +10,7 @@ import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import javax.jws.soap.SOAPBinding.ParameterStyle;
@@ -126,31 +127,47 @@ public class WsdlBuilder {
 		Map<String, String> nsPrefix = XMLNsCollector.buildNsMapping(collectNs);
 		nsPrefix.put("http://www.w3.org/2001/XMLSchema", "xs");
 
-		sb.append("<xs:schema xmlns=\"").append(ns).write("\">");
+		sb.write("<xs:schema");
+		for (Entry<String, String> e : nsPrefix.entrySet()) {
+			String n = e.getValue();
+			sb.write(" xmlns");
+			if (!n.isEmpty())
+				sb.append(':').write(n);
+			sb.append("=\"").append(e.getKey()).write('"');
+		}
+		sb.write('>');
 		for (Service.Op o : service.operations) {
-			if (o.paramStyle == ParameterStyle.WRAPPED && o.ns.equals(ns))
-				appendOperation(sb, o, nsPrefix);
-			for (Service.Param p : o.params) {
-				if (!p.ns.equals(ns))
-					continue;
-				// TODO
+			if (o.paramStyle == ParameterStyle.WRAPPED && o.ns.equals(ns)) {
+				sb.append("<xs:complexType name=\"").append(o.name).write("\"><xs:sequence>");
+				for (Param p : o.params)
+					sb.append("<xs:element name=\"").append(p.name).append("\" type=\"").append(getType(p.type, nsPrefix)).write("\"/>");
+				sb.write("</wx:sequence></xs:complexType>");
 			}
+			for (Service.Param p : o.params)
+				appendType(sb, p.type, nsPrefix, ns);
 		}
 		sb.write("</xs:schema>");
+
 	}
 
 	/**
-	 * @param sb
-	 * @param o
+	 * @param type
+	 * @param nsPrefix
+	 * @param ns
 	 * @throws IOException
 	 */
-	private static void appendOperation(Writer sb, Op o, Map<String, String> ns) throws IOException {
-		sb.append("<xs:complexType name=\"").append(o.name).write("\"><xs:sequence>");
-		for (Param p : o.params) {
-			sb.append("<xs:element name=\"").append(p.name).append("\" type=\"").append(getType(p.type, ns)).write("\"");
-
-			sb.write("/>");
+	private static void appendType(Writer sb, XmlType type, Map<String, String> nsPrefix, String ns) throws IOException {
+		SchemaData s = type.schema();
+		if (ns.equals(s.rootNs)) {
+			sb.append("<xs:element name=\"").append(s.rootElement).write("\" type=\"");
+			String n = nsPrefix.get(s.rootNs);
+			if (!n.isEmpty())
+				sb.append(n).write(':');
+			sb.append(s.rootElement).write("\"/>");
 		}
+		if (!ns.equals(s.ns))
+			return;
+		
 	}
 
 	private static String getType(XmlType type, Map<String, String> ns) {

@@ -466,7 +466,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 	public Cookie[] getCookies() {
 		if (cookies == null)
 			cookies = req.parseCookie();
-		return cookies;
+		return cookies.length == 0 ? null : cookies;
 	}
 
 	@Override

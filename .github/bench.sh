@@ -8,7 +8,7 @@ TESTS=(
 SERVER=(unknow tomcat)
 
 dotests() {
-	for t in ${TESTS[@]}; do siege -R .github/siegerc --log="$2" -t$1 "http://127.0.0.1:8080/$t"; done
+	for t in ${TESTS[@]}; do siege -R .github/siegerc --quiet --log="$2" -t$1 "http://127.0.0.1:8080/$t"; done
 }
 
 unknow_start() {
@@ -39,7 +39,7 @@ tomcat_stop() {
 
 print() {
 	printf '%-10s' 'server'
-	for i in ${TEST[@]}; do printf '%-10s' "${i## *}"; done
+	for i in ${TESTS[@]}; do printf '%-10s' "${i## *}"; done
 	echo
 	IFS=$'\n'
 	for s in ${SERVER[@]}

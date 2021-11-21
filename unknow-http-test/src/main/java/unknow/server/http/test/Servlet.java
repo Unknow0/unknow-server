@@ -53,11 +53,13 @@ public class Servlet extends HttpServlet implements ServletRequestListener, Filt
 		}
 		w.write("Cookies:\n");
 		Cookie[] cookies = req.getCookies();
-		for (int i = 0; i < cookies.length; i++) {
-			w.write(cookies[i].getName());
-			w.write(":");
-			w.write(cookies[i].getValue());
-			w.write('\n');
+		if (cookies != null) {
+			for (int i = 0; i < cookies.length; i++) {
+				w.write(cookies[i].getName());
+				w.write(":");
+				w.write(cookies[i].getValue());
+				w.write('\n');
+			}
 		}
 		w.write("Parameters:\n");
 		e = req.getParameterNames();

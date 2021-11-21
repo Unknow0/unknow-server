@@ -42,22 +42,22 @@ public final class WebserviceServlet extends HttpServlet implements SaxHandler<S
 		OP_CALL[0] = (e) -> {
 			Envelope r = new Envelope();
 			Object ro = WS.mixed((Mixed) e.getBody(0));
-			r.addBody(new Element("unknow.test", "mixedResponse", ro));
+			r.addBody(new Element("http://test.unknow", "mixedResponse", ro));
 			return r;
 		};
 		OP_SIG[1] = "#unknow.server.http.test.xml.Root;";
 		OP_CALL[1] = (e) -> {
 			Envelope r = new Envelope();
 			Object ro = WS.bare((Root) e.getBody(0));
-			r.addBody(new Element("unknow.test", "bareResponse", ro));
+			r.addBody(new Element("http://test.unknow", "bareResponse", ro));
 			return r;
 		};
-		OP_SIG[2] = "{unknow.test}wrapped";
+		OP_SIG[2] = "{http://test.unknow}wrapped";
 		OP_CALL[2] = (e) -> {
 			Envelope r = new Envelope();
 			Operation o = (Operation) e.getBody(0);
 			Object ro = WS.wrapped((Root) o.get(0));
-			r.addBody(new OperationWrapper("unknow.test", "wrapped", new Element("", "return", ro)));
+			r.addBody(new OperationWrapper("http://test.unknow", "wrapped", new Element("", "return", ro)));
 			return r;
 		};
 	}
@@ -139,7 +139,7 @@ public final class WebserviceServlet extends HttpServlet implements SaxHandler<S
 
 		@Override
 		public final void startElement(String qname, String name, SaxContext context) throws SAXException {
-			if ("{webservice.unknow}Root".equals(qname))
+			if ("{http://webservice.unknow}Root".equals(qname))
 				context.next($2$);
 			else
 				throw new SAXException("Invalid tag " + qname);
@@ -147,7 +147,7 @@ public final class WebserviceServlet extends HttpServlet implements SaxHandler<S
 
 		@Override
 		public final void endElement(String qname, String name, SaxContext context) throws SAXException {
-			if ("{webservice.unknow}Root".equals(qname)) {
+			if ("{http://webservice.unknow}Root".equals(qname)) {
 				Object v = context.pop();
 				((Operation) context.peek()).add(v);
 			} else
@@ -184,11 +184,11 @@ public final class WebserviceServlet extends HttpServlet implements SaxHandler<S
 
 		@Override
 		public final void startElement(String qname, String name, SaxContext context) throws SAXException {
-			if ("{unknow.test}wrapped".equals(qname))
+			if ("{http://test.unknow}wrapped".equals(qname))
 				context.next($3$);
-			else if ("{webservice.unknow}Root".equals(qname))
+			else if ("{http://webservice.unknow}Root".equals(qname))
 				context.next($2$);
-			else if ("{webservice.unknow}Mixed".equals(qname))
+			else if ("{http://webservice.unknow}Mixed".equals(qname))
 				context.next($0$);
 			else
 				throw new SAXException("Invalid tag " + qname);
@@ -196,13 +196,13 @@ public final class WebserviceServlet extends HttpServlet implements SaxHandler<S
 
 		@Override
 		public final void endElement(String qname, String name, SaxContext context) throws SAXException {
-			if ("{unknow.test}wrapped".equals(qname)) {
+			if ("{http://test.unknow}wrapped".equals(qname)) {
 				Object v = context.pop();
 				((Envelope) context.peek()).addBody(v);
-			} else if ("{webservice.unknow}Root".equals(qname)) {
+			} else if ("{http://webservice.unknow}Root".equals(qname)) {
 				Object v = context.pop();
 				((Envelope) context.peek()).addBody(v);
-			} else if ("{webservice.unknow}Mixed".equals(qname)) {
+			} else if ("{http://webservice.unknow}Mixed".equals(qname)) {
 				Object v = context.pop();
 				((Envelope) context.peek()).addBody(v);
 			} else
@@ -210,12 +210,12 @@ public final class WebserviceServlet extends HttpServlet implements SaxHandler<S
 		}
 	};
 
-	private static final byte[] WSDL = new byte[] { 60, 119, 115, 58, 100, 101, 102, 105, 110, 105, 116, 105, 111, 110, 115, 32, 110, 97, 109, 101, 61, 34, 87, 101, 98, 115, 101, 114, 118, 105, 99, 101, 34, 32, 120, 109, 108, 110, 115, 58, 119, 115, 61, 34, 104, 116, 116, 112, 58, 47, 47, 115, 99, 104, 101, 109, 97, 115, 46, 120, 109, 108, 115, 111, 97, 112, 46, 111, 114, 103, 47, 119, 115, 100, 108, 47, 34, 32, 120, 109, 108, 110, 115, 58, 115, 111, 97, 112, 61, 34, 104, 116, 116, 112, 58, 47, 47, 115, 99, 104, 101, 109, 97, 115, 46, 120, 109, 108, 115, 111, 97, 112, 46, 111, 114, 103, 47, 119, 115, 100, 108, 47, 115, 111, 97, 112, 47, 34, 32, 120, 109, 108, 110, 115, 58, 120, 115, 61, 34, 104, 116, 116, 112, 58, 47, 47, 119, 119, 119, 46, 119, 51, 46, 111, 114, 103, 47, 50, 48, 48, 49, 47, 88, 77, 76, 83, 99, 104, 101, 109, 97, 34, 62, 60, 119, 115, 58, 116, 121, 112, 101, 115, 62, 60, 120, 115, 58, 115, 99, 104, 101, 109, 97, 32, 120, 109, 108, 110, 115, 61, 34, 34, 62, 60, 47, 120, 115, 58, 115, 99, 104, 101, 109, 97, 62, 60, 120, 115, 58, 115, 99, 104, 101, 109, 97, 32, 120, 109, 108, 110, 115, 61, 34, 104, 116, 116, 112, 58, 47, 47, 119, 119, 119, 46, 119, 51, 46, 111, 114, 103, 47, 50, 48, 48, 49, 47, 88, 77, 76, 83, 99, 104, 101, 109, 97, 34, 62, 60, 47, 120, 115, 58, 115, 99, 104, 101, 109, 97, 62, 60, 120, 115, 58, 115, 99, 104, 101, 109, 97, 32, 120, 109, 108, 110, 115, 61, 34, 119, 101, 98, 115, 101, 114, 118, 105, 99, 101, 46, 117, 110, 107, 110, 111, 119, 34, 62, 60, 47, 120, 115, 58, 115, 99, 104, 101, 109, 97, 62, 60, 120, 115, 58, 115, 99, 104, 101, 109, 97, 32, 120, 109, 108, 110, 115, 61, 34, 117, 110, 107, 110, 111, 119, 46, 116, 101, 115, 116, 34, 62, 60, 120, 115, 58, 99, 111, 109, 112, 108, 101, 120, 84, 121, 112, 101, 32, 110, 97, 109, 101, 61, 34, 119, 114, 97, 112, 112, 101, 100, 34, 62, 60, 120, 115, 58, 115, 101, 113, 117, 101, 110, 99, 101, 62, 60, 120, 115, 58, 101, 108, 101, 109, 101, 110, 116, 32, 110, 97, 109, 101, 61, 34, 82, 111, 111, 116, 34, 32, 116, 121, 112, 101, 61, 34, 110, 117, 108, 108, 58, 82, 111, 111, 116, 34, 47, 62, 60, 47, 120, 115, 58, 115, 99, 104, 101, 109, 97, 62, 60, 47, 119, 115, 58, 116, 121, 112, 101, 115, 62, 60, 47, 119, 115, 58, 100, 101, 102, 105, 110, 105, 116, 105, 111, 110, 115, 62 };
+	private static final byte[] WSDL = new byte[] { 60, 119, 115, 58, 100, 101, 102, 105, 110, 105, 116, 105, 111, 110, 115, 32, 110, 97, 109, 101, 61, 34, 87, 101, 98, 115, 101, 114, 118, 105, 99, 101, 34, 32, 120, 109, 108, 110, 115, 58, 119, 115, 61, 34, 104, 116, 116, 112, 58, 47, 47, 115, 99, 104, 101, 109, 97, 115, 46, 120, 109, 108, 115, 111, 97, 112, 46, 111, 114, 103, 47, 119, 115, 100, 108, 47, 34, 32, 120, 109, 108, 110, 115, 58, 115, 111, 97, 112, 61, 34, 104, 116, 116, 112, 58, 47, 47, 115, 99, 104, 101, 109, 97, 115, 46, 120, 109, 108, 115, 111, 97, 112, 46, 111, 114, 103, 47, 119, 115, 100, 108, 47, 115, 111, 97, 112, 47, 34, 32, 120, 109, 108, 110, 115, 58, 120, 115, 61, 34, 104, 116, 116, 112, 58, 47, 47, 119, 119, 119, 46, 119, 51, 46, 111, 114, 103, 47, 50, 48, 48, 49, 47, 88, 77, 76, 83, 99, 104, 101, 109, 97, 34, 62, 60, 119, 115, 58, 116, 121, 112, 101, 115, 62, 60, 120, 115, 58, 115, 99, 104, 101, 109, 97, 32, 120, 109, 108, 110, 115, 61, 34, 34, 62, 60, 47, 120, 115, 58, 115, 99, 104, 101, 109, 97, 62, 60, 120, 115, 58, 115, 99, 104, 101, 109, 97, 32, 120, 109, 108, 110, 115, 61, 34, 104, 116, 116, 112, 58, 47, 47, 119, 101, 98, 115, 101, 114, 118, 105, 99, 101, 46, 117, 110, 107, 110, 111, 119, 34, 62, 60, 47, 120, 115, 58, 115, 99, 104, 101, 109, 97, 62, 60, 120, 115, 58, 115, 99, 104, 101, 109, 97, 32, 120, 109, 108, 110, 115, 61, 34, 104, 116, 116, 112, 58, 47, 47, 119, 119, 119, 46, 119, 51, 46, 111, 114, 103, 47, 50, 48, 48, 49, 47, 88, 77, 76, 83, 99, 104, 101, 109, 97, 34, 62, 60, 47, 120, 115, 58, 115, 99, 104, 101, 109, 97, 62, 60, 120, 115, 58, 115, 99, 104, 101, 109, 97, 32, 120, 109, 108, 110, 115, 61, 34, 104, 116, 116, 112, 58, 47, 47, 116, 101, 115, 116, 46, 117, 110, 107, 110, 111, 119, 34, 62, 60, 120, 115, 58, 99, 111, 109, 112, 108, 101, 120, 84, 121, 112, 101, 32, 110, 97, 109, 101, 61, 34, 119, 114, 97, 112, 112, 101, 100, 34, 62, 60, 120, 115, 58, 115, 101, 113, 117, 101, 110, 99, 101, 62, 60, 120, 115, 58, 101, 108, 101, 109, 101, 110, 116, 32, 110, 97, 109, 101, 61, 34, 82, 111, 111, 116, 34, 32, 116, 121, 112, 101, 61, 34, 110, 117, 108, 108, 58, 82, 111, 111, 116, 34, 47, 62, 60, 47, 120, 115, 58, 115, 99, 104, 101, 109, 97, 62, 60, 47, 119, 115, 58, 116, 121, 112, 101, 115, 62, 60, 47, 119, 115, 58, 100, 101, 102, 105, 110, 105, 116, 105, 111, 110, 115, 62 };
 
 	@Override
 	public final void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
 		res.setContentType("text/xml");
-		res.setContentLength(485);
+		res.setContentLength(499);
 		res.getOutputStream().write(WSDL);
 	}
 
