@@ -221,7 +221,7 @@ public class JaxwsServletBuilder {
 																				"append",
 																				new NodeList<>(new StringLiteralExpr("<e:Envelope xmlns:e=\\\"http://schemas.xmlsoap.org/soap/envelope/\\\"><e:Body><e:Fault><faultcode>Client</faultcode><faultstring>"))),
 																		"append", new NodeList<>(new MethodCallExpr(new NameExpr("e"), "getMessage"))),
-																"append", new NodeList<>(new StringLiteralExpr("</faultstring></e:Fault></e:Body></e:Envelope>")))),
+																"write", new NodeList<>(new StringLiteralExpr("</faultstring></e:Fault></e:Body></e:Envelope>")))),
 												new NodeList<>(new CatchClause(new Parameter(types.get(Exception.class), "ignore"), new BlockStmt())), null))
 										.addStatement(new MethodCallExpr(new NameExpr("log"), "warn", new NodeList<>(new StringLiteralExpr("failed to service request"), new NameExpr("e")))))),
 						null));

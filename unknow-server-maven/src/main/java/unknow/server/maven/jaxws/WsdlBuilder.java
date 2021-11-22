@@ -11,15 +11,15 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import javax.jws.soap.SOAPBinding.ParameterStyle;
 
 import unknow.server.jaxws.XMLNsCollector;
 import unknow.server.maven.jaxws.model.SchemaData;
 import unknow.server.maven.jaxws.model.Service;
-import unknow.server.maven.jaxws.model.Service.Op;
 import unknow.server.maven.jaxws.model.Service.Param;
+import unknow.server.maven.jaxws.model.XmlEnum;
+import unknow.server.maven.jaxws.model.XmlEnum.XmlEnumEntry;
 import unknow.server.maven.jaxws.model.XmlObject;
 import unknow.server.maven.jaxws.model.XmlObject.XmlField;
 import unknow.server.maven.jaxws.model.XmlType;
@@ -59,7 +59,7 @@ public class WsdlBuilder {
 	 */
 	private static void buildSchemas(Writer sb, Service service) throws IOException {
 		Map<String, Integer> ns = collectNs(service, null);
-
+		System.out.println(ns);
 		for (String s : ns.keySet())
 			buildSchema(sb, service, s);
 	}
@@ -67,23 +67,16 @@ public class WsdlBuilder {
 	private static Map<String, Integer> collectNs(Service service, String limit) {
 		Map<String, Integer> ns = new HashMap<>();
 		for (Service.Op o : service.operations) {
-			if (o.paramStyle == ParameterStyle.WRAPPED) {
+			if (o.paramStyle == ParameterStyle.WRAPPED && o.ns.equals(limit)) {
 				ns.merge(o.ns, 1, Integer::sum);
-				if (limit != null && !limit.equals(o.ns))
-					continue;
+				for (Service.Param p : o.params)
+					ns.merge(p.ns, 1, Integer::sum);
 			}
 			for (Service.Param p : o.params) {
-				if (limit != null && !limit.equals(p.ns))
-					continue;
-				collectNs(p, ns, limit);
+				collectNs(p.type, ns, limit);
 			}
 		}
 		return ns;
-	}
-
-	private static void collectNs(Service.Param p, Map<String, Integer> ns, String limit) {
-		ns.merge(p.ns, 1, Integer::sum);
-		collectNs(p.type, ns, limit);
 	}
 
 	/**
@@ -100,8 +93,10 @@ public class WsdlBuilder {
 		if (!(type instanceof XmlObject))
 			return;
 
-		if (limit != null && !limit.equals(schema.rootElement))
+		if (limit != null && !limit.equals(schema.rootNs))
 			return;
+		if (schema.rootNs != null)
+			ns.merge(schema.rootNs, 1, Integer::sum);
 
 		XmlObject o = (XmlObject) type;
 		for (XmlField e : o.elems) {
@@ -126,8 +121,9 @@ public class WsdlBuilder {
 		Map<String, Integer> collectNs = collectNs(service, ns);
 		Map<String, String> nsPrefix = XMLNsCollector.buildNsMapping(collectNs);
 		nsPrefix.put("http://www.w3.org/2001/XMLSchema", "xs");
+		System.out.println(ns + ": " + nsPrefix);
 
-		sb.write("<xs:schema");
+		sb.append("<xs:schema targetNamespace=\"").append(ns).write("\"");
 		for (Entry<String, String> e : nsPrefix.entrySet()) {
 			String n = e.getValue();
 			sb.write(" xmlns");
@@ -141,7 +137,7 @@ public class WsdlBuilder {
 				sb.append("<xs:complexType name=\"").append(o.name).write("\"><xs:sequence>");
 				for (Param p : o.params)
 					sb.append("<xs:element name=\"").append(p.name).append("\" type=\"").append(getType(p.type, nsPrefix)).write("\"/>");
-				sb.write("</wx:sequence></xs:complexType>");
+				sb.write("</xs:sequence></xs:complexType>");
 			}
 			for (Service.Param p : o.params)
 				appendType(sb, p.type, nsPrefix, ns);
@@ -157,17 +153,45 @@ public class WsdlBuilder {
 	 * @throws IOException
 	 */
 	private static void appendType(Writer sb, XmlType type, Map<String, String> nsPrefix, String ns) throws IOException {
+		// TODO guard duplicate declaration
 		SchemaData s = type.schema();
-		if (ns.equals(s.rootNs)) {
-			sb.append("<xs:element name=\"").append(s.rootElement).write("\" type=\"");
-			String n = nsPrefix.get(s.rootNs);
-			if (!n.isEmpty())
-				sb.append(n).write(':');
-			sb.append(s.rootElement).write("\"/>");
-		}
+		if (ns.equals(s.rootNs))
+			sb.append("<xs:element name=\"").append(s.rootElement).append("\" type=\"").append(getType(type, nsPrefix)).write("\"/>");
 		if (!ns.equals(s.ns))
 			return;
-		
+
+		if (type instanceof XmlEnum) {
+//			((XmlEnum)type).clazz // TODO
+			sb.append("<xs:simpleType name=\"").append(s.name).write("\"><xs:restriction base=\"xs:string\">");
+			for (XmlEnumEntry e : ((XmlEnum) type).entries)
+				sb.append("<xs:enumeration value=\"").append(e.value).write("\"/>");
+			sb.write("</xs:restriction></xs:simpleType>");
+		} else if (type instanceof XmlObject) {
+			XmlObject o = (XmlObject) type;
+			sb.append("<xs:complexType name=\"").write(s.name);
+			if (o.elems.isEmpty() && o.value != null) {
+				sb.append("\"><xs:simpleContent><xs:extension base=\"").append(getType(o.value.type, nsPrefix)).write("\">");
+				for (XmlField e : o.attrs) // TODO list ?
+					sb.append("<xs:attribute name=\"").append(e.name).append("\" type=\"").append(getType(o.value.type, nsPrefix)).write("\"/>");
+				sb.write("</xs:extention></xs:simpleType>");
+			} else {
+				if (o.value != null)
+					sb.write("\" mixed=\"true");
+				sb.append("\"><xs:sequence>");
+				for (XmlField e : o.elems) // TODO list
+					sb.append("<xs:element name=\"").append(e.name).append("\" type=\"").append(getType(e.type, nsPrefix)).write("\"/>");
+				sb.write("</xs:sequence>");
+				for (XmlField e : o.attrs) // TODO list ?
+					sb.append("<xs:attribute name=\"").append(e.name).append("\" type=\"").append(getType(e.type, nsPrefix)).write("\"/>");
+			}
+			sb.write("</xs:complexType>");
+			if (o.value != null)
+				appendType(sb, o.value.type, nsPrefix, ns);
+			for (XmlField e : o.elems)
+				appendType(sb, e.type, nsPrefix, ns);
+			for (XmlField e : o.attrs)
+				appendType(sb, e.type, nsPrefix, ns);
+		}
 	}
 
 	private static String getType(XmlType type, Map<String, String> ns) {
