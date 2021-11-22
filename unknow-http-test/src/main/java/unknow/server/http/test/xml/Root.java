@@ -8,9 +8,11 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
 
 @XmlAccessorType(XmlAccessType.FIELD)
-@XmlRootElement(namespace = "http://webservice.unknow", name = "Root")
+@XmlRootElement
+@XmlType(namespace = "http://webservice.unknow", name = "Root")
 public class Root {
 	@XmlAttribute
 	private int value;

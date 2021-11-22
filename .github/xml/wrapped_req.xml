@@ -1,7 +1,7 @@
 <e:Envelope xmlns:e="http://www.w3.org/2001/12/soap-envelope">
 	<e:Body>
-		<wrapped xmlns="unknow.test">
-			<Root xmlns="webservice.unknow" value="4">
+		<wrapped xmlns="http://test.unknow">
+			<Root xmlns="http://webservice.unknow" value="4">
 				<elem>content</elem>
 			</Root>
 		</wrapped>

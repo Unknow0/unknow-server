@@ -1,6 +1,6 @@
 <e:Envelope xmlns:e="http://www.w3.org/2001/12/soap-envelope">
 	<e:Body>
-		<a:Mixed xmlns:a="webservice.unknow">
+		<a:Mixed xmlns:a="http://webservice.unknow">
 			<elem>content</elem>
 			4
 		</a:Mixed>

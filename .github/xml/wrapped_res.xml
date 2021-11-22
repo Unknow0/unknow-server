@@ -1,11 +1,11 @@
 +{http://www.w3.org/2001/12/soap-envelope}Envelope
 +{http://www.w3.org/2001/12/soap-envelope}Body
-+{unknow.test}wrapped
++{http://test.unknow}wrapped
 +return
 +return@value=4
-+{webservice.unknow}elem
++{http://webservice.unknow}elem
 content
--{webservice.unknow}elem
+-{http://webservice.unknow}elem
 -return
--{unknow.test}wrapped
+-{http://test.unknow}wrapped
 -{http://www.w3.org/2001/12/soap-envelope}Body
