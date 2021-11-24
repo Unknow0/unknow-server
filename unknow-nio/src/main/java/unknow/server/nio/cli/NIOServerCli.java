@@ -10,7 +10,12 @@ import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import unknow.server.nio.HandlerFactory;
+import unknow.server.nio.IOWorker;
+import unknow.server.nio.NIOServer;
 import unknow.server.nio.NIOServerListener;
+import unknow.server.nio.NIOWorkers;
+import unknow.server.nio.NIOWorkers.RoundRobin;
+import unknow.server.nio.NIOWorkers.Single;
 
 /**
  * NioServer configuration
@@ -58,8 +63,19 @@ public class NIOServerCli implements Callable<Integer> {
 		if (selectTime < 0)
 			throw new IllegalArgumentException("selectTime should not be <0");
 
-		new unknow.server.nio.NIOServer(getInetAddress(), iothread, handler, listener, selectTime).run();
+		NIOWorkers workers;
+		if (iothread == 1)
+			workers = new Single(new IOWorker(0, handler, listener, selectTime));
+		else {
+			IOWorker[] w = new IOWorker[iothread];
+			for (int i = 0; i < iothread; i++)
+				w[i] = new IOWorker(i, handler, listener, selectTime);
+			workers = new RoundRobin(w);
+		}
+
+		new NIOServer(getInetAddress(), workers, listener).run();
 		return 0;
+
 	}
 
 	/**

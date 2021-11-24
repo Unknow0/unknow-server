@@ -15,10 +15,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 /**
- * simple access log filter
- * TODO: replace Formatter
+ * simple access log filter TODO: replace Formatter
  */
-public class AccessLogFilter extends Thread implements Filter {
+public class AccessLogFilter implements Filter {
 	/** global fomatter to use */
 	private static final Formatter f = new Formatter(System.out);
 	/** pending entry to write */
@@ -27,15 +26,27 @@ public class AccessLogFilter extends Thread implements Filter {
 	/** format used to log */
 	private String format = "%1$tFT%1$tT %2$s %3$s \"%4$s\" %5$d %6$d%n";
 
+	private final Thread t = new Thread() {
+		@Override
+		public void run() {
+			try {
+				while (!isInterrupted()) {
+					log(f, queue.take());
+				}
+			} catch (InterruptedException e) { // OK
+			}
+		}
+	};
+
 	/**
-	 * format used by the access log
-	 * <br>1: query timestamp
-	 * <br>2: remote address
-	 * <br>3: http method
-	 * <br>4: request uri
-	 * <br>5: http status code
-	 * <br>6: request duration in ms
-	 * <br>7: client ip (taken from x-forwarded-for)
+	 * format used by the access log <br>
+	 * 1: query timestamp <br>
+	 * 2: remote address <br>
+	 * 3: http method <br>
+	 * 4: request uri <br>
+	 * 5: http status code <br>
+	 * 6: request duration in ms <br>
+	 * 7: client ip (taken from x-forwarded-for)
 	 */
 	protected void setFormat(String format) {
 		this.format = format;
@@ -48,7 +59,7 @@ public class AccessLogFilter extends Thread implements Filter {
 		String f = filterConfig.getInitParameter("format");
 		if (f != null)
 			setFormat(f);
-		start();
+		t.start();
 	}
 
 	@Override
@@ -67,17 +78,7 @@ public class AccessLogFilter extends Thread implements Filter {
 
 	@Override
 	public void destroy() {
-		interrupt();
-	}
-
-	@Override
-	public void run() {
-		try {
-			while (!isInterrupted()) {
-				log(f, queue.take());
-			}
-		} catch (InterruptedException e) { // OK
-		}
+		t.interrupt();
 	}
 
 	protected void log(Formatter f, Entry e) {

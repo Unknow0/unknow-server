@@ -21,36 +21,25 @@ public class NIOServer implements Runnable {
 	private static final Logger log = LoggerFactory.getLogger(NIOServer.class);
 	private final NIOServerListener listener;
 	private final ServerSocketChannel channel;
-	private final IOWorker[] workers;
 
-	private int i = 0;
-	private final int len;
+	private final NIOWorkers workers;
 
 	/**
 	 * create new Server
 	 * 
-	 * @param bindTo     address to bind to
-	 * @param iothread   number of io thread
-	 * @param factory    handler factory
-	 * @param listener   listener
-	 * @param selectTime max wait time on Selector.select
+	 * @param bindTo   address to bind to
+	 * @param workers  workers handler
+	 * @param listener listener
 	 * 
 	 * @throws IOException
 	 */
-	public NIOServer(SocketAddress bindTo, int iothread, HandlerFactory factory, NIOServerListener listener, long selectTime) throws IOException {
-		log.debug("Creating new NIOServer on {}, iothread={} factory={} listener={}", bindTo, iothread, factory, listener);
+	public NIOServer(SocketAddress bindTo, NIOWorkers workers, NIOServerListener listener) throws IOException {
+		log.debug("Creating new NIOServer on {}", bindTo);
 		channel = ServerSocketChannel.open();
-
 		channel.bind(bindTo);
 
-		if (listener == null)
-			listener = NIOServerListener.NOP;
-
-		len = iothread;
-		workers = new IOWorker[len];
-		for (int i = 0; i < len; i++)
-			workers[i] = new IOWorker(i, factory, listener, selectTime);
-		this.listener = listener;
+		this.listener = listener == null ? NIOServerListener.NOP : listener;
+		this.workers = workers;
 	}
 
 	/**
@@ -61,8 +50,7 @@ public class NIOServer implements Runnable {
 		listener.starting(this);
 		Thread t = Thread.currentThread();
 		try {
-			for (int i = 0; i < workers.length; i++)
-				workers[i].start();
+			workers.start();
 			while (!t.isInterrupted()) {
 				register(channel.accept());
 			}
@@ -80,11 +68,8 @@ public class NIOServer implements Runnable {
 	 * @return the handler
 	 * @throws IOException in case of error
 	 */
-	public synchronized Handler register(SocketChannel socket) throws IOException {
-		Handler register = workers[i++].register(socket);
-		if (i == len)
-			i = 0;
-		return register;
+	public Handler register(SocketChannel socket) throws IOException {
+		return workers.register(socket);
 	}
 
 	/**

@@ -159,7 +159,7 @@ public class JaxwsServletBuilder {
 //			TODO if(o.result.header)
 			Expression e = new ObjectCreationExpr(null, types.get(Element.class), new NodeList<>(new StringLiteralExpr(o.result.ns), new StringLiteralExpr(o.result.name), new NameExpr("ro")));
 			if (o.paramStyle == ParameterStyle.WRAPPED) {
-				NodeList<Expression> p = new NodeList<>(new StringLiteralExpr(o.ns), new StringLiteralExpr(o.name), e);
+				NodeList<Expression> p = new NodeList<>(new StringLiteralExpr(o.ns), new StringLiteralExpr(o.name + "Response"), e);
 				// TODO out param
 				e = new ObjectCreationExpr(null, types.get(OperationWrapper.class), p);
 			} else {

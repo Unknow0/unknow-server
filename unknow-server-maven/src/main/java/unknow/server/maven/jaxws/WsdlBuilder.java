@@ -9,14 +9,17 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import javax.jws.soap.SOAPBinding.ParameterStyle;
 
 import unknow.server.jaxws.XMLNsCollector;
 import unknow.server.maven.jaxws.model.SchemaData;
 import unknow.server.maven.jaxws.model.Service;
+import unknow.server.maven.jaxws.model.Service.Op;
 import unknow.server.maven.jaxws.model.Service.Param;
 import unknow.server.maven.jaxws.model.XmlEnum;
 import unknow.server.maven.jaxws.model.XmlEnum.XmlEnumEntry;
@@ -39,10 +42,12 @@ public class WsdlBuilder {
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		OutputStreamWriter sb = new OutputStreamWriter(out, StandardCharsets.UTF_8);
 		try {
-			sb.append("<ws:definitions name=\"").append(service.name).write("\" xmlns:ws=\"http://schemas.xmlsoap.org/wsdl/\" xmlns:soap=\"http://schemas.xmlsoap.org/wsdl/soap/\" xmlns:xs=\"http://www.w3.org/2001/XMLSchema\">");
-			sb.write("<ws:types>");
-			buildSchemas(sb, service);
+			sb.append("<ws:definitions name=\"").append(service.name).append("\" targetNamespace=\"").append(service.ns).write("\" xmlns:ws=\"http://schemas.xmlsoap.org/wsdl/\" xmlns:soap=\"http://schemas.xmlsoap.org/wsdl/soap/\" xmlns:xs=\"http://www.w3.org/2001/XMLSchema\"><ws:types>");
+			appendSchemas(sb, service);
 			sb.write("</ws:types>");
+
+			for (Op o : service.operations)
+				appendMessage(sb, o);
 
 			sb.write("</ws:definitions>");
 			sb.flush();
@@ -57,20 +62,23 @@ public class WsdlBuilder {
 	 * @param service
 	 * @throws IOException
 	 */
-	private static void buildSchemas(Writer sb, Service service) throws IOException {
+	private static void appendSchemas(Writer sb, Service service) throws IOException {
 		Map<String, Integer> ns = collectNs(service, null);
-		System.out.println(ns);
+		ns.remove("http://www.w3.org/2001/XMLSchema");
 		for (String s : ns.keySet())
-			buildSchema(sb, service, s);
+			appendSchema(sb, service, s);
 	}
 
 	private static Map<String, Integer> collectNs(Service service, String limit) {
 		Map<String, Integer> ns = new HashMap<>();
 		for (Service.Op o : service.operations) {
-			if (o.paramStyle == ParameterStyle.WRAPPED && o.ns.equals(limit)) {
+			if (o.paramStyle == ParameterStyle.WRAPPED && (limit == null || o.ns.equals(limit))) {
 				ns.merge(o.ns, 1, Integer::sum);
 				for (Service.Param p : o.params)
 					ns.merge(p.ns, 1, Integer::sum);
+			} else if (limit == null || o.result.ns.equals(limit)) {
+				ns.merge(o.result.ns, 1, Integer::sum);
+				collectNs(o.result.type, ns, limit);
 			}
 			for (Service.Param p : o.params) {
 				collectNs(p.type, ns, limit);
@@ -85,6 +93,8 @@ public class WsdlBuilder {
 	 * @param limit
 	 */
 	private static void collectNs(XmlType type, Map<String, Integer> ns, String limit) {
+		// TODO avoid loop in collection
+
 		SchemaData schema = type.schema();
 		ns.merge(schema.ns, 1, Integer::sum);
 
@@ -117,11 +127,10 @@ public class WsdlBuilder {
 	 * @param s
 	 * @throws IOException
 	 */
-	private static void buildSchema(Writer sb, Service service, String ns) throws IOException {
+	private static void appendSchema(Writer sb, Service service, String ns) throws IOException {
 		Map<String, Integer> collectNs = collectNs(service, ns);
 		Map<String, String> nsPrefix = XMLNsCollector.buildNsMapping(collectNs);
 		nsPrefix.put("http://www.w3.org/2001/XMLSchema", "xs");
-		System.out.println(ns + ": " + nsPrefix);
 
 		sb.append("<xs:schema targetNamespace=\"").append(ns).write("\"");
 		for (Entry<String, String> e : nsPrefix.entrySet()) {
@@ -132,18 +141,21 @@ public class WsdlBuilder {
 			sb.append("=\"").append(e.getKey()).write('"');
 		}
 		sb.write('>');
+
+		Set<SchemaData> set = new HashSet<>();
 		for (Service.Op o : service.operations) {
 			if (o.paramStyle == ParameterStyle.WRAPPED && o.ns.equals(ns)) {
 				sb.append("<xs:complexType name=\"").append(o.name).write("\"><xs:sequence>");
 				for (Param p : o.params)
 					sb.append("<xs:element name=\"").append(p.name).append("\" type=\"").append(getType(p.type, nsPrefix)).write("\"/>");
+				sb.append("</xs:sequence></xs:complexType><xs:complexType name=\"").append(o.name + "Response").write("\"><xs:sequence>");
+				sb.append("<xs:element name=\"").append(o.result.name).append("\" type=\"").append(getType(o.result.type, nsPrefix)).write("\"/>");
 				sb.write("</xs:sequence></xs:complexType>");
 			}
 			for (Service.Param p : o.params)
-				appendType(sb, p.type, nsPrefix, ns);
+				appendType(sb, p.type, nsPrefix, ns, set);
 		}
 		sb.write("</xs:schema>");
-
 	}
 
 	/**
@@ -152,9 +164,11 @@ public class WsdlBuilder {
 	 * @param ns
 	 * @throws IOException
 	 */
-	private static void appendType(Writer sb, XmlType type, Map<String, String> nsPrefix, String ns) throws IOException {
-		// TODO guard duplicate declaration
+	private static void appendType(Writer sb, XmlType type, Map<String, String> nsPrefix, String ns, Set<SchemaData> processed) throws IOException {
 		SchemaData s = type.schema();
+		if (processed.contains(s))
+			return;
+		processed.add(s);
 		if (ns.equals(s.rootNs))
 			sb.append("<xs:element name=\"").append(s.rootElement).append("\" type=\"").append(getType(type, nsPrefix)).write("\"/>");
 		if (!ns.equals(s.ns))
@@ -186,12 +200,34 @@ public class WsdlBuilder {
 			}
 			sb.write("</xs:complexType>");
 			if (o.value != null)
-				appendType(sb, o.value.type, nsPrefix, ns);
+				appendType(sb, o.value.type, nsPrefix, ns, processed);
 			for (XmlField e : o.elems)
-				appendType(sb, e.type, nsPrefix, ns);
+				appendType(sb, e.type, nsPrefix, ns, processed);
 			for (XmlField e : o.attrs)
-				appendType(sb, e.type, nsPrefix, ns);
+				appendType(sb, e.type, nsPrefix, ns, processed);
 		}
+	}
+
+	/**
+	 * @param sb
+	 * @param o
+	 * @throws IOException
+	 */
+	private static void appendMessage(OutputStreamWriter sb, Op o) throws IOException {
+		sb.append("<ws:message name=\"").append(o.name + "Request").write("\">");
+		if (o.paramStyle == ParameterStyle.WRAPPED)
+			sb.append("<ws:part name=\"param\" type=\"").append(o.name).append("\" xmlns=\"").append(o.ns).write("\"/>");
+		else {
+			for (Param p : o.params)
+				sb.append("<ws:part name=\"").append(p.name).append("\" type=\"").append(p.type.schema().name).append("\" xmlns=\"").append(p.type.schema().ns).write("\"/>");
+		}
+		sb.append("</ws:message><ws:message name=\"").append(o.name + "Response").write("\">");
+		if (o.paramStyle == ParameterStyle.WRAPPED)
+			sb.append("<ws:part name=\"param\" type=\"").append(o.name + "Response").append("\" xmlns=\"").append(o.ns).write("\"/>");
+		else
+			sb.append("<ws:part name=\"param\" type=\"").append(o.result.name + "Response").append("\" xmlns=\"").append(o.result.ns).write("\"/>");
+
+		sb.write("</ws:message>");
 	}
 
 	private static String getType(XmlType type, Map<String, String> ns) {
