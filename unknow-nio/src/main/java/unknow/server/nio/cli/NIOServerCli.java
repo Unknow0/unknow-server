@@ -37,9 +37,9 @@ public class NIOServerCli implements Callable<Integer> {
 	@Option(names = "--handler", descriptionKey = "handler", converter = ObjectConverter.class)
 	public HandlerFactory handler;
 
-	/** number of io thread to use, default to 10 */
-	@Option(names = "--iothread", description = "number of io thread to use, default to 10", descriptionKey = "iothread")
-	public int iothread = 10;
+	/** number of io thread to use, default to the number of CPU */
+	@Option(names = "--iothread", description = "number of io thread to use, default to the number of CPU", descriptionKey = "iothread")
+	public int iothread = Runtime.getRuntime().availableProcessors();
 
 	/** server listener */
 	@Option(names = "--listener", description = "set the listener, default to NOP", descriptionKey = "listener", converter = NIOListenerConverter.class)
