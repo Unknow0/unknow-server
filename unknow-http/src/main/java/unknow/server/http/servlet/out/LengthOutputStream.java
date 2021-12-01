@@ -59,7 +59,7 @@ public class LengthOutputStream extends ServletOutputStream implements Output {
 	}
 
 	@Override
-	public void resetBuffers() {
+	public void resetBuffers() { // OK
 	}
 
 	@Override

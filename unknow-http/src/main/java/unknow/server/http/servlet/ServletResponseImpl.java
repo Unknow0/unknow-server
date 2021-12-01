@@ -193,6 +193,8 @@ public class ServletResponseImpl implements HttpServletResponse {
 	}
 
 	public void sendError(int sc, Throwable t, String msg) throws IOException {
+		if (commited)
+			throw new IllegalStateException("already commited");
 		status = sc;
 		ServletManager manager = ctx.getServletManager();
 		FilterChain f = manager.getError(sc, t);
@@ -214,7 +216,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 				log.error("failed to send error", e);
 			}
 		}
-
+		commited = true;
 		HttpError e = HttpError.fromStatus(sc);
 		if (msg == null) {
 			out.write(e == null ? HttpError.encodeEmptyReponse(sc, "Unknown") : e.empty());
@@ -386,14 +388,12 @@ public class ServletResponseImpl implements HttpServletResponse {
 
 	@Override
 	public void sendError(int sc, String msg) throws IOException {
-		if (commited)
-			throw new IllegalStateException("already commited");
 		sendError(sc, null, msg);
 	}
 
 	@Override
 	public void sendError(int sc) throws IOException {
-		sendError(sc, null);
+		sendError(sc, null, null);
 	}
 
 	@Override
