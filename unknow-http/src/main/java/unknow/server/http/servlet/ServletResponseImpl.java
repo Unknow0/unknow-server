@@ -230,6 +230,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 		out.write(CONTENT_LENGTH);
 		out.write(Integer.toString(bytes.length + ERROR_START.length + ERROR_END.length).getBytes(StandardCharsets.US_ASCII));
 		out.write(CRLF);
+		out.write(CRLF);
 		out.write(ERROR_START);
 		out.write(bytes);
 		out.write(ERROR_END);
