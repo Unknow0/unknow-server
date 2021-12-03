@@ -55,8 +55,10 @@ public class Service {
 
 	public static Service build(ClassOrInterfaceDeclaration serviceClass, XmlTypeLoader typeLoader) {
 		AnnotationExpr a = serviceClass.getAnnotationByClass(WebService.class).get();
-		String name = a.findFirst(MemberValuePair.class, m -> "name".equals(m.getNameAsString())).map(m -> m.getValue().asStringLiteralExpr().asString()).orElse(serviceClass.resolve().getClassName());
-		String ns = a.findFirst(MemberValuePair.class, m -> "targetNamespace".equals(m.getNameAsString())).map(m -> m.getValue().asStringLiteralExpr().asString()).orElse(serviceClass.resolve().getPackageName());
+		String name = a.findFirst(MemberValuePair.class, m -> "name".equals(m.getNameAsString())).map(m -> m.getValue().asStringLiteralExpr().asString())
+				.orElse(serviceClass.resolve().getClassName());
+		String ns = a.findFirst(MemberValuePair.class, m -> "targetNamespace".equals(m.getNameAsString())).map(m -> m.getValue().asStringLiteralExpr().asString())
+				.orElse(serviceClass.resolve().getPackageName());
 
 		Optional<AnnotationExpr> o = serviceClass.getAnnotationByClass(UrlPattern.class);
 		String[] url = { "/" + name };
@@ -79,10 +81,12 @@ public class Service {
 
 		o = serviceClass.getAnnotationByClass(SOAPBinding.class);
 		Style style = SOAPBinding.Style.valueOf(o.orElse(SOAPBINDING).findFirst(MemberValuePair.class, m -> "style".equals(m.getNameAsString())).map(m -> styleName(m)).get());
-		ParameterStyle paramStyle = SOAPBinding.ParameterStyle.valueOf(o.orElse(SOAPBINDING).findFirst(MemberValuePair.class, m -> "parameterStyle".equals(m.getNameAsString())).map(m -> styleName(m)).get());
+		ParameterStyle paramStyle = SOAPBinding.ParameterStyle
+				.valueOf(o.orElse(SOAPBINDING).findFirst(MemberValuePair.class, m -> "parameterStyle".equals(m.getNameAsString())).map(m -> styleName(m)).get());
 		Service service = new Service(name, ns, url, style, paramStyle);
 
-		String inter = a.findFirst(MemberValuePair.class, m -> "endpointInterface".equals(m.getNameAsString())).map(m -> m.getValue().asStringLiteralExpr().asString()).orElse(null);
+		String inter = a.findFirst(MemberValuePair.class, m -> "endpointInterface".equals(m.getNameAsString())).map(m -> m.getValue().asStringLiteralExpr().asString())
+				.orElse(null);
 		if (inter != null) {
 			serviceClass = typeLoader.classes.get(inter);
 			if (serviceClass != null)
@@ -106,14 +110,18 @@ public class Service {
 			MemberValuePair orElse = o.get().findFirst(MemberValuePair.class, v -> "exclude".equals(v.getNameAsString())).orElse(null);
 			if (orElse != null && orElse.getValue().asBooleanLiteralExpr().getValue())
 				continue;
-			String name = o.get().findFirst(MemberValuePair.class, v -> "operationName".equals(v.getNameAsString())).map(v -> v.getValue().asStringLiteralExpr().getValue()).orElse(m.getNameAsString());
+			String name = o.get().findFirst(MemberValuePair.class, v -> "operationName".equals(v.getNameAsString())).map(v -> v.getValue().asStringLiteralExpr().getValue())
+					.orElse(m.getNameAsString());
+			String action = o.get().findFirst(MemberValuePair.class, v -> "action".equals(v.getNameAsString())).map(v -> v.getValue().asStringLiteralExpr().getValue())
+					.orElse("");
 
 			Style style = service.style;
 			ParameterStyle paramStyle = service.paramStyle;
 			o = m.getAnnotationByClass(SOAPBinding.class);
 			if (o.isPresent()) {
 				style = o.get().findFirst(MemberValuePair.class, v -> "style".equals(v.getNameAsString())).map(v -> Style.valueOf(styleName(v))).orElse(style);
-				paramStyle = o.get().findFirst(MemberValuePair.class, v -> "parameterStyle".equals(v.getNameAsString())).map(v -> ParameterStyle.valueOf(styleName(v))).orElse(paramStyle);
+				paramStyle = o.get().findFirst(MemberValuePair.class, v -> "parameterStyle".equals(v.getNameAsString())).map(v -> ParameterStyle.valueOf(styleName(v)))
+						.orElse(paramStyle);
 			}
 
 			o = m.getAnnotationByClass(WebResult.class);
@@ -121,9 +129,11 @@ public class Service {
 			String rname = "";
 			boolean header = false;
 			if (o.isPresent()) {
-				header = o.get().findFirst(MemberValuePair.class, v -> "header".equals(v.getNameAsString())).map(v -> v.getValue().asBooleanLiteralExpr().getValue()).orElse(false);
+				header = o.get().findFirst(MemberValuePair.class, v -> "header".equals(v.getNameAsString())).map(v -> v.getValue().asBooleanLiteralExpr().getValue())
+						.orElse(false);
 				rname = o.get().findFirst(MemberValuePair.class, v -> "name".equals(v.getNameAsString())).map(v -> v.getValue().asStringLiteralExpr().getValue()).orElse("");
-				rns = o.get().findFirst(MemberValuePair.class, v -> "targetNamespace".equals(v.getNameAsString())).map(v -> v.getValue().asStringLiteralExpr().getValue()).orElse("");
+				rns = o.get().findFirst(MemberValuePair.class, v -> "targetNamespace".equals(v.getNameAsString())).map(v -> v.getValue().asStringLiteralExpr().getValue())
+						.orElse("");
 			}
 
 			if (rname.isEmpty())
@@ -132,7 +142,7 @@ public class Service {
 				rns = service.ns;
 
 			Param r = new Param(rns, rname, typeLoader.get(m.getType()), m.resolve().getQualifiedName(), header);
-			Op op = new Op(m.getNameAsString(), name, ns, r, style, paramStyle);
+			Op op = new Op(m.getNameAsString(), name, ns, r, action, style, paramStyle);
 			for (Parameter p : m.getParameters()) {
 				String ns = "##default";
 				name = "##default";
@@ -140,9 +150,12 @@ public class Service {
 				header = false;
 				Optional<AnnotationExpr> oa = p.getAnnotationByClass(WebParam.class);
 				if (oa.isPresent()) {
-					header = oa.get().findFirst(MemberValuePair.class, v -> "header".equals(v.getNameAsString())).map(v -> v.getValue().asBooleanLiteralExpr().getValue()).orElse(false);
-					name = oa.get().findFirst(MemberValuePair.class, v -> "name".equals(v.getNameAsString())).map(v -> v.getValue().asStringLiteralExpr().getValue()).orElse("##default");
-					ns = oa.get().findFirst(MemberValuePair.class, v -> "targetNamespace".equals(v.getNameAsString())).map(v -> v.getValue().asStringLiteralExpr().getValue()).orElse("##default");
+					header = oa.get().findFirst(MemberValuePair.class, v -> "header".equals(v.getNameAsString())).map(v -> v.getValue().asBooleanLiteralExpr().getValue())
+							.orElse(false);
+					name = oa.get().findFirst(MemberValuePair.class, v -> "name".equals(v.getNameAsString())).map(v -> v.getValue().asStringLiteralExpr().getValue())
+							.orElse("##default");
+					ns = oa.get().findFirst(MemberValuePair.class, v -> "targetNamespace".equals(v.getNameAsString())).map(v -> v.getValue().asStringLiteralExpr().getValue())
+							.orElse("##default");
 				}
 
 				if ("##default".equals(name))
@@ -167,17 +180,19 @@ public class Service {
 		public final String m;
 		public final String name;
 		public final String ns;
+		public final String action;
 		public final Style style;
 		public final ParameterStyle paramStyle;
 		public final List<Param> params;
 		public final Param result;
 
-		public Op(String m, String name, String ns, Param result, Style style, ParameterStyle paramStyle) {
+		public Op(String m, String name, String ns, Param result, String action, Style style, ParameterStyle paramStyle) {
 			this.m = m;
 			this.name = name;
 			this.ns = ns;
 			this.params = new ArrayList<>();
 			this.result = result;
+			this.action = action;
 			this.style = style;
 			this.paramStyle = paramStyle;
 		}

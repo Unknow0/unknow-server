@@ -49,8 +49,10 @@ public class ServletResponseImpl implements HttpServletResponse {
 			'e', 'd', '\r', '\n' };
 	private static final byte[] CONTENT_LENGTH = new byte[] { 'c', 'o', 'n', 't', 'e', 'n', 't', '-', 'l', 'e', 'n', 'g', 't', 'h', ':', ' ' };
 	private static final byte[] CONTENT_LENGTH0 = new byte[] { 'c', 'o', 'n', 't', 'e', 'n', 't', '-', 'l', 'e', 'n', 'g', 't', 'h', ':', ' ', '0', '\r', '\n' };
+	private static final byte[] CONTENT_TYPE = new byte[] { 'c', 'o', 'n', 't', 'e', 'n', 't', '-', 't', 'y', 'p', 'e', ':', ' ' };
 	private static final byte[] CONTENT_HTML = new byte[] { 'c', 'o', 'n', 't', 'e', 'n', 't', '-', 't', 'y', 'p', 'e', ':', ' ', 't', 'e', 'x', 't', '/', 'h', 't', 'm', 'l',
 			';', 'c', 'h', 'a', 'r', 's', 'e', 't', '=', 'u', 't', 'f', '8', '\r', '\n' };
+	private static final byte[] CHARSET = new byte[] { ';', 'c', 'h', 'a', 'r', 's', 'e', 't', '=' };
 	private static final byte[] LOCATION = new byte[] { 'l', 'o', 'c', 'a', 't', 'i', 'o', 'n', ':', ' ' };
 	private static final byte[] COOKIE = new byte[] { 's', 'e', 't', '-', 'c', 'o', 'o', 'k', 'i', 'e', ':', ' ' };
 	private static final byte[] PATH = new byte[] { ';', 'p', 'a', 't', 'h', '=' };
@@ -119,6 +121,15 @@ public class ServletResponseImpl implements HttpServletResponse {
 		out.write(http == null ? HttpError.encodeStatusLine(status, "Unknown") : http.encoded);
 		for (Entry<String, List<String>> e : headers.entrySet())
 			writeHeader(e.getKey(), e.getValue());
+		if (type != null && !headers.containsKey("content-type")) {
+			out.write(CONTENT_TYPE);
+			out.write(type.getBytes(StandardCharsets.US_ASCII));
+			if (charset != null) {
+				out.write(CHARSET);
+				out.write(charset.name().getBytes(StandardCharsets.US_ASCII));
+			}
+			out.write(CRLF);
+		}
 		if (servletOut != null && servletOut.isChuncked())
 			out.write(CHUNKED);
 		else if (servletOut == null || contentLength == 0)

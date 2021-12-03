@@ -51,6 +51,9 @@ public class JaxwsGenerator extends AbstractMojo {
 	@org.apache.maven.plugins.annotations.Parameter(name = "output")
 	private String output;
 
+	@org.apache.maven.plugins.annotations.Parameter(name = "publishUrl", defaultValue = "http://127.0.0.1:8080")
+	private String publishUrl;
+
 	private Output out;
 
 	/** existing public class in output package (simpleName-&gt;fqn) */
@@ -111,7 +114,7 @@ public class JaxwsGenerator extends AbstractMojo {
 			cu.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolSolver);
 			types = new TypeCache(cu, existingClass);
 
-			new JaxwsServletBuilder(c, classes, mbuilder).generate(cu, types);
+			new JaxwsServletBuilder(c, classes, mbuilder).generate(cu, types, publishUrl);
 			try {
 				out.save(cu);
 				find = true;

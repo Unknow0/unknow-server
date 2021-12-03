@@ -18,7 +18,7 @@ public class XMLNsCollector implements XMLWriter {
 	private final Map<String, Integer> ns = new HashMap<>();
 
 	@Override
-	public void close() throws IOException {
+	public void close() throws IOException { // OK
 	}
 
 	@Override
@@ -33,11 +33,11 @@ public class XMLNsCollector implements XMLWriter {
 	}
 
 	@Override
-	public void text(String text) throws IOException {
+	public void text(String text) throws IOException { // OK
 	}
 
 	@Override
-	public void endElement(String name, String nsUri) throws IOException {
+	public void endElement(String name, String nsUri) throws IOException { // OK
 	}
 
 	public Map<String, String> buildNsMapping() {
