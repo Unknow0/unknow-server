@@ -90,7 +90,7 @@ public class CreateServletManager extends Builder {
 				b.addStatement(Utils.assign(t, n, new ObjectCreationExpr(null, t, Utils.list(
 						new ObjectCreationExpr(null, types.get(ArrayMap.class, TypeCache.EMPTY), Utils.list(Utils.array(types.get(String.class), k), Utils.array(types.get(Resource.class), v)))))));
 			} else
-				b.addStatement(Utils.assign(t, n, new ObjectCreationExpr(null, t, Utils.emptyList())));
+				b.addStatement(Utils.assign(t, n, new ObjectCreationExpr(null, t, Utils.list())));
 
 			for (String p : s.pattern) {
 				if (saw.contains(p))
@@ -108,7 +108,7 @@ public class CreateServletManager extends Builder {
 			filters.add(names.get(f.clazz));
 
 			ClassOrInterfaceType t = types.get(f.clazz);
-			b.addStatement(Utils.assign(t, n, new ObjectCreationExpr(null, t, Utils.emptyList())));
+			b.addStatement(Utils.assign(t, n, new ObjectCreationExpr(null, t, Utils.list())));
 		}
 
 		Set<String> created = new HashSet<>();

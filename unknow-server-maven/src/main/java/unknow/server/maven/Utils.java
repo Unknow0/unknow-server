@@ -15,6 +15,7 @@ import com.github.javaparser.ast.expr.ArrayCreationExpr;
 import com.github.javaparser.ast.expr.ArrayInitializerExpr;
 import com.github.javaparser.ast.expr.AssignExpr;
 import com.github.javaparser.ast.expr.AssignExpr.Operator;
+import com.github.javaparser.ast.expr.BinaryExpr;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.IntegerLiteralExpr;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
@@ -30,21 +31,8 @@ import unknow.server.http.utils.ArrayMap;
  * @author unknow
  */
 public class Utils {
-	@SuppressWarnings("rawtypes")
-	private static final NodeList EMPTYLIST = new NodeList<>();
 
 	private Utils() {
-	}
-
-	/**
-	 * empty node list
-	 * 
-	 * @param <T> type
-	 * @return empty node list
-	 */
-	@SuppressWarnings("unchecked")
-	public static <T extends Node> NodeList<T> emptyList() {
-		return EMPTYLIST;
 	}
 
 	/**
@@ -136,5 +124,20 @@ public class Utils {
 			v.add(new StringLiteralExpr(map.get(key)));
 		}
 		return new ObjectCreationExpr(null, types.get(ArrayMap.class, TypeCache.EMPTY), list(array(types.get(String.class), k), array(types.get(String.class), v)));
+	}
+
+	/**
+	 * add all the expression together
+	 * 
+	 * @param e expression to add
+	 * @return e[0] + e[1] +...
+	 */
+	public static Expression add(Expression... e) {
+		if (e.length == 1)
+			return e[0];
+		BinaryExpr b = new BinaryExpr(e[0], e[1], BinaryExpr.Operator.PLUS);
+		for (int i = 2; i < e.length; i++)
+			b = new BinaryExpr(b, e[i], BinaryExpr.Operator.PLUS);
+		return b;
 	}
 }

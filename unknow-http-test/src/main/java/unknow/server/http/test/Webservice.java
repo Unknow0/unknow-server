@@ -17,7 +17,7 @@ import unknow.server.http.test.xml.Root;
 /**
  * @author unknow
  */
-@WebService(targetNamespace = "http://test.unknow")
+@WebService(targetNamespace = "http://test.unknow", name = "ws")
 public class Webservice {
 
 	@WebMethod
@@ -32,7 +32,7 @@ public class Webservice {
 		return root;
 	}
 
-	@WebMethod
+	@WebMethod(exclude = true)
 	@SOAPBinding(parameterStyle = ParameterStyle.BARE)
 	public Mixed mixed(@WebParam(targetNamespace = "http://webservice.unknow", name = "Mixed") Mixed root) {
 		return root;

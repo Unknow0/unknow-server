@@ -55,13 +55,13 @@ public class JaxMarshallerBuilder {
 		this.types = types;
 		this.clazz = cu.addClass("Marshallers", Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL);
 		this.processed = new HashSet<>();
-		clazz.addFieldWithInitializer(types.get(MarshallerRegistry.class), "R", new ObjectCreationExpr(null, types.get(MarshallerRegistry.class), Utils.emptyList()), Modifier.Keyword.PRIVATE, Modifier.Keyword.STATIC, Modifier.Keyword.FINAL);
+		clazz.addFieldWithInitializer(types.get(MarshallerRegistry.class), "R", new ObjectCreationExpr(null, types.get(MarshallerRegistry.class), Utils.list()), Modifier.Keyword.PRIVATE, Modifier.Keyword.STATIC, Modifier.Keyword.FINAL);
 		init = clazz.addStaticInitializer();
 
 		clazz.addMethod("marshall", Keyword.PUBLIC, Keyword.STATIC, Keyword.FINAL).addParameter(types.get(Envelope.class), "e").addParameter(types.get(Writer.class), "w")
 				.addThrownException(types.get(IOException.class))
 				.getBody().get()
-				.addStatement(Utils.create(types.get(XMLNsCollector.class), "c", Utils.emptyList()))
+				.addStatement(Utils.create(types.get(XMLNsCollector.class), "c", Utils.list()))
 				.addStatement(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(Marshaller.class)), "ENVELOPE"), "marshall", Utils.list(R, E, C)))
 				.addStatement(new TryStmt(new NodeList<>(
 						new AssignExpr(

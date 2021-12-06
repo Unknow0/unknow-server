@@ -40,6 +40,7 @@ public class Servlet extends HttpServlet implements ServletRequestListener, Filt
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		PrintWriter w = resp.getWriter();
+		w.append(req.getQueryString()).write("\n");
 		w.write("Headers:\n");
 		Enumeration<String> e = req.getHeaderNames();
 		while (e.hasMoreElements()) {

@@ -146,8 +146,9 @@ public class XmlTypeLoader {
 		if (a.isPresent()) {
 			AnnotationExpr an = a.get();
 			Optional<SingleMemberAnnotationExpr> v = an.findFirst(SingleMemberAnnotationExpr.class);
-			Expression e = v.isPresent() ? v.get().getMemberValue() : an.findFirst(MemberValuePair.class, m -> "value".equals(m.getNameAsString())).get().getValue();
-			type = XmlAccessType.valueOf(e.asFieldAccessExpr().getNameAsString());
+			Expression e = v.isPresent() ? v.get().getMemberValue() : an.findFirst(MemberValuePair.class, m -> "value".equals(m.getNameAsString())).map(m -> m.getValue()).orElse(null);
+			if (e != null)
+				type = XmlAccessType.valueOf(e.asFieldAccessExpr().getNameAsString());
 		}
 
 		Factory factory = null;
@@ -227,13 +228,14 @@ public class XmlTypeLoader {
 			}
 
 			AnnotationExpr annot = eleme.orElse(attri.orElse(v.orElse(null)));
-			if (annot != null || type == XmlAccessType.FIELD || type == XmlAccessType.PUBLIC_MEMBER && m.hasModifier(Keyword.PUBLIC)) {
+			if (annot != null || type == XmlAccessType.FIELD && d != null || type == XmlAccessType.PUBLIC_MEMBER && m.hasModifier(Keyword.PUBLIC)) {
 				String setter = "set" + m.getNameAsString().substring(3);
 
 				Optional<MethodDeclaration> s = c.getMethods().stream().filter(e -> e.getNameAsString().equals(setter)).filter(e -> e.getParameters().size() == 1 && e.getParameter(0).getType().resolve().describe().equals(m.getType().resolve().describe())).findFirst();
 				if (!s.isPresent())
 					throw new RuntimeException("missing setter for '" + n + "' field in '" + c.getNameAsString() + "' class");
-
+				if (d == null)
+					; // TODO
 				XmlType t = get(d.v.getType());
 				if (v.isPresent()) {
 					if (value != null)

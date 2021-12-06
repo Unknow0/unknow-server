@@ -197,7 +197,7 @@ public class HttpHandler extends Handler implements Runnable {
 	 */
 	public String parseQuery() {
 		sb.setLength(0);
-		int o = part[PATH];
+		int o = part[PATH] + 1;
 		meta.toString(sb, o, part[QUERY] - o);
 		return sb.toString();
 	}

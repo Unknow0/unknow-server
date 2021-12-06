@@ -44,41 +44,44 @@ public class PathTree {
 		Buffers path = req.meta;
 		int o = req.pathStart() + 1;
 		int e = req.pathEnd();
-		if (o == e)
-			return exact == null ? def : exact;
+		try {
+			if (o == e)
+				return exact == null ? def : exact;
 
-		PathTree last = this;
-		while (last.nexts != null) {
-			int i = path.indexOf((byte) '/', o, e - o);
-			if (i < 0)
-				i = e;
-			PathTree n = last.next(path, o, i);
-			if (n == null)
-				break;
-			if (i == e)
-				return n.exact == null ? n.def : n.exact;
-			last=n;
-			o = i + 1;
-		}
-
-		EndNode[] end = last.ends == null ? ends : last.ends;
-		if (end != null) {
-			for (;;) {
+			PathTree last = this;
+			while (last.nexts != null) {
 				int i = path.indexOf((byte) '/', o, e - o);
 				if (i < 0)
+					i = e;
+				PathTree n = last.next(path, o, i);
+				if (n == null)
 					break;
+				if (i == e)
+					return n.exact == null ? n.def : n.exact;
+				last = n;
 				o = i + 1;
 			}
-			int l = e - o;
-			for (int i = 0; i < end.length; i++) {
-				byte[] ext = end[i].ext;
-				if (ext.length < l && path.equals(ext, e - ext.length))
-					return end[i].chain;
+
+			EndNode[] end = last.ends == null ? ends : last.ends;
+			if (end != null) {
+				for (;;) {
+					int i = path.indexOf((byte) '/', o, e - o);
+					if (i < 0)
+						break;
+					o = i + 1;
+				}
+				int l = e - o;
+				for (int i = 0; i < end.length; i++) {
+					byte[] ext = end[i].ext;
+					if (ext.length < l && path.equals(ext, e - ext.length))
+						return end[i].chain;
+				}
 			}
+			return last.def == null ? def : last.def;
+		} finally {
+			req.setPathInfoStart(o - 1);
 		}
-		// TODO
-//		req.setPathInfoStart(o);
-		return last.def == null ? def : last.def;
+
 	}
 
 	private final PathTree next(Buffers path, int o, int e) {

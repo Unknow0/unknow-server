@@ -7,6 +7,10 @@
 	</parent>
 	<artifactId>unknow-http-test</artifactId>
 
+	<properties>
+		<cxf.version>3.3.12</cxf.version>
+	</properties>
+
 	<build>
 		<plugins>
 			<plugin>
@@ -78,11 +82,18 @@
 			<artifactId>unknow-http-jaxws</artifactId>
 			<version>${project.version}</version>
 		</dependency>
+
 		<dependency>
-			<groupId>unknow.sax</groupId>
-			<artifactId>unknow-sax</artifactId>
-			<version>${unknow-sax.version}</version>
+			<groupId>org.apache.cxf</groupId>
+			<artifactId>cxf-rt-frontend-jaxws</artifactId>
+			<version>${cxf.version}</version>
 		</dependency>
+		<dependency>
+			<groupId>org.apache.cxf</groupId>
+			<artifactId>cxf-rt-transports-http</artifactId>
+			<version>${cxf.version}</version>
+		</dependency>
+
 		<dependency>
 			<groupId>javax.annotation</groupId>
 			<artifactId>javax.annotation-api</artifactId>
