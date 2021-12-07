@@ -78,3 +78,5 @@ cat out.xml | xml_parse | tee out | diff - .github/xml/wrapped_res.xml || die 'w
 
 [ "$(post xml/mixed_req.xml)" = '200' ] || die 'webservice mixed'
 cat out.xml | xml_parse | tee out | diff - .github/xml/mixed_res.xml || die 'webservice mixed'
+
+curl -s -XGET "$URL/Webservice?wsdl" | xmllint --format - >/dev/null || die 'webservice wsdl'

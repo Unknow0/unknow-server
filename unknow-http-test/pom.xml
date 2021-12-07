@@ -79,11 +79,6 @@
 			<version>${project.version}</version>
 		</dependency>
 		<dependency>
-			<groupId>unknow.sax</groupId>
-			<artifactId>unknow-sax</artifactId>
-			<version>${unknow-sax.version}</version>
-		</dependency>
-		<dependency>
 			<groupId>javax.annotation</groupId>
 			<artifactId>javax.annotation-api</artifactId>
 			<version>1.3.2</version>
