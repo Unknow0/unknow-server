@@ -42,7 +42,7 @@ public class CreateEventManager extends Builder {
 
 		for (LD l : ctx.descriptor().listeners) {
 			ClassOrInterfaceType c = t.get(l.clazz);
-			Expression e = new ObjectCreationExpr(null, c, Utils.emptyList());
+			Expression e = new ObjectCreationExpr(null, c, Utils.list());
 
 			for (SD s : ctx.descriptor().servlets) {
 				if (s.clazz.equals(l.clazz)) {

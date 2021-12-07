@@ -194,7 +194,7 @@ public class WsdlBuilder {
 				sb.append("\"><xs:simpleContent><xs:extension base=\"").append(getType(o.value.type, nsPrefix)).write("\">");
 				for (XmlField e : o.attrs) // TODO list ?
 					sb.append("<xs:attribute name=\"").append(e.name).append("\" type=\"").append(getType(o.value.type, nsPrefix)).write("\"/>");
-				sb.write("</xs:extention></xs:simpleType>");
+				sb.write("</xs:extension></xs:simpleType>");
 			} else {
 				if (o.value != null)
 					sb.write("\" mixed=\"true");
@@ -221,7 +221,7 @@ public class WsdlBuilder {
 	 * @throws IOException
 	 */
 	private static void appendMessage(Writer sb, Op o) throws IOException {
-		sb.append("<ws:message name=\"").append(o.name + "Request").write("\">");
+		sb.append("<ws:message name=\"").append(o.name).write("\">");
 		if (o.paramStyle == ParameterStyle.WRAPPED)
 			sb.append("<ws:part name=\"param\" element=\"").append(o.name).append("\" xmlns=\"").append(o.ns).write("\"/>");
 		else {
@@ -240,33 +240,26 @@ public class WsdlBuilder {
 		sb.append("<ws:portType name=\"").append(service.name).write("PortType\">");
 		for (Op o : service.operations) {
 			sb.append("<ws:operation name=\"").append(o.name).write("\">");
-			sb.append("<ws:input name=\"").append(o.name).append("Request\" message=\"").append(o.name).write("Request\"/>");
-			sb.append("<ws:output name=\"").append(o.name).append("Response\" message=\"").append(o.name).write("Response\"/>");
+			if (o.paramStyle == ParameterStyle.WRAPPED || o.params.size() > 0)
+				sb.append("<ws:input name=\"").append(o.name).append("\" message=\"").append(o.name).write("\"/>");
+			if (o.result != null)
+				sb.append("<ws:output name=\"").append(o.name).append("Response\" message=\"").append(o.name).write("Response\"/>");
 			sb.write("</ws:operation>");
 		}
 		sb.write("</ws:portType>");
 	}
 
 	private static void appendBinding(Writer sb, Service service) throws IOException {
+		// XXX type tns: ?
 		sb.append("<ws:binding name=\"").append(service.name).append("Binding\" type=\"").append(service.name).write("PortType\">");
 		sb.write("<wp:binding style=\"document\" transport=\"http://schemas.xmlsoap.org/soap/http\"/>");
 		for (Op o : service.operations) {
 			sb.append("<ws:operation name=\"").append(o.name).write("\">");
 			sb.append("<wp:operation soapAction=\"").append(o.action).write("\"/>");
-			if (o.paramStyle == ParameterStyle.WRAPPED) {
-				sb.append("<ws:input name=\"").append(o.name).write("Request\"><wp:body use=\"literal\"/></ws:input>");
+			if (o.paramStyle == ParameterStyle.WRAPPED || o.params.size() > 0)
+				sb.append("<ws:input name=\"").append(o.name).write("\"><wp:body use=\"literal\"/></ws:input>");
+			if (o.result != null)
 				sb.append("<ws:output name=\"").append(o.name).write("Response\"><wp:body use=\"literal\"/></ws:output>");
-			} else {
-				for (Param p : o.params) {
-					sb.append("<ws:input name=\"").append(p.name).write("\">");
-					if (p.header)
-						sb.write("<wp:header use=\"literal\"/>");
-					else
-						sb.write("<wp:body use=\"literal\"/>");
-					sb.write("</ws:input>");
-				}
-				sb.append("<ws:output name=\"").append(o.result.name).append("\" message=\"").append(o.result.name).write("\"/>");
-			}
 			sb.write("</ws:operation>");
 		}
 		sb.write("</ws:binding>");

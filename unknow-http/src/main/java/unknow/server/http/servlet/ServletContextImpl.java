@@ -34,7 +34,9 @@ import unknow.server.http.utils.ServletManager;
  * @author unknow
  */
 public class ServletContextImpl implements ServletContext {
+	private static final String SERVER_INFO = "UnknowServer/" + ServletContextImpl.class.getPackage().getImplementationVersion();
 	private final String name;
+	private final String vhost;
 
 	private final ArrayMap<String> parameters;
 	private final ArrayMap<Object> attributes;
@@ -57,8 +59,9 @@ public class ServletContextImpl implements ServletContext {
 	 * @param servlets   the servlet manager
 	 * @param events     the event manager
 	 */
-	public ServletContextImpl(String name, ArrayMap<String> parameters, ServletManager servlets, EventManager events, SessionFactory sessions, ArrayMap<String> localeEncodings, ArrayMap<String> mimeTypes) {
+	public ServletContextImpl(String name, String vhost, ArrayMap<String> parameters, ServletManager servlets, EventManager events, SessionFactory sessions, ArrayMap<String> localeEncodings, ArrayMap<String> mimeTypes) {
 		this.name = name;
+		this.vhost = vhost;
 		this.parameters = parameters;
 		this.attributes = new ArrayMap<>();
 
@@ -220,8 +223,7 @@ public class ServletContextImpl implements ServletContext {
 
 	@Override
 	public String getServerInfo() {
-		// TODO Auto-generated method stub
-		return null;
+		return SERVER_INFO;
 	}
 
 	@Override
@@ -448,8 +450,7 @@ public class ServletContextImpl implements ServletContext {
 
 	@Override
 	public String getVirtualServerName() {
-		// TODO Auto-generated method stub
-		return null;
+		return vhost;
 	}
 
 	@Override

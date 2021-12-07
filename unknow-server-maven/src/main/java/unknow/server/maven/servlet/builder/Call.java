@@ -48,13 +48,13 @@ public class Call extends Builder {
 						new ObjectCreationExpr(null, t.get(ThreadPoolExecutor.class), Utils.list(
 								new NameExpr("execMin"), new NameExpr("execMax"), new NameExpr("execIdle"),
 								new FieldAccessExpr(new TypeExpr(t.get(TimeUnit.class)), "SECONDS"),
-								new ObjectCreationExpr(null, t.get(SynchronousQueue.class, t.get(Runnable.class)), Utils.emptyList()),
+								new ObjectCreationExpr(null, t.get(SynchronousQueue.class, t.get(Runnable.class)), Utils.list()),
 								new LambdaExpr(new Parameter(new UnknownType(), "r"),
 										new BlockStmt()
 												.addStatement(Utils.assign(t.get(Thread.class), "t", new ObjectCreationExpr(null, t.get(Thread.class), Utils.list(new NameExpr("r")))))
 												.addStatement(new MethodCallExpr(new NameExpr("t"), "setDaemon", Utils.list(new BooleanLiteralExpr(true))))
 												.addStatement(new ReturnStmt(new NameExpr("t"))))))))
-				.addStatement(new AssignExpr(new NameExpr("handler"), new ObjectCreationExpr(null, t.get(HandlerFactory.class), null, Utils.emptyList(), Utils.list(
+				.addStatement(new AssignExpr(new NameExpr("handler"), new ObjectCreationExpr(null, t.get(HandlerFactory.class), null, Utils.list(), Utils.list(
 						new MethodDeclaration(Modifier.createModifierList(Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL), t.get(Handler.class), "create").addAnnotation(Override.class)
 								.setBody(new BlockStmt()
 										.addStatement(new ReturnStmt(new ObjectCreationExpr(null, t.get(HttpHandler.class), Utils.list(new NameExpr("executor"), new ThisExpr(new Name(ctx.self().getName().getIdentifier())), new NameExpr("keepAliveIdle")))))))),

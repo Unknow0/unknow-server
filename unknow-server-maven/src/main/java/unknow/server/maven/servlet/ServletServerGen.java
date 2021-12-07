@@ -209,6 +209,11 @@ public class ServletServerGen extends AbstractMojo implements BuilderContext {
 		cl = cu.addClass(className, Modifier.Keyword.FINAL).addExtendedType(NIOServerCli.class).addImplementedType(HttpRawProcessor.class);
 		cl.addFieldWithInitializer(types.get(Logger.class), "log", new MethodCallExpr(new TypeExpr(types.get(LoggerFactory.class)), "getLogger", Utils.list(new ClassExpr(types.get(cl)))), Modifier.Keyword.PRIVATE, Modifier.Keyword.STATIC, Modifier.Keyword.FINAL);
 
+		cl.addField(types.get(String.class), "vhost")
+				.setJavadocComment(new JavadocComment("public vhost seen be the servlet (default to the binded address)")).addAndGetAnnotation(Option.class)
+				.addPair("names", new StringLiteralExpr("--vhost")).addPair("description", new StringLiteralExpr("public vhost seen be the servlet (default to the binded address)"))
+				.addPair("descriptionKey", new StringLiteralExpr("vhost"));
+
 		cl.addFieldWithInitializer(types.get(int.class), "execMin", new IntegerLiteralExpr("0"))
 				.setJavadocComment(new JavadocComment("min number of execution thread to use, default to 0")).addAndGetAnnotation(Option.class)
 				.addPair("names", new StringLiteralExpr("--exec-min")).addPair("description", new StringLiteralExpr("min number of exec thread to use, default to 0"))

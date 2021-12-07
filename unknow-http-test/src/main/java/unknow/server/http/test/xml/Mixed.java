@@ -3,13 +3,16 @@
  */
 package unknow.server.http.test.xml;
 
-import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlValue;
 
+@XmlAccessorType(XmlAccessType.FIELD)
 public class Mixed {
 	@XmlValue
 	private int value;
-	@XmlElement
+	@XmlAttribute
 	private String elem;
 
 	public int getValue() {
