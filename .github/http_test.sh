@@ -1,8 +1,10 @@
 #!/bin/sh
 
+URL=http://127.0.0.1:8080
+
 die() { echo $@; exit 1; }
-http_code() { curl -s -w '%{http_code}' "http://127.0.0.1:8080$1"; }
-post() { curl -s -XPOST -d@".github/$1" http://127.0.0.1:8080/Webservice -o out.xml -w '%{http_code}'; }
+http_code() { curl -s -w '%{http_code}' "$URL$1"; }
+post() { curl -s -XPOST -d@".github/$1" $URL/ws -o out.xml -w '%{http_code}'; }
 
 xml_parse()
 	{
@@ -76,7 +78,4 @@ cat out.xml | xml_parse | diff - .github/xml/bare_res.xml || die 'webservice bas
 [ "$(post xml/wrapped_req.xml)" = '200' ] || die 'webservice wrapped'
 cat out.xml | xml_parse | tee out | diff - .github/xml/wrapped_res.xml || die 'webservice wrapped'
 
-[ "$(post xml/mixed_req.xml)" = '200' ] || die 'webservice mixed'
-cat out.xml | xml_parse | tee out | diff - .github/xml/mixed_res.xml || die 'webservice mixed'
-
-curl -s -XGET "$URL/Webservice?wsdl" | xmllint --format - >/dev/null || die 'webservice wsdl'
+curl -s -XGET "$URL/ws?wsdl" | xmllint --format - >/dev/null || die 'webservice wsdl'

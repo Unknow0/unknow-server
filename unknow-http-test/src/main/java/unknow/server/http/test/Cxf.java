@@ -28,7 +28,7 @@ public class Cxf extends CXFNonSpringServlet {
 	@Override
 	public void loadBus(ServletConfig servletConfig) {
 		super.loadBus(servletConfig);
-
+		
 		// You could add the endpoint publish codes here
 		BusFactory.setDefaultBus(getBus());
 		Endpoint e = Endpoint.create(new Webservice());

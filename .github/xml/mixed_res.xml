@@ -1,9 +1,0 @@
-+{http://www.w3.org/2001/12/soap-envelope}Envelope
-+{http://www.w3.org/2001/12/soap-envelope}Body
-+{http://test.unknow}mixedResponse
-+elem
-content
--elem
-4
--{http://test.unknow}mixedResponse
--{http://www.w3.org/2001/12/soap-envelope}Body

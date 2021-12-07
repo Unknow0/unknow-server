@@ -179,7 +179,7 @@ public class JaxwsServletBuilder {
 
 		generateHandlers(types);
 
-		byte[] wsdl = WsdlBuilder.build(service, baseUrl);
+		byte[] wsdl = new WsdlBuilder(service, baseUrl).build();
 		servlet.addFieldWithInitializer(types.get(byte[].class), "WSDL", Utils.byteArray(wsdl), PSF);
 		servlet.addMethod("doGet", PF).addMarkerAnnotation(Override.class).addThrownException(types.get(IOException.class))
 				.addParameter(types.get(HttpServletRequest.class), "req").addParameter(types.get(HttpServletResponse.class), "res").getBody().get()

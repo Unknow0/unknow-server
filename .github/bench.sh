@@ -3,7 +3,7 @@
 TESTS=(
 	'missing'
 	'test'
-	'Webservice POST <.github/xml/bare_req.xml'
+	'ws POST <.github/xml/bare_req.xml'
 	)
 SERVER=(tomcat unknow)
 
