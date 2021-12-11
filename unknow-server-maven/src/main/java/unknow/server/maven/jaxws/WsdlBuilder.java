@@ -99,23 +99,25 @@ public class WsdlBuilder {
 		Set<SchemaData> set = new HashSet<>();
 		for (Service.Op o : service.operations) {
 			if (o.paramStyle == ParameterStyle.WRAPPED && ns.equals(o.ns)) {
-				sb.append('<').append(xs).append(":element name=\"").append(o.name).append("\" type=\"").append(name(o.ns, o.name)).write("\"/>");
-
-				sb.append('<').append(xs).append(":complexType name=\"").append(o.name).append("\"><").append(xs).write(":sequence>");
+				sb.append('<').append(xs).append(":element name=\"").append(o.name).write("\">");
+				sb.append('<').append(xs).append(":complexType><").append(xs).write(":sequence>");
 				for (Param p : o.params)
 					sb.append('<').append(xs).append(":element name=\"").append(p.name).append("\" type=\"").append(name(p.type)).write("\"/>");
-				sb.append("</").append(xs).append(":sequence></").append(xs).append(":complexType><").append(xs).append(":complexType name=\"").append(o.result.name)
-						.append("\"><").append(xs).write(":sequence>");
+				sb.append("</").append(xs).append(":sequence></").append(xs).append(":complexType></").append(xs).write(":element>");
+
+				sb.append('<').append(xs).append(":element name=\"").append(o.name).write("Response\">");
+				sb.append('<').append(xs).append(":complexType><").append(xs).write(":sequence>");
 				sb.append('<').append(xs).append(":element name=\"").append(o.result.name).append("\" type=\"").append(name(o.result.type)).write("\"/>");
-				sb.append("</").append(xs).append(":sequence></").append(xs).append(":complexType>");
+				sb.append("</").append(xs).append(":sequence></").append(xs).append(":complexType></").append(xs).write(":element>");
 			} else {
 				for (Service.Param p : o.params) {
 					if (ns.equals(p.ns))
 						sb.append('<').append(xs).append(":element name=\"").append(p.name).append("\" type=\"").append(name(p.ns, p.name)).write("\"/>");
 				}
+				if (ns.equals(o.result.ns))
+					sb.append('<').append(xs).append(":element name=\"").append(o.result.name).append("\" type=\"").append(name(o.result.type)).write("\"/>");
 			}
-			if (ns.equals(o.result.ns))
-				sb.append('<').append(xs).append(":element name=\"").append(o.result.name).append("\" type=\"").append(name(o.result.type)).write("\"/>");
+			appendType(o.result.type, ns, set);
 			for (Service.Param p : o.params)
 				appendType(p.type, ns, set);
 		}
@@ -179,25 +181,33 @@ public class WsdlBuilder {
 	 */
 	private void appendMessage(Op o) throws IOException {
 		sb.append('<').append(ws).append(":message name=\"").append(o.name).write("\">");
-		if (o.paramStyle == ParameterStyle.WRAPPED)
+		if (o.paramStyle == ParameterStyle.WRAPPED) {
 			sb.append('<').append(ws).append(":part name=\"param\" element=\"").append(name(o.ns, o.name)).write("\"/>");
-		else {
+			sb.append("</").append(ws).append(":message><").append(ws).append(":message name=\"").append(o.name).write("Response\">");
+			sb.append('<').append(ws).append(":part name=\"param\" element=\"").append(name(o.ns, o.name + "Response")).write("\"/>");
+			sb.append("</").append(ws).write(":message>");
+		} else {
 			for (Param p : o.params)
 				sb.append('<').append(ws).append(":part name=\"").append(p.name).append("\" element=\"").append(name(p.type)).write("\"/>");
+			sb.append("</").append(ws).append(":message><").append(ws).append(":message name=\"").append(o.result.name).write("\">");
+			sb.append('<').append(ws).append(":part name=\"param\" element=\"").append(name(o.result.ns, o.result.name)).write("\"/>");
+			sb.append("</").append(ws).write(":message>");
 		}
-		sb.append("</").append(ws).append(":message><").append(ws).append(":message name=\"").append(o.result.name).write("\">");
-		sb.append('<').append(ws).append(":part name=\"param\" element=\"").append(name(o.result.ns, o.result.name)).write("\"/>");
-		sb.append("</").append(ws).write(":message>");
 	}
 
 	private void appendPortType() throws IOException {
 		sb.append('<').append(ws).append(":portType name=\"").append(service.name).write("PortType\">");
 		for (Op o : service.operations) {
 			sb.append('<').append(ws).append(":operation name=\"").append(o.name).write("\">");
-			if (o.paramStyle == ParameterStyle.WRAPPED || o.params.size() > 0)
+			if (o.paramStyle == ParameterStyle.WRAPPED) {
 				sb.append('<').append(ws).append(":input name=\"").append(o.name).append("\" message=\"").append(name(service.ns, o.name)).write("\"/>");
-			if (o.result != null)
-				sb.append('<').append(ws).append(":output name=\"").append(o.result.name).append("\" message=\"").append(name(o.result.ns, o.result.name)).write("\"/>");
+				sb.append('<').append(ws).append(":output name=\"").append(o.name).append("Response\" message=\"").append(name(service.ns, o.name + "Response")).write("\"/>");
+			} else {
+				if (o.params.size() > 0)
+					sb.append('<').append(ws).append(":input name=\"").append(o.name).append("\" message=\"").append(name(service.ns, o.name)).write("\"/>");
+				if (o.result != null)
+					sb.append('<').append(ws).append(":output name=\"").append(o.result.name).append("\" message=\"").append(name(service.ns, o.result.name)).write("\"/>");
+			}
 			sb.append("</").append(ws).write(":operation>");
 		}
 		sb.append("</").append(ws).write(":portType>");
