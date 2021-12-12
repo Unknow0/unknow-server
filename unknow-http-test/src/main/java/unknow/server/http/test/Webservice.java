@@ -37,4 +37,14 @@ public class Webservice {
 	public Mixed mixed(@WebParam(targetNamespace = "http://webservice.unknow", name = "Mixed") Mixed root) {
 		return root;
 	}
+
+	@WebMethod
+	@SOAPBinding(parameterStyle = ParameterStyle.WRAPPED)
+	public void onWayWrapped(@WebParam Root root) {
+	}
+
+	@WebMethod
+	@SOAPBinding(parameterStyle = ParameterStyle.BARE)
+	public void onWayBare(@WebParam Root root) {
+	}
 }

@@ -154,22 +154,26 @@ public class JaxwsServletBuilder {
 
 				param.add(new CastExpr(types.get(p.clazz), v));
 			}
+
+			Expression e = null;
 			if (o.result == null)
 				b.addStatement(new MethodCallExpr(new NameExpr("WS"), o.m, param));
-			else
+			else {
 				b.addStatement(
 						new AssignExpr(new VariableDeclarationExpr(types.get(Object.class), "ro"), new MethodCallExpr(new NameExpr("WS"), o.m, param), Operator.ASSIGN));
 //			TODO if(o.result.header)
-			Expression e = new ObjectCreationExpr(null, types.get(Element.class),
-					Utils.list(new StringLiteralExpr(o.result.ns), new StringLiteralExpr(o.result.name), new NameExpr("ro")));
+				e = new ObjectCreationExpr(null, types.get(Element.class),
+						Utils.list(new StringLiteralExpr(o.result.ns), new StringLiteralExpr(o.result.name), new NameExpr("ro")));
+			}
 			if (o.paramStyle == ParameterStyle.WRAPPED) {
-				NodeList<Expression> p = Utils.list(new StringLiteralExpr(o.ns), new StringLiteralExpr(o.name + "Response"), e);
+				NodeList<Expression> p = Utils.list(new StringLiteralExpr(o.ns), new StringLiteralExpr(o.name + "Response"), e == null ? new NullLiteralExpr() : e);
 				// TODO out param
 				e = new ObjectCreationExpr(null, types.get(OperationWrapper.class), p);
 			} else {
 				// TODO out param
 			}
-			b.addStatement(new MethodCallExpr(new NameExpr("r"), "addBody", Utils.list(e)));
+			if (e != null)
+				b.addStatement(new MethodCallExpr(new NameExpr("r"), "addBody", Utils.list(e)));
 			b.addStatement(new ReturnStmt(new NameExpr("r")));
 
 			init.addStatement(new AssignExpr(new ArrayAccessExpr(new NameExpr("OP_CALL"), new IntegerLiteralExpr("" + oi)),

@@ -105,19 +105,23 @@ public class WsdlBuilder {
 					sb.append('<').append(xs).append(":element name=\"").append(p.name).append("\" type=\"").append(name(p.type)).write("\"/>");
 				sb.append("</").append(xs).append(":sequence></").append(xs).append(":complexType></").append(xs).write(":element>");
 
-				sb.append('<').append(xs).append(":element name=\"").append(o.name).write("Response\">");
-				sb.append('<').append(xs).append(":complexType><").append(xs).write(":sequence>");
-				sb.append('<').append(xs).append(":element name=\"").append(o.result.name).append("\" type=\"").append(name(o.result.type)).write("\"/>");
-				sb.append("</").append(xs).append(":sequence></").append(xs).append(":complexType></").append(xs).write(":element>");
+				if (o.result != null) {
+					sb.append('<').append(xs).append(":element name=\"").append(o.name).write("Response\">");
+					sb.append('<').append(xs).append(":complexType><").append(xs).write(":sequence>");
+					sb.append('<').append(xs).append(":element name=\"").append(o.result.name).append("\" type=\"").append(name(o.result.type)).write("\"/>");
+					sb.append("</").append(xs).append(":sequence></").append(xs).append(":complexType></").append(xs).write(":element>");
+				} else
+					sb.append('<').append(xs).append(":element name=\"").append(o.name).write("Response\"/>");
 			} else {
 				for (Service.Param p : o.params) {
 					if (ns.equals(p.ns))
 						sb.append('<').append(xs).append(":element name=\"").append(p.name).append("\" type=\"").append(name(p.ns, p.name)).write("\"/>");
 				}
-				if (ns.equals(o.result.ns))
+				if (o.result != null && ns.equals(o.result.ns))
 					sb.append('<').append(xs).append(":element name=\"").append(o.result.name).append("\" type=\"").append(name(o.result.type)).write("\"/>");
 			}
-			appendType(o.result.type, ns, set);
+			if (o.result != null)
+				appendType(o.result.type, ns, set);
 			for (Service.Param p : o.params)
 				appendType(p.type, ns, set);
 		}
@@ -189,9 +193,12 @@ public class WsdlBuilder {
 		} else {
 			for (Param p : o.params)
 				sb.append('<').append(ws).append(":part name=\"").append(p.name).append("\" element=\"").append(name(p.type)).write("\"/>");
-			sb.append("</").append(ws).append(":message><").append(ws).append(":message name=\"").append(o.result.name).write("\">");
-			sb.append('<').append(ws).append(":part name=\"param\" element=\"").append(name(o.result.ns, o.result.name)).write("\"/>");
 			sb.append("</").append(ws).write(":message>");
+			if (o.result != null) {
+				sb.append('<').append(ws).append(":message name=\"").append(o.result.name).write("\">");
+				sb.append('<').append(ws).append(":part name=\"param\" element=\"").append(name(o.result.ns, o.result.name)).write("\"/>");
+				sb.append("</").append(ws).write(":message>");
+			}
 		}
 	}
 
@@ -248,7 +255,7 @@ public class WsdlBuilder {
 				ns.merge(o.ns, 1, Integer::sum);
 				for (Service.Param p : o.params)
 					ns.merge(p.ns, 1, Integer::sum);
-			} else {
+			} else if (o.result != null) {
 				ns.merge(o.result.ns, 1, Integer::sum);
 				collectNs(o.result.type, ns);
 			}
@@ -299,7 +306,7 @@ public class WsdlBuilder {
 					if (ns.equals(p.ns))
 						return true;
 				}
-			} else if (ns.equals(o.result.ns) || schemaHasData(o.result.type, ns))
+			} else if (o.result != null && (ns.equals(o.result.ns) || schemaHasData(o.result.type, ns)))
 				return true;
 			for (Service.Param p : o.params) {
 				if (schemaHasData(p.type, ns))
