@@ -6,6 +6,7 @@ package unknow.server.maven.jaxws.model;
 import java.util.List;
 import java.util.Objects;
 
+import com.github.javaparser.ast.expr.CastExpr;
 import com.github.javaparser.ast.expr.Expression;
 
 import unknow.server.maven.TypeCache;
@@ -41,7 +42,7 @@ public class XmlObject implements XmlType {
 
 	@Override
 	public Expression convert(TypeCache types, Expression v) {
-		return v;
+		return new CastExpr(types.get(clazz), v);
 	}
 
 	@Override
@@ -53,7 +54,7 @@ public class XmlObject implements XmlType {
 	public String binaryName() {
 		return clazz + ";";
 	}
-	
+
 	@Override
 	public SchemaData schema() {
 		return schema;
@@ -128,7 +129,8 @@ public class XmlObject implements XmlType {
 			if (!(obj instanceof XmlField))
 				return false;
 			XmlField other = (XmlField) obj;
-			return Objects.equals(type, other.type) && Objects.equals(getter, other.getter) && Objects.equals(setter, other.setter) && Objects.equals(name, other.name) && Objects.equals(ns, other.ns);
+			return Objects.equals(type, other.type) && Objects.equals(getter, other.getter) && Objects.equals(setter, other.setter) && Objects.equals(name, other.name)
+					&& Objects.equals(ns, other.ns);
 		}
 
 		@Override

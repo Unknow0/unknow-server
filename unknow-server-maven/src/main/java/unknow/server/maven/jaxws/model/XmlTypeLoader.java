@@ -3,8 +3,6 @@
  */
 package unknow.server.maven.jaxws.model;
 
-import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -43,6 +41,27 @@ import unknow.server.maven.jaxws.model.XmlType.XmlList;
  * @author unknow
  */
 public class XmlTypeLoader {
+	private static final Map<String, XmlType> DEFAULT = new HashMap<>();
+	static {
+		DEFAULT.put("java.lang.String", XmlType.XmlString);
+		DEFAULT.put("java.lang.Boolean", XmlType.XmlBoolean);
+		DEFAULT.put("java.lang.Byte", XmlType.XmlByte);
+		DEFAULT.put("java.lang.Character", XmlType.XmlChar);
+		DEFAULT.put("java.lang.Short", XmlType.XmlShort);
+		DEFAULT.put("java.lang.Integer", XmlType.XmlInt);
+		DEFAULT.put("java.lang.Long", XmlType.XmlLong);
+		DEFAULT.put("java.lang.Float", XmlType.XmlFloat);
+		DEFAULT.put("java.lang.Double", XmlType.XmlDouble);
+		DEFAULT.put("java.math.BigInteger", XmlType.XmlBigInteger);
+		DEFAULT.put("java.math.BigDecimal", XmlType.XmlBigDecimal);
+		DEFAULT.put("java.time.LocalDate", XmlTypeDate.LOCAL_DATE);
+		DEFAULT.put("java.time.LocalTime", XmlTypeDate.LOCAL_TIME);
+		DEFAULT.put("java.time.LocalDateTime", XmlTypeDate.LOCAL_DATETIME);
+		DEFAULT.put("java.time.OffsetTime", XmlTypeDate.OFFSET_TIME);
+		DEFAULT.put("java.time.OffsetDateTime", XmlTypeDate.OFFSET_DATETIME);
+		DEFAULT.put("java.time.ZonedDateTime", XmlTypeDate.ZONED_DATETIME);
+	}
+
 	final Map<String, ClassOrInterfaceDeclaration> classes;
 	private final Map<String, XmlType> loaded;
 
@@ -53,7 +72,7 @@ public class XmlTypeLoader {
 	 */
 	public XmlTypeLoader(Map<String, ClassOrInterfaceDeclaration> classes) {
 		this.classes = classes;
-		this.loaded = new HashMap<>();
+		this.loaded = new HashMap<>(DEFAULT);
 	}
 
 	/**
@@ -100,32 +119,10 @@ public class XmlTypeLoader {
 			throw new RuntimeException("unknown type: '" + type + "'");
 		ResolvedReferenceType resolve = type.asClassOrInterfaceType().resolve();
 		String describe = resolve.describe();
-		if ("java.lang.String".equals(describe))
-			return XmlType.XmlString;
-		if ("java.lang.Boolean".equals(describe))
-			return XmlType.XmlBoolean;
-		if ("java.lang.Byte".equals(describe))
-			return XmlType.XmlByte;
-		if ("java.lang.Character".equals(describe))
-			return XmlType.XmlChar;
-		if ("java.lang.Short".equals(describe))
-			return XmlType.XmlShort;
-		if ("java.lang.Integer".equals(describe))
-			return XmlType.XmlInt;
-		if ("java.lang.Long".equals(describe))
-			return XmlType.XmlLong;
-		if ("java.lang.Float".equals(describe))
-			return XmlType.XmlFloat;
-		if ("java.lang.Double".equals(describe))
-			return XmlType.XmlDouble;
-		if (BigInteger.class.getCanonicalName().equals(describe))
-			return XmlType.XmlBigInteger;
-		if (BigDecimal.class.getCanonicalName().equals(describe))
-			return XmlType.XmlBigDecimal;
+
 //		if (isEnum(resolve)) // TODO XmlEnum/XmlEnumValue
 //			return new XmlType.Enum(describe);
 
-		// TODO date/time
 		// TODO Collection
 		// TODO Map ?
 
@@ -146,7 +143,8 @@ public class XmlTypeLoader {
 		if (a.isPresent()) {
 			AnnotationExpr an = a.get();
 			Optional<SingleMemberAnnotationExpr> v = an.findFirst(SingleMemberAnnotationExpr.class);
-			Expression e = v.isPresent() ? v.get().getMemberValue() : an.findFirst(MemberValuePair.class, m -> "value".equals(m.getNameAsString())).map(m -> m.getValue()).orElse(null);
+			Expression e = v.isPresent() ? v.get().getMemberValue()
+					: an.findFirst(MemberValuePair.class, m -> "value".equals(m.getNameAsString())).map(m -> m.getValue()).orElse(null);
 			if (e != null)
 				type = XmlAccessType.valueOf(e.asFieldAccessExpr().getNameAsString());
 		}
@@ -154,8 +152,10 @@ public class XmlTypeLoader {
 		Factory factory = null;
 		a = c.getAnnotationByClass(javax.xml.bind.annotation.XmlType.class);
 		if (a.isPresent()) {
-			String cl = a.get().findFirst(MemberValuePair.class, m -> "factoryClass".equals(m.getNameAsString())).map(v -> v.getValue().asClassExpr().getType().resolve().describe()).orElse(null);
-			String method = a.get().findFirst(MemberValuePair.class, m -> "factoryMethod".equals(m.getNameAsString())).map(v -> v.getValue().asStringLiteralExpr().asString()).orElse("");
+			String cl = a.get().findFirst(MemberValuePair.class, m -> "factoryClass".equals(m.getNameAsString()))
+					.map(v -> v.getValue().asClassExpr().getType().resolve().describe()).orElse(null);
+			String method = a.get().findFirst(MemberValuePair.class, m -> "factoryMethod".equals(m.getNameAsString())).map(v -> v.getValue().asStringLiteralExpr().asString())
+					.orElse("");
 
 			if (!method.isEmpty()) {
 				if (javax.xml.bind.annotation.XmlType.DEFAULT.class.getCanonicalName().equals(cl))
@@ -194,8 +194,11 @@ public class XmlTypeLoader {
 					String getter = "get" + Character.toUpperCase(v.getNameAsString().charAt(0)) + v.getNameAsString().substring(1);
 					// TODO check also is* for boolean
 
-					Optional<MethodDeclaration> s = c.getMethods().stream().filter(m -> m.getNameAsString().equals(setter)).filter(m -> m.getParameters().size() == 1 && m.getParameter(0).getType().resolve().describe().equals(v.getType().resolve().describe())).findFirst();
-					Optional<MethodDeclaration> g = c.getMethods().stream().filter(m -> m.getNameAsString().equals(getter)).filter(m -> m.getParameters().size() == 0).findFirst();
+					Optional<MethodDeclaration> s = c.getMethods().stream().filter(m -> m.getNameAsString().equals(setter))
+							.filter(m -> m.getParameters().size() == 1 && m.getParameter(0).getType().resolve().describe().equals(v.getType().resolve().describe()))
+							.findFirst();
+					Optional<MethodDeclaration> g = c.getMethods().stream().filter(m -> m.getNameAsString().equals(getter)).filter(m -> m.getParameters().size() == 0)
+							.findFirst();
 					if (!s.isPresent())
 						throw new RuntimeException("missing setter for '" + v.getNameAsString() + "' field in '" + c.getNameAsString() + "' class");
 					if (!g.isPresent()) // TODO check is* if boolean
@@ -231,7 +234,8 @@ public class XmlTypeLoader {
 			if (annot != null || type == XmlAccessType.FIELD && d != null || type == XmlAccessType.PUBLIC_MEMBER && m.hasModifier(Keyword.PUBLIC)) {
 				String setter = "set" + m.getNameAsString().substring(3);
 
-				Optional<MethodDeclaration> s = c.getMethods().stream().filter(e -> e.getNameAsString().equals(setter)).filter(e -> e.getParameters().size() == 1 && e.getParameter(0).getType().resolve().describe().equals(m.getType().resolve().describe())).findFirst();
+				Optional<MethodDeclaration> s = c.getMethods().stream().filter(e -> e.getNameAsString().equals(setter))
+						.filter(e -> e.getParameters().size() == 1 && e.getParameter(0).getType().resolve().describe().equals(m.getType().resolve().describe())).findFirst();
 				if (!s.isPresent())
 					throw new RuntimeException("missing setter for '" + n + "' field in '" + c.getNameAsString() + "' class");
 				if (d == null)
@@ -295,12 +299,14 @@ public class XmlTypeLoader {
 	private static String getName(Optional<AnnotationExpr> a, String def) {
 		if (!a.isPresent())
 			return def;
-		return a.get().findFirst(MemberValuePair.class, m -> "name".equals(m.getNameAsString())).map(e -> e.getValue().asStringLiteralExpr().getValue()).map(v -> "##default".equals(v) ? def : v).orElse(def);
+		return a.get().findFirst(MemberValuePair.class, m -> "name".equals(m.getNameAsString())).map(e -> e.getValue().asStringLiteralExpr().getValue())
+				.map(v -> "##default".equals(v) ? def : v).orElse(def);
 	}
 
 	private static String getNs(Optional<AnnotationExpr> a, String def) {
 		if (!a.isPresent())
 			return def;
-		return a.get().findFirst(MemberValuePair.class, m -> "namespace".equals(m.getNameAsString())).map(e -> e.getValue().asStringLiteralExpr().getValue()).map(v -> "##default".equals(v) ? def : v).orElse(def);
+		return a.get().findFirst(MemberValuePair.class, m -> "namespace".equals(m.getNameAsString())).map(e -> e.getValue().asStringLiteralExpr().getValue())
+				.map(v -> "##default".equals(v) ? def : v).orElse(def);
 	}
 }

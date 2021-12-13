@@ -27,7 +27,7 @@ unknow_stop() {
 	sleep 2
 }
 tomcat_start() {
-	cp unknow-http-test/target/*.war $CATALINA_HOME/webapps/ROOT.war
+	cp unknow-http-test/target/*.war $CATALINA_HOME/webapps/ROOT.war || exit 1
 	$CATALINA_HOME/bin/catalina.sh run >/dev/null 2>/dev/null || exit 1 &
 	pid=$!
 	trap "kill -9 $pid" EXIT

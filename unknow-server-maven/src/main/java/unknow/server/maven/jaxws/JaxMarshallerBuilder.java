@@ -11,7 +11,6 @@ import java.util.Set;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.Modifier.Keyword;
-import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.expr.AssignExpr;
@@ -55,43 +54,41 @@ public class JaxMarshallerBuilder {
 		this.types = types;
 		this.clazz = cu.addClass("Marshallers", Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL);
 		this.processed = new HashSet<>();
-		clazz.addFieldWithInitializer(types.get(MarshallerRegistry.class), "R", new ObjectCreationExpr(null, types.get(MarshallerRegistry.class), Utils.list()), Modifier.Keyword.PRIVATE, Modifier.Keyword.STATIC, Modifier.Keyword.FINAL);
+		clazz.addFieldWithInitializer(types.get(MarshallerRegistry.class), "R", new ObjectCreationExpr(null, types.get(MarshallerRegistry.class), Utils.list()),
+				Modifier.Keyword.PRIVATE, Modifier.Keyword.STATIC, Modifier.Keyword.FINAL);
 		init = clazz.addStaticInitializer();
 
 		clazz.addMethod("marshall", Keyword.PUBLIC, Keyword.STATIC, Keyword.FINAL).addParameter(types.get(Envelope.class), "e").addParameter(types.get(Writer.class), "w")
-				.addThrownException(types.get(IOException.class))
-				.getBody().get()
-				.addStatement(Utils.create(types.get(XMLNsCollector.class), "c", Utils.list()))
-				.addStatement(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(Marshaller.class)), "ENVELOPE"), "marshall", Utils.list(R, E, C)))
-				.addStatement(new TryStmt(new NodeList<>(
-						new AssignExpr(
-								new VariableDeclarationExpr(types.get(XMLWriter.class), "out"), new ObjectCreationExpr(null, types.get(XMLOutput.class), new NodeList<>(new NameExpr("w"), new MethodCallExpr(C, "buildNsMapping"))), AssignExpr.Operator.ASSIGN)),
-						new BlockStmt()
-								.addStatement(new MethodCallExpr(
-										new FieldAccessExpr(new TypeExpr(types.get(Marshaller.class)), "ENVELOPE"),
-										"marshall", new NodeList<>(R, E, new NameExpr("out")))),
-						new NodeList<>(), null));
+				.addThrownException(types.get(IOException.class)).getBody().get().addStatement(Utils.create(types.get(XMLNsCollector.class), "c", Utils.list()))
+				.addStatement(
+						new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(Marshaller.class)), "ENVELOPE"), "marshall", Utils.list(R, E, C)))
+				.addStatement(
+						new TryStmt(
+								Utils.list(
+										new AssignExpr(new VariableDeclarationExpr(types.get(XMLWriter.class), "out"),
+												new ObjectCreationExpr(null, types.get(XMLOutput.class),
+														Utils.list(new NameExpr("w"), new MethodCallExpr(C, "buildNsMapping"))),
+												AssignExpr.Operator.ASSIGN)),
+								new BlockStmt().addStatement(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(Marshaller.class)), "ENVELOPE"), "marshall",
+										Utils.list(R, E, new NameExpr("out")))),
+								Utils.list(), null));
 		clazz.addMethod("marshall", Keyword.PUBLIC, Keyword.STATIC, Keyword.FINAL).addParameter(types.get(Object.class), "e").addParameter(types.get(Writer.class), "w")
-				.addThrownException(types.get(IOException.class))
-				.addSingleMemberAnnotation(SuppressWarnings.class, new StringLiteralExpr("unchecked"))
-				.getBody().get()
-				.addStatement(new AssignExpr(
-						new VariableDeclarationExpr(types.get(Marshaller.class, types.get(Object.class)), "m"),
-						new MethodCallExpr(R, "get", new NodeList<>(new CastExpr(types.get(Class.class, types.get(Object.class)), new MethodCallExpr(E, "getClass")))),
+				.addThrownException(types.get(IOException.class)).addSingleMemberAnnotation(SuppressWarnings.class, new StringLiteralExpr("unchecked")).getBody().get()
+				.addStatement(new AssignExpr(new VariableDeclarationExpr(types.get(Marshaller.class, types.get(Object.class)), "m"),
+						new MethodCallExpr(R, "get", Utils.list(new CastExpr(types.get(Class.class, types.get(Object.class)), new MethodCallExpr(E, "getClass")))),
 						AssignExpr.Operator.ASSIGN))
-				.addStatement(new AssignExpr(
-						new VariableDeclarationExpr(types.get(XMLNsCollector.class), "c"),
-						new ObjectCreationExpr(null, types.get(XMLNsCollector.class), new NodeList<>()),
-						AssignExpr.Operator.ASSIGN))
-				.addStatement(new MethodCallExpr(new NameExpr("m"), "marshall", new NodeList<>(R, E, C)))
-				.addStatement(new TryStmt(new NodeList<>(
-						new AssignExpr(
-								new VariableDeclarationExpr(types.get(XMLWriter.class), "out"), new ObjectCreationExpr(null, types.get(XMLOutput.class), new NodeList<>(new NameExpr("w"), new MethodCallExpr(C, "buildNsMapping"))), AssignExpr.Operator.ASSIGN)),
-						new BlockStmt()
-								.addStatement(new MethodCallExpr(
-										new NameExpr("m"),
-										"marshall", new NodeList<>(R, E, new NameExpr("out")))),
-						new NodeList<>(), null));
+				.addStatement(new AssignExpr(new VariableDeclarationExpr(types.get(XMLNsCollector.class), "c"),
+						new ObjectCreationExpr(null, types.get(XMLNsCollector.class), Utils.list()), AssignExpr.Operator.ASSIGN))
+				.addStatement(
+						new MethodCallExpr(new NameExpr("m"), "marshall", Utils.list(R, E, C)))
+				.addStatement(
+						new TryStmt(
+								Utils.list(
+										new AssignExpr(new VariableDeclarationExpr(types.get(XMLWriter.class), "out"),
+												new ObjectCreationExpr(null, types.get(XMLOutput.class),
+														Utils.list(new NameExpr("w"), new MethodCallExpr(C, "buildNsMapping"))),
+												AssignExpr.Operator.ASSIGN)),
+								new BlockStmt().addStatement(new MethodCallExpr(new NameExpr("m"), "marshall", Utils.list(R, E, new NameExpr("out")))), Utils.list(), null));
 	}
 
 	public void add(XmlObject type) {
@@ -101,26 +98,25 @@ public class JaxMarshallerBuilder {
 
 		BlockStmt b = new BlockStmt();
 		for (XmlField a : type.attrs)
-			b.addStatement(new MethodCallExpr(new NameExpr("w"), "attribute", new NodeList<>(new StringLiteralExpr(a.name), new StringLiteralExpr(a.ns), a.type.toString(types, new MethodCallExpr(new NameExpr("t"), a.getter)))));
+			b.addStatement(new MethodCallExpr(new NameExpr("w"), "attribute",
+					Utils.list(new StringLiteralExpr(a.name), new StringLiteralExpr(a.ns), a.type.toString(types, new MethodCallExpr(new NameExpr("t"), a.getter)))));
 		for (XmlField f : type.elems) {
-			b.addStatement(new MethodCallExpr(new NameExpr("w"), "startElement", new NodeList<>(new StringLiteralExpr(f.name), new StringLiteralExpr(f.ns))));
+			b.addStatement(new MethodCallExpr(new NameExpr("w"), "startElement", Utils.list(new StringLiteralExpr(f.name), new StringLiteralExpr(f.ns))));
 			if (f.type instanceof XmlObject)
-				b.addStatement(new MethodCallExpr(new MethodCallExpr(new NameExpr("R"), "get", new NodeList<>(new ClassExpr(types.get(((XmlObject) f.type).clazz)))), "marshal", new NodeList<>()));
+				b.addStatement(new MethodCallExpr(new MethodCallExpr(new NameExpr("R"), "get", Utils.list(new ClassExpr(types.get(((XmlObject) f.type).clazz)))), "marshall",
+						Utils.list(new NameExpr("m"), new MethodCallExpr(new NameExpr("t"), f.getter), new NameExpr("w"))));
 			else {
 				Expression e = f.type.toString(types, new MethodCallExpr(new NameExpr("t"), f.getter));
-				b.addStatement(new MethodCallExpr(new NameExpr("w"), "text", new NodeList<>(e)));
+				b.addStatement(new MethodCallExpr(new NameExpr("w"), "text", Utils.list(e)));
 			}
-			b.addStatement(new MethodCallExpr(new NameExpr("w"), "endElement", new NodeList<>(new StringLiteralExpr(f.name), new StringLiteralExpr(f.ns))));
+			b.addStatement(new MethodCallExpr(new NameExpr("w"), "endElement", Utils.list(new StringLiteralExpr(f.name), new StringLiteralExpr(f.ns))));
 		}
 		if (type.value != null) {
 			Expression e = type.value.type.toString(types, new MethodCallExpr(new NameExpr("t"), type.value.getter));
-			b.addStatement(new MethodCallExpr(new NameExpr("w"), "text", new NodeList<>(e)));
+			b.addStatement(new MethodCallExpr(new NameExpr("w"), "text", Utils.list(e)));
 		}
 
-		init.addStatement(new MethodCallExpr(new NameExpr("R"), "register", new NodeList<>(
-				new ClassExpr(types.get(type.clazz)),
-				new LambdaExpr(
-						new NodeList<>(new Parameter(new UnknownType(), "m"), new Parameter(new UnknownType(), "t"), new Parameter(new UnknownType(), "w")),
-						b))));
+		init.addStatement(new MethodCallExpr(new NameExpr("R"), "register", Utils.list(new ClassExpr(types.get(type.clazz)),
+				new LambdaExpr(Utils.list(new Parameter(new UnknownType(), "m"), new Parameter(new UnknownType(), "t"), new Parameter(new UnknownType(), "w")), b))));
 	}
 }

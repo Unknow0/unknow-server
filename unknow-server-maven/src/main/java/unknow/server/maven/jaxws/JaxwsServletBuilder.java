@@ -10,7 +10,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 
 import javax.jws.soap.SOAPBinding.ParameterStyle;
 import javax.servlet.annotation.WebServlet;
@@ -23,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
+import com.github.javaparser.Range;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.NodeList;
@@ -37,7 +37,6 @@ import com.github.javaparser.ast.expr.BinaryExpr;
 import com.github.javaparser.ast.expr.CastExpr;
 import com.github.javaparser.ast.expr.ClassExpr;
 import com.github.javaparser.ast.expr.Expression;
-import com.github.javaparser.ast.expr.FieldAccessExpr;
 import com.github.javaparser.ast.expr.IntegerLiteralExpr;
 import com.github.javaparser.ast.expr.LambdaExpr;
 import com.github.javaparser.ast.expr.LongLiteralExpr;
@@ -54,7 +53,6 @@ import com.github.javaparser.ast.stmt.CatchClause;
 import com.github.javaparser.ast.stmt.ExpressionStmt;
 import com.github.javaparser.ast.stmt.IfStmt;
 import com.github.javaparser.ast.stmt.ReturnStmt;
-import com.github.javaparser.ast.stmt.Statement;
 import com.github.javaparser.ast.stmt.ThrowStmt;
 import com.github.javaparser.ast.stmt.TryStmt;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
@@ -67,6 +65,7 @@ import unknow.server.jaxws.Element;
 import unknow.server.jaxws.Envelope;
 import unknow.server.jaxws.Envelope.Operation;
 import unknow.server.jaxws.OperationWrapper;
+import unknow.server.jaxws.WSMethod;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
 import unknow.server.maven.jaxws.model.Service;
@@ -126,8 +125,7 @@ public class JaxwsServletBuilder {
 
 		Collections.sort(service.operations, (o1, o2) -> o1.sig().compareTo(o2.sig()));
 		servlet.addFieldWithInitializer(types.get(String[].class), "OP_SIG", Utils.array(types.get(String.class), service.operations.size()), PSF);
-		servlet.addFieldWithInitializer(types.array(Function.class, types.get(Envelope.class), types.get(Envelope.class)), "OP_CALL",
-				Utils.array(types.get(Function.class), service.operations.size()), PSF).addSingleMemberAnnotation(SuppressWarnings.class, new StringLiteralExpr("unchecked"));
+		servlet.addFieldWithInitializer(types.array(WSMethod.class), "OP_CALL", Utils.array(types.get(WSMethod.class), service.operations.size()), PSF);
 		BlockStmt init = servlet.addStaticInitializer();
 		int oi = 0;
 		for (Service.Op o : service.operations) {
@@ -189,50 +187,54 @@ public class JaxwsServletBuilder {
 				.addStatement(new MethodCallExpr(new NameExpr("res"), "setContentLength", Utils.list(new IntegerLiteralExpr(Integer.toString(wsdl.length)))))
 				.addStatement(new MethodCallExpr(new MethodCallExpr(new NameExpr("res"), "getOutputStream"), "write", Utils.list(new NameExpr("WSDL"))));
 
-		servlet.addMethod("doPost", PF).addMarkerAnnotation(Override.class).addParameter(types.get(HttpServletRequest.class), "req")
-				.addParameter(types.get(HttpServletResponse.class), "res").getBody().get().addStatement(
-						new TryStmt(
-								new BlockStmt()
-										.addStatement(new AssignExpr(new VariableDeclarationExpr(types.get(Envelope.class), "e"),
-												new MethodCallExpr(new TypeExpr(types.get(SaxParser.class)), "parse", Utils.list(new ThisExpr(),
+		servlet.addMethod("doPost",
+				PF).addMarkerAnnotation(Override.class).addParameter(types.get(HttpServletRequest.class), "req").addParameter(types.get(HttpServletResponse.class), "res")
+				.getBody().get().addStatement(new TryStmt(
+						new BlockStmt()
+								.addStatement(new AssignExpr(new VariableDeclarationExpr(types.get(Envelope.class), "e"),
+										new MethodCallExpr(new TypeExpr(types.get(SaxParser.class)), "parse",
+												Utils.list(new ThisExpr(),
 														new ObjectCreationExpr(null, types.get(InputSource.class),
 																Utils.list(new MethodCallExpr(new NameExpr("req"), "getInputStream"))))),
-												Operator.ASSIGN))
-										.addStatement(
-												new MethodCallExpr(new FieldAccessExpr(new TypeExpr(
-														types.get(System.class)), "out"), "println", Utils
-																.list(new NameExpr("e"))))
-										.addStatement(new AssignExpr(new VariableDeclarationExpr(types.get(int.class), "i"),
-												new MethodCallExpr(new TypeExpr(types.get(Arrays.class)), "binarySearch",
-														Utils.list(new NameExpr("OP_SIG"), new MethodCallExpr(new NameExpr("e"), "sig"))),
-												Operator.ASSIGN))
-										.addStatement(new IfStmt(new BinaryExpr(new NameExpr("i"), new IntegerLiteralExpr("0"), BinaryExpr.Operator.LESS),
-												new BlockStmt().addStatement(new MethodCallExpr(new NameExpr("res"), "setStatus", Utils.list(new IntegerLiteralExpr("500"))))
-														.addStatement(fault(types, "res", new StringLiteralExpr("unknown request"))).addStatement(new ReturnStmt()),
-												null))
-										// TODO if i<0 return soap fault
-										.addStatement(
-												new MethodCallExpr(new NameExpr("Marshallers"), "marshall",
-														Utils.list(new MethodCallExpr(new ArrayAccessExpr(new NameExpr("OP_CALL"), new NameExpr("i")), "apply",
-																Utils.list(new NameExpr("e"))), new MethodCallExpr(new NameExpr("res"), "getWriter")))),
-								Utils.list(new CatchClause(new Parameter(types.get(Exception.class), "e"),
-										new BlockStmt().addStatement(new MethodCallExpr(new NameExpr("res"), "setStatus", Utils.list(new IntegerLiteralExpr("500"))))
-												.addStatement(fault(types, "res", new MethodCallExpr(new NameExpr("e"), "getMessage"))).addStatement(new MethodCallExpr(
-														new NameExpr("log"), "warn", Utils.list(new StringLiteralExpr("failed to service request"), new NameExpr("e")))))),
-								null));
+										Operator.ASSIGN))
+								.addStatement(new AssignExpr(new VariableDeclarationExpr(types.get(int.class), "i"),
+										new MethodCallExpr(new TypeExpr(types.get(Arrays.class)), "binarySearch",
+												Utils.list(new NameExpr("OP_SIG"), new MethodCallExpr(new NameExpr("e"), "sig"))),
+										Operator.ASSIGN))
+								.addStatement(new IfStmt(new BinaryExpr(new NameExpr("i"), new IntegerLiteralExpr("0"), BinaryExpr.Operator.LESS),
+										new BlockStmt()
+												.addStatement(new MethodCallExpr(null, "fault", Utils.list(new NameExpr("res"), new StringLiteralExpr("unknown request"))))
+												.addStatement(new ReturnStmt()),
+										null))
+								// TODO if i<0 return soap fault
+								.addStatement(
+										new MethodCallExpr(new NameExpr("Marshallers"), "marshall",
+												Utils.list(
+														new MethodCallExpr(new ArrayAccessExpr(new NameExpr("OP_CALL"), new NameExpr("i")), "call",
+																Utils.list(new NameExpr("e"))),
+														new MethodCallExpr(new NameExpr("res"), "getWriter")))),
+						Utils.list(new CatchClause(new Parameter(types.get(Exception.class), "e"), new BlockStmt()
+								.addStatement(new MethodCallExpr(null, "fault", Utils.list(new NameExpr("res"), new MethodCallExpr(new NameExpr("e"), "getMessage"))))
+								.addStatement(
+										new MethodCallExpr(new NameExpr("log"), "warn", Utils.list(new StringLiteralExpr("failed to service request"), new NameExpr("e")))))),
+						null));
+		generateFault(types);
+
 	}
 
-	private static Statement fault(TypeCache types, String res, Expression faultString) {
+	private void generateFault(TypeCache types) {
+		LineComment lineComment = new LineComment("OK");
+		lineComment.setRange(Range.range(0, 0, 0, 0));
 		BlockStmt ok = new BlockStmt();
-		ok.addOrphanComment(new LineComment("OK"));
+		ok.addOrphanComment(lineComment);
 
-		return new TryStmt(
-				new BlockStmt().addStatement(new MethodCallExpr(new MethodCallExpr(
-						new MethodCallExpr(new MethodCallExpr(new NameExpr(res), "getWriter"), "append",
-								Utils.list(new StringLiteralExpr(
-										"<e:Envelope xmlns:e=\\\"http://schemas.xmlsoap.org/soap/envelope/\\\"><e:Body><e:Fault><faultcode>Client</faultcode><faultstring>"))),
-						"append", Utils.list(faultString)), "write", Utils.list(new StringLiteralExpr("</faultstring></e:Fault></e:Body></e:Envelope>")))),
-				Utils.list(new CatchClause(new Parameter(types.get(Exception.class), "ignore"), ok)), null);
+		servlet.addMethod("fault", PSF).addParameter(types.get(HttpServletResponse.class), "res").addParameter(types.get(String.class), "err").getBody().get()
+				.addStatement(new TryStmt(
+						new BlockStmt().addStatement(new MethodCallExpr(new MethodCallExpr(
+								new MethodCallExpr(new MethodCallExpr(new NameExpr("res"), "getWriter"), "append", Utils.list(new StringLiteralExpr(
+										"<e:Envelope xmlns:e=\\\"http://schemas.xmlsoap.org/soap/envelope/\\\"><e:Body><e:Fault><faultcode>Server</faultcode><faultstring>"))),
+								"append", Utils.list(new NameExpr("err"))), "write", Utils.list(new StringLiteralExpr("</faultstring></e:Fault></e:Body></e:Envelope>")))),
+						Utils.list(new CatchClause(new Parameter(types.get(Exception.class), "ignore"), ok)), null));
 	}
 
 	private void generateHandlers(TypeCache types) {

@@ -9,12 +9,10 @@ import java.math.BigInteger;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.expr.BinaryExpr;
 import com.github.javaparser.ast.expr.BinaryExpr.Operator;
-import com.github.javaparser.ast.expr.CastExpr;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
 import com.github.javaparser.ast.expr.StringLiteralExpr;
-import com.github.javaparser.ast.expr.TypeExpr;
 
 import unknow.server.maven.TypeCache;
 
@@ -148,10 +146,8 @@ public interface XmlType {
 
 		@Override
 		public Expression convert(TypeCache types, Expression v) {
-			return new BinaryExpr(
-					new MethodCallExpr(new StringLiteralExpr("true"), "equalsIgnoreCase", new NodeList<>(v)),
-					new MethodCallExpr(new StringLiteralExpr("1"), "equals", new NodeList<>(v)),
-					Operator.OR);
+			return new BinaryExpr(new MethodCallExpr(new StringLiteralExpr("true"), "equalsIgnoreCase", new NodeList<>(v)),
+					new MethodCallExpr(new StringLiteralExpr("1"), "equals", new NodeList<>(v)), Operator.OR);
 		}
 
 		@Override
@@ -170,58 +166,13 @@ public interface XmlType {
 		}
 	};
 
-	public static final XmlType XmlByte = new XmlPrimitive(byte.class, Integer.class, "parseInt", "byte");
-	public static final XmlType XmlChar = new XmlPrimitive(char.class, Integer.class, "parseInt", "int");
-	public static final XmlType XmlShort = new XmlPrimitive(short.class, Integer.class, "parseInt", "short");
-	public static final XmlType XmlInt = new XmlPrimitive(int.class, Integer.class, "parseInt", "int");
-	public static final XmlType XmlLong = new XmlPrimitive(long.class, Long.class, "parseLong", "long");
-	public static final XmlType XmlFloat = new XmlPrimitive(float.class, Float.class, "parseFloat", "decimal");
-	public static final XmlType XmlDouble = new XmlPrimitive(double.class, Double.class, "parseDouble", "decimal");
-
-	public static class XmlPrimitive implements XmlType {
-		private final Class<?> clazz;
-		private final Class<?> parser;
-		private final String parse;
-		private final SchemaData schema;
-
-		/**
-		 * create new XmlType.XmlPrimitive
-		 */
-		public XmlPrimitive(Class<?> clazz, Class<?> parser, String parse, String type) {
-			this.clazz = clazz;
-			this.parser = parser;
-			this.parse = parse;
-			this.schema = new SchemaData(type, "http://www.w3.org/2001/XMLSchema", null, null);
-		}
-
-		@Override
-		public Expression convert(TypeCache types, Expression v) {
-			Expression e = new MethodCallExpr(new TypeExpr(types.get(parser)), parse, new NodeList<>(v));
-			if (parser == Integer.class && clazz != int.class)
-				e = new CastExpr(types.get(clazz), e);
-			return e;
-		}
-
-		@Override
-		public Expression toString(TypeCache types, Expression v) {
-			return new MethodCallExpr(new TypeExpr(types.get(parser)), "toString", new NodeList<>(v));
-		}
-
-		@Override
-		public String binaryName() {
-			return clazz.getName();
-		}
-
-		@Override
-		public String toString() {
-			return clazz.getName();
-		}
-
-		@Override
-		public SchemaData schema() {
-			return schema;
-		}
-	}
+	public static final XmlType XmlByte = new XmlTypePrimitive(byte.class, Integer.class, "parseInt", "byte");
+	public static final XmlType XmlChar = new XmlTypePrimitive(char.class, Integer.class, "parseInt", "int");
+	public static final XmlType XmlShort = new XmlTypePrimitive(short.class, Integer.class, "parseInt", "short");
+	public static final XmlType XmlInt = new XmlTypePrimitive(int.class, Integer.class, "parseInt", "int");
+	public static final XmlType XmlLong = new XmlTypePrimitive(long.class, Long.class, "parseLong", "long");
+	public static final XmlType XmlFloat = new XmlTypePrimitive(float.class, Float.class, "parseFloat", "decimal");
+	public static final XmlType XmlDouble = new XmlTypePrimitive(double.class, Double.class, "parseDouble", "decimal");
 
 	public static class XmlList implements XmlType {
 		public final XmlType component;

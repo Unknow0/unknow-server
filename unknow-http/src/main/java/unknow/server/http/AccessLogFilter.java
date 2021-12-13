@@ -46,7 +46,7 @@ public class AccessLogFilter implements Filter {
 	 * 4: request uri <br>
 	 * 5: http status code <br>
 	 * 6: request duration in ms <br>
-	 * 7: client ip (taken from x-forwarded-for)
+	 * 7: client ip (taken from x-forwarded-for, or remote address if not found)
 	 */
 	protected void setFormat(String format) {
 		this.format = format;
@@ -89,7 +89,7 @@ public class AccessLogFilter implements Filter {
 		private final Object[] arg;
 
 		public Entry() {
-			arg = new Object[] { System.currentTimeMillis(), "none", "TEST", "", 0, 42, "none" };
+			arg = new Object[] { System.currentTimeMillis(), "remote", "TEST", "/", 200, 42, "realIp" };
 		}
 
 		public Entry(long start, HttpServletRequest req, HttpServletResponse res) {
