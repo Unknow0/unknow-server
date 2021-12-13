@@ -24,6 +24,7 @@ import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.MemberValuePair;
 import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.NormalAnnotationExpr;
+import com.github.javaparser.ast.type.VoidType;
 
 import unknow.server.jaxws.UrlPattern;
 
@@ -124,30 +125,33 @@ public class Service {
 						.orElse(paramStyle);
 			}
 
-			o = m.getAnnotationByClass(WebResult.class);
-			String rns = "";
-			String rname = "";
-			boolean header = false;
-			if (o.isPresent()) {
-				header = o.get().findFirst(MemberValuePair.class, v -> "header".equals(v.getNameAsString())).map(v -> v.getValue().asBooleanLiteralExpr().getValue())
-						.orElse(false);
-				rname = o.get().findFirst(MemberValuePair.class, v -> "name".equals(v.getNameAsString())).map(v -> v.getValue().asStringLiteralExpr().getValue()).orElse("");
-				rns = o.get().findFirst(MemberValuePair.class, v -> "targetNamespace".equals(v.getNameAsString())).map(v -> v.getValue().asStringLiteralExpr().getValue())
-						.orElse("");
+			Param r = null;
+			if (!(m.getType() instanceof VoidType)) {
+				o = m.getAnnotationByClass(WebResult.class);
+				String rns = "";
+				String rname = "";
+				boolean header = false;
+				if (o.isPresent()) {
+					header = o.get().findFirst(MemberValuePair.class, v -> "header".equals(v.getNameAsString())).map(v -> v.getValue().asBooleanLiteralExpr().getValue())
+							.orElse(false);
+					rname = o.get().findFirst(MemberValuePair.class, v -> "name".equals(v.getNameAsString())).map(v -> v.getValue().asStringLiteralExpr().getValue()).orElse("");
+					rns = o.get().findFirst(MemberValuePair.class, v -> "targetNamespace".equals(v.getNameAsString())).map(v -> v.getValue().asStringLiteralExpr().getValue())
+							.orElse("");
+				}
+
+				if (rname.isEmpty())
+					rname = style == Style.DOCUMENT && paramStyle == ParameterStyle.BARE ? name + "Response" : "return";
+				if (rns.isEmpty() && (style != Style.DOCUMENT || paramStyle != ParameterStyle.WRAPPED || header))
+					rns = service.ns;
+
+				r = new Param(rns, rname, typeLoader.get(m.getType()), m.resolve().getQualifiedName(), header);
 			}
-
-			if (rname.isEmpty())
-				rname = style == Style.DOCUMENT && paramStyle == ParameterStyle.BARE ? name + "Response" : "return";
-			if (rns.isEmpty() && (style != Style.DOCUMENT || paramStyle != ParameterStyle.WRAPPED || header))
-				rns = service.ns;
-
-			Param r = new Param(rns, rname, typeLoader.get(m.getType()), m.resolve().getQualifiedName(), header);
 			Op op = new Op(m.getNameAsString(), name, ns, r, action, style, paramStyle);
 			for (Parameter p : m.getParameters()) {
 				String ns = "##default";
 				name = "##default";
 				XmlType type = typeLoader.get(p.getType());
-				header = false;
+				boolean header = false;
 				Optional<AnnotationExpr> oa = p.getAnnotationByClass(WebParam.class);
 				if (oa.isPresent()) {
 					header = oa.get().findFirst(MemberValuePair.class, v -> "header".equals(v.getNameAsString())).map(v -> v.getValue().asBooleanLiteralExpr().getValue())
