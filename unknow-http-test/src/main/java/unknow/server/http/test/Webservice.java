@@ -40,11 +40,11 @@ public class Webservice {
 
 	@WebMethod
 	@SOAPBinding(parameterStyle = ParameterStyle.WRAPPED)
-	public void onWayWrapped(@WebParam Root root) {
+	public void onWayWrapped(@WebParam String root) {
 	}
 
 	@WebMethod
 	@SOAPBinding(parameterStyle = ParameterStyle.BARE)
-	public void onWayBare(@WebParam Root root) {
+	public void onWayBare(@WebParam String root) {
 	}
 }

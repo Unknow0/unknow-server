@@ -6,7 +6,6 @@
 		<version>0.0.1-SNAPSHOT</version>
 	</parent>
 	<artifactId>unknow-http-test</artifactId>
-	<packaging>war</packaging>
 
 	<properties>
 		<cxf.version>3.3.11</cxf.version>
@@ -14,12 +13,6 @@
 
 	<build>
 		<plugins>
-			<plugin>
-				<artifactId>maven-war-plugin</artifactId>
-				<configuration>
-					<warSourceDirectory>${basedir}/src/main/resources</warSourceDirectory>
-				</configuration>
-			</plugin>
 			<plugin>
 				<artifactId>maven-clean-plugin</artifactId>
 				<configuration>
@@ -64,7 +57,7 @@
 							<goal>shade</goal>
 						</goals>
 						<configuration>
-							<outputFile>target/server.jar</outputFile>
+							<finalName>server</finalName>
 							<transformers>
 								<transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
 									<resource>META-INF/spring.handlers</resource>
@@ -88,17 +81,14 @@
 				</executions>
 			</plugin>
 			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-war-plugin</artifactId>
-				<version>2.6</version>
 				<executions>
 					<execution>
-						<phase>package</phase>
 						<goals>
 							<goal>war</goal>
 						</goals>
 						<configuration>
-							<warSourceDirectory>src/main/resources</warSourceDirectory>
+							<warSourceDirectory>${basedir}/src/main/resources</warSourceDirectory>
 						</configuration>
 					</execution>
 				</executions>

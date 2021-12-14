@@ -73,9 +73,9 @@ sleep 5
 xmllint --format out.xml | grep -q '<faultstring>' || die 'Webservice broken content'
 
 [ "$(post xml/bare_req.xml)" = '200' ] || die 'webservice bare'
-cat out.xml | xml_parse | diff - .github/xml/bare_res.xml || die 'webservice base'
+cat out.xml | xml_parse | diff - .github/xml/bare_res.xml || die 'webservice bare content'
 
 [ "$(post xml/wrapped_req.xml)" = '200' ] || die 'webservice wrapped'
-cat out.xml | xml_parse | tee out | diff - .github/xml/wrapped_res.xml || die 'webservice wrapped'
+cat out.xml | xml_parse | tee out | diff - .github/xml/wrapped_res.xml || die 'webservice wrapped content'
 
 curl -s -XGET "$URL/ws?wsdl" | xmllint --format - >/dev/null || die 'webservice wsdl'

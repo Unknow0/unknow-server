@@ -50,19 +50,19 @@ public interface NIOServerListener {
 	 */
 	public static final NIOServerListener NOP = new NIOServerListener() {
 		@Override
-		public void starting(NIOServer server) {
+		public void starting(NIOServer server) { // OK
 		}
 
 		@Override
-		public void accepted(int id, Handler h) {
+		public void accepted(int id, Handler h) { // OK
 		}
 
 		@Override
-		public void closed(int id, Handler h) {
+		public void closed(int id, Handler h) { // OK
 		}
 
 		@Override
-		public void closing(NIOServer server, Exception e) {
+		public void closing(NIOServer server, Exception e) { // OK
 		}
 
 		@Override

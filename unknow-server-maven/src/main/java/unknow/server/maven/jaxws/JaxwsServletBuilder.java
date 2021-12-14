@@ -234,7 +234,9 @@ public class JaxwsServletBuilder {
 
 		servlet.addMethod("fault", PSF).addParameter(types.get(HttpServletResponse.class), "res").addParameter(types.get(String.class), "err").getBody().get()
 				.addStatement(new TryStmt(
-						new BlockStmt().addStatement(new MethodCallExpr(new MethodCallExpr(
+						new BlockStmt()
+						.addStatement(new MethodCallExpr(new NameExpr("res"), "setStatus", Utils.list(new IntegerLiteralExpr("500"))))
+						.addStatement(new MethodCallExpr(new MethodCallExpr(
 								new MethodCallExpr(new MethodCallExpr(new NameExpr("res"), "getWriter"), "append", Utils.list(new StringLiteralExpr(
 										"<e:Envelope xmlns:e=\\\"http://schemas.xmlsoap.org/soap/envelope/\\\"><e:Body><e:Fault><faultcode>Server</faultcode><faultstring>"))),
 								"append", Utils.list(new NameExpr("err"))), "write", Utils.list(new StringLiteralExpr("</faultstring></e:Fault></e:Body></e:Envelope>")))),
@@ -289,7 +291,7 @@ public class JaxwsServletBuilder {
 	private NameExpr generateHandler(XmlType type, TypeCache types) {
 		String k = type.isSimple() ? "" : type.binaryName();
 		NameExpr nameExpr = saxHandlers.get(k);
-		if (nameExpr != null && !OPERATION.equals(type))
+		if (nameExpr != null && !k.equals(OPERATION + ";"))
 			return nameExpr;
 		String name = "$" + saxHandlers.size() + "$";
 		saxHandlers.put(k, nameExpr = new NameExpr(name));
