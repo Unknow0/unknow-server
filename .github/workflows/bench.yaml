@@ -20,7 +20,7 @@ jobs:
     - name: install dependencies
       run: |
         sudo apt-get install siege
-		VER=$(wget -q -O - https://dlcdn.apache.org/tomcat/tomcat-9/ | grep '<a href="v9' | sed 's:.*>v\(9[^</]*\)/</a.*:\1:' | sort -rV | head -1)
+        VER=$(wget -q -O - https://dlcdn.apache.org/tomcat/tomcat-9/ | grep '<a href="v9' | sed 's:.*>v\(9[^</]*\)/</a.*:\1:' | sort -rV | head -1)
         wget -O - https://dlcdn.apache.org/tomcat/tomcat-9/v$VER/bin/apache-tomcat-$VER.tar.gz | tar xz
 
     - name: run bench
