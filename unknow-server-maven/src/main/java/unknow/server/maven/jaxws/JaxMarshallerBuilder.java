@@ -102,10 +102,11 @@ public class JaxMarshallerBuilder {
 					Utils.list(new StringLiteralExpr(a.name), new StringLiteralExpr(a.ns), a.type.toString(types, new MethodCallExpr(new NameExpr("t"), a.getter)))));
 		for (XmlField f : type.elems) {
 			b.addStatement(new MethodCallExpr(new NameExpr("w"), "startElement", Utils.list(new StringLiteralExpr(f.name), new StringLiteralExpr(f.ns))));
-			if (f.type instanceof XmlObject)
+			if (f.type instanceof XmlObject) {
+				add((XmlObject) f.type);
 				b.addStatement(new MethodCallExpr(new MethodCallExpr(new NameExpr("R"), "get", Utils.list(new ClassExpr(types.get(((XmlObject) f.type).clazz)))), "marshall",
 						Utils.list(new NameExpr("m"), new MethodCallExpr(new NameExpr("t"), f.getter), new NameExpr("w"))));
-			else {
+			} else {
 				Expression e = f.type.toString(types, new MethodCallExpr(new NameExpr("t"), f.getter));
 				b.addStatement(new MethodCallExpr(new NameExpr("w"), "text", Utils.list(e)));
 			}

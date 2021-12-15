@@ -1,4 +1,4 @@
-<e:Envelope xmlns:e="http://www.w3.org/2001/12/soap-envelope">
+<e:Envelope xmlns:e="http://schemas.xmlsoap.org/soap/envelope/">
 	<e:Body>
 		<wrapped xmlns="http://test.unknow">
 			<Root xmlns="http://webservice.unknow" value="4">

@@ -69,7 +69,6 @@ public class XMLOutput implements XMLWriter {
 			if (!nsPrefix.isEmpty())
 				w.append(nsPrefix).write(':');
 		}
-		// TODO encode value
 		w.append(name).write("=\"");
 		encodeEntities(value.toCharArray());
 		w.write('"');
@@ -90,6 +89,7 @@ public class XMLOutput implements XMLWriter {
 	@Override
 	public void endElement(String name, String nsUri) throws IOException {
 		if (step == START) {
+			step = CONTENT;
 			w.write("/>");
 			return;
 		}

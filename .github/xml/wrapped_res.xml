@@ -1,5 +1,5 @@
-+{http://www.w3.org/2001/12/soap-envelope}Envelope
-+{http://www.w3.org/2001/12/soap-envelope}Body
++{http://schemas.xmlsoap.org/soap/envelope/}Envelope
++{http://schemas.xmlsoap.org/soap/envelope/}Body
 +{http://test.unknow}wrappedResponse
 +return
 +return@value=4
@@ -8,4 +8,4 @@ content
 -{http://webservice.unknow}elem
 -return
 -{http://test.unknow}wrappedResponse
--{http://www.w3.org/2001/12/soap-envelope}Body
+-{http://schemas.xmlsoap.org/soap/envelope/}Body

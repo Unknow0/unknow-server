@@ -1,9 +1,9 @@
-+{http://www.w3.org/2001/12/soap-envelope}Envelope
-+{http://www.w3.org/2001/12/soap-envelope}Body
++{http://schemas.xmlsoap.org/soap/envelope/}Envelope
++{http://schemas.xmlsoap.org/soap/envelope/}Body
 +{http://test.unknow}bareResponse
 +{http://test.unknow}bareResponse@value=4
 +{http://webservice.unknow}elem
 content
 -{http://webservice.unknow}elem
 -{http://test.unknow}bareResponse
--{http://www.w3.org/2001/12/soap-envelope}Body
+-{http://schemas.xmlsoap.org/soap/envelope/}Body

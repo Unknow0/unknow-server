@@ -13,24 +13,24 @@ public interface Marshaller<T> {
 	
 	@SuppressWarnings("unchecked")
 	public static final Marshaller<Envelope> ENVELOPE = (m, t, w) -> {
-		w.startElement("Envelope", "http://www.w3.org/2001/12/soap-envelope");
+		w.startElement("Envelope", "http://schemas.xmlsoap.org/soap/envelope/");
 		int l = t.getHeaderSize();
 		if (l > 0) {
-			w.startElement("Header", "http://www.w3.org/2001/12/soap-envelope");
+			w.startElement("Header", "http://schemas.xmlsoap.org/soap/envelope/");
 			for (int i = 0; i < l; i++) {
 				Object o = t.getHeader(i);
 				m.get((Class<Object>) o.getClass()).marshall(m, o, w);
 			}
-			w.endElement("Header", "http://www.w3.org/2001/12/soap-envelope");
+			w.endElement("Header", "http://schemas.xmlsoap.org/soap/envelope/");
 		}
-		w.startElement("Body", "http://www.w3.org/2001/12/soap-envelope");
+		w.startElement("Body", "http://schemas.xmlsoap.org/soap/envelope/");
 		l = t.getBodySize();
 		for (int i = 0; i < l; i++) {
 			Object o = t.getBody(i);
 			m.get((Class<Object>) o.getClass()).marshall(m, o, w);
 		}
-		w.endElement("Body", "http://www.w3.org/2001/12/soap-envelope");
-		w.endElement("Envelope", "http://www.w3.org/2001/12/soap-envelope");
+		w.endElement("Body", "http://schemas.xmlsoap.org/soap/envelope/");
+		w.endElement("Envelope", "http://schemas.xmlsoap.org/soap/envelope/");
 	};
 
 	@SuppressWarnings("unchecked")

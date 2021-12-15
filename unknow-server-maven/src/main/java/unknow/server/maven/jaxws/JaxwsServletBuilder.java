@@ -233,9 +233,7 @@ public class JaxwsServletBuilder {
 		ok.addOrphanComment(lineComment);
 
 		servlet.addMethod("fault", PSF).addParameter(types.get(HttpServletResponse.class), "res").addParameter(types.get(String.class), "err").getBody().get()
-				.addStatement(new TryStmt(
-						new BlockStmt()
-						.addStatement(new MethodCallExpr(new NameExpr("res"), "setStatus", Utils.list(new IntegerLiteralExpr("500"))))
+				.addStatement(new TryStmt(new BlockStmt().addStatement(new MethodCallExpr(new NameExpr("res"), "setStatus", Utils.list(new IntegerLiteralExpr("500"))))
 						.addStatement(new MethodCallExpr(new MethodCallExpr(
 								new MethodCallExpr(new MethodCallExpr(new NameExpr("res"), "getWriter"), "append", Utils.list(new StringLiteralExpr(
 										"<e:Envelope xmlns:e=\\\"http://schemas.xmlsoap.org/soap/envelope/\\\"><e:Body><e:Fault><faultcode>Server</faultcode><faultstring>"))),
@@ -252,9 +250,10 @@ public class JaxwsServletBuilder {
 
 			List<XmlField> childs = new ArrayList<>();
 
+			if (o.result != null && o.result.type instanceof XmlObject)
+				mbuilder.add((XmlObject) o.result.type);
+
 			for (Service.Param p : o.params) {
-				if (p.type instanceof XmlObject)
-					mbuilder.add((XmlObject) p.type);
 				if (p.header)
 					header.addElem(new XmlField(p.type, "", "addHeader", p.name, p.ns));
 				else if (o.paramStyle == ParameterStyle.WRAPPED)
@@ -271,11 +270,11 @@ public class JaxwsServletBuilder {
 		servlet.addMethod("startElement", PF).addParameter(types.get(String.class), "qname").addParameter(types.get(String.class), "name")
 				.addParameter(types.get(SaxContext.class), "context").addMarkerAnnotation(Override.class).addThrownException(types.get(SAXException.class))
 				.setBody(new BlockStmt().addStatement(new IfStmt(
-						new MethodCallExpr(new StringLiteralExpr("{http://www.w3.org/2001/12/soap-envelope}Header"), "equals", Utils.list(QNAME)),
+						new MethodCallExpr(new StringLiteralExpr("{http://schemas.xmlsoap.org/soap/envelope/}Header"), "equals", Utils.list(QNAME)),
 						new ExpressionStmt(new MethodCallExpr(CONTEXT, "next", Utils.list(new NameExpr("HEADER")))),
-						new IfStmt(new MethodCallExpr(new StringLiteralExpr("{http://www.w3.org/2001/12/soap-envelope}Body"), "equals", Utils.list(QNAME)),
+						new IfStmt(new MethodCallExpr(new StringLiteralExpr("{http://schemas.xmlsoap.org/soap/envelope/}Body"), "equals", Utils.list(QNAME)),
 								new ExpressionStmt(new MethodCallExpr(CONTEXT, "next", Utils.list(new NameExpr("BODY")))),
-								new IfStmt(new MethodCallExpr(new StringLiteralExpr("{http://www.w3.org/2001/12/soap-envelope}Envelope"), "equals", Utils.list(QNAME)),
+								new IfStmt(new MethodCallExpr(new StringLiteralExpr("{http://schemas.xmlsoap.org/soap/envelope/}Envelope"), "equals", Utils.list(QNAME)),
 										new ExpressionStmt(
 												new MethodCallExpr(CONTEXT, "push", Utils.list(new ObjectCreationExpr(null, types.get(Envelope.class), Utils.list())))),
 										new ThrowStmt(new ObjectCreationExpr(null, types.get(SAXException.class),

@@ -239,7 +239,7 @@ public class HttpHandler extends Handler implements Runnable {
 		int o = part[PROTOCOL] + 2;
 		for (int i = 0; i < headerCount; i++) {
 			int e = headers[i];
-			int indexOf = meta.indexOf(COLON, o, e);
+			int indexOf = meta.indexOf(COLON, o, e - o);
 			if (indexOf < 0)
 				indexOf = e;
 			sb.setLength(0);
@@ -316,7 +316,7 @@ public class HttpHandler extends Handler implements Runnable {
 		int o = part[PROTOCOL] + 2;
 		for (int i = 0; i < headerCount; i++) {
 			int e = headers[i];
-			int indexOf = meta.indexOf(COLON, o, e);
+			int indexOf = meta.indexOf(COLON, o, e - o);
 			if (indexOf < 0) { // not cookie to parse there
 				o = e + 2;
 				continue;
@@ -335,10 +335,10 @@ public class HttpHandler extends Handler implements Runnable {
 			// parse cookie
 			int next;
 			do {
-				next = meta.indexOf(COOKIE_SEP, o, e);
+				next = meta.indexOf(COOKIE_SEP, o, e - o);
 				if (next < 0)
 					next = e;
-				indexOf = meta.indexOf(EQUAL, o, next);
+				indexOf = meta.indexOf(EQUAL, o, next - o);
 				if (indexOf < 0)
 					break;
 				sb.setLength(0);
@@ -417,15 +417,16 @@ public class HttpHandler extends Handler implements Runnable {
 		return part[PATH];
 	}
 
-	private static ByteBuffer DECODE_BB = ByteBuffer.allocate(10);
-	private static CharBuffer DECODE_CB = CharBuffer.allocate(2);
-	private static final CharsetDecoder DECODER = StandardCharsets.UTF_8.newDecoder().onUnmappableCharacter(CodingErrorAction.REPLACE).onMalformedInput(CodingErrorAction.REPLACE);
+	private ByteBuffer DECODE_BB = ByteBuffer.allocate(10);
+	private CharBuffer DECODE_CB = CharBuffer.allocate(2);
+	private static final CharsetDecoder DECODER = StandardCharsets.UTF_8.newDecoder().onUnmappableCharacter(CodingErrorAction.REPLACE)
+			.onMalformedInput(CodingErrorAction.REPLACE);
 
-	private static final void decodePath(StringBuilder sb, Buffers b, int o, int e) {
+	private final void decodePath(StringBuilder sb, Buffers b, int o, int e) {
 		DECODE_BB.clear();
 		DECODE_CB.clear();
 		for (;;) {
-			int i = b.indexOf(PERCENT, o, e);
+			int i = b.indexOf(PERCENT, o, e - o);
 			if (i != o && DECODE_BB.position() > 0) {
 				DECODE_BB.flip();
 				CoderResult r = DECODER.decode(DECODE_BB, DECODE_CB, true);
@@ -457,10 +458,10 @@ public class HttpHandler extends Handler implements Runnable {
 
 	private void parseParam(Buffers in, int o, int e, Map<String, List<String>> param) {
 		while (o < e) {
-			int indexOf = in.indexOf(AMPERSAMP, o, e);
+			int indexOf = in.indexOf(AMPERSAMP, o, e - o);
 			if (indexOf < 0)
 				indexOf = e;
-			int i = in.indexOf(EQUAL, o, indexOf);
+			int i = in.indexOf(EQUAL, o, indexOf - o);
 			String n;
 			String v;
 			if (i > 0) {
