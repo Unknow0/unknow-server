@@ -226,11 +226,17 @@ public class WsdlBuilder {
 		for (Op o : service.operations) {
 			sb.append('<').append(ws).append(":operation name=\"").append(o.name).write("\">");
 			sb.append('<').append(wp).append(":operation soapAction=\"").append(o.action).write("\"/>");
-			if (o.paramStyle == ParameterStyle.WRAPPED || o.params.size() > 0)
+			if (o.paramStyle == ParameterStyle.WRAPPED) {
 				sb.append('<').append(ws).append(":input name=\"").append(o.name).append("\"><").append(wp).append(":body use=\"literal\"/></").append(ws).write(":input>");
-			if (o.result != null)
-				sb.append('<').append(ws).append(":output name=\"").append(o.result.name).append("\"><").append(wp).append(":body use=\"literal\"/></").append(ws)
-						.write(":output>");
+				sb.append('<').append(ws).append(":output name=\"").append(o.name).append("Response\"><").append(wp).append(":body use=\"literal\"/></").append(ws).write(":output>");
+			} else {
+				if (!o.params.isEmpty())
+					sb.append('<').append(ws).append(":input name=\"").append(o.name).append("\"><").append(wp).append(":body use=\"literal\"/></").append(ws)
+							.write(":input>");
+				if (o.result != null)
+					sb.append('<').append(ws).append(":output name=\"").append(o.result.name).append("\"><").append(wp).append(":body use=\"literal\"/></").append(ws)
+							.write(":output>");
+			}
 			sb.append("</").append(ws).write(":operation>");
 		}
 		sb.append("</").append(ws).append(":binding>");
