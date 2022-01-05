@@ -21,9 +21,10 @@ jobs:
       run: |
         sudo apt-get install siege
         VER=$(wget -q -O - https://dlcdn.apache.org/tomcat/tomcat-9/ | grep '<a href="v9' | sed 's:.*>v\(9[^</]*\)/</a.*:\1:' | sort -rV | head -1)
-        wget -O - https://dlcdn.apache.org/tomcat/tomcat-9/v$VER/bin/apache-tomcat-$VER.tar.gz | tar xz
+        mkdir -p tomcat
+        wget -O - https://dlcdn.apache.org/tomcat/tomcat-9/v$VER/bin/apache-tomcat-$VER.tar.gz | tar xz --strip-components=1 -C tomcat
 
     - name: run bench
-      run: bash .github/bench.sh
+      run: bash bench.sh
       env:
-        CATALINA_HOME: apache-tomcat-9.0.55
+        CATALINA_HOME: tomcat

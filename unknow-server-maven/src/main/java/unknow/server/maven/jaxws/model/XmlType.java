@@ -42,11 +42,18 @@ public interface XmlType {
 	}
 
 	/**
+	 * @return the class name
+	 */
+	String clazz();
+
+	/**
 	 * generate the binaryName of the underling java type
 	 * 
 	 * @return binary name
 	 */
-	String binaryName();
+	default String binaryName() {
+		return clazz() + ';';
+	}
 
 	/**
 	 * get the schema data
@@ -71,7 +78,7 @@ public interface XmlType {
 		}
 
 		@Override
-		public String binaryName() {
+		public String clazz() {
 			return "java.lang.String";
 		}
 
@@ -99,8 +106,8 @@ public interface XmlType {
 		}
 
 		@Override
-		public String binaryName() {
-			return BigDecimal.class.getCanonicalName();
+		public String clazz() {
+			return BigDecimal.class.getName();
 		}
 
 		@Override
@@ -127,8 +134,8 @@ public interface XmlType {
 		}
 
 		@Override
-		public String binaryName() {
-			return BigInteger.class.getCanonicalName();
+		public String clazz() {
+			return BigInteger.class.getName();
 		}
 
 		@Override
@@ -151,7 +158,7 @@ public interface XmlType {
 		}
 
 		@Override
-		public String binaryName() {
+		public String clazz() {
 			return "java.lang.Boolean";
 		}
 
@@ -189,6 +196,11 @@ public interface XmlType {
 		@Override
 		public Expression toString(TypeCache types, Expression v) {
 			return component.toString(types, v);
+		}
+
+		@Override
+		public String clazz() {
+			return "java.util.List";
 		}
 
 		@Override

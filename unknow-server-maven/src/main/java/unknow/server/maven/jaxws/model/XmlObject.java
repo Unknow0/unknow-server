@@ -51,8 +51,8 @@ public class XmlObject implements XmlType {
 	}
 
 	@Override
-	public String binaryName() {
-		return clazz + ";";
+	public String clazz() {
+		return clazz;
 	}
 
 	@Override
@@ -77,7 +77,7 @@ public class XmlObject implements XmlType {
 	}
 
 	public static class XmlElem {
-		public final XmlType type;
+		protected final XmlType type;
 		public final String getter;
 		public final String setter;
 
@@ -89,7 +89,13 @@ public class XmlObject implements XmlType {
 
 		@Override
 		public int hashCode() {
-			return Objects.hash(type, getter, setter);
+			return Objects.hash(type(), getter, setter);
+		}
+
+		public XmlType type() {
+			if (type instanceof XmlTypeWrapper)
+				return ((XmlTypeWrapper) type).delegate;
+			return type;
 		}
 
 		@Override
@@ -99,12 +105,12 @@ public class XmlObject implements XmlType {
 			if (!(obj instanceof XmlElem))
 				return false;
 			XmlElem other = (XmlElem) obj;
-			return Objects.equals(type, other.type) && Objects.equals(getter, other.getter) && Objects.equals(setter, other.setter);
+			return Objects.equals(type(), other.type()) && Objects.equals(getter, other.getter) && Objects.equals(setter, other.setter);
 		}
 
 		@Override
 		public String toString() {
-			return "XmlElem [type=" + type + ", getter=" + getter + ", setter=" + setter + "]";
+			return "XmlElem [type=" + type() + ", getter=" + getter + ", setter=" + setter + "]";
 		}
 	}
 

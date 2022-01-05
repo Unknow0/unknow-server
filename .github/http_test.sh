@@ -20,7 +20,7 @@ xml_parse()
 		do
 			k=${i%%=*}
 			v=${i#*=}
-			[[ "$k" = "xmlns" ]] && tns="{${v:1:-1}}" && continue
+			[[ "$k" = "xmlns" ]] && [[ "${#v}" -gt 2 ]] && tns="{${v:1:-1}}" && continue
 			[[ "$k" =~ xmlns:.* ]] && ns[${k#*:}]="{${v:1:-1}}"
 		done
 		}

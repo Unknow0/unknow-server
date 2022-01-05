@@ -1,0 +1,7 @@
+quiet = true
+verbose = false
+logging = true
+logfile = log
+parser = false
+concurrent = 25
+csv = true

@@ -26,7 +26,7 @@ import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Node;
-import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
+import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.symbolsolver.JavaSymbolSolver;
 import com.github.javaparser.symbolsolver.model.resolution.TypeSolver;
@@ -59,7 +59,7 @@ public class JaxwsGenerator extends AbstractMojo {
 	/** existing public class in output package (simpleName-&gt;fqn) */
 	private final Map<String, String> existingClass = new HashMap<>();
 	/** all class in src (fqn to classDef) */
-	private final Map<String, ClassOrInterfaceDeclaration> classes = new HashMap<>();
+	private final Map<String, TypeDeclaration<?>> classes = new HashMap<>();
 
 	private JavaSymbolSolver javaSymbolSolver;
 	private JavaParser parser;
@@ -88,7 +88,7 @@ public class JaxwsGenerator extends AbstractMojo {
 				public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
 					if (!file.getFileName().toString().endsWith(".java"))
 						return FileVisitResult.CONTINUE;
-					parser.parse(file).ifSuccessful(t -> t.walk(ClassOrInterfaceDeclaration.class, c -> classes.put(c.resolve().getQualifiedName(), c)));
+					parser.parse(file).ifSuccessful(t -> t.walk(TypeDeclaration.class, c -> classes.put(c.resolve().getQualifiedName(), c)));
 					if (count == file.getNameCount() && file.startsWith(local)) {
 						String string = file.getFileName().toString();
 						string = string.substring(0, string.length() - 5);
@@ -106,7 +106,7 @@ public class JaxwsGenerator extends AbstractMojo {
 		TypeCache types = new TypeCache(marshallers, existingClass);
 		JaxMarshallerBuilder mbuilder = new JaxMarshallerBuilder(marshallers, types);
 		boolean find = false;
-		for (ClassOrInterfaceDeclaration c : classes.values()) {
+		for (TypeDeclaration<?> c : classes.values()) {
 			Optional<AnnotationExpr> a = c.getAnnotationByClass(WebService.class);
 			if (!a.isPresent())
 				continue;
@@ -114,7 +114,7 @@ public class JaxwsGenerator extends AbstractMojo {
 			cu.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolSolver);
 			types = new TypeCache(cu, existingClass);
 
-			new JaxwsServletBuilder(c, classes, mbuilder).generate(cu, types, publishUrl);
+			new JaxwsServletBuilder(c.asClassOrInterfaceDeclaration(), classes, mbuilder).generate(cu, types, publishUrl);
 			try {
 				out.save(cu);
 				find = true;

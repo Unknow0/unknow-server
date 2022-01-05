@@ -4,23 +4,31 @@
 package unknow.server.maven.jaxws.model;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlEnumValue;
 import javax.xml.bind.annotation.XmlTransient;
 import javax.xml.bind.annotation.XmlValue;
 
 import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.Modifier.Keyword;
+import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
+import com.github.javaparser.ast.body.EnumConstantDeclaration;
+import com.github.javaparser.ast.body.EnumDeclaration;
 import com.github.javaparser.ast.body.FieldDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.ast.body.VariableDeclarator;
 import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.ast.expr.Expression;
@@ -30,6 +38,7 @@ import com.github.javaparser.ast.type.Type;
 import com.github.javaparser.resolution.types.ResolvedReferenceType;
 import com.github.javaparser.resolution.types.ResolvedType;
 
+import unknow.server.maven.jaxws.model.XmlEnum.XmlEnumEntry;
 import unknow.server.maven.jaxws.model.XmlObject.Factory;
 import unknow.server.maven.jaxws.model.XmlObject.XmlElem;
 import unknow.server.maven.jaxws.model.XmlObject.XmlField;
@@ -62,7 +71,7 @@ public class XmlTypeLoader {
 		DEFAULT.put("java.time.ZonedDateTime", XmlTypeDate.ZONED_DATETIME);
 	}
 
-	final Map<String, ClassOrInterfaceDeclaration> classes;
+	final Map<String, TypeDeclaration<?>> classes;
 	private final Map<String, XmlType> loaded;
 
 	/**
@@ -70,7 +79,7 @@ public class XmlTypeLoader {
 	 * 
 	 * @param classes all known sources class
 	 */
-	public XmlTypeLoader(Map<String, ClassOrInterfaceDeclaration> classes) {
+	public XmlTypeLoader(Map<String, TypeDeclaration<?>> classes) {
 		this.classes = classes;
 		this.loaded = new HashMap<>(DEFAULT);
 	}
@@ -85,8 +94,13 @@ public class XmlTypeLoader {
 		ResolvedType r = type.resolve();
 		String describe = r.describe();
 		XmlType xmlType = loaded.get(describe);
-		if (xmlType == null)
-			loaded.put(describe, xmlType = create(type));
+		if (xmlType == null) {
+			XmlTypeWrapper w = new XmlTypeWrapper();
+			loaded.put(describe, w);
+			xmlType = create(type);
+			w.setDelegate(xmlType);
+			loaded.put(describe, xmlType);
+		}
 		return xmlType;
 	}
 
@@ -119,18 +133,33 @@ public class XmlTypeLoader {
 			throw new RuntimeException("unknown type: '" + type + "'");
 		ResolvedReferenceType resolve = type.asClassOrInterfaceType().resolve();
 		String describe = resolve.describe();
+		TypeDeclaration<?> c = classes.get(describe);
+		if (c == null)
+			// TODO class.forName & create
+			throw new RuntimeException("missing class '" + describe + "'");
 
-//		if (isEnum(resolve)) // TODO XmlEnum/XmlEnumValue
-//			return new XmlType.Enum(describe);
+		if (c.isEnumDeclaration()) // TODO XmlEnum/XmlEnumValue
+			return createEnum(c.asEnumDeclaration());
+		if (c.isClassOrInterfaceDeclaration()) {
+			// TODO Collection
+			// TODO Map ?
 
-		// TODO Collection
-		// TODO Map ?
+			return createObject(c.asClassOrInterfaceDeclaration());
+		}
+		throw new RuntimeException("invalid type declaration " + c);
+	}
 
-		ClassOrInterfaceDeclaration c = classes.get(describe);
-		if (c != null)
-			return createObject(c);
-		// TODO class.forName & create
-		throw new RuntimeException("missing class '" + describe + "'");
+	/**
+	 * @param enumDeclaration
+	 * @return
+	 */
+	private XmlType createEnum(EnumDeclaration type) {
+		List<XmlEnumEntry> entries = new ArrayList<>();
+		for (EnumConstantDeclaration e : type.getEntries()) {
+			String v = getValue(e.getAnnotationByClass(XmlEnumValue.class), e.getNameAsString());
+			entries.add(new XmlEnumEntry(e.getNameAsString(), v));
+		}
+		return new XmlEnum(type.resolve().getQualifiedName(), entries, getSchema(type), "enum" + loaded.size() + "$");
 	}
 
 	private XmlObject createObject(ClassOrInterfaceDeclaration c) {
@@ -151,6 +180,7 @@ public class XmlTypeLoader {
 
 		Factory factory = null;
 		a = c.getAnnotationByClass(javax.xml.bind.annotation.XmlType.class);
+		List<String> propOrder = null;
 		if (a.isPresent()) {
 			String cl = a.get().findFirst(MemberValuePair.class, m -> "factoryClass".equals(m.getNameAsString()))
 					.map(v -> v.getValue().asClassExpr().getType().resolve().describe()).orElse(null);
@@ -163,18 +193,22 @@ public class XmlTypeLoader {
 				else
 					factory = new Factory(cl, method);
 			}
-			// TODO prop order
 			name = getName(a, name);
 			namespace = getNs(a, namespace);
+			Expression e = a.get().findFirst(MemberValuePair.class, m -> "propOrder".equals(m.getNameAsString())).map(m -> m.getValue()).orElse(null);
+			if (e != null) {
+				if (e.isStringLiteralExpr())
+					propOrder = Arrays.asList(e.asStringLiteralExpr().asString());
+				else if (e.isArrayInitializerExpr())
+					propOrder = e.asArrayInitializerExpr().getValues().stream().map(m -> m.asStringLiteralExpr().asString()).collect(Collectors.toList());
+			}
 		}
 
 		class D {
 			final FieldDeclaration f;
-			final VariableDeclarator v;
 
-			public D(FieldDeclaration f, VariableDeclarator v) {
+			public D(FieldDeclaration f) {
 				this.f = f;
-				this.v = v;
 			}
 		}
 		Map<String, D> fields = new HashMap<>();
@@ -204,7 +238,7 @@ public class XmlTypeLoader {
 					if (!g.isPresent()) // TODO check is* if boolean
 						throw new RuntimeException("missing setter for '" + v.getNameAsString() + "' field in '" + c.getNameAsString() + "' class");
 
-					fields.put(v.getNameAsString(), new D(f, v));
+					fields.put(v.getNameAsString(), new D(f));
 				}
 			}
 		}
@@ -238,9 +272,7 @@ public class XmlTypeLoader {
 						.filter(e -> e.getParameters().size() == 1 && e.getParameter(0).getType().resolve().describe().equals(m.getType().resolve().describe())).findFirst();
 				if (!s.isPresent())
 					throw new RuntimeException("missing setter for '" + n + "' field in '" + c.getNameAsString() + "' class");
-				if (d == null)
-					; // TODO
-				XmlType t = get(d.v.getType());
+				XmlType t = get(m.getType());
 				if (v.isPresent()) {
 					if (value != null)
 						throw new RuntimeException("multiple value for '" + c.getNameAsString() + "'");
@@ -258,15 +290,53 @@ public class XmlTypeLoader {
 				}
 			}
 		}
-
+		if (propOrder != null) {
+			List<String> order = propOrder;
+			Collections.sort(elems, (o, b) -> {
+				String an = Character.toLowerCase(o.getter.charAt(3)) + o.getter.substring(4);
+				String bn = Character.toLowerCase(b.getter.charAt(3)) + b.getter.substring(4);
+				int ai = order.indexOf(an);
+				int bi = order.indexOf(bn);
+				if (bi >= 0 && ai >= 0)
+					return ai - bi;
+				if (ai < 0 && bi < 0)
+					return 0; // TODO default ordering @XmlAccessorOrder
+				if (bi < 0)
+					return 1;
+				return -1;
+			});
+		}
 		return new XmlObject(c.resolve().getQualifiedName(), factory, attrs, elems, value, getSchema(c));
+	}
+
+	private static String getValue(Optional<AnnotationExpr> a, String def) {
+		if (!a.isPresent())
+			return def;
+
+		Expression e = null;
+		if (a.get().isSingleMemberAnnotationExpr())
+			e = a.get().asSingleMemberAnnotationExpr().getMemberValue();
+		else {
+			for (Node n : a.get().getChildNodes()) {
+				MemberValuePair m = (MemberValuePair) n;
+				if ("value".equals(m.getNameAsString())) {
+					e = m.getValue();
+					break;
+				}
+			}
+		}
+		if (e == null)
+			return def;
+		if (e.isStringLiteralExpr())
+			return e.asStringLiteralExpr().asString();
+		return def;
 	}
 
 	/**
 	 * @param c
 	 * @return
 	 */
-	private static SchemaData getSchema(ClassOrInterfaceDeclaration c) {
+	private static SchemaData getSchema(TypeDeclaration<?> c) {
 		// TODO get namespace data ?
 		String ns = "";
 		String name = c.getNameAsString();
@@ -286,14 +356,6 @@ public class XmlTypeLoader {
 		}
 
 		return new SchemaData(name, ns, rootElem, rootNs);
-	}
-
-	private static boolean isEnum(ResolvedReferenceType t) {
-		for (ResolvedReferenceType p : t.getAllAncestors()) {
-			if (p.isJavaLangEnum())
-				return true;
-		}
-		return false;
 	}
 
 	private static String getName(Optional<AnnotationExpr> a, String def) {

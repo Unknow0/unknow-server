@@ -24,7 +24,7 @@ public class JspServletGenerator {
 		CompilationUnit cu = new CompilationUnit("jsp");
 		ClassOrInterfaceDeclaration cl = cu.addClass("Impl", Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL).addExtendedType(HttpServlet.class);
 
-		cl.addMethod("service", null);
+		cl.addMethod("service", Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL);
 		try (BufferedReader r = Files.newBufferedReader(file)) {
 			parse(r);
 		}

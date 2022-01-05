@@ -16,9 +16,9 @@ import javax.jws.soap.SOAPBinding.ParameterStyle;
 import javax.jws.soap.SOAPBinding.Style;
 
 import com.github.javaparser.ast.NodeList;
-import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.Parameter;
+import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.MemberValuePair;
@@ -54,7 +54,7 @@ public class Service {
 		this.paramStyle = paramStyle;
 	}
 
-	public static Service build(ClassOrInterfaceDeclaration serviceClass, XmlTypeLoader typeLoader) {
+	public static Service build(TypeDeclaration<?> serviceClass, XmlTypeLoader typeLoader) {
 		AnnotationExpr a = serviceClass.getAnnotationByClass(WebService.class).get();
 		String name = a.findFirst(MemberValuePair.class, m -> "name".equals(m.getNameAsString())).map(m -> m.getValue().asStringLiteralExpr().asString())
 				.orElse(serviceClass.resolve().getClassName());
@@ -103,7 +103,7 @@ public class Service {
 	 * @param cl
 	 * @param typeLoader
 	 */
-	private void collectOp(Service service, ClassOrInterfaceDeclaration cl, XmlTypeLoader typeLoader) {
+	private void collectOp(Service service, TypeDeclaration<?> cl, XmlTypeLoader typeLoader) {
 		for (MethodDeclaration m : cl.getMethods()) {
 			Optional<AnnotationExpr> o = m.getAnnotationByClass(WebMethod.class);
 			if (!o.isPresent())

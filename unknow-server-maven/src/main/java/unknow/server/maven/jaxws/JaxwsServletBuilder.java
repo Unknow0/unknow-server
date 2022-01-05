@@ -28,6 +28,7 @@ import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.Parameter;
+import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.ast.comments.LineComment;
 import com.github.javaparser.ast.expr.ArrayAccessExpr;
 import com.github.javaparser.ast.expr.ArrayInitializerExpr;
@@ -69,6 +70,8 @@ import unknow.server.jaxws.WSMethod;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
 import unknow.server.maven.jaxws.model.Service;
+import unknow.server.maven.jaxws.model.XmlEnum;
+import unknow.server.maven.jaxws.model.XmlEnum.XmlEnumEntry;
 import unknow.server.maven.jaxws.model.XmlObject;
 import unknow.server.maven.jaxws.model.XmlObject.XmlField;
 import unknow.server.maven.jaxws.model.XmlType;
@@ -85,7 +88,6 @@ public class JaxwsServletBuilder {
 	private static final Modifier.Keyword[] PF = { Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL };
 
 	private static final List<XmlField> OP_ATTRS = Arrays.asList(new XmlField(JaxSaxHandlerBuilder.QNAME_PARAM, "", "setQName", "", ""));
-	private static final String OPERATION = Operation.class.getName();
 
 	private final ClassOrInterfaceDeclaration serviceClass;
 	private final JaxMarshallerBuilder mbuilder;
@@ -99,7 +101,7 @@ public class JaxwsServletBuilder {
 	private JaxSaxHandlerBuilder header;
 	private JaxSaxHandlerBuilder body;
 
-	public JaxwsServletBuilder(ClassOrInterfaceDeclaration serviceClass, Map<String, ClassOrInterfaceDeclaration> classes, JaxMarshallerBuilder mbuilder) {
+	public JaxwsServletBuilder(ClassOrInterfaceDeclaration serviceClass, Map<String, TypeDeclaration<?>> classes, JaxMarshallerBuilder mbuilder) {
 		this.serviceClass = serviceClass;
 		this.mbuilder = mbuilder;
 		// collect operations
@@ -164,7 +166,9 @@ public class JaxwsServletBuilder {
 						Utils.list(new StringLiteralExpr(o.result.ns), new StringLiteralExpr(o.result.name), new NameExpr("ro")));
 			}
 			if (o.paramStyle == ParameterStyle.WRAPPED) {
-				NodeList<Expression> p = Utils.list(new StringLiteralExpr(o.ns), new StringLiteralExpr(o.name + "Response"), e == null ? new NullLiteralExpr() : e);
+				NodeList<Expression> p = Utils.list(new StringLiteralExpr(o.ns), new StringLiteralExpr(o.name + "Response"));
+				if (e != null)
+					p.add(e);
 				// TODO out param
 				e = new ObjectCreationExpr(null, types.get(OperationWrapper.class), p);
 			} else {
@@ -250,8 +254,12 @@ public class JaxwsServletBuilder {
 
 			List<XmlField> childs = new ArrayList<>();
 
-			if (o.result != null && o.result.type instanceof XmlObject)
-				mbuilder.add((XmlObject) o.result.type);
+			if (o.result != null) {
+				if (o.result.type instanceof XmlObject)
+					mbuilder.add((XmlObject) o.result.type);
+				else if (o.result.type instanceof XmlEnum)
+					mbuilder.add((XmlEnum) o.result.type);
+			}
 
 			for (Service.Param p : o.params) {
 				if (p.header)
@@ -262,7 +270,7 @@ public class JaxwsServletBuilder {
 					body.addElem(new XmlField(p.type, "", "addBody", p.name, p.ns));
 			}
 			if (o.paramStyle == ParameterStyle.WRAPPED)
-				body.addElem(new XmlField(new XmlObject(OPERATION, null, OP_ATTRS, childs, null, null), "", "addBody", o.name, service.ns));
+				body.addElem(new XmlField(new XmlOperation(o.name, childs), "", "addBody", o.name, service.ns));
 		}
 
 		ClassOrInterfaceType t = types.get(SaxHandler.class, types.get(SaxContext.class));
@@ -288,9 +296,27 @@ public class JaxwsServletBuilder {
 	 * @param types
 	 */
 	private NameExpr generateHandler(XmlType type, TypeCache types) {
+		if (type instanceof XmlEnum) {
+			XmlEnum e = (XmlEnum) type;
+			NodeList<Expression> values = Utils.list();
+//			Statement s = 
+			for (XmlEnumEntry c : e.entries)
+				values.add(new StringLiteralExpr(c.value));
+			servlet.addFieldWithInitializer(types.array(String.class), e.convertMethod, Utils.array(types.get(String.class), values), PSF);
+			servlet.addMethod(e.convertMethod, PSF).addParameter(types.get(String.class), "s").setType(types.get(e.clazz))
+					.addThrownException(types.get(SAXException.class))
+					.getBody().get()
+					.addStatement(Utils.assign(types.get(int.class), "i", new MethodCallExpr(
+							new TypeExpr(types.get(Arrays.class)), "binarySearch", Utils.list(new NameExpr(e.convertMethod), new NameExpr("s")))))
+					.addStatement(new IfStmt(
+							new BinaryExpr(new NameExpr("i"), new IntegerLiteralExpr("0"), BinaryExpr.Operator.LESS),
+							new ThrowStmt(new ObjectCreationExpr(null, types.get(SAXException.class), Utils.list(new BinaryExpr(new StringLiteralExpr("Invalid enum constant: "), new NameExpr("s"), BinaryExpr.Operator.PLUS)))),
+							null))
+					.addStatement(new ReturnStmt(new ArrayAccessExpr(new MethodCallExpr(new TypeExpr(types.get(e.clazz)), "values"), new NameExpr("i"))));
+		}
 		String k = type.isSimple() ? "" : type.binaryName();
 		NameExpr nameExpr = saxHandlers.get(k);
-		if (nameExpr != null && !k.equals(OPERATION + ";"))
+		if (nameExpr != null)
 			return nameExpr;
 		String name = "$" + saxHandlers.size() + "$";
 		saxHandlers.put(k, nameExpr = new NameExpr(name));
@@ -300,6 +326,21 @@ public class JaxwsServletBuilder {
 		servlet.addFieldWithInitializer(t, name, new ObjectCreationExpr(null, t, null, Utils.list(), JaxSaxHandlerBuilder.build(types, type, n -> generateHandler(n, types))),
 				PSF);
 		return nameExpr;
+	}
+
+	private static class XmlOperation extends XmlObject {
+
+		final String name;
+
+		public XmlOperation(String name, List<XmlField> elems) {
+			super(Operation.class.getCanonicalName(), null, OP_ATTRS, elems, null, null);
+			this.name = name;
+		}
+
+		@Override
+		public String binaryName() {
+			return "op:" + name;
+		}
 	}
 
 }

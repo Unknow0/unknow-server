@@ -30,5 +30,4 @@ public class MarshallerRegistry {
 			throw new IOException("not marshaler found for '" + clazz + "'");
 		return m;
 	}
-
 }

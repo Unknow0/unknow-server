@@ -36,6 +36,7 @@ import com.github.javaparser.ast.type.VoidType;
 
 import unknow.sax.SaxContext;
 import unknow.server.maven.TypeCache;
+import unknow.server.maven.Utils;
 import unknow.server.maven.jaxws.model.SchemaData;
 import unknow.server.maven.jaxws.model.XmlObject;
 import unknow.server.maven.jaxws.model.XmlObject.XmlElem;
@@ -54,8 +55,8 @@ public class JaxSaxHandlerBuilder {
 		}
 
 		@Override
-		public String binaryName() {
-			return null;
+		public String clazz() {
+			return "";
 		}
 
 		@Override
@@ -81,17 +82,17 @@ public class JaxSaxHandlerBuilder {
 
 		this.firstAttr = true;
 		this.attrs = new BlockStmt();
-		this.start = new ThrowStmt(new ObjectCreationExpr(null, types.get(SAXException.class), new NodeList<>(
+		this.start = new ThrowStmt(new ObjectCreationExpr(null, types.get(SAXException.class), Utils.list(
 				new BinaryExpr(new StringLiteralExpr("Invalid tag "), QNAME, BinaryExpr.Operator.PLUS))));
 		this.last = new ExpressionStmt(new MethodCallExpr(CONTEXT, "previous"));
 	}
 
 	public void setObjectCreation(String factory, String method) {
-		Expression create = new ObjectCreationExpr(null, types.get(clazz), new NodeList<>());
+		Expression create = new ObjectCreationExpr(null, types.get(clazz), Utils.list());
 		if (factory != null)
 			create = new MethodCallExpr(new TypeExpr(types.get(factory)), method);
 		attrs.addStatement(new AssignExpr(new VariableDeclarationExpr(types.get(clazz), "o"), create, AssignExpr.Operator.ASSIGN))
-				.addStatement(new MethodCallExpr(CONTEXT, "push", new NodeList<>(new NameExpr("o"))));
+				.addStatement(new MethodCallExpr(CONTEXT, "push", Utils.list(new NameExpr("o"))));
 	}
 
 	public void setQName(String field) {
@@ -99,8 +100,8 @@ public class JaxSaxHandlerBuilder {
 	}
 
 	public void addAttr(XmlField a) {
-		if (a.type == QNAME_PARAM) {
-			attrs.addStatement(new MethodCallExpr(new NameExpr("o"), a.setter, new NodeList<>(QNAME)));
+		if (a.type() == QNAME_PARAM) {
+			attrs.addStatement(new MethodCallExpr(new NameExpr("o"), a.setter, Utils.list(QNAME)));
 			return;
 		}
 		Expression var = new NameExpr("a");
@@ -111,12 +112,12 @@ public class JaxSaxHandlerBuilder {
 		attrs
 				.addStatement(new AssignExpr(
 						var,
-						new MethodCallExpr(ATTRS, "getValue", new NodeList<>(new StringLiteralExpr(a.ns), new StringLiteralExpr(a.name))),
+						new MethodCallExpr(ATTRS, "getValue", Utils.list(new StringLiteralExpr(a.ns), new StringLiteralExpr(a.name))),
 						AssignExpr.Operator.ASSIGN))
 				.addStatement(new IfStmt(
 						new BinaryExpr(new NameExpr("a"), new NullLiteralExpr(), Operator.NOT_EQUALS),
 						new ExpressionStmt(
-								new MethodCallExpr(new NameExpr("o"), a.setter, new NodeList<>(a.type.convert(types, new NameExpr("a"))))),
+								new MethodCallExpr(new NameExpr("o"), a.setter, Utils.list(a.type().convert(types, new NameExpr("a"))))),
 						null));
 	}
 
@@ -125,24 +126,24 @@ public class JaxSaxHandlerBuilder {
 				.addStatement(new MethodCallExpr(
 						new EnclosedExpr(new CastExpr(types.get(clazz), new MethodCallExpr(CONTEXT, "peek"))),
 						value.setter,
-						new NodeList<>(value.type.convert(types, new MethodCallExpr(CONTEXT, "textContent")))))
+						Utils.list(value.type().convert(types, new MethodCallExpr(CONTEXT, "textContent")))))
 				.addStatement(new MethodCallExpr(CONTEXT, "previous"));
 	}
 
 	public void addElem(XmlField a) {
 		start = new IfStmt(
-				new MethodCallExpr(new StringLiteralExpr(a.qname()), "equals", new NodeList<>(QNAME)),
-				new ExpressionStmt(new MethodCallExpr(CONTEXT, "next", new NodeList<>(handlers.apply(a.type)))),
+				new MethodCallExpr(new StringLiteralExpr(a.qname()), "equals", Utils.list(QNAME)),
+				new ExpressionStmt(new MethodCallExpr(CONTEXT, "next", Utils.list(handlers.apply(a.type())))),
 				start);
 
 		end = new IfStmt(
-				new MethodCallExpr(new StringLiteralExpr(a.qname()), "equals", new NodeList<>(QNAME)),
+				new MethodCallExpr(new StringLiteralExpr(a.qname()), "equals", Utils.list(QNAME)),
 				new BlockStmt()
-						.addStatement(new AssignExpr(new VariableDeclarationExpr(types.get(a.type.isSimple() ? String.class : Object.class), "v"), new MethodCallExpr(CONTEXT, "pop"), AssignExpr.Operator.ASSIGN))
+						.addStatement(Utils.assign(types.get(a.type().clazz()), "v", a.type().convert(types, new MethodCallExpr(CONTEXT, "pop"))))
 						.addStatement(new MethodCallExpr(
 								new EnclosedExpr(new CastExpr(types.get(clazz), new MethodCallExpr(CONTEXT, "peek"))),
 								a.setter,
-								new NodeList<>(a.type.convert(types, new NameExpr("v"))))),
+								Utils.list(new NameExpr("v")))),
 				end);
 	}
 
@@ -155,43 +156,43 @@ public class JaxSaxHandlerBuilder {
 			last = end;
 		}
 
-		NodeList<BodyDeclaration<?>> list = new NodeList<>();
+		NodeList<BodyDeclaration<?>> list = Utils.list();
 		if (!attrs.getStatements().isEmpty())
 			list.add(new MethodDeclaration(
 					Modifier.createModifierList(Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL),
 					"attributes",
 					new VoidType(),
-					new NodeList<>(new Parameter(types.get(String.class), "qname"), new Parameter(types.get(String.class), "name"), new Parameter(types.get(Attributes.class), "attrs"), new Parameter(types.get(SaxContext.class), "context")))
+					Utils.list(new Parameter(types.get(String.class), "qname"), new Parameter(types.get(String.class), "name"), new Parameter(types.get(Attributes.class), "attrs"), new Parameter(types.get(SaxContext.class), "context")))
 							.addMarkerAnnotation(Override.class).addThrownException(types.get(SAXException.class))
 							.setBody(attrs));
 		list.add(new MethodDeclaration(
 				Modifier.createModifierList(Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL),
 				"startElement",
 				new VoidType(),
-				new NodeList<>(new Parameter(types.get(String.class), "qname"), new Parameter(types.get(String.class), "name"), new Parameter(types.get(SaxContext.class), "context")))
+				Utils.list(new Parameter(types.get(String.class), "qname"), new Parameter(types.get(String.class), "name"), new Parameter(types.get(SaxContext.class), "context")))
 						.addMarkerAnnotation(Override.class).addThrownException(types.get(SAXException.class))
-						.setBody(new BlockStmt(new NodeList<>(start))));
+						.setBody(new BlockStmt(Utils.list(start))));
 		list.add(new MethodDeclaration(
 				Modifier.createModifierList(Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL),
 				"endElement",
 				new VoidType(),
-				new NodeList<>(new Parameter(types.get(String.class), "qname"), new Parameter(types.get(String.class), "name"), new Parameter(types.get(SaxContext.class), "context")))
+				Utils.list(new Parameter(types.get(String.class), "qname"), new Parameter(types.get(String.class), "name"), new Parameter(types.get(SaxContext.class), "context")))
 						.addMarkerAnnotation(Override.class).addThrownException(types.get(SAXException.class))
-						.setBody(new BlockStmt(new NodeList<>(last))));
+						.setBody(new BlockStmt(Utils.list(last))));
 		return list;
 	}
 
 	public static NodeList<BodyDeclaration<?>> build(TypeCache types, XmlType xml, Function<XmlType, NameExpr> handlers) {
 		if (xml.isSimple()) {
-			return new NodeList<>(
+			return Utils.list(
 					new MethodDeclaration(
 							Modifier.createModifierList(Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL),
 							"endElement",
 							new VoidType(),
-							new NodeList<>(new Parameter(types.get(String.class), "qname"), new Parameter(types.get(String.class), "name"), new Parameter(types.get(SaxContext.class), "context")))
+							Utils.list(new Parameter(types.get(String.class), "qname"), new Parameter(types.get(String.class), "name"), new Parameter(types.get(SaxContext.class), "context")))
 									.addMarkerAnnotation(Override.class).addThrownException(types.get(SAXException.class))
 									.setBody(new BlockStmt()
-											.addStatement(new MethodCallExpr(CONTEXT, "push", new NodeList<>(new MethodCallExpr(CONTEXT, "textContent"))))
+											.addStatement(new MethodCallExpr(CONTEXT, "push", Utils.list(new MethodCallExpr(CONTEXT, "textContent"))))
 											.addStatement(new MethodCallExpr(CONTEXT, "previous"))));
 		}
 		XmlObject o = (XmlObject) xml;

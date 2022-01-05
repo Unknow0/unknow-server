@@ -38,8 +38,13 @@ public class XmlTypePrimitive implements XmlType {
 	}
 
 	@Override
-	public String binaryName() {
+	public String clazz() {
 		return clazz.getName();
+	}
+
+	@Override
+	public String binaryName() {
+		return clazz.getCanonicalName();
 	}
 
 	@Override

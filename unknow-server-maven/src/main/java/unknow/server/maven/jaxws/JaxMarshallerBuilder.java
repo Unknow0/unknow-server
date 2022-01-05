@@ -11,6 +11,7 @@ import java.util.Set;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.Modifier.Keyword;
+import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.expr.AssignExpr;
@@ -21,11 +22,15 @@ import com.github.javaparser.ast.expr.FieldAccessExpr;
 import com.github.javaparser.ast.expr.LambdaExpr;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.NameExpr;
+import com.github.javaparser.ast.expr.NullLiteralExpr;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
 import com.github.javaparser.ast.expr.StringLiteralExpr;
 import com.github.javaparser.ast.expr.TypeExpr;
 import com.github.javaparser.ast.expr.VariableDeclarationExpr;
 import com.github.javaparser.ast.stmt.BlockStmt;
+import com.github.javaparser.ast.stmt.ReturnStmt;
+import com.github.javaparser.ast.stmt.SwitchEntry;
+import com.github.javaparser.ast.stmt.SwitchStmt;
 import com.github.javaparser.ast.stmt.TryStmt;
 import com.github.javaparser.ast.type.UnknownType;
 
@@ -37,6 +42,8 @@ import unknow.server.jaxws.XMLOutput;
 import unknow.server.jaxws.XMLWriter;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
+import unknow.server.maven.jaxws.model.XmlEnum;
+import unknow.server.maven.jaxws.model.XmlEnum.XmlEnumEntry;
 import unknow.server.maven.jaxws.model.XmlObject;
 import unknow.server.maven.jaxws.model.XmlObject.XmlField;
 
@@ -91,6 +98,23 @@ public class JaxMarshallerBuilder {
 								new BlockStmt().addStatement(new MethodCallExpr(new NameExpr("m"), "marshall", Utils.list(R, E, new NameExpr("out")))), Utils.list(), null));
 	}
 
+	public void add(XmlEnum type) {
+		if (processed.contains(type.clazz))
+			return;
+		processed.add(type.clazz);
+
+		NodeList<SwitchEntry> list = Utils.list();
+		for (XmlEnumEntry e : type.entries)
+			list.add(new SwitchEntry(
+					Utils.list(new NameExpr(e.name)),
+					SwitchEntry.Type.STATEMENT_GROUP,
+					Utils.list(new ReturnStmt(new StringLiteralExpr(e.value)))));
+		list.add(new SwitchEntry(Utils.list(), SwitchEntry.Type.STATEMENT_GROUP, Utils.list(new ReturnStmt(new NullLiteralExpr()))));
+		clazz.addMethod(type.convertMethod, Keyword.PRIVATE, Keyword.STATIC, Keyword.FINAL).addParameter(types.get(type.clazz), "e").setType(types.get(String.class))
+				.getBody().get()
+				.addStatement(new SwitchStmt(new NameExpr("e"), list));
+	}
+
 	public void add(XmlObject type) {
 		if (processed.contains(type.clazz))
 			return;
@@ -99,21 +123,23 @@ public class JaxMarshallerBuilder {
 		BlockStmt b = new BlockStmt();
 		for (XmlField a : type.attrs)
 			b.addStatement(new MethodCallExpr(new NameExpr("w"), "attribute",
-					Utils.list(new StringLiteralExpr(a.name), new StringLiteralExpr(a.ns), a.type.toString(types, new MethodCallExpr(new NameExpr("t"), a.getter)))));
+					Utils.list(new StringLiteralExpr(a.name), new StringLiteralExpr(a.ns), a.type().toString(types, new MethodCallExpr(new NameExpr("t"), a.getter)))));
 		for (XmlField f : type.elems) {
 			b.addStatement(new MethodCallExpr(new NameExpr("w"), "startElement", Utils.list(new StringLiteralExpr(f.name), new StringLiteralExpr(f.ns))));
-			if (f.type instanceof XmlObject) {
-				add((XmlObject) f.type);
-				b.addStatement(new MethodCallExpr(new MethodCallExpr(new NameExpr("R"), "get", Utils.list(new ClassExpr(types.get(((XmlObject) f.type).clazz)))), "marshall",
+			if (f.type() instanceof XmlObject) {
+				add((XmlObject) f.type());
+				b.addStatement(new MethodCallExpr(new MethodCallExpr(new NameExpr("R"), "get", Utils.list(new ClassExpr(types.get(((XmlObject) f.type()).clazz)))), "marshall",
 						Utils.list(new NameExpr("m"), new MethodCallExpr(new NameExpr("t"), f.getter), new NameExpr("w"))));
 			} else {
-				Expression e = f.type.toString(types, new MethodCallExpr(new NameExpr("t"), f.getter));
+				if (f.type() instanceof XmlEnum)
+					add((XmlEnum) f.type());
+				Expression e = f.type().toString(types, new MethodCallExpr(new NameExpr("t"), f.getter));
 				b.addStatement(new MethodCallExpr(new NameExpr("w"), "text", Utils.list(e)));
 			}
 			b.addStatement(new MethodCallExpr(new NameExpr("w"), "endElement", Utils.list(new StringLiteralExpr(f.name), new StringLiteralExpr(f.ns))));
 		}
 		if (type.value != null) {
-			Expression e = type.value.type.toString(types, new MethodCallExpr(new NameExpr("t"), type.value.getter));
+			Expression e = type.value.type().toString(types, new MethodCallExpr(new NameExpr("t"), type.value.getter));
 			b.addStatement(new MethodCallExpr(new NameExpr("w"), "text", Utils.list(e)));
 		}
 

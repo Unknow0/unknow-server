@@ -62,6 +62,11 @@ public class XmlTypeDate implements XmlType {
 	}
 
 	@Override
+	public String clazz() {
+		return clazz;
+	}
+
+	@Override
 	public String binaryName() {
 		return clazz + ';';
 	}

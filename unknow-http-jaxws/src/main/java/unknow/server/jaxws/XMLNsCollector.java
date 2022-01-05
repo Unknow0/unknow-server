@@ -61,7 +61,6 @@ public class XMLNsCollector implements XMLWriter {
 		int i = 0;
 		while (it.hasNext())
 			map.put(it.next(), prefix(i++));
-		map.remove("", "");
 		return map;
 	}
 

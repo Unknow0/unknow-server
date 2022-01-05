@@ -11,12 +11,14 @@ import javax.jws.WebService;
 import javax.jws.soap.SOAPBinding;
 import javax.jws.soap.SOAPBinding.ParameterStyle;
 
+import unknow.server.http.test.xml.Complex;
 import unknow.server.http.test.xml.Mixed;
 import unknow.server.http.test.xml.Root;
 
 /**
  * @author unknow
  */
+@SuppressWarnings("unused")
 @WebService(targetNamespace = "http://test.unknow", name = "ws")
 public class Webservice {
 
@@ -46,5 +48,10 @@ public class Webservice {
 	@WebMethod
 	@SOAPBinding(parameterStyle = ParameterStyle.BARE)
 	public void onWayBare(@WebParam String root) {
+	}
+
+	@WebMethod
+	public Complex complex(Complex param) {
+		return param;
 	}
 }
