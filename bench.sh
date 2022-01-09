@@ -32,8 +32,8 @@ trap 'rm -rf out; [[ "$pid" ]] && kill -9 $pid' EXIT
 for i in ${SERVER[@]}
 do
 	${i}_start
-	./run.sh $i "http://127.0.0.1:8080"
+	. run.sh $i "http://127.0.0.1:8080"
 	${i}_stop
 done
 
-./result.sh
+. print.sh
