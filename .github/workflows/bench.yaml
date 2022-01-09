@@ -29,4 +29,4 @@ jobs:
         env
         bash bench.sh
       env:
-        CATALINA_HOME: "${{env.GITHUB_WORKSPACE}}/tomcat"
+        CATALINA_HOME: "${{github.workspace}}/tomcat"
