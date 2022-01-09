@@ -27,4 +27,4 @@ jobs:
     - name: run bench
       run: bash bench.sh
       env:
-        CATALINA_HOME: "${{env.GITHUB_WORKSPACE}}/tomcat"
+        CATALINA_HOME: "${GITHUB_WORKSPACE}/tomcat"
