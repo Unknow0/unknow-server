@@ -1,34 +1,32 @@
 #!/bin/bash
 
 unknow_start() {
-	java -jar unknow-http-test/target/server.jar >/dev/null 2>/dev/null &
+	java -jar ../unknow-http-test/target/server.jar >/dev/null 2>/dev/null &
 	pid=$!
-	trap "kill -9 $pid" EXIT
 	sleep 5
 }
 unknow_stop() {
 	kill -9 $pid
-	trap "" EXIT
+	pid=
 	sleep 2
 }
 tomcat_start() {
-	cp unknow-http-test/target/*.war $CATALINA_HOME/webapps/ROOT.war || exit 1
+	cp ../unknow-http-test/target/*.war $CATALINA_HOME/webapps/ROOT.war || exit 1
 	$CATALINA_HOME/bin/catalina.sh run >/dev/null 2>/dev/null || exit 1 &
 	pid=$!
-	trap "kill -9 $pid" EXIT
 	sleep 10
 }
 tomcat_stop() {
 	$CATALINA_HOME/bin/shutdown.sh
 	sleep 2
 	kill -9 $pid
-	trap "" EXIT
+	pid=
 	sleep 2
 }
 
 cd "$(dirname "$0")/bench"
 mkdir out
-trap "rm -rf out" EXIT
+trap 'rm -rf out; [[ "$pid" ]] && kill -9 $pid' EXIT
 . conf.sh
 
 for i in ${SERVER[@]}
