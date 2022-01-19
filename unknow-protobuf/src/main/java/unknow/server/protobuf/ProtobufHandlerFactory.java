@@ -26,7 +26,7 @@ public abstract class ProtobufHandlerFactory<T> extends HandlerFactory {
 
 	@Override
 	protected Handler create() {
-		return new ProtobufHandler();
+		return new ProtobufHandler(this);
 	}
 
 	protected abstract void process(T t, OutputStream h);
@@ -34,7 +34,8 @@ public abstract class ProtobufHandlerFactory<T> extends HandlerFactory {
 	private final class ProtobufHandler extends Handler {
 		private final LimitedInputStream limited;
 
-		public ProtobufHandler() {
+		public ProtobufHandler(HandlerFactory factory) {
+			super(factory);
 			this.limited = new LimitedInputStream(getIn());
 		}
 

@@ -25,8 +25,6 @@ public class IOWorker extends Thread {
 	private final Object mutex = new Object();
 	/** this worker id */
 	private final int id;
-	/** factory of handlers */
-	private final HandlerFactory handlers;
 	/** the selector */
 	private final Selector selector;
 	/** the timeout on select method */
@@ -46,11 +44,9 @@ public class IOWorker extends Thread {
 	 * @param timeout  the timeout on select
 	 * @throws IOException
 	 */
-	public IOWorker(int id, HandlerFactory handlers, NIOServerListener listener, long timeout) throws IOException {
+	public IOWorker(int id, NIOServerListener listener, long timeout) throws IOException {
 		super("IOWorker-" + id);
-		setDaemon(true);
 		this.id = id;
-		this.handlers = handlers;
 		this.listener = listener;
 		this.selector = Selector.open();
 		this.timeout = timeout;
@@ -60,21 +56,21 @@ public class IOWorker extends Thread {
 	 * register a new socket to this thread
 	 * 
 	 * @param socket the socket to register
+	 * @param handler the handler
 	 * @throws IOException
 	 */
-	public Handler register(SocketChannel socket) throws IOException {
+	public void register(SocketChannel socket, Handler handler) throws IOException {
 		synchronized (mutex) {
 			selector.wakeup();
 			socket.configureBlocking(false);
-			Handler handler = handlers.get(socket.register(selector, SelectionKey.OP_READ));
+			handler.attach(socket.register(selector, SelectionKey.OP_READ));
 			listener.accepted(id, handler);
-			return handler;
 		}
 	}
 
 	@Override
 	public void run() {
-		while (!isInterrupted()) {
+		while (!Thread.interrupted()) {
 			try {
 				if (selector.select(timeout) > 0)
 					processSelection();
@@ -83,7 +79,7 @@ public class IOWorker extends Thread {
 					for (SelectionKey key : selector.keys()) {
 						Handler h = (Handler) key.attachment();
 						if (!key.isValid() || h.isClosed()) {
-							handlers.free(h);
+							h.free();
 							key.cancel();
 							key.channel().close();
 							listener.closed(id, h);
@@ -93,6 +89,34 @@ public class IOWorker extends Thread {
 			} catch (IOException e) {
 				log.error("failed to execute", e);
 			}
+		}
+		// stop mode
+		// TODO add timeout ?
+		while (!selector.keys().isEmpty()) {
+			try {
+				log.info("wait {} connection before close", selector.keys().size());
+				if (selector.select(500) > 0)
+					processSelection();
+				synchronized (mutex) {
+					for (SelectionKey key : selector.keys()) {
+						Handler h = (Handler) key.attachment();
+						if (!key.isValid() || h.isClosed() || h.isIdle()) {
+							h.free();
+							key.cancel();
+							key.channel().close();
+							listener.closed(id, h);
+						}
+					}
+				}
+			} catch (Throwable e) {
+				log.error("failed to execute", e);
+			}
+		}
+		log.info("{}", selector.keys().size());
+		try {
+			selector.close();
+		} catch (Exception e) {
+			log.error("failed to close selector", e);
 		}
 	}
 

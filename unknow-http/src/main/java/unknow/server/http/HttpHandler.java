@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import unknow.server.nio.Handler;
+import unknow.server.nio.HandlerFactory;
 import unknow.server.nio.util.Buffers;
 
 public class HttpHandler extends Handler implements Runnable {
@@ -74,7 +75,8 @@ public class HttpHandler extends Handler implements Runnable {
 	/**
 	 * create new RequestBuilder
 	 */
-	public HttpHandler(ExecutorService executor, HttpRawProcessor processor, int keepAliveIdle) {
+	public HttpHandler(HandlerFactory factory, ExecutorService executor, HttpRawProcessor processor, int keepAliveIdle) {
+		super(factory);
 		this.executor = executor;
 		this.processor = processor;
 		this.keepAliveIdle = keepAliveIdle;

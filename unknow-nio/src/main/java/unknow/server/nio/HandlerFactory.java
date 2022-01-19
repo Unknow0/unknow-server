@@ -3,7 +3,6 @@
  */
 package unknow.server.nio;
 
-import java.nio.channels.SelectionKey;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -21,11 +20,10 @@ public abstract class HandlerFactory {
 	 * 
 	 * @return a handler
 	 */
-	public final Handler get(SelectionKey key) {
+	public final Handler get() {
 		Handler h = cache.poll();
 		if (h == null)
 			h = create();
-		h.attach(key);
 		return h;
 	}
 
@@ -35,7 +33,6 @@ public abstract class HandlerFactory {
 	 * @param h handler
 	 */
 	public final void free(Handler h) {
-		h.reset();
 		cache.offer(h);
 	}
 

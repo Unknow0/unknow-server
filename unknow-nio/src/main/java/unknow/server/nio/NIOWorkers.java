@@ -6,6 +6,9 @@ package unknow.server.nio;
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * @author unknow
  */
@@ -14,10 +17,10 @@ public interface NIOWorkers {
 	 * register a socket to an IOWorker
 	 * 
 	 * @param socket the socket to register
-	 * @return the handler created for the socket
+	 * @param handler the handler
 	 * @throws IOException
 	 */
-	Handler register(SocketChannel socket) throws IOException;
+	void register(SocketChannel socket, Handler handler) throws IOException;
 
 	/**
 	 * start the IOWorker
@@ -25,7 +28,7 @@ public interface NIOWorkers {
 	void start();
 
 	/**
-	 * stop the IOWorker
+	 * gracefully stop the workers
 	 */
 	void stop();
 
@@ -42,8 +45,8 @@ public interface NIOWorkers {
 		}
 
 		@Override
-		public Handler register(SocketChannel socket) throws IOException {
-			return worker.register(socket);
+		public void register(SocketChannel socket, Handler handler) throws IOException {
+			worker.register(socket, handler);
 		}
 
 		@Override
@@ -67,6 +70,7 @@ public interface NIOWorkers {
 	 * @author unknow
 	 */
 	public static class RoundRobin implements NIOWorkers {
+		private static final Logger log = LoggerFactory.getLogger(RoundRobin.class);
 		private final IOWorker[] w;
 		private int i;
 
@@ -76,11 +80,10 @@ public interface NIOWorkers {
 		}
 
 		@Override
-		public synchronized Handler register(SocketChannel socket) throws IOException {
-			Handler register = w[i++].register(socket);
+		public synchronized void register(SocketChannel socket, Handler handler) throws IOException {
+			w[i++].register(socket, handler);
 			if (i == w.length)
 				i = 0;
-			return register;
 		}
 
 		@Override
@@ -96,7 +99,8 @@ public interface NIOWorkers {
 			try {
 				for (int i = 0; i < w.length; i++)
 					w[i].join();
-			} catch (InterruptedException e) { // OK
+			} catch (InterruptedException e) {
+				log.info("", e);
 			}
 		}
 	}

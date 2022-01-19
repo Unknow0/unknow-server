@@ -57,7 +57,7 @@ public class Call extends Builder {
 				.addStatement(new AssignExpr(new NameExpr("handler"), new ObjectCreationExpr(null, t.get(HandlerFactory.class), null, Utils.list(), Utils.list(
 						new MethodDeclaration(Modifier.createModifierList(Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL), t.get(Handler.class), "create").addAnnotation(Override.class)
 								.setBody(new BlockStmt()
-										.addStatement(new ReturnStmt(new ObjectCreationExpr(null, t.get(HttpHandler.class), Utils.list(new NameExpr("executor"), new ThisExpr(new Name(ctx.self().getName().getIdentifier())), new NameExpr("keepAliveIdle")))))))),
+										.addStatement(new ReturnStmt(new ObjectCreationExpr(null, t.get(HttpHandler.class), Utils.list(new ThisExpr(), new NameExpr("executor"), new ThisExpr(new Name(ctx.self().getName().getIdentifier())), new NameExpr("keepAliveIdle")))))))),
 						Operator.ASSIGN))
 				.addStatement(new MethodCallExpr("loadInitializer"))
 				.addStatement(new MethodCallExpr("initialize"))

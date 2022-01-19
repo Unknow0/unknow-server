@@ -38,7 +38,7 @@ public interface NIOServerListener {
 	void closed(int id, Handler h);
 
 	/**
-	 * call when the server stop
+	 * call before the server stop
 	 * 
 	 * @param server the server closing
 	 * @param e      the exception or null if the server is closed normally

@@ -20,17 +20,29 @@ import unknow.server.nio.util.BuffersInputStream;
  * @author unknow
  */
 public abstract class Handler {
+	/** factory that created the handler */
+	private final HandlerFactory factory;
+
 	/** the data waiting to be wrote */
 	private final Buffers pendingWrite = new Buffers();
 	/** the data waiting to be handled */
 	protected final Buffers pendingRead = new Buffers();
+
+	/** Stream of pending data */
 	private final InputStream in = new BuffersInputStream(pendingRead);
 
+	/** Output stream */
 	private Out out = new Out(this);
+
+	/** selection key */
 	private SelectionKey key;
 
 	private long lastRead;
 	private long lastWrite;
+
+	protected Handler(HandlerFactory factory) {
+		this.factory = factory;
+	}
 
 	void attach(SelectionKey key) {
 		key.attach(this);
@@ -147,6 +159,22 @@ public abstract class Handler {
 	}
 
 	/**
+	 * return true if this handler is in idle state
+	 * we should keep it open but we can close it at anytime
+	 */
+	public boolean isIdle() {
+		return false;
+	}
+
+	/**
+	 * free the handler
+	 */
+	public final void free() {
+		reset();
+		factory.free(this);
+	}
+
+	/**
 	 * reset this handler
 	 */
 	public void reset() {
@@ -161,7 +189,7 @@ public abstract class Handler {
 
 	@Override
 	public String toString() {
-		return key.channel().toString() + " closed: " + (out.h == null) + " pending: " + pendingWrite.length();
+		return key.channel().toString() + " closed: " + isClosed() + " pending: " + pendingWrite.length() + " idle: " + isIdle();
 	}
 
 	/**
@@ -234,7 +262,7 @@ public abstract class Handler {
 		@Override
 		public synchronized void flush() throws IOException {
 			if (h == null)
-				throw new IOException("already closed");
+				return;
 			if (!h.pendingWrite.isEmpty())
 				h.key.selector().wakeup();
 		}

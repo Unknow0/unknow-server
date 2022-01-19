@@ -3,7 +3,9 @@
  */
 package unknow.server.nio.cli;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.util.concurrent.Callable;
 
 import picocli.CommandLine;
@@ -49,6 +51,10 @@ public class NIOServerCli implements Callable<Integer> {
 	@Option(names = "--selecttime", description = "timeout on Selector.select, 0=unlimited", descriptionKey = "selecttime")
 	public long selectTime = 0;
 
+	/** shutdown port */
+	@Option(names = "--shutdown-port", description = "port to open to gracefuly shutdown the server", descriptionKey = "shutdown-port")
+	public int shutdownPort = 0;
+
 	/**
 	 * @return local address to bind to
 	 */
@@ -65,17 +71,18 @@ public class NIOServerCli implements Callable<Integer> {
 
 		NIOWorkers workers;
 		if (iothread == 1)
-			workers = new Single(new IOWorker(0, handler, listener, selectTime));
+			workers = new Single(new IOWorker(0, listener, selectTime));
 		else {
 			IOWorker[] w = new IOWorker[iothread];
 			for (int i = 0; i < iothread; i++)
-				w[i] = new IOWorker(i, handler, listener, selectTime);
+				w[i] = new IOWorker(i, listener, selectTime);
 			workers = new RoundRobin(w);
 		}
-
-		new NIOServer(getInetAddress(), workers, listener).run();
+		NIOServer nioServer = new NIOServer(getInetAddress(), workers, handler, listener);
+		if (shutdownPort > 0)
+			new Shutdown(nioServer).start();
+		nioServer.run();
 		return 0;
-
 	}
 
 	/**
@@ -85,5 +92,29 @@ public class NIOServerCli implements Callable<Integer> {
 	 */
 	public static void main(String[] arg) {
 		System.exit(new CommandLine(new NIOServerCli()).execute(arg));
+	}
+
+	private class Shutdown extends Thread {
+		private final NIOServer nioServer;
+		private final ServerSocket socket;
+
+		public Shutdown(NIOServer nioServer) throws IOException {
+			super("Shutdown handler");
+			setDaemon(true);
+			this.nioServer = nioServer;
+			this.socket = new ServerSocket(shutdownPort);
+		}
+
+		@Override
+		public void run() {
+			while (true) {
+				try {
+					socket.accept();
+					nioServer.stop();
+					break;
+				} catch (Exception e) { // OK
+				}
+			}
+		}
 	}
 }
