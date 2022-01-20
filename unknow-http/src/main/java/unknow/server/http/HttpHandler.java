@@ -169,9 +169,11 @@ public class HttpHandler extends Handler implements Runnable {
 	 * @return the http method as a string
 	 */
 	public String parseMethod() {
-		sb.setLength(0);
-		meta.toString(sb, 0, part[METHOD]);
-		return sb.toString();
+		synchronized (sb) {
+			sb.setLength(0);
+			meta.toString(sb, 0, part[METHOD]);
+			return sb.toString();
+		}
 	}
 
 	/**
@@ -179,9 +181,11 @@ public class HttpHandler extends Handler implements Runnable {
 	 */
 	public String parseServletPath() {
 		int o = part[METHOD] + 1;
-		sb.setLength(0);
-		decodePath(sb, meta, o, infoStart < 0 ? part[PATH] : infoStart);
-		return sb.toString();
+		synchronized (sb) {
+			sb.setLength(0);
+			decodePath(sb, meta, o, infoStart < 0 ? part[PATH] : infoStart);
+			return sb.toString();
+		}
 	}
 
 	/**
@@ -189,19 +193,25 @@ public class HttpHandler extends Handler implements Runnable {
 	 */
 	public String parsePathInfo() {
 		int e = part[PATH];
-		sb.setLength(0);
-		decodePath(sb, meta, infoStart < 0 ? e : infoStart, e);
-		return sb.toString();
+		synchronized (sb) {
+			sb.setLength(0);
+			decodePath(sb, meta, infoStart < 0 ? e : infoStart, e);
+			return sb.toString();
+		}
 	}
 
 	/**
 	 * @return the query string as a string
 	 */
 	public String parseQuery() {
-		sb.setLength(0);
-		int o = part[PATH] + 1;
-		meta.toString(sb, o, part[QUERY] - o);
-		return sb.toString();
+		synchronized (sb) {
+			sb.setLength(0);
+			int o = part[PATH] + 1;
+			int l = part[QUERY] - o;
+			if (l > 0)
+				meta.toString(sb, o, l);
+			return sb.toString();
+		}
 	}
 
 	/**
@@ -226,10 +236,12 @@ public class HttpHandler extends Handler implements Runnable {
 	 * @return the protocol as a string
 	 */
 	public String parseProtocol() {
-		sb.setLength(0);
-		int o = part[QUERY] + 1;
-		meta.toString(sb, o, part[PROTOCOL] - o);
-		return sb.toString();
+		synchronized (sb) {
+			sb.setLength(0);
+			int o = part[QUERY] + 1;
+			meta.toString(sb, o, part[PROTOCOL] - o);
+			return sb.toString();
+		}
 	}
 
 	/**
@@ -238,25 +250,27 @@ public class HttpHandler extends Handler implements Runnable {
 	public Map<String, List<String>> parseHeader() {
 		Map<String, List<String>> map = new HashMap<>();
 
-		int o = part[PROTOCOL] + 2;
-		for (int i = 0; i < headerCount; i++) {
-			int e = headers[i];
-			int indexOf = meta.indexOf(COLON, o, e - o);
-			if (indexOf < 0)
-				indexOf = e;
-			sb.setLength(0);
-			meta.toString(sb, o, indexOf - o);
-			String k = sb.toString().toLowerCase();
-			List<String> list = map.get(k);
-			if (list == null)
-				map.put(k, list = new ArrayList<>());
-			if (indexOf < e && !parseHeaderValue(list, indexOf + 1, e)) {
-				list.clear();
+		synchronized (sb) {
+			int o = part[PROTOCOL] + 2;
+			for (int i = 0; i < headerCount; i++) {
+				int e = headers[i];
+				int indexOf = meta.indexOf(COLON, o, e - o);
+				if (indexOf < 0)
+					indexOf = e;
 				sb.setLength(0);
-				meta.toString(sb, indexOf + 1, e - indexOf - 1);
-				list.add(sb.toString().trim());
+				meta.toString(sb, o, indexOf - o);
+				String k = sb.toString().toLowerCase();
+				List<String> list = map.get(k);
+				if (list == null)
+					map.put(k, list = new ArrayList<>());
+				if (indexOf < e && !parseHeaderValue(list, indexOf + 1, e)) {
+					list.clear();
+					sb.setLength(0);
+					meta.toString(sb, indexOf + 1, e - indexOf - 1);
+					list.add(sb.toString().trim());
+				}
+				o = e + 2;
 			}
-			o = e + 2;
 		}
 		return map;
 	}
@@ -270,6 +284,7 @@ public class HttpHandler extends Handler implements Runnable {
 	 * @return false if the parsing failed
 	 */
 	private boolean parseHeaderValue(List<String> list, int o, int e) {
+
 		for (;;) {
 			sb.setLength(0);
 			o = meta.indexOfNot(WS, o, e - o);
@@ -323,35 +338,37 @@ public class HttpHandler extends Handler implements Runnable {
 				o = e + 2;
 				continue;
 			}
-			sb.setLength(0);
-			meta.toString(sb, o, indexOf - o);
-			if (!"cookie".equals(sb.toString().toLowerCase())) {
-				o = e + 2;
-				continue;
-			}
-			o = meta.indexOfNot(WS, indexOf + 1, e);
-			if (o == -1) {
-				o = e + 2;
-				continue;
-			}
-			// parse cookie
-			int next;
-			do {
-				next = meta.indexOf(COOKIE_SEP, o, e - o);
-				if (next < 0)
-					next = e;
-				indexOf = meta.indexOf(EQUAL, o, next - o);
-				if (indexOf < 0)
-					break;
+			synchronized (sb) {
 				sb.setLength(0);
 				meta.toString(sb, o, indexOf - o);
-				String n = sb.toString();
-				sb.setLength(0);
-				meta.toString(sb, indexOf + 1, next - indexOf - 1);
-				cookies.add(new Cookie(n, sb.toString()));
-				o = next + 2;
-			} while (next < e);
-			o = e + 2;
+				if (!"cookie".equals(sb.toString().toLowerCase())) {
+					o = e + 2;
+					continue;
+				}
+				o = meta.indexOfNot(WS, indexOf + 1, e);
+				if (o == -1) {
+					o = e + 2;
+					continue;
+				}
+				// parse cookie
+				int next;
+				do {
+					next = meta.indexOf(COOKIE_SEP, o, e - o);
+					if (next < 0)
+						next = e;
+					indexOf = meta.indexOf(EQUAL, o, next - o);
+					if (indexOf < 0)
+						break;
+					sb.setLength(0);
+					meta.toString(sb, o, indexOf - o);
+					String n = sb.toString();
+					sb.setLength(0);
+					meta.toString(sb, indexOf + 1, next - indexOf - 1);
+					cookies.add(new Cookie(n, sb.toString()));
+					o = next + 2;
+				} while (next < e);
+				o = e + 2;
+			}
 		}
 		return cookies.toArray(COOKIE);
 	}
@@ -459,31 +476,33 @@ public class HttpHandler extends Handler implements Runnable {
 	}
 
 	private void parseParam(Buffers in, int o, int e, Map<String, List<String>> param) {
-		while (o < e) {
-			int indexOf = in.indexOf(AMPERSAMP, o, e - o);
-			if (indexOf < 0)
-				indexOf = e;
-			int i = in.indexOf(EQUAL, o, indexOf - o);
-			String n;
-			String v;
-			if (i > 0) {
-				sb.setLength(0);
-				decodePath(sb, in, o, i);
-				n = sb.toString();
-				sb.setLength(0);
-				decodePath(sb, in, i + 1, indexOf);
-				v = sb.toString();
-			} else {
-				sb.setLength(0);
-				decodePath(sb, in, o, indexOf);
-				n = sb.toString();
-				v = "";
+		synchronized (sb) {
+			while (o < e) {
+				int indexOf = in.indexOf(AMPERSAMP, o, e - o);
+				if (indexOf < 0)
+					indexOf = e;
+				int i = in.indexOf(EQUAL, o, indexOf - o);
+				String n;
+				String v;
+				if (i > 0) {
+					sb.setLength(0);
+					decodePath(sb, in, o, i);
+					n = sb.toString();
+					sb.setLength(0);
+					decodePath(sb, in, i + 1, indexOf);
+					v = sb.toString();
+				} else {
+					sb.setLength(0);
+					decodePath(sb, in, o, indexOf);
+					n = sb.toString();
+					v = "";
+				}
+				List<String> list = param.get(n);
+				if (list == null)
+					param.put(n, list = new ArrayList<>());
+				list.add(v);
+				o = indexOf + 1;
 			}
-			List<String> list = param.get(n);
-			if (list == null)
-				param.put(n, list = new ArrayList<>());
-			list.add(v);
-			o = indexOf + 1;
 		}
 	}
 }
