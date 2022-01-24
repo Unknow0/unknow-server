@@ -44,7 +44,8 @@ import unknow.server.http.utils.ArrayMap;
 import unknow.server.http.utils.IntArrayMap;
 import unknow.server.http.utils.ObjectArrayMap;
 import unknow.server.http.utils.PathTree;
-import unknow.server.http.utils.PathTree.EndNode;
+import unknow.server.http.utils.PathTree.Node;
+import unknow.server.http.utils.PathTree.PartNode;
 import unknow.server.http.utils.Resource;
 import unknow.server.http.utils.ServletManager;
 import unknow.server.maven.TypeCache;
@@ -131,10 +132,10 @@ public class CreateServletManager extends Builder {
 		}
 		tree.normalize();
 		System.err.println("tree:\n" + tree);
-		return treePath(b, type, tree, null, tree.endingFilter, types, names, created);
+		return new ObjectCreationExpr(null, types.get(PathTree.class), Utils.list(nodePart(b, type, tree, null, tree.endingFilter, types, names, created)));
 	}
 
-	private static Expression treePath(BlockStmt b, DispatcherType type, TreePathBuilder tree, String path, Map<String, List<SD>> endingFilter, TypeCache t,
+	private static Expression nodePart(BlockStmt b, DispatcherType type, TreePathBuilder tree, String path, Map<String, List<SD>> endingFilter, TypeCache t,
 			Map<Object, NameExpr> names, Set<String> created) {
 		NodeList<Expression> childs = new NodeList<>();
 		NodeList<Expression> ends = new NodeList<>();
@@ -146,7 +147,7 @@ public class CreateServletManager extends Builder {
 			for (Entry<String, List<SD>> e : endingFilter.entrySet()) {
 				SD s = ending != null ? ending.getOrDefault(e.getKey(), tree.def) : tree.def;
 				String chain = buildChains(b, actualFilters(e.getValue(), type), s, t, names, created);
-				ends.add(new ObjectCreationExpr(null, t.get(EndNode.class), Utils.list(Utils.byteArray(PathTree.encodePart(e.getKey())), new NameExpr(chain))));
+				ends.add(new ObjectCreationExpr(null, t.get(Node.class), Utils.list(Utils.byteArray(PathTree.encodePart(e.getKey())), new NameExpr(chain))));
 			}
 		}
 		if (ending != null) {
@@ -154,7 +155,7 @@ public class CreateServletManager extends Builder {
 				if (endingFilter.containsKey(e.getKey()))
 					continue;
 				String chain = buildChains(b, actualFilters(tree.defFilter, type), e.getValue(), t, names, created);
-				ends.add(new ObjectCreationExpr(null, t.get(EndNode.class), Utils.list(Utils.byteArray(PathTree.encodePart(e.getKey())), new NameExpr(chain))));
+				ends.add(new ObjectCreationExpr(null, t.get(Node.class), Utils.list(Utils.byteArray(PathTree.encodePart(e.getKey())), new NameExpr(chain))));
 			}
 		}
 
@@ -167,12 +168,13 @@ public class CreateServletManager extends Builder {
 			def = new NameExpr(buildChains(b, actualFilters(tree.defFilter, type), tree.def, t, names, created));
 
 		for (Entry<String, TreePathBuilder> n : tree.nexts.entrySet())
-			childs.add(treePath(b, type, n.getValue(), n.getKey(), endingFilter, t, names, created));
+			childs.add(nodePart(b, type, n.getValue(), n.getKey(), endingFilter, t, names, created));
 
-		return new ObjectCreationExpr(null, t.get(PathTree.class), Utils.list(
+		return new ObjectCreationExpr(null, t.get(PartNode.class), Utils.list(
 				path == null ? new NullLiteralExpr() : Utils.byteArray(PathTree.encodePart(path)),
-				childs.isEmpty() ? new NullLiteralExpr() : Utils.array(t.get(PathTree.class), childs),
-				ends.isEmpty() ? new NullLiteralExpr() : Utils.array(t.get(EndNode.class), ends),
+				childs.isEmpty() ? new NullLiteralExpr() : Utils.array(t.get(PartNode.class), childs),
+				new NullLiteralExpr(),
+				ends.isEmpty() ? new NullLiteralExpr() : Utils.array(t.get(Node.class), ends),
 				exact, def));
 	}
 

@@ -16,101 +16,200 @@ import unknow.server.nio.util.Buffers;
  * @author unknow
  */
 public class PathTree {
-	private final byte[] part;
-	private final PathTree[] nexts;
-	// TODO add pattern
-	private final EndNode[] ends;
-	private final FilterChain exact;
-	private final FilterChain def;
+	private final PartNode root;
 
 	/**
 	 * create a new PathTree
 	 * 
-	 * @param part  the path part
-	 * @param nexts the root node
-	 * @param ends  the end with pattern "*.jsp" pattern
-	 * @param exact the "" pattern chains
-	 * @param def   the "/*" pattern
+	 * @param root root part
 	 */
-	public PathTree(byte[] part, PathTree[] nexts, EndNode[] ends, FilterChain exact, FilterChain def) {
-		this.part = part;
-		this.nexts = nexts;
-		this.ends = ends;
-		this.exact = exact;
-		this.def = def;
+	public PathTree(PartNode root) {
+		this.root = root;
 	}
 
+	/**
+	 * find the chain to call
+	 * 
+	 * @param req the request
+	 * @return the chain
+	 */
 	public FilterChain find(HttpHandler req) {
-		Buffers path = req.meta;
-		int o = req.pathStart() + 1;
-		int e = req.pathEnd();
-		try {
-			if (o == e)
-				return exact == null ? def : exact;
+		req.setPathInfoStart(1);
+		FilterChain f = tryFind(req, root, req.meta, req.pathStart() + 1, req.pathEnd());
+		return f == null ? root.def : f;
+	}
 
-			PathTree last = this;
-			while (last.nexts != null) {
-				int i = path.indexOf((byte) '/', o, e - o);
-				if (i < 0)
-					i = e;
-				PathTree n = last.next(path, o, i);
-				if (n == null)
-					break;
-				if (i == e)
-					return n.exact == null ? n.def : n.exact;
-				last = n;
-				o = i + 1;
-			}
-
-			EndNode[] end = last.ends == null ? ends : last.ends;
-			if (end != null) {
-				for (;;) {
-					int i = path.indexOf((byte) '/', o, e - o);
-					if (i < 0)
-						break;
-					o = i + 1;
-				}
-				int l = e - o;
-				for (int i = 0; i < end.length; i++) {
-					byte[] ext = end[i].ext;
-					if (ext.length < l && path.equals(ext, e - ext.length))
-						return end[i].chain;
-				}
-			}
-			return last.def == null ? def : last.def;
-		} finally {
-			req.setPathInfoStart(o - 1);
+	private FilterChain tryFind(HttpHandler req, PartNode last, Buffers path, int o, int e) {
+		if (o == e) {
+			req.setPathInfoStart(e);
+			return last.exact;
 		}
 
+		while (last.nexts != null) {
+			int i = path.indexOf((byte) '/', o, e - o);
+			if (i < 0)
+				i = e;
+			PartNode n = next(last.nexts, path, o, i);
+			if (n == null)
+				break;
+			if (i == e) {
+				req.setPathInfoStart(e);
+				return n.exact;
+			}
+			last = n;
+			o = i + 1;
+		}
+		if (last.pattern != null) {
+			int i = path.indexOf((byte) '/', o, e - o);
+			if (i > 0) {
+				FilterChain f = tryFind(req, last.pattern, path, i + 1, e);
+				if (f != null) // contextPath already set
+					return f;
+			} else {
+				req.setPathInfoStart(e);
+				return last.pattern.exact;
+			}
+		}
+
+		if (last.ends != null) {
+			Node n = ends(last.ends, path, o, e);
+			if (n != null) {
+				req.setPathInfoStart(e);
+				return n.exact;
+			}
+		}
+		req.setPathInfoStart(o);
+		return last.def;
 	}
 
-	private final PathTree next(Buffers path, int o, int e) {
-		PathTree[] n = nexts;
-		int l = e - o;
-		for (int i = 0; i < n.length; i++) {
-			PathTree node = n[i];
-			if (node.part.length == l && path.equals(node.part, o))
-				return node;
+	private static final PartNode next(PartNode[] nexts, Buffers path, int o, int e) {
+		int low = 0;
+		int high = nexts.length - 1;
+
+		while (low <= high) {
+			int mid = (low + high) >>> 1;
+
+			PartNode n = nexts[mid];
+			int c = compare(n.part, path, o, e);
+			if (c < 0)
+				low = mid + 1;
+			else if (c > 0)
+				high = mid - 1;
+			else
+				return n; // key found
 		}
 		return null;
 	}
 
-	public static final class EndNode {
-		private final byte[] ext; // .jsp
-		private final FilterChain chain;
+	private static final Node ends(Node[] nexts, Buffers path, int o, int e) {
+		int low = 0;
+		int high = nexts.length - 1;
+
+		while (low <= high) {
+			int mid = (low + high) >>> 1;
+
+			Node n = nexts[mid];
+			int c = compare(n.part, path, Math.max(o, e - n.part.length), e);
+			if (c < 0)
+				low = mid + 1;
+			else if (c > 0)
+				high = mid - 1;
+			else
+				return n; // key found
+		}
+		return null;
+	}
+
+	/**
+	 * compare two part
+	 * 
+	 * @param a one
+	 * @param b two
+	 * @return -1,1 or 0 if a <,> or = to b
+	 */
+	public static int compare(byte[] a, byte[] b) {
+		int ai = a.length;
+		int bi = b.length;
+		while (ai >= 0 && bi >= 0) {
+			int c = a[--ai] - b[--bi];
+			if (c != 0)
+				return c;
+		}
+		return a.length - b.length;
+	}
+
+	/**
+	 * compare two part
+	 * 
+	 * @param a one
+	 * @param b two
+	 * @param o start of the part in the buffer
+	 * @param e end of the part
+	 * @return -1,1 or 0 if a <,> or = to b
+	 */
+	public static int compare(byte[] a, Buffers b, int o, int e) {
+		int i = a.length;
+		int bl = e - o;
+		while (o < e && i >= 0) {
+			int c = a[--i] - b.get(--e);
+			if (c != 0)
+				return c;
+		}
+		return a.length - bl;
+	}
+
+	/**
+	 * node for ending
+	 * 
+	 * @author unknow
+	 */
+	public static class Node {
+		final byte[] part; // .jsp
+		final FilterChain exact;
 
 		/**
 		 * create new EndNode
 		 * 
-		 * @param ext
+		 * @param part
 		 * @param chain
 		 */
-		public EndNode(byte[] ext, FilterChain chain) {
-			this.ext = ext;
-			this.chain = chain;
+		public Node(byte[] part, FilterChain chain) {
+			this.part = part;
+			this.exact = chain;
 		}
 	}
 
+	public static class PartNode extends Node {
+		final PartNode[] nexts;
+		final PartNode pattern;
+		final Node[] ends;
+		final FilterChain def;
+
+		/**
+		 * create a new PartNode
+		 * 
+		 * @param part    the path part
+		 * @param nexts   the child part
+		 * @param pattern the pattern child (try if the child match)
+		 * @param ends    the end with pattern "*.jsp" pattern
+		 * @param exact   the "" pattern chains
+		 * @param def     the "/*" pattern
+		 */
+		public PartNode(byte[] part, PartNode[] nexts, PartNode pattern, Node[] ends, FilterChain exact, FilterChain def) {
+			super(part, exact);
+			this.nexts = nexts;
+			this.pattern = pattern;
+			this.ends = ends;
+			this.def = def;
+		}
+	}
+
+	/**
+	 * url encode a path part
+	 * 
+	 * @param s part to encode
+	 * @return encoded part
+	 */
 	public static byte[] encodePart(String s) {
 		byte[] bytes = s.getBytes(StandardCharsets.UTF_8);
 		int l = bytes.length;

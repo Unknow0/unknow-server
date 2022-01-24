@@ -28,7 +28,9 @@ public class Buffers {
 	}
 
 	/**
-	 * @param b
+	 * append one byte to the buffer
+	 * 
+	 * @param b byte to add
 	 */
 	public synchronized void write(int b) {
 		if (tail == null)
@@ -44,6 +46,15 @@ public class Buffers {
 	}
 
 	/**
+	 * append data into this buffers, same as @{code write(buf, 0, buf.length)}
+	 * 
+	 * @param buf the data to add
+	 */
+	public void write(byte[] buf) {
+		write(buf, 0, buf.length);
+	}
+
+	/**
 	 * append data into this buffers
 	 * 
 	 * @param buf the data to add
@@ -56,7 +67,7 @@ public class Buffers {
 		if (tail == null)
 			head = tail = Chunk.get();
 		len += l;
-		tail=writeInto(tail, buf, o, l);
+		tail = writeInto(tail, buf, o, l);
 		this.notifyAll();
 	}
 
