@@ -19,6 +19,8 @@ import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.Servlet;
 
+import org.apache.commons.lang3.StringUtils;
+
 import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.Parameter;
@@ -84,12 +86,11 @@ public class CreateServletManager extends Builder {
 				for (String key : list) {
 					Resource r = descriptor.resources.get(key);
 					k.add(new StringLiteralExpr(key));
-					v.add(new ObjectCreationExpr(null,
-							types.get(Resource.class),
+					v.add(new ObjectCreationExpr(null, types.get(Resource.class),
 							Utils.list(new LongLiteralExpr(r.getLastModified() + "L"), new LongLiteralExpr(r.getSize() + "L"))));
 				}
-				b.addStatement(Utils.assign(t, n, new ObjectCreationExpr(null, t, Utils.list(
-						new ObjectCreationExpr(null, types.get(ArrayMap.class, TypeCache.EMPTY), Utils.list(Utils.array(types.get(String.class), k), Utils.array(types.get(Resource.class), v)))))));
+				b.addStatement(Utils.assign(t, n, new ObjectCreationExpr(null, t, Utils.list(new ObjectCreationExpr(null, types.get(ArrayMap.class, TypeCache.EMPTY),
+						Utils.list(Utils.array(types.get(String.class), k), Utils.array(types.get(Resource.class), v)))))));
 			} else
 				b.addStatement(Utils.assign(t, n, new ObjectCreationExpr(null, t, Utils.list())));
 
@@ -114,12 +115,10 @@ public class CreateServletManager extends Builder {
 
 		Set<String> created = new HashSet<>();
 
-		b.addStatement(new ReturnStmt(new ObjectCreationExpr(null, types.get(ServletManager.class), Utils.list(
-				Utils.array(types.get(Servlet.class), servlets),
-				Utils.array(types.get(Filter.class), filters),
-				buildTree(descriptor, DispatcherType.REQUEST, b, types, names, created),
-				errorCode(b, descriptor, types, names, created),
-				errorClass(b, descriptor, types, names, created)))));
+		b.addStatement(new ReturnStmt(new ObjectCreationExpr(null, types.get(ServletManager.class),
+				Utils.list(Utils.array(types.get(Servlet.class), servlets), Utils.array(types.get(Filter.class), filters),
+						buildTree(descriptor, DispatcherType.REQUEST, b, types, names, created), errorCode(b, descriptor, types, names, created),
+						errorClass(b, descriptor, types, names, created)))));
 	}
 
 	private static Expression buildTree(Descriptor descriptor, DispatcherType type, BlockStmt b, TypeCache types, Map<Object, NameExpr> names, Set<String> created) {
@@ -167,15 +166,15 @@ public class CreateServletManager extends Builder {
 		if (tree.def != null)
 			def = new NameExpr(buildChains(b, actualFilters(tree.defFilter, type), tree.def, t, names, created));
 
-		for (Entry<String, TreePathBuilder> n : tree.nexts.entrySet())
-			childs.add(nodePart(b, type, n.getValue(), n.getKey(), endingFilter, t, names, created));
+		List<String> s = new ArrayList<>(tree.nexts.keySet());
+		Collections.sort(s, (s1, s2) -> StringUtils.reverse(s1).compareTo(StringUtils.reverse(s2)));
+		for (String p : s)
+			childs.add(nodePart(b, type, tree.nexts.get(p), p, endingFilter, t, names, created));
 
-		return new ObjectCreationExpr(null, t.get(PartNode.class), Utils.list(
-				path == null ? new NullLiteralExpr() : Utils.byteArray(PathTree.encodePart(path)),
-				childs.isEmpty() ? new NullLiteralExpr() : Utils.array(t.get(PartNode.class), childs),
-				new NullLiteralExpr(),
-				ends.isEmpty() ? new NullLiteralExpr() : Utils.array(t.get(Node.class), ends),
-				exact, def));
+		return new ObjectCreationExpr(null, t.get(PartNode.class),
+				Utils.list(path == null ? new NullLiteralExpr() : Utils.byteArray(PathTree.encodePart(path)),
+						childs.isEmpty() ? new NullLiteralExpr() : Utils.array(t.get(PartNode.class), childs), new NullLiteralExpr(),
+						ends.isEmpty() ? new NullLiteralExpr() : Utils.array(t.get(Node.class), ends), exact, def));
 	}
 
 	private static String buildChains(BlockStmt b, Collection<SD> chains, SD s, TypeCache t, Map<Object, NameExpr> names, Set<String> created) {
@@ -233,7 +232,8 @@ public class CreateServletManager extends Builder {
 			v.add(new ObjectCreationExpr(null, t.get(FilterChainImpl.ChangePath.class),
 					Utils.list(new StringLiteralExpr(path), new NameExpr(buildChains(b, descriptor.findFilters(path, DispatcherType.ERROR), s, t, names, created)))));
 		}
-		return new ObjectCreationExpr(null, t.get(IntArrayMap.class, TypeCache.EMPTY), Utils.list(Utils.array(PrimitiveType.intType(), k), Utils.array(t.get(FilterChain.class), v)));
+		return new ObjectCreationExpr(null, t.get(IntArrayMap.class, TypeCache.EMPTY),
+				Utils.list(Utils.array(PrimitiveType.intType(), k), Utils.array(t.get(FilterChain.class), v)));
 	}
 
 	private static ObjectCreationExpr errorClass(BlockStmt b, Descriptor descriptor, TypeCache t, Map<Object, NameExpr> names, Set<String> created) {
@@ -247,10 +247,12 @@ public class CreateServletManager extends Builder {
 			if (s == null || e.isEmpty())
 				continue;
 			k.add(new ClassExpr(t.get(e.toString())));
-			v.add(new ObjectCreationExpr(null, t.get(FilterChainImpl.ChangePath.class), Utils.list(new StringLiteralExpr(path),
-					new NameExpr(buildChains(b, descriptor.findFilters(path, DispatcherType.ERROR), s, t, names, created)))));
+			v.add(new ObjectCreationExpr(null, t.get(FilterChainImpl.ChangePath.class),
+					Utils.list(new StringLiteralExpr(path), new NameExpr(buildChains(b, descriptor.findFilters(path, DispatcherType.ERROR), s, t, names, created)))));
 		}
-		LambdaExpr cmp = new LambdaExpr(Utils.list(new Parameter(TypeCache.EMPTY, "a"), new Parameter(TypeCache.EMPTY, "b")), new MethodCallExpr(new MethodCallExpr(Names.a, "getName"), "compareTo", Utils.list(new MethodCallExpr(Names.b, "getName"))));
-		return new ObjectCreationExpr(null, t.get(ObjectArrayMap.class, TypeCache.EMPTY), Utils.list(Utils.array(t.get(Class.class), k), Utils.array(t.get(FilterChain.class), v), cmp));
+		LambdaExpr cmp = new LambdaExpr(Utils.list(new Parameter(TypeCache.EMPTY, "a"), new Parameter(TypeCache.EMPTY, "b")),
+				new MethodCallExpr(new MethodCallExpr(Names.a, "getName"), "compareTo", Utils.list(new MethodCallExpr(Names.b, "getName"))));
+		return new ObjectCreationExpr(null, t.get(ObjectArrayMap.class, TypeCache.EMPTY),
+				Utils.list(Utils.array(t.get(Class.class), k), Utils.array(t.get(FilterChain.class), v), cmp));
 	}
 }
