@@ -63,6 +63,13 @@ public interface XmlType {
 	SchemaData schema();
 
 	/**
+	 * @return true if java type is primitive
+	 */
+	default boolean isPrimitive() {
+		return false;
+	}
+
+	/**
 	 * @return true if this type is simple
 	 */
 	default boolean isSimple() {

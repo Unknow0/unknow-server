@@ -53,6 +53,11 @@ public class XmlTypePrimitive implements XmlType {
 	}
 
 	@Override
+	public boolean isPrimitive() {
+		return clazz.isPrimitive();
+	}
+
+	@Override
 	public SchemaData schema() {
 		return schema;
 	}

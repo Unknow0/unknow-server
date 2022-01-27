@@ -31,6 +31,11 @@ public class XmlTypeWrapper implements XmlType {
 	}
 
 	@Override
+	public boolean isPrimitive() {
+		return delegate.isPrimitive();
+	}
+
+	@Override
 	public Expression convert(TypeCache types, Expression v) {
 		return delegate.convert(types, v);
 	}

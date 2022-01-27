@@ -302,8 +302,8 @@ public class XmlTypeLoader {
 				if (ai < 0 && bi < 0)
 					return 0; // TODO default ordering @XmlAccessorOrder
 				if (bi < 0)
-					return 1;
-				return -1;
+					return -1;
+				return 1;
 			});
 		}
 		return new XmlObject(c.resolve().getQualifiedName(), factory, attrs, elems, value, getSchema(c));
