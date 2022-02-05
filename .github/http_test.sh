@@ -3,7 +3,7 @@
 URL=http://127.0.0.1:8080
 
 die() { echo $@; exit 1; }
-http_code() { curl -s -w '%{http_code}' "$URL$1"; }
+http_code() { curl -o /dev/null -s -w '%{http_code}' "$URL$1"; }
 post() { curl -s -XPOST -d@".github/$1" $URL/ws -o out.xml -w '%{http_code}'; }
 
 xml_parse()
