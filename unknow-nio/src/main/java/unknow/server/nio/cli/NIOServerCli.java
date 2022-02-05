@@ -41,7 +41,7 @@ public class NIOServerCli implements Callable<Integer> {
 
 	/** number of io thread to use, default to the number of CPU */
 	@Option(names = "--iothread", description = "number of io thread to use, default to the number of CPU", descriptionKey = "iothread")
-	public int iothread = Runtime.getRuntime().availableProcessors();
+	public int iothread = Math.max(1, Runtime.getRuntime().availableProcessors() / 4);
 
 	/** server listener */
 	@Option(names = "--listener", description = "set the listener, default to NOP", descriptionKey = "listener", converter = NIOListenerConverter.class)
@@ -49,7 +49,7 @@ public class NIOServerCli implements Callable<Integer> {
 
 	/** selectionTime */
 	@Option(names = "--selecttime", description = "timeout on Selector.select, 0=unlimited", descriptionKey = "selecttime")
-	public long selectTime = 0;
+	public long selectTime = 200;
 
 	/** shutdown port */
 	@Option(names = "--shutdown-port", description = "port to open to gracefuly shutdown the server", descriptionKey = "shutdown-port")

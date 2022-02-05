@@ -159,11 +159,10 @@ public abstract class Handler {
 	}
 
 	/**
-	 * return true if this handler is in idle state
-	 * we should keep it open but we can close it at anytime
+	 * return true if this handler is in idle state we should keep it open but we can close it at anytime
 	 */
 	public boolean isIdle() {
-		return false;
+		return true;
 	}
 
 	/**

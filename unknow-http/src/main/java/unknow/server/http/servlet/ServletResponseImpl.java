@@ -101,6 +101,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 		cookies = new ArrayList<>();
 
 		status = 200;
+		addHeader("connection", "close");
 	}
 
 	public final boolean isCommited() {
@@ -351,6 +352,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 		resetBuffer();
 		status = 200;
 		headers.clear();
+		addHeader("connection", "close");
 		servletOut = null;
 	}
 
@@ -448,12 +450,12 @@ public class ServletResponseImpl implements HttpServletResponse {
 		name = name.toLowerCase();
 		List<String> list = headers.get(name);
 		if (list == null)
-			headers.put(name, list = new ArrayList<>(0));
+			headers.put(name, list = new ArrayList<>(1));
 		else
 			list.clear();
 		list.add(value);
 		if ("connection".equals(name))
-			shouldClose = "close".equalsIgnoreCase(value);
+			shouldClose = !"keep-alive".equalsIgnoreCase(value);
 	}
 
 	@Override
@@ -461,10 +463,10 @@ public class ServletResponseImpl implements HttpServletResponse {
 		name = name.toLowerCase();
 		List<String> list = headers.get(name);
 		if (list == null)
-			headers.put(name, list = new ArrayList<>(0));
+			headers.put(name, list = new ArrayList<>(1));
 		list.add(value);
 		if ("connection".equals(name))
-			shouldClose = "close".equalsIgnoreCase(value);
+			shouldClose = !"keep-alive".equalsIgnoreCase(value);
 	}
 
 	@Override

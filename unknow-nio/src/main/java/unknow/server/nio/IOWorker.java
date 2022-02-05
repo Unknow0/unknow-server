@@ -39,7 +39,6 @@ public class IOWorker extends Thread {
 	 * create new IOWorker
 	 * 
 	 * @param id       the worker id
-	 * @param handlers handlers factory
 	 * @param listener listener to use
 	 * @param timeout  the timeout on select
 	 * @throws IOException
@@ -55,7 +54,7 @@ public class IOWorker extends Thread {
 	/**
 	 * register a new socket to this thread
 	 * 
-	 * @param socket the socket to register
+	 * @param socket  the socket to register
 	 * @param handler the handler
 	 * @throws IOException
 	 */
@@ -134,18 +133,21 @@ public class IOWorker extends Thread {
 			Handler h = (Handler) key.attachment();
 			SocketChannel channel = (SocketChannel) key.channel();
 
+			if (key.isValid() && key.isWritable()) {
+				try {
+					h.writeInto(channel, buf);
+				} catch (IOException e) {
+					log.error("failed to write", h, e);
+					channel.close();
+				}
+			}
+
 			// Tests whether this key's channel is ready to accept a new socket connection
 			if (key.isValid() && key.isReadable()) {
 				try {
 					h.readFrom(channel, buf);
 				} catch (IOException e) {
-					channel.close();
-				}
-			}
-			if (key.isValid() && key.isWritable()) {
-				try {
-					h.writeInto(channel, buf);
-				} catch (IOException e) {
+					log.error("failed to read {}", h, e);
 					channel.close();
 				}
 			}

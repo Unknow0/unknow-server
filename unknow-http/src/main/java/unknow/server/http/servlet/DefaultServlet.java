@@ -48,6 +48,9 @@ public class DefaultServlet extends HttpServlet {
 			return;
 		}
 
+		Integer code = (Integer) req.getAttribute("javax.servlet.error.status_code");
+		if (code != null)
+			resp.setStatus(code);
 		resp.setContentLengthLong(r.getSize());
 		resp.setContentType(getServletContext().getMimeType(req.getServletPath()));
 		// TODO add cache config

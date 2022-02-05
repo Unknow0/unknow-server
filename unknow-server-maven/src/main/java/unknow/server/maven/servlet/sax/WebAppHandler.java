@@ -70,6 +70,7 @@ public class WebAppHandler implements SaxHandler<Context> {
 		@Override
 		public void endElement(String uri, String name, Context context) {
 			context.descriptor.name = context.textContent();
+			context.previous();
 		}
 	};
 
@@ -104,12 +105,6 @@ public class WebAppHandler implements SaxHandler<Context> {
 		public void startElement(String ns, String name, Context context) {
 			if ("init-param".equals(name))
 				context.next(INIT_PARAM);
-		}
-
-		@Override
-		public void attributes(String uri, String name, Attributes atts, Context context) {
-			if ("filter".equals(name))
-				context.push(new SD(context.descriptor.filters.size()));
 		}
 
 		@Override

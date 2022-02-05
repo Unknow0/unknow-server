@@ -86,8 +86,6 @@ public class HttpHandler extends Handler implements Runnable {
 
 	@Override
 	protected void handle(InputStream in, OutputStream out) {
-		if (step == CONTENT)
-			return;
 		if (step == METHOD)
 			tryRead(SPACE, MAX_METHOD_SIZE, PATH, HttpError.BAD_REQUEST);
 		if (step == PATH) {
@@ -126,7 +124,7 @@ public class HttpHandler extends Handler implements Runnable {
 			if (k == -2)
 				error(HttpError.HEADER_TOO_LARGE);
 		}
-		if (step == CONTENT)
+		if (step == CONTENT && f == null)
 			f = executor.submit(this);
 	}
 
@@ -386,20 +384,29 @@ public class HttpHandler extends Handler implements Runnable {
 	public void run() {
 		try {
 			processor.process(this);
-			synchronized (this) {
-				pendingRead.clear();
-				meta.clear();
-				headerCount = last = 0;
-				step = METHOD;
-			}
+			cleanup();
 		} catch (Exception e) {
+			log.error("", e);
+		} finally {
 			try {
 				getOut().close();
-			} catch (IOException e1) {
-				e.addSuppressed(e1);
+			} catch (IOException e) { // OK
 			}
-			log.error("", e);
 		}
+	}
+
+	private void cleanup() {
+		synchronized (this) {
+			meta.clear();
+			headerCount = last = 0;
+			step = METHOD;
+			f = null;
+		}
+	}
+
+	@Override
+	public boolean isIdle() {
+		return f == null;
 	}
 
 	@Override
@@ -417,15 +424,10 @@ public class HttpHandler extends Handler implements Runnable {
 
 	@Override
 	public void reset() {
-		synchronized (this) {
-			super.reset();
-			meta.clear();
-			headerCount = last = 0;
-			step = METHOD;
-			if (f != null)
-				f.cancel(true);
-			f = null;
-		}
+		super.reset();
+		if (f != null)
+			f.cancel(true);
+		cleanup();
 	}
 
 	public int pathStart() {
