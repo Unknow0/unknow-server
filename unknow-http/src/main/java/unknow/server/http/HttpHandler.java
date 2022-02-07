@@ -459,6 +459,7 @@ public class HttpHandler extends Handler implements Runnable {
 					r = DECODER.decode(DECODE_BB, DECODE_CB, true);
 				}
 				sb.append(DECODE_CB.array(), 0, DECODE_CB.position());
+				DECODE_BB.compact();
 			}
 			if (i >= 0) {
 				b.toString(sb, o, i++ - o);
