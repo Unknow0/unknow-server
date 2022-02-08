@@ -386,7 +386,7 @@ public class HttpHandler extends Handler implements Runnable {
 			processor.process(this);
 			cleanup();
 		} catch (Exception e) {
-			log.error("", e);
+			log.error("processor error", e);
 		} finally {
 			try {
 				getOut().close();
@@ -396,12 +396,10 @@ public class HttpHandler extends Handler implements Runnable {
 	}
 
 	private void cleanup() {
-		synchronized (this) {
-			meta.clear();
-			headerCount = last = 0;
-			step = METHOD;
-			f = null;
-		}
+		meta.clear();
+		headerCount = last = 0;
+		step = METHOD;
+		f = null;
 	}
 
 	@Override
@@ -411,7 +409,7 @@ public class HttpHandler extends Handler implements Runnable {
 
 	@Override
 	public boolean isClosed() {
-		if ((f == null || f.isDone()) && super.isClosed())
+		if (f == null && super.isClosed())
 			return true;
 		if (keepAliveIdle > 0) {
 			long e = System.currentTimeMillis() - keepAliveIdle;

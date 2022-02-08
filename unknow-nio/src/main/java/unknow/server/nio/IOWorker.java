@@ -78,10 +78,10 @@ public class IOWorker extends Thread {
 					for (SelectionKey key : selector.keys()) {
 						Handler h = (Handler) key.attachment();
 						if (!key.isValid() || h.isClosed()) {
+							listener.closed(id, h);
 							h.free();
 							key.cancel();
 							key.channel().close();
-							listener.closed(id, h);
 						}
 					}
 				}

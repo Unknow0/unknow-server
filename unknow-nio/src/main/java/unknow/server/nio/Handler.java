@@ -32,7 +32,7 @@ public abstract class Handler {
 	private final InputStream in = new BuffersInputStream(pendingRead);
 
 	/** Output stream */
-	private Out out = new Out(this);
+	private Out out;
 
 	/** selection key */
 	private SelectionKey key;
@@ -47,6 +47,7 @@ public abstract class Handler {
 	void attach(SelectionKey key) {
 		key.attach(this);
 		this.key = key;
+		this.out = new Out(this);
 		lastRead = lastWrite = System.currentTimeMillis();
 	}
 
@@ -181,7 +182,6 @@ public abstract class Handler {
 			out.close();
 		} catch (IOException e) { // OK
 		}
-		out = new Out(this);
 		pendingWrite.clear();
 		pendingRead.clear();
 	}
