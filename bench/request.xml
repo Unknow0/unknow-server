@@ -1,7 +1,0 @@
-<e:Envelope xmlns:e="http://schemas.xmlsoap.org/soap/envelope/">
-        <e:Body>
-                <Root xmlns="http://webservice.unknow" value="4">
-                        <elem>content</elem>
-                </Root>
-        </e:Body>
-</e:Envelope>
