@@ -19,11 +19,18 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
+import javax.servlet.DispatcherType;
+import javax.servlet.FilterChain;
 import javax.servlet.http.Cookie;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import unknow.server.http.servlet.ServletContextImpl;
+import unknow.server.http.servlet.ServletRequestImpl;
+import unknow.server.http.servlet.ServletResponseImpl;
+import unknow.server.http.utils.EventManager;
+import unknow.server.http.utils.ServletManager;
 import unknow.server.nio.Handler;
 import unknow.server.nio.HandlerFactory;
 import unknow.server.nio.util.Buffers;
@@ -58,8 +65,11 @@ public class HttpHandler extends Handler implements Runnable {
 	private static final int CONTENT = 5;
 
 	private final ExecutorService executor;
-	private final HttpRawProcessor processor;
 	private final int keepAliveIdle;
+
+	private final ServletContextImpl ctx;
+	private final ServletManager servlets;
+	private final EventManager events;
 
 	private int step = METHOD;
 	private int last = 0;
@@ -75,10 +85,12 @@ public class HttpHandler extends Handler implements Runnable {
 	/**
 	 * create new RequestBuilder
 	 */
-	public HttpHandler(HandlerFactory factory, ExecutorService executor, HttpRawProcessor processor, int keepAliveIdle) {
+	public HttpHandler(HandlerFactory factory, ExecutorService executor, ServletContextImpl ctx, int keepAliveIdle) {
 		super(factory);
 		this.executor = executor;
-		this.processor = processor;
+		this.ctx = ctx;
+		this.servlets = ctx.getServletManager();
+		this.events = ctx.getEvents();
 		this.keepAliveIdle = keepAliveIdle;
 		meta = new Buffers();
 		sb = new StringBuilder();
@@ -383,11 +395,28 @@ public class HttpHandler extends Handler implements Runnable {
 	@Override
 	public void run() {
 		try {
-			processor.process(this);
-			cleanup();
+			ServletResponseImpl res = new ServletResponseImpl(ctx, getOut(), this);
+			ServletRequestImpl req = new ServletRequestImpl(ctx, this, DispatcherType.REQUEST, res);
+			events.fireRequestInitialized(req);
+			FilterChain s = servlets.find(req);
+			if (s != null)
+				try {
+					s.doFilter(req, res);
+				} catch (Exception e) {
+					log.error("failed to service '{}'", s, e);
+					if (!res.isCommited())
+						res.sendError(500, null);
+				}
+			else
+				res.sendError(404, null);
+			events.fireRequestDestroyed(req);
+			if (res.getHeader("connection") == null && req.getHeader("connection") != null)
+				res.setHeader("connection", req.getHeader("connection"));
+			res.close();
 		} catch (Exception e) {
 			log.error("processor error", e);
 		} finally {
+			cleanup();
 			try {
 				getOut().close();
 			} catch (IOException e) { // OK

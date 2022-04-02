@@ -6,9 +6,9 @@ package unknow.server.maven.servlet;
 import com.github.javaparser.ast.expr.NameExpr;
 
 public final class Names {
-	public static final NameExpr CTX = new NameExpr("CTX");
-	public static final NameExpr SERVLETS = new NameExpr("SERVLETS");
-	public static final NameExpr EVENTS = new NameExpr("EVENTS");
+	public static final NameExpr CTX = new NameExpr("ctx");
+	public static final NameExpr SERVLETS = new NameExpr("servlets");
+	public static final NameExpr EVENTS = new NameExpr("events");
 	public static final NameExpr log = new NameExpr("log");
 
 	public static final NameExpr initParam = new NameExpr("initParam");

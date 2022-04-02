@@ -22,8 +22,6 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.xml.sax.InputSource;
 
 import com.github.javaparser.JavaParser;
@@ -32,51 +30,34 @@ import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
-import com.github.javaparser.ast.comments.JavadocComment;
-import com.github.javaparser.ast.expr.ClassExpr;
-import com.github.javaparser.ast.expr.FieldAccessExpr;
-import com.github.javaparser.ast.expr.IntegerLiteralExpr;
-import com.github.javaparser.ast.expr.MethodCallExpr;
-import com.github.javaparser.ast.expr.StringLiteralExpr;
-import com.github.javaparser.ast.expr.TypeExpr;
 import com.github.javaparser.symbolsolver.JavaSymbolSolver;
 import com.github.javaparser.symbolsolver.model.resolution.TypeSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver;
 
-import picocli.CommandLine.Option;
 import unknow.sax.SaxParser;
-import unknow.server.http.HttpRawProcessor;
+import unknow.server.http.AbstractHttpServer;
 import unknow.server.http.servlet.DefaultServlet;
-import unknow.server.http.servlet.ServletContextImpl;
-import unknow.server.http.utils.EventManager;
 import unknow.server.http.utils.Resource;
-import unknow.server.http.utils.ServletManager;
 import unknow.server.maven.Output;
 import unknow.server.maven.TypeCache;
-import unknow.server.maven.Utils;
 import unknow.server.maven.servlet.Builder.BuilderContext;
-import unknow.server.maven.servlet.builder.Call;
-import unknow.server.maven.servlet.builder.Constructor;
 import unknow.server.maven.servlet.builder.CreateContext;
 import unknow.server.maven.servlet.builder.CreateEventManager;
 import unknow.server.maven.servlet.builder.CreateServletManager;
 import unknow.server.maven.servlet.builder.Initialize;
-import unknow.server.maven.servlet.builder.LoadInitializer;
 import unknow.server.maven.servlet.builder.Main;
-import unknow.server.maven.servlet.builder.Process;
 import unknow.server.maven.servlet.descriptor.Descriptor;
 import unknow.server.maven.servlet.descriptor.SD;
 import unknow.server.maven.servlet.sax.Context;
-import unknow.server.nio.cli.NIOServerCli;
 
 /**
  * @author unknow
  */
 @Mojo(defaultPhase = LifecyclePhase.GENERATE_SOURCES, name = "servlet-generator", requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
 public class ServletServerGen extends AbstractMojo implements BuilderContext {
-	private static final List<Builder> BUILDER = Arrays.asList(new Constructor(), new CreateEventManager(), new CreateServletManager(), new CreateContext(), new LoadInitializer(), new Initialize(), new Process(), new Call(), new Main());
+	private static final List<Builder> BUILDER = Arrays.asList(new CreateEventManager(), new CreateServletManager(), new CreateContext(), new Initialize(), new Main());
 
 	private final CompilationUnit cu = new CompilationUnit();
 
@@ -194,51 +175,19 @@ public class ServletServerGen extends AbstractMojo implements BuilderContext {
 
 		// generate class
 		types = new TypeCache(cu, existingClass);
-		generateClass();
+
+		if (packageName != null && !packageName.isEmpty())
+			cu.setPackageDeclaration(packageName);
+		cl = cu.addClass(className, Modifier.Keyword.FINAL).addExtendedType(AbstractHttpServer.class);
+
+		for (Builder b : BUILDER)
+			b.add(this);
 
 		try {
 			new Output(output, packageName).save(cu);
 		} catch (IOException e) {
 			throw new MojoFailureException("failed to save output class", e);
 		}
-	}
-
-	private void generateClass() {
-		if (packageName != null && !packageName.isEmpty())
-			cu.setPackageDeclaration(packageName);
-		cl = cu.addClass(className, Modifier.Keyword.FINAL).addExtendedType(NIOServerCli.class).addImplementedType(HttpRawProcessor.class);
-		cl.addFieldWithInitializer(types.get(Logger.class), "log", new MethodCallExpr(new TypeExpr(types.get(LoggerFactory.class)), "getLogger", Utils.list(new ClassExpr(types.get(cl)))), Modifier.Keyword.PRIVATE, Modifier.Keyword.STATIC, Modifier.Keyword.FINAL);
-
-		cl.addField(types.get(String.class), "vhost")
-				.setJavadocComment(new JavadocComment("public vhost seen be the servlet (default to the binded address)")).addAndGetAnnotation(Option.class)
-				.addPair("names", new StringLiteralExpr("--vhost")).addPair("description", new StringLiteralExpr("public vhost seen be the servlet (default to the binded address)"))
-				.addPair("descriptionKey", new StringLiteralExpr("vhost"));
-
-		cl.addFieldWithInitializer(types.get(int.class), "execMin", new IntegerLiteralExpr("0"))
-				.setJavadocComment(new JavadocComment("min number of execution thread to use, default to 0")).addAndGetAnnotation(Option.class)
-				.addPair("names", new StringLiteralExpr("--exec-min")).addPair("description", new StringLiteralExpr("min number of exec thread to use, default to 0"))
-				.addPair("descriptionKey", new StringLiteralExpr("exec-min"));
-		cl.addFieldWithInitializer(types.get(int.class), "execMax", new FieldAccessExpr(new TypeExpr(types.get(Integer.class)), "MAX_VALUE"))
-				.setJavadocComment(new JavadocComment("max number of execution thread to use, default to Integer.MAX_VALUE")).addAndGetAnnotation(Option.class)
-				.addPair("names", new StringLiteralExpr("--exec-max"))
-				.addPair("description", new StringLiteralExpr("max number of exec thread to use, default to Integer.MAX_VALUE"))
-				.addPair("descriptionKey", new StringLiteralExpr("exec-max"));
-		cl.addFieldWithInitializer(types.get(long.class), "execIdle", new IntegerLiteralExpr("60L"))
-				.setJavadocComment(new JavadocComment("max idle time for exec thread, default to 60")).addAndGetAnnotation(Option.class)
-				.addPair("names", new StringLiteralExpr("--exec-idle")).addPair("description", new StringLiteralExpr("max idle time for exec thread, default to 60"))
-				.addPair("descriptionKey", new StringLiteralExpr("exec-idle"));
-		cl.addFieldWithInitializer(types.get(int.class), "keepAliveIdle", new IntegerLiteralExpr("-1"))
-				.setJavadocComment(new JavadocComment("max time to keep idle keepalive connection, default to -1")).addAndGetAnnotation(Option.class)
-				.addPair("names", new StringLiteralExpr("--keep-alive-idle"))
-				.addPair("description", new StringLiteralExpr("max time to keep idle keepalive connection, default to -1"))
-				.addPair("descriptionKey", new StringLiteralExpr("keep-alive-idle"));
-
-		cl.addField(types.get(ServletManager.class), "SERVLETS", Modifier.Keyword.PRIVATE, Modifier.Keyword.FINAL);
-		cl.addField(types.get(EventManager.class), "EVENTS", Modifier.Keyword.PRIVATE, Modifier.Keyword.FINAL);
-		cl.addField(types.get(ServletContextImpl.class), "CTX", Modifier.Keyword.PRIVATE, Modifier.Keyword.FINAL);
-
-		for (Builder b : BUILDER)
-			b.add(this);
 	}
 
 	@Override

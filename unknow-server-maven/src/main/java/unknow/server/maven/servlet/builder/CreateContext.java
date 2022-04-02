@@ -31,7 +31,8 @@ public class CreateContext extends Builder {
 	public void add(BuilderContext ctx) {
 		TypeCache t = ctx.type();
 
-		ctx.self().addMethod("createContext", Modifier.Keyword.PRIVATE, Modifier.Keyword.FINAL).setType(t.get(ServletContextImpl.class))
+		ctx.self().addMethod("createContext", Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL).setType(t.get(ServletContextImpl.class))
+				.addMarkerAnnotation(Override.class)
 				.getBody().get()
 				.addStatement(new IfStmt(
 						new BinaryExpr(new NameExpr("vhost"), new NullLiteralExpr(), Operator.EQUALS),

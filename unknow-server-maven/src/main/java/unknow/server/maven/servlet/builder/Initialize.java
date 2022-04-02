@@ -35,7 +35,8 @@ public class Initialize extends Builder {
 		Collections.sort(ctx.descriptor().servlets, (a, b) -> a.loadOnStartup - b.loadOnStartup);
 
 		TypeCache t = ctx.type();
-		BlockStmt b = ctx.self().addMethod("initialize", Modifier.Keyword.PRIVATE, Modifier.Keyword.FINAL).addThrownException(t.get(ServletException.class))
+		BlockStmt b = ctx.self().addMethod("initialize", Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL).addThrownException(t.get(ServletException.class))
+				.addMarkerAnnotation(Override.class)
 				.getBody().get();
 		if (!ctx.descriptor().servlets.isEmpty()) {
 			b.addStatement(Utils.assign(t.array(Servlet.class), "s", new MethodCallExpr(Names.SERVLETS, "getServlets")));

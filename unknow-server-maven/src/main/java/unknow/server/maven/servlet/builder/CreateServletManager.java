@@ -66,7 +66,9 @@ public class CreateServletManager extends Builder {
 	public void add(BuilderContext ctx) {
 		Descriptor descriptor = ctx.descriptor();
 		TypeCache types = ctx.type();
-		BlockStmt b = ctx.self().addMethod("createServletManager", Modifier.Keyword.PRIVATE, Modifier.Keyword.FINAL).setType(types.get(ServletManager.class)).getBody().get();
+		BlockStmt b = ctx.self().addMethod("createServletManager", Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL).setType(types.get(ServletManager.class))
+				.addMarkerAnnotation(Override.class)
+				.getBody().get();
 
 		NodeList<Expression> servlets = new NodeList<>();
 		NodeList<Expression> filters = new NodeList<>();

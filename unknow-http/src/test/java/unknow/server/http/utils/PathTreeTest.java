@@ -18,9 +18,9 @@ import javax.servlet.ServletResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.mockito.stubbing.Answer;
 
 import unknow.server.http.HttpHandler;
+import unknow.server.http.servlet.ServletContextImpl;
 import unknow.server.http.utils.PathTree.Node;
 import unknow.server.http.utils.PathTree.PartNode;
 
@@ -32,7 +32,8 @@ public class PathTreeTest {
 
 	@BeforeEach
 	public void init() {
-		mock = mock(HttpHandler.class, withSettings().defaultAnswer(Mockito.CALLS_REAL_METHODS).useConstructor(null, null, null, -1));
+		ServletContextImpl ctx = mock(ServletContextImpl.class);
+		mock = mock(HttpHandler.class, withSettings().defaultAnswer(Mockito.CALLS_REAL_METHODS).useConstructor(null, null, ctx, -1));
 		Mockito.when(mock.pathStart()).thenReturn(0);
 	}
 
