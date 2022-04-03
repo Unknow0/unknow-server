@@ -26,3 +26,8 @@ jobs:
         JMETER: "${{github.workspace}}/jmeter/bin/jmeter"
     - name: result
       run: bash bench/result.sh out/*
+
+    - uses: actions/upload-artifact@v3
+	  with: |
+	    ${{github.workspace}}/tomcat/logs
+		out

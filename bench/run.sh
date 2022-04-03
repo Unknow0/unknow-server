@@ -12,7 +12,8 @@ unknow_stop() {
 }
 tomcat_start() {
 	cp unknow-http-test/target/*.war $CATALINA_HOME/webapps/ROOT.war || exit 1
-	$CATALINA_HOME/bin/catalina.sh run >/dev/null 2>/dev/null || exit 1 &
+	$CATALINA_HOME/bin/catalina.sh run >$CATALINA_HOME/logs/out.log 2>/dev/null || exit 1 &
+	
 	pid=$!
 	sleep 10
 }

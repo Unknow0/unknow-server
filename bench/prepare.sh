@@ -9,4 +9,4 @@ mkdir -p jmeter
 wget -O -  https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-$VER.tgz | tar xz --strip-components=1 -C jmeter
 
 # avoid goiing out of ephemeral port
-sysctl net.ipv4.tcp_tw_reuse=1
+sudo sysctl net.ipv4.tcp_tw_reuse=1

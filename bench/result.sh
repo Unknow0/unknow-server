@@ -29,7 +29,7 @@ parse()
 	done < "$1"
 	}
 
-for i in "$@"; do parse "$i"; done
+for i in $1/*; do parse "$i"; done
 
 echo
 echo 'throughput:'
