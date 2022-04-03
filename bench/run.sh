@@ -11,11 +11,13 @@ unknow_stop() {
 	sleep 2
 }
 tomcat_start() {
+	ls -lh unknow-http-test/target/*.war
 	cp unknow-http-test/target/*.war $CATALINA_HOME/webapps/ROOT.war || exit 1
-	$CATALINA_HOME/bin/catalina.sh run >$CATALINA_HOME/logs/out.log 2>/dev/null || exit 1 &
+	$CATALINA_HOME/bin/catalina.sh run >/dev/null 2>/dev/null || exit 1 &
 	
 	pid=$!
 	sleep 10
+	ls -lh unknow-http-test/target/*.war
 }
 tomcat_stop() {
 	$CATALINA_HOME/bin/shutdown.sh
@@ -26,7 +28,7 @@ tomcat_stop() {
 }
 
 mkdir out
-trap 'rm -rf out; [[ "$pid" ]] && kill -9 $pid' EXIT
+trap '[[ "$pid" ]] && kill -9 $pid' EXIT
 
 for i in tomcat unknow
 do
