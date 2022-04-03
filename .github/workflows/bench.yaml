@@ -25,9 +25,11 @@ jobs:
         CATALINA_HOME: "${{github.workspace}}/tomcat/"
         JMETER: "${{github.workspace}}/jmeter/bin/jmeter"
     - name: result
-      run: bash bench/result.sh out/*
+      run: bash bench/result.sh out
 
     - uses: actions/upload-artifact@v3
-      with: |
-        ${{github.workspace}}/tomcat/logs
-        out
+      with: 
+        name: logs
+        path: |
+          ${{github.workspace}}/tomcat/logs
+          out
