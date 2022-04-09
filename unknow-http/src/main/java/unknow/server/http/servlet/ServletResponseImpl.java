@@ -71,7 +71,6 @@ public class ServletResponseImpl implements HttpServletResponse {
 	private Output servletOut;
 
 	private boolean commited = false;
-	private boolean shouldClose = false;
 
 	private int status;
 	private Charset charset;
@@ -101,7 +100,6 @@ public class ServletResponseImpl implements HttpServletResponse {
 		cookies = new ArrayList<>();
 
 		status = 200;
-		addHeader("connection", "close");
 	}
 
 	public final boolean isCommited() {
@@ -198,10 +196,6 @@ public class ServletResponseImpl implements HttpServletResponse {
 		if (servletOut != null)
 			servletOut.close();
 		commit();
-		if (shouldClose)
-			out.close();
-		else
-			out.flush();
 	}
 
 	public void sendError(int sc, Throwable t, String msg) throws IOException {
@@ -352,7 +346,6 @@ public class ServletResponseImpl implements HttpServletResponse {
 		resetBuffer();
 		status = 200;
 		headers.clear();
-		addHeader("connection", "close");
 		servletOut = null;
 	}
 
@@ -454,8 +447,6 @@ public class ServletResponseImpl implements HttpServletResponse {
 		else
 			list.clear();
 		list.add(value);
-		if ("connection".equals(name))
-			shouldClose = !"keep-alive".equalsIgnoreCase(value);
 	}
 
 	@Override
@@ -465,8 +456,6 @@ public class ServletResponseImpl implements HttpServletResponse {
 		if (list == null)
 			headers.put(name, list = new ArrayList<>(1));
 		list.add(value);
-		if ("connection".equals(name))
-			shouldClose = !"keep-alive".equalsIgnoreCase(value);
 	}
 
 	@Override

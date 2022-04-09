@@ -394,9 +394,16 @@ public class HttpHandler extends Handler implements Runnable {
 
 	@Override
 	public void run() {
+		boolean close = false;
 		try {
 			ServletResponseImpl res = new ServletResponseImpl(ctx, getOut(), this);
 			ServletRequestImpl req = new ServletRequestImpl(ctx, this, DispatcherType.REQUEST, res);
+			if ("100-continue".equals(req.getHeader("expect"))) {
+				getOut().write(HttpError.CONTINUE.encoded);
+				getOut().write(CRLF);
+				getOut().flush();
+			}
+			close = keepAliveIdle <= 0 || !"keep-alive".equalsIgnoreCase(req.getHeader("connection"));
 			events.fireRequestInitialized(req);
 			FilterChain s = servlets.find(req);
 			if (s != null)
@@ -410,17 +417,19 @@ public class HttpHandler extends Handler implements Runnable {
 			else
 				res.sendError(404, null);
 			events.fireRequestDestroyed(req);
-			if (res.getHeader("connection") == null && req.getHeader("connection") != null)
-				res.setHeader("connection", req.getHeader("connection"));
+			String connection = res.getHeader("connection");
+			if (!close && connection != null && !"keep-alive".equals(connection))
+				close = true;
 			res.close();
 		} catch (Exception e) {
 			log.error("processor error", e);
 		} finally {
+			if (close)
+				try {
+					getOut().close();
+				} catch (IOException e) { // OK
+				}
 			cleanup();
-			try {
-				getOut().close();
-			} catch (IOException e) { // OK
-			}
 		}
 	}
 

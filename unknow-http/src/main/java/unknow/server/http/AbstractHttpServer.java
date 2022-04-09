@@ -2,7 +2,7 @@ package unknow.server.http;
 
 import java.util.ServiceLoader;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -47,7 +47,7 @@ public abstract class AbstractHttpServer extends NIOServerCli {
 	 * max time to keep idle keepalive connection, default to -1
 	 */
 	@Option(names = "--keep-alive-idle", description = "max time to keep idle keepalive connection, default to -1", descriptionKey = "keep-alive-idle")
-	public int keepAliveIdle = -1;
+	public int keepAliveIdle = 2000;
 
 	protected final ServletContextImpl ctx;
 	protected final ServletManager servlets;
@@ -75,13 +75,12 @@ public abstract class AbstractHttpServer extends NIOServerCli {
 
 	@Override()
 	public final Integer call() throws Exception {
-		ExecutorService executor = new ThreadPoolExecutor(execMin, execMax, execIdle, TimeUnit.SECONDS, new SynchronousQueue<Runnable>(), r -> {
+		ExecutorService executor = new ThreadPoolExecutor(execMin, execMax, execIdle, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), r -> {
 			Thread t = new Thread(r);
 			t.setDaemon(true);
 			return t;
 		});
 		handler = new HandlerFactory() {
-
 			@Override()
 			protected final Handler create() {
 				return new HttpHandler(this, executor, ctx, keepAliveIdle);
