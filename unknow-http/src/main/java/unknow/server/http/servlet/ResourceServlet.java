@@ -12,25 +12,20 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import unknow.server.http.utils.ArrayMap;
-import unknow.server.http.utils.Resource;
 import unknow.server.nio.util.Buffers.Chunk;
 
 /**
  * @author unknow
  */
-public class DefaultServlet extends HttpServlet {
+public class ResourceServlet extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 
-	private final ArrayMap<Resource> resources;
+	private final long lastModified;
+	private final long size;
 
-	/**
-	 * create new DefaultServlet
-	 * 
-	 * @param resources all accessible resources
-	 */
-	public DefaultServlet(ArrayMap<Resource> resources) {
-		this.resources = resources;
+	public ResourceServlet(long lastModified, long size) {
+		this.lastModified = lastModified;
+		this.size = size;
 	}
 
 	/**
@@ -42,16 +37,10 @@ public class DefaultServlet extends HttpServlet {
 	 * @throws IOException
 	 */
 	private void process(HttpServletRequest req, HttpServletResponse resp, boolean content) throws IOException {
-		Resource r = resources.get(req.getServletPath());
-		if (r == null) {
-			resp.sendError(404);
-			return;
-		}
-
 		Integer code = (Integer) req.getAttribute("javax.servlet.error.status_code");
 		if (code != null)
 			resp.setStatus(code);
-		resp.setContentLengthLong(r.getSize());
+		resp.setContentLengthLong(size);
 		resp.setContentType(getServletContext().getMimeType(req.getServletPath()));
 		// TODO add cache config
 
@@ -84,7 +73,6 @@ public class DefaultServlet extends HttpServlet {
 
 	@Override
 	protected long getLastModified(HttpServletRequest req) {
-		Resource resource = resources.get(req.getServletPath());
-		return resource == null ? -1 : resource.getLastModified();
+		return lastModified;
 	}
 }

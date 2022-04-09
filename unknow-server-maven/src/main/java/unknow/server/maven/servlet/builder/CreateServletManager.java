@@ -39,10 +39,9 @@ import com.github.javaparser.ast.stmt.ReturnStmt;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.PrimitiveType;
 
-import unknow.server.http.servlet.DefaultServlet;
 import unknow.server.http.servlet.FilterChainImpl;
 import unknow.server.http.servlet.FilterChainImpl.ServletFilter;
-import unknow.server.http.utils.ArrayMap;
+import unknow.server.http.servlet.ResourceServlet;
 import unknow.server.http.utils.IntArrayMap;
 import unknow.server.http.utils.ObjectArrayMap;
 import unknow.server.http.utils.PathTree;
@@ -80,19 +79,9 @@ public class CreateServletManager extends Builder {
 			names.put(s.clazz, new NameExpr(n));
 			ClassOrInterfaceType t = types.get(s.clazz);
 			servlets.add(names.get(s.clazz));
-			if (DefaultServlet.class.getName().equals(s.clazz)) {
-				List<String> list = new ArrayList<>(descriptor.resources.keySet());
-				Collections.sort(list);
-				NodeList<Expression> k = new NodeList<>();
-				NodeList<Expression> v = new NodeList<>();
-				for (String key : list) {
-					Resource r = descriptor.resources.get(key);
-					k.add(new StringLiteralExpr(key));
-					v.add(new ObjectCreationExpr(null, types.get(Resource.class),
-							Utils.list(new LongLiteralExpr(r.getLastModified() + "L"), new LongLiteralExpr(r.getSize() + "L"))));
-				}
-				b.addStatement(Utils.assign(t, n, new ObjectCreationExpr(null, t, Utils.list(new ObjectCreationExpr(null, types.get(ArrayMap.class, TypeCache.EMPTY),
-						Utils.list(Utils.array(types.get(String.class), k), Utils.array(types.get(Resource.class), v)))))));
+			if (ResourceServlet.class.getName().equals(s.clazz)) {
+				Resource r = descriptor.resources.get(s.name);
+				b.addStatement(Utils.assign(t, n, new ObjectCreationExpr(null, t, Utils.list(new LongLiteralExpr(Long.toString(r.getLastModified())), new LongLiteralExpr(Long.toString(r.getSize()))))));
 			} else
 				b.addStatement(Utils.assign(t, n, new ObjectCreationExpr(null, t, Utils.list())));
 

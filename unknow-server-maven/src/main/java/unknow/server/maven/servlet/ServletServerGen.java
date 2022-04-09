@@ -38,7 +38,7 @@ import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeS
 
 import unknow.sax.SaxParser;
 import unknow.server.http.AbstractHttpServer;
-import unknow.server.http.servlet.DefaultServlet;
+import unknow.server.http.servlet.ResourceServlet;
 import unknow.server.http.utils.Resource;
 import unknow.server.maven.Output;
 import unknow.server.maven.TypeCache;
@@ -114,29 +114,6 @@ public class ServletServerGen extends AbstractMojo implements BuilderContext {
 			} else
 				getLog().warn("missing '" + webXml + "'");
 		}
-		try { // collecting resources files
-			Path path = Paths.get(resources);
-			if (Files.isDirectory(path)) {
-				Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
-					@Override
-					public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-						dir = path.relativize(dir);
-						String path = dir.getName(0).toString().toUpperCase();
-						return "WEB-INF".equals(path) || "META-INF".equals(path) ? FileVisitResult.SKIP_SUBTREE : FileVisitResult.CONTINUE;
-					}
-
-					@Override
-					public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-						descriptor.resources.put("/" + path.relativize(file).toString().replace('\\', '/'),
-								new Resource(Files.getLastModifiedTime(file).to(TimeUnit.MILLISECONDS), Files.size(file)));
-						return FileVisitResult.CONTINUE;
-					}
-				});
-			} else
-				getLog().warn("no resource found '" + resources + "'");
-		} catch (IOException e) {
-			throw new MojoFailureException("failed to get resources", e);
-		}
 
 		final Map<String, String> existingClass = new HashMap<>();
 		final Path local = Paths.get(src, packageName == null ? new String[0] : packageName.split("\\."));
@@ -162,14 +139,8 @@ public class ServletServerGen extends AbstractMojo implements BuilderContext {
 			throw new MojoFailureException("failed to get source failed", e);
 		}
 		SD d = descriptor.findServlet("/");
-		if (d == null) {
-			d = new SD(descriptor.servlets.size());
-			d.clazz = DefaultServlet.class.getName();
-			System.out.println(">> " + d.clazz);
-			d.name = "default";
-			d.pattern.add("/");
-			descriptor.servlets.add(d);
-		}
+		if (d == null)
+			generateResources();
 
 		getLog().info("descriptor:\n" + descriptor);
 
@@ -187,6 +158,41 @@ public class ServletServerGen extends AbstractMojo implements BuilderContext {
 			new Output(output, packageName).save(cu);
 		} catch (IOException e) {
 			throw new MojoFailureException("failed to save output class", e);
+		}
+	}
+
+	/**
+	 * @throws MojoFailureException
+	 * 
+	 */
+	private void generateResources() throws MojoFailureException {
+		try { // collecting resources files
+			Path path = Paths.get(resources);
+			if (Files.isDirectory(path)) {
+				Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
+					@Override
+					public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+						dir = path.relativize(dir);
+						String path = dir.getName(0).toString().toUpperCase();
+						return "WEB-INF".equals(path) || "META-INF".equals(path) ? FileVisitResult.SKIP_SUBTREE : FileVisitResult.CONTINUE;
+					}
+
+					@Override
+					public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+						String p = "/" + path.relativize(file).toString().replace('\\', '/');
+						descriptor.resources.put(p, new Resource(Files.getLastModifiedTime(file).to(TimeUnit.MILLISECONDS), Files.size(file)));
+						SD d = new SD(descriptor.servlets.size());
+						d.clazz = ResourceServlet.class.getName();
+						d.name = p;
+						d.pattern.add(p);
+						descriptor.servlets.add(d);
+						return FileVisitResult.CONTINUE;
+					}
+				});
+			} else
+				getLog().warn("no resource found '" + resources + "'");
+		} catch (IOException e) {
+			throw new MojoFailureException("failed to get resources", e);
 		}
 	}
 

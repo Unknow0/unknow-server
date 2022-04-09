@@ -41,7 +41,7 @@ public abstract class AbstractHttpServer extends NIOServerCli {
 	 * max idle time for exec thread, default to 60
 	 */
 	@Option(names = "--exec-idle", description = "max idle time for exec thread, default to 60", descriptionKey = "exec-idle")
-	public long execIdle = 60L;
+	public long execIdle = 600L;
 
 	/**
 	 * max time to keep idle keepalive connection, default to -1
