@@ -81,7 +81,7 @@ public class CreateServletManager extends Builder {
 			servlets.add(names.get(s.clazz));
 			if (ResourceServlet.class.getName().equals(s.clazz)) {
 				Resource r = descriptor.resources.get(s.name);
-				b.addStatement(Utils.assign(t, n, new ObjectCreationExpr(null, t, Utils.list(new LongLiteralExpr(Long.toString(r.getLastModified())), new LongLiteralExpr(Long.toString(r.getSize()))))));
+				b.addStatement(Utils.assign(t, n, new ObjectCreationExpr(null, t, Utils.list(new LongLiteralExpr(r.getLastModified() + "L"), new LongLiteralExpr(r.getSize() + "L")))));
 			} else
 				b.addStatement(Utils.assign(t, n, new ObjectCreationExpr(null, t, Utils.list())));
 
