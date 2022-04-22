@@ -35,7 +35,7 @@ import unknow.server.nio.Handler;
 import unknow.server.nio.HandlerFactory;
 import unknow.server.nio.util.Buffers;
 
-public final class HttpHandler extends Handler implements Runnable {
+public class HttpHandler extends Handler implements Runnable {
 	private static final Logger log = LoggerFactory.getLogger(HttpHandler.class);
 	private static final Cookie[] COOKIE = new Cookie[0];
 

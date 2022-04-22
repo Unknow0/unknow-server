@@ -41,7 +41,7 @@ public class NIOServerCli implements Callable<Integer> {
 
 	/** number of io thread to use, default to the number of CPU */
 	@Option(names = "--iothread", description = "number of io thread to use, default to the number of CPU", descriptionKey = "iothread")
-	public int iothread = Math.max(1, Runtime.getRuntime().availableProcessors() / 4);
+	public int iothread = Math.max(1, Runtime.getRuntime().availableProcessors() / 2);
 
 	/** server listener */
 	@Option(names = "--listener", description = "set the listener, default to NOP", descriptionKey = "listener", converter = NIOListenerConverter.class)
