@@ -40,6 +40,7 @@ public class HttpHandler extends Handler implements Runnable {
 	private static final Cookie[] COOKIE = new Cookie[0];
 
 	private static final byte[] CRLF = new byte[] { '\r', '\n' };
+	private static final byte[] CRLF2 = new byte[] { '\r', '\n', '\r', '\n' };
 	private static final byte[] WS = new byte[] { ' ', '\t' };
 	private static final byte[] SEP = new byte[] { ' ', '\t', '"', ',' };
 	private static final byte[] COOKIE_SEP = new byte[] { ';', ' ' };
@@ -56,6 +57,8 @@ public class HttpHandler extends Handler implements Runnable {
 	private static final int MAX_PATH_SIZE = 2000;
 	private static final int MAX_VERSION_SIZE = 12;
 	private static final int MAX_HEADER_SIZE = 512;
+
+	private static final int MAX_START_SIZE = 8192;
 
 	private static final int METHOD = 0;
 	private static final int PATH = 1;
@@ -102,50 +105,62 @@ public class HttpHandler extends Handler implements Runnable {
 
 	@Override
 	protected void handle(InputStream in, OutputStream out) {
-		if (step == METHOD)
-			tryRead(SPACE, MAX_METHOD_SIZE, PATH, HttpError.BAD_REQUEST);
-		if (step == PATH) {
-			int e = pendingRead.indexOf(SPACE, last, MAX_PATH_SIZE);
-			if (e == -2)
-				error(HttpError.URI_TOO_LONG);
-			if (e < 0)
-				return;
-			int q = pendingRead.indexOf(QUESTION, last, e - last);
-			if (q < 0)
-				q = e;
-			part[PATH] = q;
-			part[QUERY] = e;
-			step = PROTOCOL;
-			last = e + 1;
+		if (f != null)
+			return;
+		int i = pendingRead.indexOf(CRLF2, MAX_START_SIZE);
+		if (i == -1)
+			return;
+		if (i == -2) {
+			error(HttpError.BAD_REQUEST);
+			return;
 		}
-		if (step == PROTOCOL)
-			tryRead(CRLF, MAX_VERSION_SIZE, HEADER, HttpError.BAD_REQUEST);
-		if (step == HEADER) {
-			int k;
-			while ((k = pendingRead.indexOf(CRLF, last, MAX_HEADER_SIZE)) > 0) {
-				if (k == last) {
-					pendingRead.read(meta, last);
-					pendingRead.skip(2);
-					step = CONTENT;
-					break;
-				}
-				headers[headerCount++] = k;
-				if (headerCount > headers.length) {
-					error(HttpError.BAD_REQUEST);
-					return;
-				}
-				last = k + 2;
-			}
+		pendingRead.read(meta, i + 2);
+		pendingRead.skip(2);
+		f = executor.submit(this);
 
-			if (k == -2)
-				error(HttpError.HEADER_TOO_LARGE);
-		}
-		if (step == CONTENT && f == null)
-			f = executor.submit(this);
+//		if (step == METHOD)
+//			tryRead(SPACE, MAX_METHOD_SIZE, PATH, HttpError.BAD_REQUEST);
+//		if (step == PATH) {
+//			int e = pendingRead.indexOf(SPACE, last, MAX_PATH_SIZE);
+//			if (e == -2)
+//				error(HttpError.URI_TOO_LONG);
+//			if (e < 0)
+//				return;
+//			int q = pendingRead.indexOf(QUESTION, last, e - last);
+//			if (q < 0)
+//				q = e;
+//			part[PATH] = q;
+//			part[QUERY] = e;
+//			step = PROTOCOL;
+//			last = e + 1;
+//		}
+//		if (step == PROTOCOL)
+//			tryRead(CRLF, MAX_VERSION_SIZE, HEADER, HttpError.BAD_REQUEST);
+//		if (step == HEADER) {
+//			int k;
+//			while ((k = pendingRead.indexOf(CRLF, last, MAX_HEADER_SIZE)) > 0) {
+//				if (k == last) {
+//					pendingRead.read(meta, last);
+//					pendingRead.skip(2);
+//					step = CONTENT;
+//					break;
+//				}
+//				headers[headerCount++] = k;
+//				if (headerCount > headers.length) {
+//					error(HttpError.BAD_REQUEST);
+//					return;
+//				}
+//				last = k + 2;
+//			}
+//
+//			if (k == -2)
+//				error(HttpError.HEADER_TOO_LARGE);
+//		}
+//		if (step == CONTENT && f == null)
 	}
 
 	private boolean tryRead(byte lookup, int limit, int next, HttpError e) {
-		int i = pendingRead.indexOf(lookup, last, limit);
+		int i = meta.indexOf(lookup, last, limit);
 		if (i < 0) {
 			if (i == -2)
 				error(e);
@@ -158,7 +173,7 @@ public class HttpHandler extends Handler implements Runnable {
 	}
 
 	private boolean tryRead(byte[] lookup, int limit, int next, HttpError e) {
-		int i = pendingRead.indexOf(lookup, last, limit);
+		int i = meta.indexOf(lookup, last, limit);
 		if (i < 0) {
 			if (i == -2)
 				error(e);
@@ -396,9 +411,50 @@ public class HttpHandler extends Handler implements Runnable {
 		}
 	}
 
+	private void read() {
+		if (step == METHOD)
+			tryRead(SPACE, MAX_METHOD_SIZE, PATH, HttpError.BAD_REQUEST);
+		if (step == PATH) {
+			int e = meta.indexOf(SPACE, last, MAX_PATH_SIZE);
+			if (e == -2)
+				error(HttpError.URI_TOO_LONG);
+			if (e < 0)
+				return;
+			int q = meta.indexOf(QUESTION, last, e - last);
+			if (q < 0)
+				q = e;
+			part[PATH] = q;
+			part[QUERY] = e;
+			step = PROTOCOL;
+			last = e + 1;
+		}
+		if (step == PROTOCOL)
+			tryRead(CRLF, MAX_VERSION_SIZE, HEADER, HttpError.BAD_REQUEST);
+		if (step == HEADER) {
+			int k;
+			while ((k = meta.indexOf(CRLF, last, MAX_HEADER_SIZE)) > 0) {
+				if (k == last) {
+					step = CONTENT;
+					break;
+				}
+				headers[headerCount++] = k;
+				if (headerCount > headers.length) {
+					error(HttpError.BAD_REQUEST);
+					return;
+				}
+				last = k + 2;
+			}
+
+			if (k == -2)
+				error(HttpError.HEADER_TOO_LARGE);
+		}
+	}
+
 	@Override
 	public void run() {
 		boolean close = false;
+
+		read();
 		try {
 			ServletResponseImpl res = new ServletResponseImpl(ctx, getOut(), this);
 			ServletRequestImpl req = new ServletRequestImpl(ctx, this, DispatcherType.REQUEST, res);
