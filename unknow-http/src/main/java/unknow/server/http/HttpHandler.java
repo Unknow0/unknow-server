@@ -107,7 +107,6 @@ public class HttpHandler extends Handler implements Runnable {
 	protected void handle(InputStream in, OutputStream out) {
 		if (f != null)
 			return;
-		System.out.println("ici");
 		int i = pendingRead.indexOf(CRLF2, MAX_START_SIZE);
 		if (i == -1)
 			return;
@@ -535,8 +534,10 @@ public class HttpHandler extends Handler implements Runnable {
 
 	@Override
 	public boolean isClosed() {
-		if (f != null || !super.isClosed())
+		if (f != null)
 			return false;
+		if (super.isClosed())
+			return true;
 		if (keepAliveIdle > 0) {
 			long e = System.currentTimeMillis() - keepAliveIdle;
 			if (lastRead() < e && lastWrite() < e)
