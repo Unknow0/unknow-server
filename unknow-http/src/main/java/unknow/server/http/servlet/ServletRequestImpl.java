@@ -101,6 +101,18 @@ public class ServletRequestImpl implements HttpServletRequest {
 		this.res = res;
 	}
 
+	public void setMethod(String method) {
+		this.method = method;
+	}
+
+	public void setQuery(String query) {
+		this.query = query;
+	}
+
+	public void setProtocol(String protocol) {
+		this.protocol = protocol;
+	}
+
 	private void parseParam() {
 		if (parameter != null)
 			return;
