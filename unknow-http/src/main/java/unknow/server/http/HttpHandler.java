@@ -258,7 +258,7 @@ public class HttpHandler extends Handler implements Runnable {
 	 * @param param the output param
 	 */
 	public void parseContentParam(Map<String, List<String>> param) {
-		parseParam(pendingRead, 0, pendingRead.length(), param);
+//		parseParam(pendingRead, 0, pendingRead.length(), param);
 	}
 
 	/**
@@ -451,26 +451,34 @@ public class HttpHandler extends Handler implements Runnable {
 		meta.toString(sb, last, i - last);
 		req.setProtocol(sb.toString());
 		sb.setLength(0);
-		last = i + 1;
+		last = i + 2;
 
-		if (step == HEADER) {
-			int k;
-			while ((k = meta.indexOf(CRLF, last, MAX_HEADER_SIZE)) > 0) {
-				if (k == last) {
-					step = CONTENT;
-					break;
-				}
-				headers[headerCount++] = k;
-				if (headerCount > headers.length) {
-					error(HttpError.BAD_REQUEST);
-					return false;
-				}
-				last = k + 2;
+		Map<String, List<String>> map = new HashMap<>();
+		while ((i = meta.indexOf(CRLF, last, MAX_HEADER_SIZE)) > 0) {
+			int c = meta.indexOf(COLON, last, i - last);
+			if (c < 0) {
+				error(HttpError.BAD_REQUEST);
+				return false;
 			}
+			System.out.println(last + "\t" + c + "\t" + i);
 
-			if (k == -2)
-				error(HttpError.HEADER_TOO_LARGE);
+			meta.toString(sb, last, c - last);
+			String k = sb.toString().trim().toLowerCase();
+			sb.setLength(0);
+
+			meta.toString(sb, c + 1, i - c - 1);
+			String v = sb.toString().trim();
+			sb.setLength(0);
+
+			List<String> list = map.get(k);
+			if (list == null)
+				map.put(k, list = new ArrayList<>(1));
+			list.add(v);
+
+			last = i + 2;
 		}
+		System.out.println(map);
+		req.setHeaders(map);
 		return true;
 	}
 
@@ -490,7 +498,7 @@ public class HttpHandler extends Handler implements Runnable {
 				getOut().write(CRLF);
 				getOut().flush();
 			}
-			close = keepAliveIdle <= 0 || !"keep-alive".equalsIgnoreCase(req.getHeader("connection"));
+			close = keepAliveIdle == 0 || !"keep-alive".equalsIgnoreCase(req.getHeader("connection"));
 			events.fireRequestInitialized(req);
 			FilterChain s = servlets.find(req);
 			if (s != null)
@@ -538,7 +546,7 @@ public class HttpHandler extends Handler implements Runnable {
 			return false;
 		if (super.isClosed())
 			return true;
-		if (keepAliveIdle > 0) {
+		if (keepAliveIdle >= 0) {
 			long e = System.currentTimeMillis() - keepAliveIdle;
 			if (lastRead() < e && lastWrite() < e)
 				return true;
@@ -549,9 +557,9 @@ public class HttpHandler extends Handler implements Runnable {
 
 	@Override
 	public void reset() {
-		super.reset();
 		if (f != null)
 			f.cancel(true);
+		super.reset();
 		cleanup();
 	}
 

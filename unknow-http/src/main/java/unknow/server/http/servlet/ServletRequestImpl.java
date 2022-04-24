@@ -113,6 +113,10 @@ public class ServletRequestImpl implements HttpServletRequest {
 		this.protocol = protocol;
 	}
 
+	public void setHeaders(Map<String, List<String>> headers) {
+		this.headers = headers;
+	}
+
 	private void parseParam() {
 		if (parameter != null)
 			return;

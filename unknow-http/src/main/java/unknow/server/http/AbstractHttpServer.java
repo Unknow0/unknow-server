@@ -46,8 +46,8 @@ public abstract class AbstractHttpServer extends NIOServerCli {
 	/**
 	 * max time to keep idle keepalive connection, default to -1
 	 */
-	@Option(names = "--keep-alive-idle", description = "max time to keep idle keepalive connection, default to -1", descriptionKey = "keep-alive-idle")
-	public int keepAliveIdle = 2000;
+	@Option(names = "--keep-alive-idle", description = "max time to keep idle keepalive connection, -1: infinite, 0: no keep alive,  default to -1", descriptionKey = "keep-alive-idle")
+	public int keepAliveIdle = -1;
 
 	protected final ServletContextImpl ctx;
 	protected final ServletManager servlets;
