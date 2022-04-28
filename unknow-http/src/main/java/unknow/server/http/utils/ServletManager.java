@@ -42,6 +42,7 @@ public final class ServletManager {
 			case REQUEST:
 				return request.find(req.req);
 			default:
+				System.out.println("WTF");
 				return null;
 		}
 	}

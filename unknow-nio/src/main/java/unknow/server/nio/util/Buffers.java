@@ -82,7 +82,7 @@ public class Buffers {
 		if (tail == null)
 			head = tail = Chunk.get();
 		len += bb.remaining();
-		writeInto(tail, bb);
+		tail = writeInto(tail, bb);
 		this.notifyAll();
 	}
 
@@ -116,9 +116,9 @@ public class Buffers {
 			return;
 		}
 		Chunk c = Chunk.get();
-		c.next = head;
 		head = c;
 		c = writeInto(c, buf, o, l);
+		c.next = head;
 		if (tail == null)
 			tail = c;
 	}
@@ -136,9 +136,9 @@ public class Buffers {
 			return;
 		}
 		Chunk c = Chunk.get();
-		c.next = head;
 		head = c;
 		c = writeInto(c, buf);
+		c.next = head;
 		if (tail == null)
 			tail = c;
 	}
@@ -225,42 +225,47 @@ public class Buffers {
 		if (l == 0 || head == null)
 			return;
 		Chunk h = head;
-		Chunk c = head;
-		Chunk last = null;
+		Chunk t = null;
 		int read = 0;
+
+		Chunk c = head;
+		// read whole chunk
 		while (c != null && l > c.l) {
 			l -= c.l;
 			read += c.l;
-			last = c;
+			t = c;
 			c = c.next;
 		}
-		if (c == null)
-			;
-		else if (l > 0) {
+
+		if (c != null && l > 0) {
 			Chunk n = Chunk.get();
 			System.arraycopy(c.b, c.o, n.b, 0, l);
 			c.o += l;
 			c.l -= l;
 			n.l = l;
 			read += l;
-			if (last != null)
-				last.next = n;
+			if (t != null)
+				t.next = n;
 			else
 				h = n;
-			last = n;
-		} else
-			last.next = null;
+			t = n;
+		} else { // we move all
+			c = null;
+			if (t != null)
+				t.next = null;
+		}
 
 		len -= read;
 		head = c;
 		if (c == null)
-			tail = c;
+			tail = null;
 		synchronized (buf) {
 			buf.len += read;
 			if (buf.head == null)
-				buf.head = buf.tail = h;
+				buf.head = h;
 			else
 				buf.tail.next = h;
+			buf.tail = t;
 		}
 	}
 
@@ -317,51 +322,45 @@ public class Buffers {
 	 * 
 	 * @param b   the byte to find
 	 * @param off start offset
-	 * @param len the maximum number of byte to read
+	 * @param max the maximum number of byte to read
 	 * @return -1 if not found, -2 if max reached
 	 */
-	public synchronized int indexOf(byte b, int off, int len) {
-		if (this.len - off < 1)
+	// 5 4
+	public synchronized int indexOf(byte b, int off, int max) {
+		if (max == 0)
 			return -1;
-		if (len < 0)
-			len = this.len + 1;
+		if (max < 0)
+			max = len;
+		else
+			max += off;
 		Chunk c = head;
-		int l;
-		int o = off;
-		while (c.l < off) {
+		int l = off;
+		while (c != null && c.l < off) {
 			off -= c.l;
 			c = c.next;
-			if (c == null)
-				return -1;
 		}
-		if (off > 0) {
-			l = Math.min(c.l, len);
-			for (int i = 0; i < l; i++) {
-				if (c.b[i + off + c.o] == b)
-					return o + i;
+		if (c == null)
+			return -1;
+		for (int i = off; i < Math.min(c.l, max); i++) {
+			if (c.b[i + c.o] == b)
+				return l + i - off;
+		}
+		l += c.l - off;
+		if (l > max)
+			return -2;
+		c = c.next;
+		while (c != null) {
+			int e = c.o + Math.min(c.l, max - l);
+			for (int i = 0; i < e; i++) {
+				if (c.b[i + c.o] == b)
+					return l + i;
 			}
-			len -= l;
-			o += l;
-			if (len == 0)
+			l += c.l;
+			if (l > max)
 				return -2;
 			c = c.next;
-			if (c == null)
-				return -1;
 		}
-		for (;;) {
-			l = Math.min(c.l, len);
-			for (int i = 0; i < l; i++) {
-				if (c.b[i + off + c.o] == b)
-					return o + i;
-			}
-			len -= l;
-			o += l;
-			if (len == 0)
-				return -2;
-			c = c.next;
-			if (c == null)
-				return -1;
-		}
+		return -1;
 	}
 
 	/**
@@ -375,34 +374,74 @@ public class Buffers {
 		return indexOf(b, 0, max);
 	}
 
+	/**
+	 * find a bytes in the buffers
+	 * 
+	 * @param b   the byte to find
+	 * @param o   first index to check
+	 * @param max the maximum number of byte to read
+	 * @return -1 if not found, -2 if max reached
+	 */
 	public synchronized int indexOf(byte[] b, int o, int max) {
 		if (len - o < b.length)
 			return -1;
+		if (b.length == 0)
+			return o;
+		max += o;
 		Chunk c = head;
 		int l = o;
-		int j = 0;
 		while (c != null && c.l < o) {
 			o -= c.l;
 			c = c.next;
 		}
+		if (c == null)
+			return -1;
+		for (int i = o; i < c.l; i++) {
+			if (startsWith(c, b, i))
+				return i + l - o;
+		}
+		l += c.l - o;
+		if (max >= 0 && l > max)
+			return -2;
+		c = c.next;
 		while (c != null) {
-			loop: for (int i = c.o + o; i < c.o + c.l; i++) {
-				for (int k = i; j < b.length; j++, k++) {
-					if (c.b[k] != b[j]) {
-						j = 0;
-						continue loop;
-					}
-				}
-				if (j == b.length)
-					return i - c.o;
+			for (int i = 0; i < c.l; i++) {
+				if (startsWith(c, b, i))
+					return l + i;
 			}
-			o = 0;
 			l += c.l;
 			if (max >= 0 && l > max)
 				return -2;
 			c = c.next;
 		}
 		return -1;
+	}
+
+	/**
+	 * check if the chunk startsWith
+	 * 
+	 * @param c chunk to check
+	 * @param b what to look for
+	 * @param i first index to check
+	 * @return true it the b starts at index i
+	 */
+	private boolean startsWith(Chunk c, byte[] b, int i) {
+		i += c.o;
+		int e = c.o + c.l;
+		int k = 0;
+		while (true) {
+			if (c.b[i] != b[k])
+				return false;
+			if (++k == b.length)
+				return true;
+			if (++i == e) {
+				if (c.next == null)
+					return false;
+				c = c.next;
+				i = c.o;
+				e = c.o + c.l;
+			}
+		}
 	}
 
 	/**
@@ -533,7 +572,7 @@ public class Buffers {
 		Chunk b = head;
 		if (b == null || off > len)
 			return -1;
-		while (b.l < off) {
+		while (b.l <= off) {
 			off -= b.l;
 			b = b.next;
 			if (b == null)
@@ -595,6 +634,13 @@ public class Buffers {
 		return false;
 	}
 
+	/**
+	 * write data in the chunk
+	 * 
+	 * @param c  where to append
+	 * @param bb data to append
+	 * @return end chunk of added data
+	 */
 	private final Chunk writeInto(Chunk c, ByteBuffer bb) {
 		int l = bb.remaining();
 		for (;;) {
@@ -609,6 +655,15 @@ public class Buffers {
 		}
 	}
 
+	/**
+	 * write data in the chunk
+	 * 
+	 * @param c where to append
+	 * @param b data to append
+	 * @param o offset
+	 * @param l length
+	 * @return end chunk of added data
+	 */
 	private final Chunk writeInto(Chunk c, byte[] buf, int o, int l) {
 		for (;;) {
 			int r = Math.min(l, 4096 - c.l - c.o);
@@ -630,6 +685,12 @@ public class Buffers {
 		return sb.toString();
 	}
 
+	public String toString(int off, int len) {
+		StringBuilder sb = new StringBuilder();
+		toString(sb, off, len);
+		return sb.toString();
+	}
+
 	/**
 	 * convert the buffers to string assuming ascii encoding
 	 * 
@@ -644,29 +705,25 @@ public class Buffers {
 		if (len == -1 || len > this.len - off)
 			len = this.len - off;
 		sb.ensureCapacity(len);
-		char[] c = new char[4096];
 
+		// skip whole chunk
 		while (b.l < off) {
 			off -= b.l;
 			if ((b = b.next) == null)
 				return;
 		}
-		if (off > 0) {
-			int e = Math.min(b.o + len, b.l);
-			for (int i = b.o; i < e; i++)
-				c[i - b.o] = (char) b.b[i + off];
-			int l = e - b.o;
-			sb.append(c, 0, l);
-			len -= l;
-			b = b.next;
-		}
+
+		int e = Math.min(b.o + b.l, b.o + off + len);
+		for (int i = b.o + off; i < e; i++)
+			sb.append((char) b.b[i]);
+		len -= e - b.o - off;
+		b = b.next;
+
 		while (len > 0 && b != null) {
-			int e = b.o + (b.l < len ? b.l : len);
+			e = b.o + (b.l < len ? b.l : len);
 			for (int i = b.o; i < e; i++)
-				c[i - b.o] = (char) b.b[i];
-			int l = e - b.o;
-			sb.append(c, 0, l);
-			len -= l;
+				sb.append((char) b.b[i]);
+			len -= e - b.o;
 			b = b.next;
 		}
 	}
@@ -689,6 +746,7 @@ public class Buffers {
 
 		private Chunk() {
 			b = new byte[4096];
+			o = l = 0;
 		}
 
 		/**

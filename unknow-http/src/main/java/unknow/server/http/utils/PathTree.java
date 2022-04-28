@@ -49,6 +49,8 @@ public class PathTree {
 			int i = path.indexOf((byte) '/', o, e - o);
 			if (i < 0)
 				i = e;
+			if (i == 14) // XXX
+				path.indexOf((byte) '/', o, e - o);
 			PartNode n = next(last.nexts, path, o, i);
 			if (n == null)
 				break;

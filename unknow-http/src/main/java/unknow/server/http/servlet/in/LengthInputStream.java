@@ -48,7 +48,7 @@ public class LengthInputStream extends ServletInputStream {
 	public int read(byte[] b, int off, int len) throws IOException {
 		if (length == 0)
 			return -1;
-		int i = in.read(b, 0, b.length);
+		int i = in.read(b, 0, b.length > length ? (int) length : b.length);
 		if (i > 0)
 			length -= i;
 		return i;

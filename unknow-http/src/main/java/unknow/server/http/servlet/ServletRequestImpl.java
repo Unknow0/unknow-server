@@ -624,6 +624,24 @@ public class ServletRequestImpl implements HttpServletRequest {
 		return ctx;
 	}
 
+	/**
+	 * close the request
+	 * 
+	 * @throws IOException
+	 */
+	public void close() throws IOException { // TODO
+//		if (reader != null) {
+//			char[] cbuf = new char[2048];
+//			while (reader.read(cbuf) > 0)
+//				;
+//		} else {
+//			ServletInputStream in = getInputStream();
+//			byte[] buf = new byte[4096];
+//			while (in.read(buf) > 0)
+//				;
+//		}
+	}
+
 	private ServletInputStream createInput() {
 		String tr = getHeader("transfert-encoding"); // TODO
 		if ("chunked".equalsIgnoreCase(tr))
