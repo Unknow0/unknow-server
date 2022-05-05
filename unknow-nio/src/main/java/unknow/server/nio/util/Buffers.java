@@ -15,7 +15,7 @@ public class Buffers {
 	private Chunk tail;
 	private int len;
 
-	public Chunk getHead() {
+	Chunk getHead() {
 		return head;
 	}
 
@@ -23,7 +23,7 @@ public class Buffers {
 	 * 
 	 * @return the current number of bytes
 	 */
-	public int length() {
+	public synchronized int length() {
 		return len;
 	}
 
@@ -302,7 +302,7 @@ public class Buffers {
 	/**
 	 * @return true if this buffers is empty
 	 */
-	public boolean isEmpty() {
+	public synchronized boolean isEmpty() {
 		return len == 0;
 	}
 

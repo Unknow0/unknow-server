@@ -105,8 +105,12 @@ public class HttpHandler extends Handler implements Runnable {
 
 	@Override
 	protected void handle(InputStream in, OutputStream out) {
-		if (f != null)
+		if (f != null) {
+			synchronized (pendingRead) {
+				pendingRead.notifyAll();
+			}
 			return;
+		}
 		int i = pendingRead.indexOf(CRLF2, MAX_START_SIZE);
 		if (i == -1)
 			return;
