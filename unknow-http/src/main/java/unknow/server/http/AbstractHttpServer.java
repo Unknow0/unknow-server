@@ -2,7 +2,8 @@ package unknow.server.http;
 
 import java.util.ServiceLoader;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.Executors;
+import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -75,8 +76,8 @@ public abstract class AbstractHttpServer extends NIOServerCli {
 
 	@Override()
 	public final Integer call() throws Exception {
-		ExecutorService executor = new ThreadPoolExecutor(execMin, execMax, execIdle, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), r -> {
-			Thread t = new Thread(r);
+		ExecutorService executor = new ThreadPoolExecutor(execMin, execMax, execIdle, TimeUnit.SECONDS, new SynchronousQueue<Runnable>(), r -> {
+			Thread t = new Thread(r, "exec");
 			t.setDaemon(true);
 			return t;
 		});

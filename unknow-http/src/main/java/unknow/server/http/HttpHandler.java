@@ -104,7 +104,7 @@ public class HttpHandler extends Handler implements Runnable {
 	}
 
 	@Override
-	protected void handle(InputStream in, OutputStream out) {
+	protected void onRead() {
 		if (f != null) {
 			synchronized (pendingRead) {
 				pendingRead.notifyAll();

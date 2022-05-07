@@ -67,7 +67,7 @@ public abstract class Handler {
 		}
 		buf.flip();
 		pendingRead.write(buf);
-		handle(in, out);
+		onRead();
 	}
 
 	/**
@@ -90,6 +90,7 @@ public abstract class Handler {
 			pendingWrite.prepend(buf);
 		if (pendingWrite.isEmpty())
 			key.interestOps(SelectionKey.OP_READ);
+		onWrite();
 	}
 
 	/**
@@ -194,7 +195,11 @@ public abstract class Handler {
 	/**
 	 * handle the pendingData
 	 */
-	protected abstract void handle(InputStream in, OutputStream out);
+	protected void onRead() {
+	}
+
+	protected void onWrite() {
+	}
 
 	private static final class Out extends OutputStream {
 		private Handler h;

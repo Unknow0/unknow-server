@@ -40,17 +40,18 @@ public abstract class ProtobufHandlerFactory<T> extends HandlerFactory {
 		}
 
 		@Override
-		public void handle(InputStream in, OutputStream out) {
+		public void onRead() {
+			InputStream in = getIn();
 			try {
 				in.mark(4096);
 				int len = readInt(in);
 				if (len < 0 || len < in.available())
 					return;
 				limited.setLimit(len);
-				process(parser.parseFrom(limited), out);
+				process(parser.parseFrom(limited), getOut());
 			} catch (IOException e) {
 				try {
-					out.close();
+					getOut().close();
 				} catch (IOException e1) { // OK
 				}
 			} finally {
