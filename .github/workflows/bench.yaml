@@ -28,6 +28,7 @@ jobs:
       run: bash bench/result.sh out
 
     - uses: actions/upload-artifact@v3
+	  if: always()
       with: 
         name: logs
         path: |
