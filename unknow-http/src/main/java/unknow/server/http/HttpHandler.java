@@ -105,22 +105,28 @@ public class HttpHandler extends Handler implements Runnable {
 
 	@Override
 	protected void onRead() {
-		if (f != null) {
-			synchronized (pendingRead) {
-				pendingRead.notifyAll();
+		synchronized (this) {
+			if (f != null) {
+				synchronized (pendingRead) {
+					pendingRead.notifyAll();
+				}
+				System.out.println("> notify");
+				return;
 			}
-			return;
+			int i = pendingRead.indexOf(CRLF2, MAX_START_SIZE);
+			if (i == -1) {
+				System.out.println("> missing");
+				return;
+			}
+			if (i == -2) {
+				System.out.println("> error");
+				error(HttpError.BAD_REQUEST);
+				return;
+			}
+			pendingRead.read(meta, i + 2);
+			pendingRead.skip(2);
+			f = executor.submit(this);
 		}
-		int i = pendingRead.indexOf(CRLF2, MAX_START_SIZE);
-		if (i == -1)
-			return;
-		if (i == -2) {
-			error(HttpError.BAD_REQUEST);
-			return;
-		}
-		pendingRead.read(meta, i + 2);
-		pendingRead.skip(2);
-		f = executor.submit(this);
 
 //		if (step == METHOD)
 //			tryRead(SPACE, MAX_METHOD_SIZE, PATH, HttpError.BAD_REQUEST);
@@ -537,10 +543,12 @@ public class HttpHandler extends Handler implements Runnable {
 	}
 
 	private void cleanup() {
-		meta.clear();
-		headerCount = last = 0;
-		step = METHOD;
-		f = null;
+		synchronized (this) {
+			meta.clear();
+			headerCount = last = 0;
+			step = METHOD;
+			f = null;
+		}
 	}
 
 	@Override
