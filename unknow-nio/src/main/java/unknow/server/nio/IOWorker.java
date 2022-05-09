@@ -58,7 +58,7 @@ public class IOWorker extends Thread {
 	 * @param handler the handler
 	 * @throws IOException
 	 */
-	public void register(SocketChannel socket, Handler handler) throws IOException {
+	public void register(SocketChannel socket, Connection handler) throws IOException {
 		synchronized (mutex) {
 			selector.wakeup();
 			socket.configureBlocking(false);
@@ -76,8 +76,8 @@ public class IOWorker extends Thread {
 
 				synchronized (mutex) {
 					for (SelectionKey key : selector.keys()) {
-						Handler h = (Handler) key.attachment();
-						if (!key.isValid() || h.isClosed()) {
+						Connection h = (Connection) key.attachment();
+						if (!key.isValid() || h.closed(false)) {
 							listener.closed(id, h);
 							h.free();
 							key.cancel();
@@ -98,8 +98,8 @@ public class IOWorker extends Thread {
 					processSelection();
 				synchronized (mutex) {
 					for (SelectionKey key : selector.keys()) {
-						Handler h = (Handler) key.attachment();
-						if (!key.isValid() || h.isClosed() || h.isIdle()) {
+						Connection h = (Connection) key.attachment();
+						if (!key.isValid() || h.closed(true)) {
 							h.free();
 							key.cancel();
 							key.channel().close();
@@ -130,7 +130,7 @@ public class IOWorker extends Thread {
 		while (it.hasNext()) {
 			SelectionKey key = it.next();
 			it.remove();
-			Handler h = (Handler) key.attachment();
+			Connection h = (Connection) key.attachment();
 			SocketChannel channel = (SocketChannel) key.channel();
 
 			if (key.isValid() && key.isWritable()) {

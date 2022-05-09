@@ -4,6 +4,9 @@
 package unknow.server.http;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.CharsetDecoder;
@@ -29,11 +32,11 @@ import unknow.server.http.servlet.ServletRequestImpl;
 import unknow.server.http.servlet.ServletResponseImpl;
 import unknow.server.http.utils.EventManager;
 import unknow.server.http.utils.ServletManager;
+import unknow.server.nio.Connection;
 import unknow.server.nio.Handler;
-import unknow.server.nio.HandlerFactory;
 import unknow.server.nio.util.Buffers;
 
-public class HttpHandler extends Handler implements Runnable {
+public class HttpHandler implements Handler, Runnable {
 	private static final Logger log = LoggerFactory.getLogger(HttpHandler.class);
 	private static final Cookie[] COOKIE = new Cookie[0];
 
@@ -65,6 +68,8 @@ public class HttpHandler extends Handler implements Runnable {
 	private static final int HEADER = 4;
 	private static final int CONTENT = 5;
 
+	private final Connection co;
+
 	private final ExecutorService executor;
 	private final int keepAliveIdle;
 
@@ -85,13 +90,13 @@ public class HttpHandler extends Handler implements Runnable {
 //	private String path;
 //	private String version;
 
-	private Future<?> f;
+	private volatile Future<?> f;
 
 	/**
 	 * create new RequestBuilder
 	 */
-	public HttpHandler(HandlerFactory factory, ExecutorService executor, ServletContextImpl ctx, int keepAliveIdle) {
-		super(factory);
+	public HttpHandler(Connection co, ExecutorService executor, ServletContextImpl ctx, int keepAliveIdle) {
+		this.co = co;
 		this.executor = executor;
 		this.ctx = ctx;
 		this.servlets = ctx.getServletManager();
@@ -102,26 +107,23 @@ public class HttpHandler extends Handler implements Runnable {
 	}
 
 	@Override
-	protected void onRead() {
-		if (f != null && !f.isDone()) {
-			synchronized (pendingRead) {
-				pendingRead.notifyAll();
+	public void onRead() {
+		if (f != null) {
+			synchronized (co.pendingRead) {
+				co.pendingRead.notifyAll();
 			}
-			System.out.println("> notify");
+			log.info("> notify {}", co);
 			return;
 		}
-		int i = pendingRead.indexOf(CRLF2, MAX_START_SIZE);
-		if (i == -1) {
-			System.out.println("> missing");
+		int i = co.pendingRead.indexOf(CRLF2, MAX_START_SIZE);
+		if (i == -1)
 			return;
-		}
 		if (i == -2) {
-			System.out.println("> error");
 			error(HttpError.BAD_REQUEST);
 			return;
 		}
-		pendingRead.read(meta, i + 2);
-		pendingRead.skip(2);
+		co.pendingRead.read(meta, i + 2);
+		co.pendingRead.skip(2);
 		f = executor.submit(this);
 
 //		if (step == METHOD)
@@ -163,6 +165,10 @@ public class HttpHandler extends Handler implements Runnable {
 //				error(HttpError.HEADER_TOO_LARGE);
 //		}
 //		if (step == CONTENT && f == null)
+	}
+
+	@Override
+	public void onWrite() {
 	}
 
 //	private boolean tryRead(byte lookup, int limit, int next, HttpError e) {
@@ -409,10 +415,11 @@ public class HttpHandler extends Handler implements Runnable {
 	}
 
 	private final void error(HttpError e) {
-		log.error("{}: {}", getRemote(), e);
+		log.error("{}: {}", co.getRemote(), e);
 		try {
-			getOut().write(e.empty());
-			getOut().close();
+			OutputStream out = co.getOut();
+			out.write(e.empty());
+			out.close();
 		} catch (IOException ex) { // OK
 		}
 	}
@@ -490,17 +497,18 @@ public class HttpHandler extends Handler implements Runnable {
 	public void run() {
 		boolean close = false;
 
+		OutputStream out = co.getOut();
 		try {
-			ServletResponseImpl res = new ServletResponseImpl(ctx, getOut(), this);
+			ServletResponseImpl res = new ServletResponseImpl(ctx, out, this);
 			ServletRequestImpl req = new ServletRequestImpl(ctx, this, DispatcherType.REQUEST, res);
 
 			if (!fillRequest(req))
 				return;
 
 			if ("100-continue".equals(req.getHeader("expect"))) {
-				getOut().write(HttpError.CONTINUE.encoded);
-				getOut().write(CRLF);
-				getOut().flush();
+				out.write(HttpError.CONTINUE.encoded);
+				out.write(CRLF);
+				out.flush();
 			}
 			close = keepAliveIdle == 0 || !"keep-alive".equalsIgnoreCase(req.getHeader("connection"));
 			events.fireRequestInitialized(req);
@@ -529,36 +537,34 @@ public class HttpHandler extends Handler implements Runnable {
 		} catch (Exception e) {
 			log.error("processor error", e);
 		} finally {
+			cleanup();
 			if (close)
 				try {
-					getOut().close();
+					out.close();
 				} catch (IOException e) { // OK
 				}
-			cleanup();
 		}
 	}
 
 	private void cleanup() {
+		f = null;
 		meta.clear();
 		headerCount = last = 0;
 		step = METHOD;
-		f = null;
 	}
 
 	@Override
-	public boolean isIdle() {
-		return f == null;
-	}
+	public boolean closed(boolean stop) {
+		if (stop)
+			return f == null;
 
-	@Override
-	public boolean isClosed() {
-		if (f != null && !f.isDone())
+		if (f != null)
 			return false;
-		if (super.isClosed())
+		if (co.isClosed())
 			return true;
 		if (keepAliveIdle >= 0) {
 			long e = System.currentTimeMillis() - keepAliveIdle;
-			if (lastRead() < e && lastWrite() < e)
+			if (co.lastRead() < e && co.lastWrite() < e)
 				return true;
 		}
 		// TODO check request timeout
@@ -566,10 +572,14 @@ public class HttpHandler extends Handler implements Runnable {
 	}
 
 	@Override
+	public void free() {
+		reset();
+	}
+
+	@Override
 	public void reset() {
 		if (f != null)
 			f.cancel(true);
-		super.reset();
 		cleanup();
 	}
 
@@ -650,5 +660,26 @@ public class HttpHandler extends Handler implements Runnable {
 				o = indexOf + 1;
 			}
 		}
+	}
+
+	/**
+	 * @return
+	 */
+	public InetSocketAddress getLocal() {
+		return co.getLocal();
+	}
+
+	/**
+	 * @return
+	 */
+	public InetSocketAddress getRemote() {
+		return co.getRemote();
+	}
+
+	/**
+	 * @return
+	 */
+	public InputStream getIn() {
+		return co.getIn();
 	}
 }

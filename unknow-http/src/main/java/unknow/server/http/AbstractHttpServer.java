@@ -2,20 +2,18 @@ package unknow.server.http;
 
 import java.util.ServiceLoader;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.servlet.ServletContainerInitializer;
 import javax.servlet.ServletException;
 
 import picocli.CommandLine.Option;
 import unknow.server.http.servlet.ServletContextImpl;
+import unknow.server.http.utils.EmptyQueue;
 import unknow.server.http.utils.EventManager;
 import unknow.server.http.utils.ServletManager;
-import unknow.server.nio.Handler;
-import unknow.server.nio.HandlerFactory;
 import unknow.server.nio.cli.NIOServerCli;
 
 public abstract class AbstractHttpServer extends NIOServerCli {
@@ -76,17 +74,14 @@ public abstract class AbstractHttpServer extends NIOServerCli {
 
 	@Override()
 	public final Integer call() throws Exception {
-		ExecutorService executor = new ThreadPoolExecutor(execMin, execMax, execIdle, TimeUnit.SECONDS, new SynchronousQueue<Runnable>(), r -> {
-			Thread t = new Thread(r, "exec");
+		AtomicInteger i = new AtomicInteger();
+		ExecutorService executor = new ThreadPoolExecutor(execMin, execMax, execIdle, TimeUnit.SECONDS, new EmptyQueue<Runnable>(), r -> {
+			Thread t = new Thread(r, "exec-" + i.getAndIncrement());
 			t.setDaemon(true);
 			return t;
 		});
-		handler = new HandlerFactory() {
-			@Override()
-			protected final Handler create() {
-				return new HttpHandler(this, executor, ctx, keepAliveIdle);
-			}
-		};
+
+		handler = co -> new HttpHandler(co, executor, ctx, keepAliveIdle);
 
 		loadInitializer();
 		initialize();

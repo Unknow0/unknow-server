@@ -20,7 +20,7 @@ public interface NIOWorkers {
 	 * @param handler the handler
 	 * @throws IOException
 	 */
-	void register(SocketChannel socket, Handler handler) throws IOException;
+	void register(SocketChannel socket, Connection handler) throws IOException;
 
 	/**
 	 * start the IOWorker
@@ -45,7 +45,7 @@ public interface NIOWorkers {
 		}
 
 		@Override
-		public void register(SocketChannel socket, Handler handler) throws IOException {
+		public void register(SocketChannel socket, Connection handler) throws IOException {
 			worker.register(socket, handler);
 		}
 
@@ -80,7 +80,7 @@ public interface NIOWorkers {
 		}
 
 		@Override
-		public synchronized void register(SocketChannel socket, Handler handler) throws IOException {
+		public synchronized void register(SocketChannel socket, Connection handler) throws IOException {
 			w[i++].register(socket, handler);
 			if (i == w.length)
 				i = 0;
