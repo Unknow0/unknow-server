@@ -1,7 +1,7 @@
 #!/bin/bash
 
 unknow_start() {
-	java -jar unknow-http-test/target/server.jar >/dev/null 2>/dev/null &
+	java -jar unknow-http-test/target/server.jar >log 2>log &
 	pid=$!
 	sleep 5
 }

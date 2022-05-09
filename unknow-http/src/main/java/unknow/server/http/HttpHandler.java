@@ -4,8 +4,6 @@
 package unknow.server.http;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.CharsetDecoder;
@@ -105,28 +103,26 @@ public class HttpHandler extends Handler implements Runnable {
 
 	@Override
 	protected void onRead() {
-		synchronized (this) {
-			if (f != null) {
-				synchronized (pendingRead) {
-					pendingRead.notifyAll();
-				}
-				System.out.println("> notify");
-				return;
+		if (f != null && !f.isDone()) {
+			synchronized (pendingRead) {
+				pendingRead.notifyAll();
 			}
-			int i = pendingRead.indexOf(CRLF2, MAX_START_SIZE);
-			if (i == -1) {
-				System.out.println("> missing");
-				return;
-			}
-			if (i == -2) {
-				System.out.println("> error");
-				error(HttpError.BAD_REQUEST);
-				return;
-			}
-			pendingRead.read(meta, i + 2);
-			pendingRead.skip(2);
-			f = executor.submit(this);
+			System.out.println("> notify");
+			return;
 		}
+		int i = pendingRead.indexOf(CRLF2, MAX_START_SIZE);
+		if (i == -1) {
+			System.out.println("> missing");
+			return;
+		}
+		if (i == -2) {
+			System.out.println("> error");
+			error(HttpError.BAD_REQUEST);
+			return;
+		}
+		pendingRead.read(meta, i + 2);
+		pendingRead.skip(2);
+		f = executor.submit(this);
 
 //		if (step == METHOD)
 //			tryRead(SPACE, MAX_METHOD_SIZE, PATH, HttpError.BAD_REQUEST);
@@ -543,12 +539,10 @@ public class HttpHandler extends Handler implements Runnable {
 	}
 
 	private void cleanup() {
-		synchronized (this) {
-			meta.clear();
-			headerCount = last = 0;
-			step = METHOD;
-			f = null;
-		}
+		meta.clear();
+		headerCount = last = 0;
+		step = METHOD;
+		f = null;
 	}
 
 	@Override
@@ -558,7 +552,7 @@ public class HttpHandler extends Handler implements Runnable {
 
 	@Override
 	public boolean isClosed() {
-		if (f != null)
+		if (f != null && !f.isDone())
 			return false;
 		if (super.isClosed())
 			return true;
