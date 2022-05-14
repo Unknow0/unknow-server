@@ -182,8 +182,8 @@ public class ServletServerGen extends AbstractMojo implements BuilderContext {
 						String p = "/" + path.relativize(file).toString().replace('\\', '/');
 						descriptor.resources.put(p, new Resource(Files.getLastModifiedTime(file).to(TimeUnit.MILLISECONDS), Files.size(file)));
 						SD d = new SD(descriptor.servlets.size());
-						d.clazz = ResourceServlet.class.getName();
-						d.name = p;
+						d.clazz = ResourceServlet.class.getName() + d.index;
+						d.name = "Resource:" + p;
 						d.pattern.add(p);
 						descriptor.servlets.add(d);
 						return FileVisitResult.CONTINUE;

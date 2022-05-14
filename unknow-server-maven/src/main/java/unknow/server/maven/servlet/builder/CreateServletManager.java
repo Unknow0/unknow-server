@@ -77,14 +77,15 @@ public class CreateServletManager extends Builder {
 		for (SD s : descriptor.servlets) {
 			String n = "s" + s.index;
 			names.put(s.clazz, new NameExpr(n));
-			ClassOrInterfaceType t = types.get(s.clazz);
 			servlets.add(names.get(s.clazz));
-			if (ResourceServlet.class.getName().equals(s.clazz)) {
-				Resource r = descriptor.resources.get(s.name);
+			if (s.clazz.startsWith(ResourceServlet.class.getName())) {
+				ClassOrInterfaceType t = types.get(ResourceServlet.class);
+				Resource r = descriptor.resources.get(s.pattern.get(0));
 				b.addStatement(Utils.assign(t, n, new ObjectCreationExpr(null, t, Utils.list(new LongLiteralExpr(r.getLastModified() + "L"), new LongLiteralExpr(r.getSize() + "L")))));
-			} else
+			} else {
+				ClassOrInterfaceType t = types.get(s.clazz);
 				b.addStatement(Utils.assign(t, n, new ObjectCreationExpr(null, t, Utils.list())));
-
+			}
 			for (String p : s.pattern) {
 				if (saw.contains(p))
 					System.err.println("duplicate servlet pattern '" + p + "'");
@@ -110,6 +111,7 @@ public class CreateServletManager extends Builder {
 				Utils.list(Utils.array(types.get(Servlet.class), servlets), Utils.array(types.get(Filter.class), filters),
 						buildTree(descriptor, DispatcherType.REQUEST, b, types, names, created), errorCode(b, descriptor, types, names, created),
 						errorClass(b, descriptor, types, names, created)))));
+		System.out.println(names);
 	}
 
 	private static Expression buildTree(Descriptor descriptor, DispatcherType type, BlockStmt b, TypeCache types, Map<Object, NameExpr> names, Set<String> created) {
