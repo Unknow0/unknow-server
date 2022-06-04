@@ -90,7 +90,7 @@ public class HttpHandler implements Handler, Runnable {
 //	private String path;
 //	private String version;
 
-	private Future<?> f;
+	private volatile Future<?> f;
 
 	/**
 	 * create new RequestBuilder
@@ -107,8 +107,8 @@ public class HttpHandler implements Handler, Runnable {
 	}
 
 	@Override
-	public synchronized void onRead() {
-		if (f != null && !f.isDone()) {
+	public void onRead() {
+		if (f != null ) {
 			synchronized (co.pendingRead) {
 				co.pendingRead.notifyAll();
 			}
@@ -546,7 +546,7 @@ public class HttpHandler implements Handler, Runnable {
 		}
 	}
 
-	private synchronized void cleanup() {
+	private void cleanup() {
 		f = null;
 		meta.clear();
 		headerCount = last = 0;
@@ -554,13 +554,13 @@ public class HttpHandler implements Handler, Runnable {
 	}
 
 	@Override
-	public synchronized boolean closed(boolean stop) {
+	public boolean closed(boolean stop) {
 		if (stop)
 			return f == null;
 
 		if (co.isClosed())
 			return true;
-		if (f != null && !f.isDone())
+		if (f != null )
 			return false;
 		if (keepAliveIdle >= 0) {
 			long e = System.currentTimeMillis() - keepAliveIdle;
@@ -577,7 +577,7 @@ public class HttpHandler implements Handler, Runnable {
 	}
 
 	@Override
-	public synchronized void reset() {
+	public void reset() {
 		if (f != null)
 			f.cancel(true);
 		cleanup();
