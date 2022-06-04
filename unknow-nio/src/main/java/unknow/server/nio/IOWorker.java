@@ -75,9 +75,10 @@ public class IOWorker extends Thread {
 					processSelection();
 
 				synchronized (mutex) {
+					long now = System.currentTimeMillis();
 					for (SelectionKey key : selector.keys()) {
 						Connection h = (Connection) key.attachment();
-						if (!key.isValid() || h.closed(false)) {
+						if (!key.isValid() || h.closed(now, false)) {
 							listener.closed(id, h);
 							h.free();
 							key.cancel();
@@ -97,9 +98,10 @@ public class IOWorker extends Thread {
 				if (selector.select(500) > 0)
 					processSelection();
 				synchronized (mutex) {
+					long now = System.currentTimeMillis();
 					for (SelectionKey key : selector.keys()) {
 						Connection h = (Connection) key.attachment();
-						if (!key.isValid() || h.closed(true)) {
+						if (!key.isValid() || h.closed(now, true)) {
 							h.free();
 							key.cancel();
 							key.channel().close();

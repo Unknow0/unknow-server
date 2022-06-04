@@ -76,8 +76,8 @@ public abstract class ProtobufHandlerFactory<T> implements HandlerFactory {
 		}
 
 		@Override
-		public boolean closed(boolean close) {
-			return close || co.isClosed();
+		public boolean closed(long now, boolean close) {
+			return close;
 		}
 
 		@Override

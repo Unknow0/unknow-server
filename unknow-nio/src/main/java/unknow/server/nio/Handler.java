@@ -11,7 +11,7 @@ public interface Handler {
 
 	void onWrite();
 
-	boolean closed(boolean close);
+	boolean closed(long now, boolean close);
 
 	void free();
 

@@ -532,11 +532,11 @@ public class HttpHandler implements Handler, Runnable {
 			log.error("processor error", e);
 		} finally {
 			cleanup();
-//			if (close)
-			try {
-				out.close();
-			} catch (IOException e) { // OK
-			}
+			if (close)
+				try {
+					out.close();
+				} catch (IOException e) { // OK
+				}
 		}
 	}
 
@@ -548,7 +548,7 @@ public class HttpHandler implements Handler, Runnable {
 	}
 
 	@Override
-	public boolean closed(boolean stop) {
+	public boolean closed(long now, boolean stop) {
 		if (stop)
 			return f == null;
 
@@ -556,9 +556,9 @@ public class HttpHandler implements Handler, Runnable {
 			return true;
 		if (f != null)
 			return false;
-		if (keepAliveIdle >= 0) {
-			long e = System.currentTimeMillis() - keepAliveIdle;
-			if (co.lastRead() < e && co.lastWrite() < e)
+		if (keepAliveIdle > 0) {
+			long e = now - keepAliveIdle;
+			if (co.lastRead() <= e && co.lastWrite() <= e)
 				return true;
 		}
 		// TODO check request timeout

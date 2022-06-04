@@ -160,8 +160,8 @@ public final class Connection {
 		return out.h == null && pendingWrite.isEmpty();
 	}
 
-	public boolean closed(boolean stop) {
-		return handler.closed(stop);
+	public boolean closed(long now, boolean stop) {
+		return handler.closed(now, stop);
 	}
 
 	/**
