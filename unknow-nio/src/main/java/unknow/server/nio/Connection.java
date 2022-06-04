@@ -191,7 +191,7 @@ public final class Connection {
 	}
 
 	private static final class Out extends OutputStream {
-		private Connection h;
+		private volatile Connection h;
 
 		Out(Connection h) {
 			this.h = h;
