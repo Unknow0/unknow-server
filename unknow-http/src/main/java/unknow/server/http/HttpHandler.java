@@ -124,7 +124,8 @@ public class HttpHandler implements Handler, Runnable {
 		}
 		co.pendingRead.read(meta, i + 2);
 		co.pendingRead.skip(2);
-		f = executor.submit(this);
+//		f = executor.submit(this);
+		run();
 
 //		if (step == METHOD)
 //			tryRead(SPACE, MAX_METHOD_SIZE, PATH, HttpError.BAD_REQUEST);
