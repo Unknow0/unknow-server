@@ -108,7 +108,7 @@ public class HttpHandler implements Handler, Runnable {
 
 	@Override
 	public void onRead() {
-		if (f != null ) {
+		if (f != null) {
 			synchronized (co.pendingRead) {
 				co.pendingRead.notifyAll();
 			}
@@ -527,22 +527,16 @@ public class HttpHandler implements Handler, Runnable {
 			String connection = res.getHeader("connection");
 			if (!close && connection != null && !"keep-alive".equals(connection))
 				close = true;
-			try {
-				req.close();
-			} catch (IOException e) {
-				log.error("failed to cleanup request", e);
-				close = true; // assume the response is broken
-			}
 			res.close();
 		} catch (Exception e) {
 			log.error("processor error", e);
 		} finally {
 			cleanup();
-			if (close)
-				try {
-					out.close();
-				} catch (IOException e) { // OK
-				}
+//			if (close)
+			try {
+				out.close();
+			} catch (IOException e) { // OK
+			}
 		}
 	}
 
@@ -560,7 +554,7 @@ public class HttpHandler implements Handler, Runnable {
 
 		if (co.isClosed())
 			return true;
-		if (f != null )
+		if (f != null)
 			return false;
 		if (keepAliveIdle >= 0) {
 			long e = System.currentTimeMillis() - keepAliveIdle;
