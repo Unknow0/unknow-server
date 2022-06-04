@@ -107,7 +107,7 @@ public class HttpHandler implements Handler, Runnable {
 	}
 
 	@Override
-	public void onRead() {
+	public synchronized void onRead() {
 		if (f != null && !f.isDone()) {
 			synchronized (co.pendingRead) {
 				co.pendingRead.notifyAll();
@@ -124,9 +124,7 @@ public class HttpHandler implements Handler, Runnable {
 		}
 		co.pendingRead.read(meta, i + 2);
 		co.pendingRead.skip(2);
-		synchronized (this) {
-			f = executor.submit(this);
-		}
+		f = executor.submit(this);
 
 //		if (step == METHOD)
 //			tryRead(SPACE, MAX_METHOD_SIZE, PATH, HttpError.BAD_REQUEST);
@@ -548,26 +546,22 @@ public class HttpHandler implements Handler, Runnable {
 		}
 	}
 
-	private void cleanup() {
-		synchronized (this) {
-			f = null;
-		}
+	private synchronized void cleanup() {
+		f = null;
 		meta.clear();
 		headerCount = last = 0;
 		step = METHOD;
 	}
 
 	@Override
-	public boolean closed(boolean stop) {
+	public synchronized boolean closed(boolean stop) {
 		if (stop)
 			return f == null;
 
 		if (co.isClosed())
 			return true;
-		synchronized (this) {
-			if (f != null && !f.isDone())
-				return false;
-		}
+		if (f != null && !f.isDone())
+			return false;
 		if (keepAliveIdle >= 0) {
 			long e = System.currentTimeMillis() - keepAliveIdle;
 			if (co.lastRead() < e && co.lastWrite() < e)
@@ -583,11 +577,9 @@ public class HttpHandler implements Handler, Runnable {
 	}
 
 	@Override
-	public void reset() {
-		synchronized (this) {
-			if (f != null)
-				f.cancel(true);
-		}
+	public synchronized void reset() {
+		if (f != null)
+			f.cancel(true);
 		cleanup();
 	}
 
