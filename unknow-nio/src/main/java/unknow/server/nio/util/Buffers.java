@@ -333,13 +333,16 @@ public class Buffers {
 			head = c;
 			if (c == null)
 				tail = null;
-			synchronized (buf) {
+			buf.lock.lockInterruptibly();
+			try {
 				buf.len += read;
 				if (buf.head == null)
 					buf.head = h;
 				else
 					buf.tail.next = h;
 				buf.tail = t;
+			} finally {
+				buf.lock.unlock();
 			}
 		} finally {
 			lock.unlock();
