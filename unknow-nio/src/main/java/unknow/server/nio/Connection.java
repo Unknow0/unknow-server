@@ -56,9 +56,10 @@ public final class Connection {
 	 * 
 	 * @param channel source channel
 	 * @param buf     output buffer
-	 * @throws IOException in case of error
+	 * @throws IOException          in case of error
+	 * @throws InterruptedException
 	 */
-	protected final void readFrom(SocketChannel channel, ByteBuffer buf) throws IOException {
+	protected final void readFrom(SocketChannel channel, ByteBuffer buf) throws IOException, InterruptedException {
 		lastRead = System.currentTimeMillis();
 		buf.clear();
 		if (channel.read(buf) == -1) {
@@ -75,12 +76,13 @@ public final class Connection {
 	 * 
 	 * @param channel where to write
 	 * @param buf     local cache
-	 * @throws IOException in case of error
+	 * @throws IOException          in case of error
+	 * @throws InterruptedException
 	 */
-	protected final void writeInto(SocketChannel channel, ByteBuffer buf) throws IOException {
+	protected final void writeInto(SocketChannel channel, ByteBuffer buf) throws IOException, InterruptedException {
 		lastWrite = System.currentTimeMillis();
 		buf.clear();
-		while (pendingWrite.read(buf)) {
+		while (pendingWrite.read(buf, false)) {
 			buf.flip();
 			channel.write(buf);
 			if (buf.hasRemaining())
@@ -157,7 +159,11 @@ public final class Connection {
 	 * @return true if we should close this handler
 	 */
 	public boolean isClosed() {
-		return out.h == null && pendingWrite.isEmpty();
+		try {
+			return out.h == null && pendingWrite.isEmpty();
+		} catch (InterruptedException e) {
+			return true;
+		}
 	}
 
 	public boolean closed(long now, boolean stop) {
@@ -166,16 +172,20 @@ public final class Connection {
 
 	/**
 	 * free the handler
+	 * 
+	 * @throws InterruptedException
 	 */
-	public final void free() {
+	public final void free() throws InterruptedException {
 		reset();
 		handler.free();
 	}
 
 	/**
 	 * reset this handler
+	 * 
+	 * @throws InterruptedException
 	 */
-	public void reset() {
+	public void reset() throws InterruptedException {
 		try {
 			out.close();
 		} catch (IOException e) { // OK
@@ -187,7 +197,11 @@ public final class Connection {
 
 	@Override
 	public String toString() {
-		return key.channel().toString() + " closed: " + isClosed() + " pending: " + pendingWrite.length();
+		try {
+			return key.channel().toString() + " closed: " + isClosed() + " pending: " + pendingWrite.length();
+		} catch (InterruptedException e) {
+			return "";
+		}
 	}
 
 	private static final class Out extends OutputStream {
@@ -201,7 +215,11 @@ public final class Connection {
 		public synchronized final void write(int b) throws IOException {
 			if (h == null)
 				throw new IOException("already closed");
-			h.pendingWrite.write(b);
+			try {
+				h.pendingWrite.write(b);
+			} catch (InterruptedException e) {
+				throw new IOException(e);
+			}
 			h.key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 		}
 
@@ -232,7 +250,11 @@ public final class Connection {
 				throw new IndexOutOfBoundsException();
 			if (h == null)
 				throw new IOException("already closed");
-			h.pendingWrite.write(buf, off, len);
+			try {
+				h.pendingWrite.write(buf, off, len);
+			} catch (InterruptedException e) {
+				throw new IOException(e);
+			}
 			h.key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 		}
 
@@ -256,8 +278,12 @@ public final class Connection {
 		public synchronized void flush() throws IOException {
 			if (h == null)
 				return;
-			if (!h.pendingWrite.isEmpty())
-				h.key.selector().wakeup();
+			try {
+				if (!h.pendingWrite.isEmpty())
+					h.key.selector().wakeup();
+			} catch (InterruptedException e) {
+				throw new IOException(e);
+			}
 		}
 	}
 }

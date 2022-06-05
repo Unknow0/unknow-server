@@ -37,7 +37,7 @@ public final class ServletManager {
 		return filters;
 	}
 
-	public FilterChain find(ServletRequestImpl req) {
+	public FilterChain find(ServletRequestImpl req) throws InterruptedException {
 		switch (req.getDispatcherType()) {
 			case REQUEST:
 				return request.find(req.req);

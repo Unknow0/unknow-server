@@ -9,6 +9,7 @@ import javax.servlet.FilterChain;
 
 import unknow.server.http.HttpHandler;
 import unknow.server.nio.util.Buffers;
+import unknow.server.nio.util.BuffersUtils;
 
 /**
  * the calculated path tree to FilterChains
@@ -32,25 +33,26 @@ public class PathTree {
 	 * 
 	 * @param req the request
 	 * @return the chain
+	 * @throws InterruptedException
 	 */
-	public FilterChain find(HttpHandler req) {
+	public FilterChain find(HttpHandler req) throws InterruptedException {
 		req.setPathInfoStart(1);
 		FilterChain f = tryFind(req, root, req.meta, req.pathStart() + 1, req.pathEnd());
 		return f == null ? root.def : f;
 	}
 
-	private FilterChain tryFind(HttpHandler req, PartNode last, Buffers path, int o, int e) {
+	private FilterChain tryFind(HttpHandler req, PartNode last, Buffers path, int o, int e) throws InterruptedException {
 		if (o == e) {
 			req.setPathInfoStart(e);
 			return last.exact;
 		}
 
 		while (last.nexts != null) {
-			int i = path.indexOf((byte) '/', o, e - o);
+			int i = BuffersUtils.indexOf(path, (byte) '/', o, e - o);
 			if (i < 0)
 				i = e;
 			if (i == 14) // XXX
-				path.indexOf((byte) '/', o, e - o);
+				BuffersUtils.indexOf(path, (byte) '/', o, e - o);
 			PartNode n = next(last.nexts, path, o, i);
 			if (n == null)
 				break;
@@ -62,7 +64,7 @@ public class PathTree {
 			o = i + 1;
 		}
 		if (last.pattern != null) {
-			int i = path.indexOf((byte) '/', o, e - o);
+			int i = BuffersUtils.indexOf(path, (byte) '/', o, e - o);
 			if (i > 0) {
 				FilterChain f = tryFind(req, last.pattern, path, i + 1, e);
 				if (f != null) // contextPath already set
@@ -84,7 +86,7 @@ public class PathTree {
 		return last.def;
 	}
 
-	private static final PartNode next(PartNode[] nexts, Buffers path, int o, int e) {
+	private static final PartNode next(PartNode[] nexts, Buffers path, int o, int e) throws InterruptedException {
 		int low = 0;
 		int high = nexts.length - 1;
 
@@ -103,7 +105,7 @@ public class PathTree {
 		return null;
 	}
 
-	private static final Node ends(Node[] nexts, Buffers path, int o, int e) {
+	private static final Node ends(Node[] nexts, Buffers path, int o, int e) throws InterruptedException {
 		int low = 0;
 		int high = nexts.length - 1;
 
@@ -148,8 +150,9 @@ public class PathTree {
 	 * @param o start of the part in the buffer
 	 * @param e end of the part
 	 * @return -1,1 or 0 if a <,> or = to b
+	 * @throws InterruptedException
 	 */
-	public static int compare(byte[] a, Buffers b, int o, int e) {
+	public static int compare(byte[] a, Buffers b, int o, int e) throws InterruptedException {
 		int i = a.length;
 		int bl = e - o;
 		while (o < e && i >= 0) {

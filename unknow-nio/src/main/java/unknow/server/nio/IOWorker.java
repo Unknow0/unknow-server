@@ -4,6 +4,7 @@
 package unknow.server.nio;
 
 import java.io.IOException;
+import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -60,9 +61,11 @@ public class IOWorker extends Thread {
 	 */
 	public void register(SocketChannel socket, Connection handler) throws IOException {
 		synchronized (mutex) {
-			selector.wakeup();
+			socket.setOption(StandardSocketOptions.SO_KEEPALIVE, true);
+			socket.setOption(StandardSocketOptions.SO_REUSEADDR, true);
 			socket.configureBlocking(false);
 			handler.attach(socket.register(selector, SelectionKey.OP_READ));
+			selector.wakeup();
 			listener.accepted(id, handler);
 		}
 	}
@@ -71,23 +74,11 @@ public class IOWorker extends Thread {
 	public void run() {
 		while (!Thread.interrupted()) {
 			try {
-				if (selector.select(timeout) > 0)
-					processSelection();
-
-				synchronized (mutex) {
-					long now = System.currentTimeMillis();
-					for (SelectionKey key : selector.keys()) {
-						Connection h = (Connection) key.attachment();
-						if (!key.isValid() || h.closed(now, false)) {
-							listener.closed(id, h);
-							h.free();
-							key.cancel();
-							key.channel().close();
-						}
-					}
-				}
+				select(timeout, false);
 			} catch (IOException e) {
 				log.error("failed to execute", e);
+			} catch (InterruptedException e) {
+				break;
 			}
 		}
 		// stop mode
@@ -95,25 +86,11 @@ public class IOWorker extends Thread {
 		while (!selector.keys().isEmpty()) {
 			try {
 				log.info("wait {} connection before close", selector.keys().size());
-				if (selector.select(500) > 0)
-					processSelection();
-				synchronized (mutex) {
-					long now = System.currentTimeMillis();
-					for (SelectionKey key : selector.keys()) {
-						Connection h = (Connection) key.attachment();
-						if (!key.isValid() || h.closed(now, true)) {
-							h.free();
-							key.cancel();
-							key.channel().close();
-							listener.closed(id, h);
-						}
-					}
-				}
+				select(500, true);
 			} catch (Throwable e) {
 				log.error("failed to execute", e);
 			}
 		}
-		log.info("{}", selector.keys().size());
 		try {
 			selector.close();
 		} catch (Exception e) {
@@ -121,12 +98,31 @@ public class IOWorker extends Thread {
 		}
 	}
 
+	private void select(long timeout, boolean close) throws IOException, InterruptedException {
+		if (selector.select(timeout) > 0)
+			processSelection();
+
+		synchronized (mutex) {
+			long now = System.currentTimeMillis();
+			for (SelectionKey key : selector.keys()) {
+				Connection h = (Connection) key.attachment();
+				if (!key.isValid() || h.closed(now, close)) {
+					listener.closed(id, h);
+					key.cancel();
+					key.channel().close();
+					h.free();
+				}
+			}
+		}
+	}
+
 	/**
 	 * the selection loop
 	 * 
 	 * @throws IOException
+	 * @throws InterruptedException
 	 */
-	private final void processSelection() throws IOException {
+	private final void processSelection() throws IOException, InterruptedException {
 		Iterator<SelectionKey> it = selector.selectedKeys().iterator();
 
 		while (it.hasNext()) {

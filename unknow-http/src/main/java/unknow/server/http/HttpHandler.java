@@ -35,6 +35,7 @@ import unknow.server.http.utils.ServletManager;
 import unknow.server.nio.Connection;
 import unknow.server.nio.Handler;
 import unknow.server.nio.util.Buffers;
+import unknow.server.nio.util.BuffersUtils;
 
 public class HttpHandler implements Handler, Runnable {
 	private static final Logger log = LoggerFactory.getLogger(HttpHandler.class);
@@ -107,22 +108,17 @@ public class HttpHandler implements Handler, Runnable {
 	}
 
 	@Override
-	public void onRead() {
-		if (f != null) {
-			synchronized (co.pendingRead) {
-				co.pendingRead.notifyAll();
-			}
-			log.info("> notify {}", co);
+	public void onRead() throws InterruptedException {
+		if (f != null)
 			return;
-		}
-		int i = co.pendingRead.indexOf(CRLF2, MAX_START_SIZE);
+		int i = BuffersUtils.indexOf(co.pendingRead, CRLF2, 0, MAX_START_SIZE);
 		if (i == -1)
 			return;
 		if (i == -2) {
 			error(HttpError.BAD_REQUEST);
 			return;
 		}
-		co.pendingRead.read(meta, i + 2);
+		co.pendingRead.read(meta, i + 2, false);
 		co.pendingRead.skip(2);
 		f = executor.submit(this);
 
@@ -210,11 +206,12 @@ public class HttpHandler implements Handler, Runnable {
 	 * @return the http method as a string
 	 */
 	public String parseMethod() {
-		synchronized (sb) {
-			sb.setLength(0);
-			meta.toString(sb, 0, part[METHOD]);
-			return sb.toString();
-		}
+//		synchronized (sb) {
+//			sb.setLength(0);
+//			meta.toString(sb, 0, part[METHOD]);
+//			return sb.toString();
+//		}
+		return "";
 	}
 
 	/**
@@ -245,14 +242,15 @@ public class HttpHandler implements Handler, Runnable {
 	 * @return the query string as a string
 	 */
 	public String parseQuery() {
-		synchronized (sb) {
-			sb.setLength(0);
-			int o = part[PATH] + 1;
-			int l = part[QUERY] - o;
-			if (l > 0)
-				meta.toString(sb, o, l);
-			return sb.toString();
-		}
+//		synchronized (sb) {
+//			sb.setLength(0);
+//			int o = part[PATH] + 1;
+//			int l = part[QUERY] - o;
+//			if (l > 0)
+//				meta.toString(sb, o, l);
+//			return sb.toString();
+//		}
+		return "";
 	}
 
 	/**
@@ -277,12 +275,13 @@ public class HttpHandler implements Handler, Runnable {
 	 * @return the protocol as a string
 	 */
 	public String parseProtocol() {
-		synchronized (sb) {
-			sb.setLength(0);
-			int o = part[QUERY] + 1;
-			meta.toString(sb, o, part[PROTOCOL] - o);
-			return sb.toString();
-		}
+//		synchronized (sb) {
+//			sb.setLength(0);
+//			int o = part[QUERY] + 1;
+//			meta.toString(sb, o, part[PROTOCOL] - o);
+//			return sb.toString();
+//		}
+		return "";
 	}
 
 	/**
@@ -291,28 +290,28 @@ public class HttpHandler implements Handler, Runnable {
 	public Map<String, List<String>> parseHeader() {
 		Map<String, List<String>> map = new HashMap<>();
 
-		synchronized (sb) {
-			int o = part[PROTOCOL] + 2;
-			for (int i = 0; i < headerCount; i++) {
-				int e = headers[i];
-				int indexOf = meta.indexOf(COLON, o, e - o);
-				if (indexOf < 0)
-					indexOf = e;
-				sb.setLength(0);
-				meta.toString(sb, o, indexOf - o);
-				String k = sb.toString().toLowerCase();
-				List<String> list = map.get(k);
-				if (list == null)
-					map.put(k, list = new ArrayList<>());
-				if (indexOf < e && !parseHeaderValue(list, indexOf + 1, e)) {
-					list.clear();
-					sb.setLength(0);
-					meta.toString(sb, indexOf + 1, e - indexOf - 1);
-					list.add(sb.toString().trim());
-				}
-				o = e + 2;
-			}
-		}
+//		synchronized (sb) {
+//			int o = part[PROTOCOL] + 2;
+//			for (int i = 0; i < headerCount; i++) {
+//				int e = headers[i];
+//				int indexOf = meta.indexOf(COLON, o, e - o);
+//				if (indexOf < 0)
+//					indexOf = e;
+//				sb.setLength(0);
+//				meta.toString(sb, o, indexOf - o);
+//				String k = sb.toString().toLowerCase();
+//				List<String> list = map.get(k);
+//				if (list == null)
+//					map.put(k, list = new ArrayList<>());
+//				if (indexOf < e && !parseHeaderValue(list, indexOf + 1, e)) {
+//					list.clear();
+//					sb.setLength(0);
+//					meta.toString(sb, indexOf + 1, e - indexOf - 1);
+//					list.add(sb.toString().trim());
+//				}
+//				o = e + 2;
+//			}
+//		}
 		return map;
 	}
 
@@ -324,47 +323,47 @@ public class HttpHandler implements Handler, Runnable {
 	 * @param e    the end offset
 	 * @return false if the parsing failed
 	 */
-	private boolean parseHeaderValue(List<String> list, int o, int e) {
-
-		for (;;) {
-			sb.setLength(0);
-			o = meta.indexOfNot(WS, o, e - o);
-			if (o < 0)
-				return true;
-			if (meta.get(o) == QUOTE) {
-				o++;
-				int i = meta.indexOf(QUOTE, o, e - o);
-				if (i < 0)
-					return false;
-				while (meta.get(i - 1) == '\\') {
-					meta.toString(sb, o, i - o);
-					o = i + 1;
-					i = meta.indexOf(QUOTE, o, e - o);
-					if (i == -1)
-						return false;
-				}
-				meta.toString(sb, o, i - o);
-				o = i + 1;
-			} else {
-				int i = meta.indexOfOne(SEP, o, e - o);
-				if (i < 0) { // we are done
-					meta.toString(sb, o, e - o);
-					list.add(sb.toString().trim());
-					return true;
-				}
-				meta.toString(sb, o, i - o);
-				o = i;
-			}
-			int j = meta.indexOf(COMA, o, e - o);
-			if (j != meta.indexOfNot(WS, o, e - o))
-				return false;
-			if (sb.length() > 0)
-				list.add(sb.toString());
-			if (j < 0)
-				return true;
-			o = j + 1;
-		}
-	}
+//	private boolean parseHeaderValue(List<String> list, int o, int e) {
+//
+//		for (;;) {
+//			sb.setLength(0);
+//			o = meta.indexOfNot(WS, o, e - o);
+//			if (o < 0)
+//				return true;
+//			if (meta.get(o) == QUOTE) {
+//				o++;
+//				int i = meta.indexOf(QUOTE, o, e - o);
+//				if (i < 0)
+//					return false;
+//				while (meta.get(i - 1) == '\\') {
+//					meta.toString(sb, o, i - o);
+//					o = i + 1;
+//					i = meta.indexOf(QUOTE, o, e - o);
+//					if (i == -1)
+//						return false;
+//				}
+//				meta.toString(sb, o, i - o);
+//				o = i + 1;
+//			} else {
+//				int i = meta.indexOfOne(SEP, o, e - o);
+//				if (i < 0) { // we are done
+//					meta.toString(sb, o, e - o);
+//					list.add(sb.toString().trim());
+//					return true;
+//				}
+//				meta.toString(sb, o, i - o);
+//				o = i;
+//			}
+//			int j = meta.indexOf(COMA, o, e - o);
+//			if (j != meta.indexOfNot(WS, o, e - o))
+//				return false;
+//			if (sb.length() > 0)
+//				list.add(sb.toString());
+//			if (j < 0)
+//				return true;
+//			o = j + 1;
+//		}
+//	}
 
 	/**
 	 * @return the cookies
@@ -372,45 +371,45 @@ public class HttpHandler implements Handler, Runnable {
 	public Cookie[] parseCookie() {
 		List<Cookie> cookies = new ArrayList<>();
 		int o = part[PROTOCOL] + 2;
-		for (int i = 0; i < headerCount; i++) {
-			int e = headers[i];
-			int indexOf = meta.indexOf(COLON, o, e - o);
-			if (indexOf < 0) { // not cookie to parse there
-				o = e + 2;
-				continue;
-			}
-			synchronized (sb) {
-				sb.setLength(0);
-				meta.toString(sb, o, indexOf - o);
-				if (!"cookie".equals(sb.toString().toLowerCase())) {
-					o = e + 2;
-					continue;
-				}
-				o = meta.indexOfNot(WS, indexOf + 1, e);
-				if (o == -1) {
-					o = e + 2;
-					continue;
-				}
-				// parse cookie
-				int next;
-				do {
-					next = meta.indexOf(COOKIE_SEP, o, e - o);
-					if (next < 0)
-						next = e;
-					indexOf = meta.indexOf(EQUAL, o, next - o);
-					if (indexOf < 0)
-						break;
-					sb.setLength(0);
-					meta.toString(sb, o, indexOf - o);
-					String n = sb.toString();
-					sb.setLength(0);
-					meta.toString(sb, indexOf + 1, next - indexOf - 1);
-					cookies.add(new Cookie(n, sb.toString()));
-					o = next + 2;
-				} while (next < e);
-				o = e + 2;
-			}
-		}
+//		for (int i = 0; i < headerCount; i++) {
+//			int e = headers[i];
+//			int indexOf = meta.indexOf(COLON, o, e - o);
+//			if (indexOf < 0) { // not cookie to parse there
+//				o = e + 2;
+//				continue;
+//			}
+//			synchronized (sb) {
+//				sb.setLength(0);
+//				meta.toString(sb, o, indexOf - o);
+//				if (!"cookie".equals(sb.toString().toLowerCase())) {
+//					o = e + 2;
+//					continue;
+//				}
+//				o = meta.indexOfNot(WS, indexOf + 1, e);
+//				if (o == -1) {
+//					o = e + 2;
+//					continue;
+//				}
+//				// parse cookie
+//				int next;
+//				do {
+//					next = meta.indexOf(COOKIE_SEP, o, e - o);
+//					if (next < 0)
+//						next = e;
+//					indexOf = meta.indexOf(EQUAL, o, next - o);
+//					if (indexOf < 0)
+//						break;
+//					sb.setLength(0);
+//					meta.toString(sb, o, indexOf - o);
+//					String n = sb.toString();
+//					sb.setLength(0);
+//					meta.toString(sb, indexOf + 1, next - indexOf - 1);
+//					cookies.add(new Cookie(n, sb.toString()));
+//					o = next + 2;
+//				} while (next < e);
+//				o = e + 2;
+//			}
+//		}
 		return cookies.toArray(COOKIE);
 	}
 
@@ -424,61 +423,61 @@ public class HttpHandler implements Handler, Runnable {
 		}
 	}
 
-	private boolean fillRequest(ServletRequestImpl req) {
-		int i = meta.indexOf(SPACE, 0, MAX_METHOD_SIZE);
+	private boolean fillRequest(ServletRequestImpl req) throws InterruptedException {
+		int i = BuffersUtils.indexOf(meta, SPACE, 0, MAX_METHOD_SIZE);
 		if (i < 0) {
 			error(HttpError.BAD_REQUEST);
 			return false;
 		}
-		meta.toString(sb, 0, i);
+		BuffersUtils.toString(sb, meta, 0, i);
 		req.setMethod(sb.toString());
 		sb.setLength(0);
 		int last = i + 1;
 
-		i = meta.indexOf(SPACE, last, MAX_PATH_SIZE);
+		i = BuffersUtils.indexOf(meta, SPACE, last, MAX_PATH_SIZE);
 		if (i < 0) {
 			error(HttpError.URI_TOO_LONG);
 			return false;
 		}
-		int q = meta.indexOf(QUESTION, last, i - last);
+		int q = BuffersUtils.indexOf(meta, QUESTION, last, i - last);
 		if (q < 0)
 			q = i;
 
-		meta.toString(sb, last, q - last);
+		BuffersUtils.toString(sb, meta, last, q - last);
 		String path = sb.toString();
 		sb.setLength(0);
 
 		part[METHOD] = last - 1;
 		part[PATH] = q;
 
-		meta.toString(sb, q, i - q);
+		BuffersUtils.toString(sb, meta, q, i - q);
 		req.setQuery(sb.toString());
 		sb.setLength(0);
 		last = i + 1;
 
-		i = meta.indexOf(CRLF, last, MAX_VERSION_SIZE);
+		i = BuffersUtils.indexOf(meta, CRLF, last, MAX_VERSION_SIZE);
 		if (i < 0) {
 			error(HttpError.BAD_REQUEST);
 			return false;
 		}
-		meta.toString(sb, last, i - last);
+		BuffersUtils.toString(sb, meta, last, i - last);
 		req.setProtocol(sb.toString());
 		sb.setLength(0);
 		last = i + 2;
 
 		Map<String, List<String>> map = new HashMap<>();
-		while ((i = meta.indexOf(CRLF, last, MAX_HEADER_SIZE)) > 0) {
-			int c = meta.indexOf(COLON, last, i - last);
+		while ((i = BuffersUtils.indexOf(meta, CRLF, last, MAX_HEADER_SIZE)) > 0) {
+			int c = BuffersUtils.indexOf(meta, COLON, last, i - last);
 			if (c < 0) {
 				error(HttpError.BAD_REQUEST);
 				return false;
 			}
 
-			meta.toString(sb, last, c - last);
+			BuffersUtils.toString(sb, meta, last, c - last);
 			String k = sb.toString().trim().toLowerCase();
 			sb.setLength(0);
 
-			meta.toString(sb, c + 1, i - c - 1);
+			BuffersUtils.toString(sb, meta, c + 1, i - c - 1);
 			String v = sb.toString().trim();
 			sb.setLength(0);
 
@@ -541,10 +540,15 @@ public class HttpHandler implements Handler, Runnable {
 	}
 
 	private void cleanup() {
-		f = null;
-		meta.clear();
+		synchronized (this) {
+			f = null;
+		}
 		headerCount = last = 0;
 		step = METHOD;
+		try {
+			meta.clear();
+		} catch (InterruptedException e) {
+		}
 	}
 
 	@Override
@@ -561,6 +565,12 @@ public class HttpHandler implements Handler, Runnable {
 			if (co.lastRead() <= e && co.lastWrite() <= e)
 				return true;
 		}
+		try {
+			if (!co.pendingRead.isEmpty())
+				onRead();
+		} catch (InterruptedException e) {
+		}
+
 		// TODO check request timeout
 		return false;
 	}
@@ -593,67 +603,67 @@ public class HttpHandler implements Handler, Runnable {
 	private final void decodePath(StringBuilder sb, Buffers b, int o, int e) {
 		DECODE_BB.clear();
 		DECODE_CB.clear();
-		for (;;) {
-			int i = b.indexOf(PERCENT, o, e - o);
-			if (i != o && DECODE_BB.position() > 0) {
-				DECODE_BB.flip();
-				CoderResult r = DECODER.decode(DECODE_BB, DECODE_CB, true);
-				while (r.isOverflow()) {
-					CharBuffer tmp = CharBuffer.allocate(DECODE_CB.capacity() * 2);
-					DECODE_CB.flip();
-					tmp.put(DECODE_CB);
-					DECODE_CB = tmp;
-					r = DECODER.decode(DECODE_BB, DECODE_CB, true);
-				}
-				sb.append(DECODE_CB.array(), 0, DECODE_CB.position());
-				DECODE_BB.compact();
-			}
-			if (i >= 0) {
-				b.toString(sb, o, i++ - o);
-				if (DECODE_BB.remaining() == 0) {
-					ByteBuffer tmp = ByteBuffer.allocate(DECODE_BB.capacity() * 2);
-					DECODE_BB.flip();
-					tmp.put(DECODE_BB);
-					DECODE_BB = tmp;
-				}
-				DECODE_BB.put((byte) (Character.digit(b.get(i++), 16) * 16 + Character.digit(b.get(i++), 16)));
-				o = i;
-			} else {
-				b.toString(sb, o, e - o);
-				break;
-			}
-		}
+//		for (;;) {
+//			int i = b.indexOf(PERCENT, o, e - o);
+//			if (i != o && DECODE_BB.position() > 0) {
+//				DECODE_BB.flip();
+//				CoderResult r = DECODER.decode(DECODE_BB, DECODE_CB, true);
+//				while (r.isOverflow()) {
+//					CharBuffer tmp = CharBuffer.allocate(DECODE_CB.capacity() * 2);
+//					DECODE_CB.flip();
+//					tmp.put(DECODE_CB);
+//					DECODE_CB = tmp;
+//					r = DECODER.decode(DECODE_BB, DECODE_CB, true);
+//				}
+//				sb.append(DECODE_CB.array(), 0, DECODE_CB.position());
+//				DECODE_BB.compact();
+//			}
+//			if (i >= 0) {
+//				b.toString(sb, o, i++ - o);
+//				if (DECODE_BB.remaining() == 0) {
+//					ByteBuffer tmp = ByteBuffer.allocate(DECODE_BB.capacity() * 2);
+//					DECODE_BB.flip();
+//					tmp.put(DECODE_BB);
+//					DECODE_BB = tmp;
+//				}
+//				DECODE_BB.put((byte) (Character.digit(b.get(i++), 16) * 16 + Character.digit(b.get(i++), 16)));
+//				o = i;
+//			} else {
+//				b.toString(sb, o, e - o);
+//				break;
+//			}
+//		}
 	}
 
 	private void parseParam(Buffers in, int o, int e, Map<String, List<String>> param) {
-		synchronized (sb) {
-			while (o < e) {
-				int indexOf = in.indexOf(AMPERSAMP, o, e - o);
-				if (indexOf < 0)
-					indexOf = e;
-				int i = in.indexOf(EQUAL, o, indexOf - o);
-				String n;
-				String v;
-				if (i > 0) {
-					sb.setLength(0);
-					decodePath(sb, in, o, i);
-					n = sb.toString();
-					sb.setLength(0);
-					decodePath(sb, in, i + 1, indexOf);
-					v = sb.toString();
-				} else {
-					sb.setLength(0);
-					decodePath(sb, in, o, indexOf);
-					n = sb.toString();
-					v = "";
-				}
-				List<String> list = param.get(n);
-				if (list == null)
-					param.put(n, list = new ArrayList<>());
-				list.add(v);
-				o = indexOf + 1;
-			}
-		}
+//		synchronized (sb) {
+//			while (o < e) {
+//				int indexOf = in.indexOf(AMPERSAMP, o, e - o);
+//				if (indexOf < 0)
+//					indexOf = e;
+//				int i = in.indexOf(EQUAL, o, indexOf - o);
+//				String n;
+//				String v;
+//				if (i > 0) {
+//					sb.setLength(0);
+//					decodePath(sb, in, o, i);
+//					n = sb.toString();
+//					sb.setLength(0);
+//					decodePath(sb, in, i + 1, indexOf);
+//					v = sb.toString();
+//				} else {
+//					sb.setLength(0);
+//					decodePath(sb, in, o, indexOf);
+//					n = sb.toString();
+//					v = "";
+//				}
+//				List<String> list = param.get(n);
+//				if (list == null)
+//					param.put(n, list = new ArrayList<>());
+//				list.add(v);
+//				o = indexOf + 1;
+//			}
+//		}
 	}
 
 	/**

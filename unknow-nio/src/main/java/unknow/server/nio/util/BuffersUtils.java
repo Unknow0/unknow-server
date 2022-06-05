@@ -3,7 +3,7 @@
  */
 package unknow.server.nio.util;
 
-import unknow.server.nio.util.Buffers.Chunk;
+import unknow.server.nio.util.Buffers.Walker;
 
 /**
  * @author unknow
@@ -18,24 +18,35 @@ public final class BuffersUtils {
 	 * @param buf    buff to look into
 	 * @param lookup data too lookup
 	 * @return true if we stars with "lookup"
+	 * @throws InterruptedException
 	 */
-	public static boolean startsWith(Buffers buf, byte[] lookup) {
-		synchronized (buf) {
-			Chunk b = buf.getHead();
-			int l = lookup.length;
-			if (b == null || buf.length() < l)
-				return false;
-			int i = 0;
+	public static boolean startsWith(Buffers buf, byte[] lookup, int o, int l) throws InterruptedException {
+		StartWith w = new StartWith(lookup);
+		buf.walk(w, o, l);
+		return w.found;
+	}
 
-			do {
-				int e = b.o + b.l;
-				for (int j = b.o; j < e && i < l; i++, j++) {
-					if (lookup[i] != b.b[j])
-						return false;
-				}
-			} while ((b = b.next) != null);
+	private static final class StartWith implements Walker {
+		private final byte[] lookup;
+		int i = 0;
+		boolean found;
+
+		public StartWith(byte[] lookup) {
+			this.lookup = lookup;
+			found = false;
 		}
-		return true;
+
+		@Override
+		public boolean apply(byte[] b, int o, int e) {
+			while (o < e && i < lookup.length) {
+				if (lookup[i] != b[o])
+					return false;
+				i++;
+				o++;
+			}
+			found = i == lookup.length;
+			return !found;
+		}
 	}
 
 	/**
@@ -45,30 +56,30 @@ public final class BuffersUtils {
 	 * @param lookup data too lookup
 	 * @return true if we stars with "lookup"
 	 */
-	public static boolean endsWith(Buffers buf, byte[] lookup) {
-		synchronized (buf) {
-			Chunk b = buf.getHead();
-			int l = lookup.length;
-			int o = buf.length() - l;
-			if (b == null || o < 0)
-				return false;
-			int i = 0;
-			// skip
-			while (o > b.l) {
-				o -= b.l;
-				b = b.next;
-			}
-			do {
-				int e = b.o + b.l - o;
-				for (int j = b.o + o; j < e && i < l; i++, j++) {
-					if (lookup[i] != b.b[j])
-						return false;
-				}
-				o = 0;
-			} while ((b = b.next) != null);
-		}
-		return true;
-	}
+//	public static boolean endsWith(Buffers buf, byte[] lookup) {
+//		synchronized (buf) {
+//			Chunk b = buf.getHead();
+//			int l = lookup.length;
+//			int o = buf.length() - l;
+//			if (b == null || o < 0)
+//				return false;
+//			int i = 0;
+//			// skip
+//			while (o > b.l) {
+//				o -= b.l;
+//				b = b.next;
+//			}
+//			do {
+//				int e = b.o + b.l - o;
+//				for (int j = b.o + o; j < e && i < l; i++, j++) {
+//					if (lookup[i] != b.b[j])
+//						return false;
+//				}
+//				o = 0;
+//			} while ((b = b.next) != null);
+//		}
+//		return true;
+//	}
 
 	/**
 	 * check if the data equals
@@ -76,54 +87,118 @@ public final class BuffersUtils {
 	 * @param buf    buff to look into
 	 * @param lookup data too lookup
 	 * @return true if we stars with "lookup"
+	 * @throws InterruptedException
 	 */
-	public static boolean equals(Buffers buf, byte[] lookup) {
-		synchronized (buf) {
-			Chunk b = buf.getHead();
-			int l = lookup.length;
-			if (b == null || buf.length() != l)
-				return false;
-			int i = 0;
-			int e, j;
-			do {
-				e = b.o + b.l;
-				j = b.o;
-				while (j < e && i < l) {
-					if (lookup[i++] != b.b[j++])
-						return false;
-				}
-				if (i == l)
-					return true;
-			} while ((b = b.next) != null);
+//	public static boolean equals(Buffers buf, byte[] lookup) {
+//		synchronized (buf) {
+//			Chunk b = buf.getHead();
+//			int l = lookup.length;
+//			if (b == null || buf.length() != l)
+//				return false;
+//			int i = 0;
+//			int e, j;
+//			do {
+//				e = b.o + b.l;
+//				j = b.o;
+//				while (j < e && i < l) {
+//					if (lookup[i++] != b.b[j++])
+//						return false;
+//				}
+//				if (i == l)
+//					return true;
+//			} while ((b = b.next) != null);
+//		}
+//		return false;
+//	}
+	/**
+	 * get index of
+	 * 
+	 * @param buf    buff to look into
+	 * @param lookup data too lookup
+	 * @param o      first index to check
+	 * @param l      max number of bytes to check
+	 * @return the index or -1 if not found, -2 if max reached
+	 * @throws InterruptedException
+	 */
+	public static int indexOf(Buffers buf, byte lookup, int o, int l) throws InterruptedException {
+		IndexOf w = new IndexOf(lookup);
+		switch (buf.walk(w, o, l)) {
+			case MAX:
+				return -2;
+			case STOPED:
+				return w.i + o;
+			default:
+				return -1;
 		}
-		return false;
+	}
+
+	private static final class IndexOf implements Walker {
+		private final byte lookup;
+		int i = 0;
+
+		public IndexOf(byte lookup) {
+			this.lookup = lookup;
+		}
+
+		@Override
+		public boolean apply(byte[] b, int o, int e) {
+			while (o < e) {
+				if (lookup == b[o])
+					return false;
+				i++;
+				o++;
+			}
+			return true;
+		}
 	}
 
 	/**
-	 * check if the path equals or is followed by '/' or '?'
+	 * get index of
 	 * 
-	 * @param buf  buff to look into
-	 * @param path data too lookup
-	 * @return true if we stars with "lookup"
+	 * @param buf    buff to look into
+	 * @param lookup data too lookup
+	 * @return the index or -1 if not found, -2 if max reached
+	 * @throws InterruptedException
 	 */
-	public static boolean pathMatches(Buffers buf, byte[] path) {
-		synchronized (buf) {
-			Chunk b = buf.getHead();
-			int l = path.length;
-			if (b == null || buf.length() < l)
-				return false;
-			int i = 0;
-			int e, j;
-			do {
-				e = b.o + b.l;
-				j = b.o;
-				while (j < e && i < l) {
-					if (path[i++] != b.b[j++])
-						return false;
+	public static int indexOf(Buffers buf, byte[] lookup, int o, int l) throws InterruptedException {
+		IndexOfBloc w = new IndexOfBloc(lookup);
+		switch (buf.walk(w, o, l)) {
+			case MAX:
+				return -2;
+			case STOPED:
+				return w.r + o;
+			default:
+				return -1;
+		}
+	}
+
+	private static final class IndexOfBloc implements Walker {
+		private final byte[] lookup;
+		private int i = 0;
+		int r = 0;
+
+		public IndexOfBloc(byte[] lookup) {
+			this.lookup = lookup;
+		}
+
+		private final boolean match(byte[] b, int o, int e) {
+			for (; i < lookup.length && o < e; i++, o++) {
+				if (b[o] != lookup[i]) {
+					i = 0;
+					return false;
 				}
-				if (i == l && j < e)
-					return b.b[j] == '/' || b.b[j] == '?';
-			} while ((b = b.next) != null);
+			}
+			return true;
+		}
+
+		@Override
+		public boolean apply(byte[] b, int o, int e) {
+			while (o < e) {
+				if (match(b, o, e))
+					return i != lookup.length;
+				o++;
+				r++;
+			}
 			return true;
 		}
 	}
@@ -135,28 +210,30 @@ public final class BuffersUtils {
 	 * @param buf the buffer to convert
 	 * @param off starting offset
 	 * @param len length (-1 to take the full buffer)
+	 * @throws InterruptedException
 	 */
-	public static void toString(StringBuilder sb, Buffers buf, int off, int len) {
-		synchronized (buf) {
-			Chunk b = buf.getHead();
-			if (b == null)
-				return;
-			if (len == 0 || off >= buf.length())
-				return;
-			if (len == -1)
-				len = buf.length() - off;
-			sb.ensureCapacity(len);
-			do {
-				if (b.l < off) {
-					off -= b.l;
-					continue;
-				}
-				int w = b.l - off;
-				for (int i = b.o + off; i < b.o + b.l; i++)
-					sb.append((char) b.b[i]);
-				off = 0;
-				len -= w;
-			} while (len > 0 && (b = b.next) != null);
+	public static void toString(StringBuilder sb, Buffers buf, int off, int len) throws InterruptedException {
+		ToString w = new ToString(sb);
+		buf.walk(w, off, len);
+	}
+
+	private static final class ToString implements Walker {
+		private final StringBuilder sb;
+
+		public ToString(StringBuilder sb) {
+			this.sb = sb;
+		}
+
+		@Override
+		public boolean apply(byte[] b, int o, int e) {
+			while (o < e)
+				sb.append((char) b[o++]);
+			return true;
+		}
+
+		@Override
+		public String toString() {
+			return sb.toString();
 		}
 	}
 }

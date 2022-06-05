@@ -38,14 +38,14 @@ public class PathTreeTest {
 	}
 
 	@Test
-	public void root() {
+	public void root() throws InterruptedException {
 		FilterChain exacts = new F("exacts");
 		FilterChain defaults = new F("defaults");
 
 		PathTree tree = new PathTree(new PartNode(null, null, null, null, exacts, defaults));
 
 		mock.meta.clear();
-		mock.meta.write('/');
+		mock.meta.write("/".getBytes());
 		Mockito.when(mock.pathEnd()).thenReturn(mock.meta.length());
 		assertEquals(exacts, tree.find(mock));
 
@@ -56,7 +56,7 @@ public class PathTreeTest {
 	}
 
 	@Test
-	public void nexts() {
+	public void nexts() throws InterruptedException {
 		F defaults = new F("defaults");
 		F first = new F("first");
 		F second = new F("second");
@@ -82,7 +82,7 @@ public class PathTreeTest {
 	}
 
 	@Test
-	public void ends() {
+	public void ends() throws InterruptedException {
 		F defaults = new F("defaults");
 		F jsp = new F(".jsp");
 		F html = new F(".html");
@@ -108,7 +108,7 @@ public class PathTreeTest {
 	}
 
 	@Test
-	public void pattern() {
+	public void pattern() throws InterruptedException {
 		F defaults = new F("defaults");
 		F patternExa = new F("pattern exact");
 		F patternDef = new F("pattern default");
