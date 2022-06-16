@@ -52,10 +52,7 @@ public abstract class ProtobufHandlerFactory<T> implements HandlerFactory {
 				limited.setLimit(len);
 				process(parser.parseFrom(limited), co.getOut());
 			} catch (IOException e) {
-				try {
-					co.getOut().close();
-				} catch (IOException e1) { // OK
-				}
+				co.getOut().close();
 			} finally {
 				try {
 					in.reset();
