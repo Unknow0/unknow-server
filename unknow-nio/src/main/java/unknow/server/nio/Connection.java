@@ -45,7 +45,6 @@ public final class Connection {
 	}
 
 	void attach(SelectionKey key) {
-		key.attach(this);
 		this.key = key;
 		this.out = new Out(this);
 		lastRead = lastWrite = System.currentTimeMillis();
@@ -123,7 +122,7 @@ public final class Connection {
 	/**
 	 * @return the current outputStream
 	 */
-	public final OutputStream getOut() {
+	public final Out getOut() {
 		return out;
 	}
 
@@ -160,7 +159,7 @@ public final class Connection {
 	 */
 	public boolean isClosed() {
 		try {
-			return out.h == null && pendingWrite.isEmpty();
+			return out.isClosed() && pendingWrite.isEmpty();
 		} catch (InterruptedException e) {
 			return true;
 		}
@@ -186,10 +185,7 @@ public final class Connection {
 	 * @throws InterruptedException
 	 */
 	public void reset() throws InterruptedException {
-		try {
-			out.close();
-		} catch (IOException e) { // OK
-		}
+		out.close();
 		pendingWrite.clear();
 		pendingRead.clear();
 		handler.reset();
@@ -204,10 +200,10 @@ public final class Connection {
 		}
 	}
 
-	private static final class Out extends OutputStream {
-		private volatile Connection h;
+	public static final class Out extends OutputStream {
+		private Connection h;
 
-		Out(Connection h) {
+		private Out(Connection h) {
 			this.h = h;
 		}
 
@@ -261,28 +257,29 @@ public final class Connection {
 		/**
 		 * request to close the handler
 		 * 
-		 * @throws IOException
 		 */
 		@Override
-		public synchronized void close() throws IOException {
+		public synchronized void close() {
 			flush();
 			h = null;
+		}
+
+		public synchronized boolean isClosed() {
+			return h == null;
 		}
 
 		/**
 		 * flush pending data
 		 * 
-		 * @throws IOException
 		 */
 		@Override
-		public synchronized void flush() throws IOException {
+		public synchronized void flush() {
 			if (h == null)
 				return;
 			try {
 				if (!h.pendingWrite.isEmpty())
 					h.key.selector().wakeup();
 			} catch (InterruptedException e) {
-				throw new IOException(e);
 			}
 		}
 	}

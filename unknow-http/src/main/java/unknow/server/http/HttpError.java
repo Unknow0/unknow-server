@@ -59,17 +59,16 @@ public final class HttpError {
 	public final int code;
 	public final String message;
 	public final byte[] encoded;
-	private byte[] empty;
+	private final byte[] empty;
 
 	private HttpError(int code, String message) {
 		this.code = code;
 		this.message = message;
 		this.encoded = encodeStatusLine(code, message);
+		this.empty = encodeEmptyReponse(code, message);
 	}
 
 	public byte[] empty() {
-		if (empty == null)
-			empty = encodeEmptyReponse(code, message);
 		return empty;
 	}
 

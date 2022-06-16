@@ -60,14 +60,14 @@ public class IOWorker extends Thread {
 	 * @throws IOException
 	 */
 	public void register(SocketChannel socket, Connection handler) throws IOException {
+		socket.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.TRUE);
+		socket.setOption(StandardSocketOptions.SO_REUSEADDR, Boolean.TRUE);
+		socket.configureBlocking(false);
 		synchronized (mutex) {
-			socket.setOption(StandardSocketOptions.SO_KEEPALIVE, true);
-			socket.setOption(StandardSocketOptions.SO_REUSEADDR, true);
-			socket.configureBlocking(false);
-			handler.attach(socket.register(selector, SelectionKey.OP_READ));
 			selector.wakeup();
-			listener.accepted(id, handler);
+			handler.attach(socket.register(selector, SelectionKey.OP_READ, handler));
 		}
+		listener.accepted(id, handler);
 	}
 
 	@Override

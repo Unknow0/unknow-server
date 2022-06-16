@@ -2,6 +2,7 @@ package unknow.server.http;
 
 import java.util.ServiceLoader;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -39,8 +40,8 @@ public abstract class AbstractHttpServer extends NIOServerCli {
 	/**
 	 * max idle time for exec thread, default to 60
 	 */
-	@Option(names = "--exec-idle", description = "max idle time for exec thread, default to 60", descriptionKey = "exec-idle")
-	public long execIdle = 600L;
+	@Option(names = "--exec-idle", description = "max idle time for exec thread in seconds, default to 60", descriptionKey = "exec-idle")
+	public long execIdle = 60L;
 
 	/**
 	 * max time to keep idle keepalive connection, default to -1
@@ -75,7 +76,7 @@ public abstract class AbstractHttpServer extends NIOServerCli {
 	@Override()
 	public final Integer call() throws Exception {
 		AtomicInteger i = new AtomicInteger();
-		ExecutorService executor = new ThreadPoolExecutor(execMin, execMax, execIdle, TimeUnit.SECONDS, new EmptyQueue<Runnable>(), r -> {
+		ExecutorService executor = new ThreadPoolExecutor(execMin, execMax, execIdle, TimeUnit.SECONDS, new SynchronousQueue<Runnable>(), r -> {
 			Thread t = new Thread(r, "exec-" + i.getAndIncrement());
 			t.setDaemon(true);
 			return t;

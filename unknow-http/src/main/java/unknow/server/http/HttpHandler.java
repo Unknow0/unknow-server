@@ -7,12 +7,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
-import java.nio.charset.CharsetDecoder;
-import java.nio.charset.CoderResult;
-import java.nio.charset.CodingErrorAction;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -33,6 +27,7 @@ import unknow.server.http.servlet.ServletResponseImpl;
 import unknow.server.http.utils.EventManager;
 import unknow.server.http.utils.ServletManager;
 import unknow.server.nio.Connection;
+import unknow.server.nio.Connection.Out;
 import unknow.server.nio.Handler;
 import unknow.server.nio.util.Buffers;
 import unknow.server.nio.util.BuffersUtils;
@@ -108,7 +103,7 @@ public class HttpHandler implements Handler, Runnable {
 	}
 
 	@Override
-	public void onRead() throws InterruptedException {
+	public final void onRead() throws InterruptedException {
 		if (f != null)
 			return;
 		int i = BuffersUtils.indexOf(co.pendingRead, CRLF2, 0, MAX_START_SIZE);
@@ -164,7 +159,7 @@ public class HttpHandler implements Handler, Runnable {
 	}
 
 	@Override
-	public void onWrite() {
+	public final void onWrite() {
 	}
 
 //	private boolean tryRead(byte lookup, int limit, int next, HttpError e) {
@@ -221,7 +216,7 @@ public class HttpHandler implements Handler, Runnable {
 		int o = part[METHOD] + 1;
 		synchronized (sb) {
 			sb.setLength(0);
-			decodePath(sb, meta, o, infoStart < 0 ? part[PATH] : infoStart);
+//			decodePath(sb, meta, o, infoStart < 0 ? part[PATH] : infoStart);
 			return sb.toString();
 		}
 	}
@@ -233,7 +228,7 @@ public class HttpHandler implements Handler, Runnable {
 		int e = part[PATH];
 		synchronized (sb) {
 			sb.setLength(0);
-			decodePath(sb, meta, infoStart < 0 ? e : infoStart, e);
+//			decodePath(sb, meta, infoStart < 0 ? e : infoStart, e);
 			return sb.toString();
 		}
 	}
@@ -443,9 +438,9 @@ public class HttpHandler implements Handler, Runnable {
 		if (q < 0)
 			q = i;
 
-		BuffersUtils.toString(sb, meta, last, q - last);
-		String path = sb.toString();
-		sb.setLength(0);
+//		BuffersUtils.toString(sb, meta, last, q - last);
+//		String path = sb.toString();
+//		sb.setLength(0);
 
 		part[METHOD] = last - 1;
 		part[PATH] = q;
@@ -496,7 +491,7 @@ public class HttpHandler implements Handler, Runnable {
 	public void run() {
 		boolean close = false;
 
-		OutputStream out = co.getOut();
+		Out out = co.getOut();
 		try {
 			ServletResponseImpl res = new ServletResponseImpl(ctx, out, this);
 			ServletRequestImpl req = new ServletRequestImpl(ctx, this, DispatcherType.REQUEST, res);
@@ -509,7 +504,9 @@ public class HttpHandler implements Handler, Runnable {
 				out.write(CRLF);
 				out.flush();
 			}
-			close = keepAliveIdle == 0 || !"keep-alive".equalsIgnoreCase(req.getHeader("connection"));
+			close = keepAliveIdle == 0 || !"keep-alive".equals(req.getHeader("connection"));
+			if (!close)
+				res.setHeader("connection", "keep-alive");
 			events.fireRequestInitialized(req);
 			FilterChain s = servlets.find(req);
 			if (s != null)
@@ -532,17 +529,14 @@ public class HttpHandler implements Handler, Runnable {
 		} finally {
 			cleanup();
 			if (close)
-				try {
-					out.close();
-				} catch (IOException e) { // OK
-				}
+				out.close();
+			else
+				out.flush();
 		}
 	}
 
 	private void cleanup() {
-		synchronized (this) {
-			f = null;
-		}
+		f = null;
 		headerCount = last = 0;
 		step = METHOD;
 		try {
@@ -595,14 +589,14 @@ public class HttpHandler implements Handler, Runnable {
 		return part[PATH];
 	}
 
-	private ByteBuffer DECODE_BB = ByteBuffer.allocate(10);
-	private CharBuffer DECODE_CB = CharBuffer.allocate(2);
-	private static final CharsetDecoder DECODER = StandardCharsets.UTF_8.newDecoder().onUnmappableCharacter(CodingErrorAction.REPLACE)
-			.onMalformedInput(CodingErrorAction.REPLACE);
-
-	private final void decodePath(StringBuilder sb, Buffers b, int o, int e) {
-		DECODE_BB.clear();
-		DECODE_CB.clear();
+//	private ByteBuffer DECODE_BB = ByteBuffer.allocate(10);
+//	private CharBuffer DECODE_CB = CharBuffer.allocate(2);
+//	private static final CharsetDecoder DECODER = StandardCharsets.UTF_8.newDecoder().onUnmappableCharacter(CodingErrorAction.REPLACE)
+//			.onMalformedInput(CodingErrorAction.REPLACE);
+//
+//	private final void decodePath(StringBuilder sb, Buffers b, int o, int e) {
+//		DECODE_BB.clear();
+//		DECODE_CB.clear();
 //		for (;;) {
 //			int i = b.indexOf(PERCENT, o, e - o);
 //			if (i != o && DECODE_BB.position() > 0) {
@@ -633,7 +627,7 @@ public class HttpHandler implements Handler, Runnable {
 //				break;
 //			}
 //		}
-	}
+//	}
 
 	private void parseParam(Buffers in, int o, int e, Map<String, List<String>> param) {
 //		synchronized (sb) {
