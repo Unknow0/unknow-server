@@ -19,7 +19,9 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import javax.servlet.DispatcherType;
 import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
@@ -203,22 +205,23 @@ public class ServletResponseImpl implements HttpServletResponse {
 		ServletManager manager = ctx.getServletManager();
 		FilterChain f = manager.getError(sc, t);
 		if (f != null) {
-//			ServletRequestImpl r = new ServletRequestImpl(ctx, req, DispatcherType.ERROR, this);
-//			r.setAttribute("javax.servlet.error.status_code", sc);
-//			if (t != null) {
-//				r.setAttribute("javax.servlet.error.exception_type", t.getClass());
-//				r.setAttribute("javax.servlet.error.message", t.getMessage());
-//				r.setAttribute("javax.servlet.error.exception", t);
-//			}
-//			r.setAttribute("javax.servlet.error.request_uri", r.getRequestURI());
-//			r.setAttribute("javax.servlet.error.servlet_name", "");
-//			reset();
-//			try {
-//				f.doFilter(r, this);
-//				return;
-//			} catch (ServletException e) {
-//				log.error("failed to send error", e);
-//			}
+			ServletRequestImpl r = new ServletRequestImpl(ctx, req, DispatcherType.ERROR, this);
+			r.setMethod("GET");
+			r.setAttribute("javax.servlet.error.status_code", sc);
+			if (t != null) {
+				r.setAttribute("javax.servlet.error.exception_type", t.getClass());
+				r.setAttribute("javax.servlet.error.message", t.getMessage());
+				r.setAttribute("javax.servlet.error.exception", t);
+			}
+			r.setAttribute("javax.servlet.error.request_uri", r.getRequestURI());
+			r.setAttribute("javax.servlet.error.servlet_name", "");
+			reset();
+			try {
+				f.doFilter(r, this);
+				return;
+			} catch (ServletException e) {
+				log.error("failed to send error", e);
+			}
 		}
 		commited = true;
 		HttpError e = HttpError.fromStatus(sc);

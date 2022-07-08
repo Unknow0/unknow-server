@@ -38,15 +38,17 @@ import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeS
 
 import unknow.sax.SaxParser;
 import unknow.server.http.AbstractHttpServer;
-import unknow.server.http.servlet.ResourceServlet;
+import unknow.server.http.servlet.ServletResource;
+import unknow.server.http.servlet.ServletResourceStatic;
 import unknow.server.http.utils.Resource;
 import unknow.server.maven.Output;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.servlet.Builder.BuilderContext;
 import unknow.server.maven.servlet.builder.CreateContext;
 import unknow.server.maven.servlet.builder.CreateEventManager;
+import unknow.server.maven.servlet.builder.CreateFilters;
 import unknow.server.maven.servlet.builder.CreateServletManager;
-import unknow.server.maven.servlet.builder.Initialize;
+import unknow.server.maven.servlet.builder.CreateServlets;
 import unknow.server.maven.servlet.builder.Main;
 import unknow.server.maven.servlet.descriptor.Descriptor;
 import unknow.server.maven.servlet.descriptor.SD;
@@ -57,7 +59,7 @@ import unknow.server.maven.servlet.sax.Context;
  */
 @Mojo(defaultPhase = LifecyclePhase.GENERATE_SOURCES, name = "servlet-generator", requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
 public class ServletServerGen extends AbstractMojo implements BuilderContext {
-	private static final List<Builder> BUILDER = Arrays.asList(new CreateEventManager(), new CreateServletManager(), new CreateContext(), new Initialize(), new Main());
+	private static final List<Builder> BUILDER = Arrays.asList(new CreateEventManager(), new CreateServletManager(), new CreateContext(), new CreateServlets(), new CreateFilters(), new Main());
 
 	private final CompilationUnit cu = new CompilationUnit();
 
@@ -89,6 +91,9 @@ public class ServletServerGen extends AbstractMojo implements BuilderContext {
 
 	@Parameter(name = "resources", defaultValue = "${project.basedir}/src/main/resources")
 	private String resources;
+
+	@Parameter(name = "staticResourceSize", defaultValue = "4096")
+	private int staticResourceSize;
 
 	@Parameter(name = "sessionFactory", defaultValue = "unknow.server.http.servlet.session.NoSessionFactory")
 	private String sessionFactory;
@@ -180,9 +185,10 @@ public class ServletServerGen extends AbstractMojo implements BuilderContext {
 					@Override
 					public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
 						String p = "/" + path.relativize(file).toString().replace('\\', '/');
-						descriptor.resources.put(p, new Resource(Files.getLastModifiedTime(file).to(TimeUnit.MILLISECONDS), Files.size(file)));
+						long size = Files.size(file);
+						descriptor.resources.put(p, new Resource(Files.getLastModifiedTime(file).to(TimeUnit.MILLISECONDS), size));
 						SD d = new SD(descriptor.servlets.size());
-						d.clazz = ResourceServlet.class.getName() + d.index;
+						d.clazz = (size < staticResourceSize ? ServletResourceStatic.class : ServletResource.class).getName();
 						d.name = "Resource:" + p;
 						d.pattern.add(p);
 						descriptor.servlets.add(d);

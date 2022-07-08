@@ -262,6 +262,10 @@ public final class Connection {
 		public synchronized void close() {
 			flush();
 			h = null;
+			Exception e = new Exception();
+			StackTraceElement[] stackTrace = e.getStackTrace();
+			if (stackTrace.length < 2 || !"unknow.server.nio.Connection".equals(stackTrace[1].getClassName()) || !"reset".equals(stackTrace[1].getMethodName()))
+				e.printStackTrace();
 		}
 
 		public synchronized boolean isClosed() {

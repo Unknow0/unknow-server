@@ -169,7 +169,7 @@ public class PathTree {
 	 * @author unknow
 	 */
 	public static class Node {
-		final byte[] part; // .jsp
+		final byte[] part;
 		final FilterChain exact;
 
 		/**

@@ -40,11 +40,11 @@ import javax.servlet.http.HttpUpgradeHandler;
 import javax.servlet.http.Part;
 
 import unknow.server.http.HttpHandler;
+import unknow.server.http.data.ArrayMap;
 import unknow.server.http.servlet.in.ChunckedInputStream;
 import unknow.server.http.servlet.in.EmptyInputStream;
 import unknow.server.http.servlet.in.LengthInputStream;
 import unknow.server.http.servlet.session.SessionFactory;
-import unknow.server.http.utils.ArrayMap;
 
 /**
  * @author unknow
@@ -137,6 +137,8 @@ public class ServletRequestImpl implements HttpServletRequest {
 	 */
 	public void setServletPath(String servletPath) {
 		this.servletPath = servletPath;
+		this.pathInfo = "";
+		this.query = "";
 	}
 
 	@Override
@@ -156,7 +158,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public void setAttribute(String name, Object o) {
-		Object old = attributes.set(name, o);
+		Object old = attributes.put(name, o);
 		ctx.getEvents().fireRequestAttribute(this, name, o, old);
 	}
 

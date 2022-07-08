@@ -505,8 +505,6 @@ public class HttpHandler implements Handler, Runnable {
 				out.flush();
 			}
 			close = keepAliveIdle == 0 || !"keep-alive".equals(req.getHeader("connection"));
-			if (!close)
-				res.setHeader("connection", "keep-alive");
 			events.fireRequestInitialized(req);
 			FilterChain s = servlets.find(req);
 			if (s != null)
@@ -520,12 +518,10 @@ public class HttpHandler implements Handler, Runnable {
 			else
 				res.sendError(404, null);
 			events.fireRequestDestroyed(req);
-			String connection = res.getHeader("connection");
-			if (!close && connection != null && !"keep-alive".equals(connection))
-				close = true;
 			res.close();
 		} catch (Exception e) {
 			log.error("processor error", e);
+			error(HttpError.SERVER_ERROR);
 		} finally {
 			cleanup();
 			if (close)

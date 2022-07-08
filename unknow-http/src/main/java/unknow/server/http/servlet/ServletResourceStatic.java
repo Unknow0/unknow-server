@@ -12,20 +12,39 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import unknow.server.nio.util.Buffers.Chunk;
-
 /**
  * @author unknow
  */
-public class ResourceServlet extends HttpServlet {
+public final class ServletResourceStatic extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 
+	private final String path;
+	private final byte[] data;
 	private final long lastModified;
 	private final long size;
+	private String mimeType;
 
-	public ResourceServlet(long lastModified, long size) {
+	public ServletResourceStatic(String path, long lastModified, long size) {
+		if (size > Integer.MAX_VALUE)
+			throw new IllegalArgumentException("resource too big to load");
+		this.path = path;
+		this.data = new byte[(int) size];
 		this.lastModified = lastModified;
 		this.size = size;
+	}
+
+	@Override
+	public void init() throws ServletException {
+		this.mimeType = getServletContext().getMimeType(path);
+
+		try (InputStream is = getServletContext().getResourceAsStream(path)) {
+			int i = 0, l;
+			while ((l = is.read(data, i, data.length - i)) > 0)
+				i += l;
+		} catch (IOException e) {
+			throw new ServletException(e);
+		}
+		System.out.println(path + ": " + new String(data));
 	}
 
 	/**
@@ -41,24 +60,13 @@ public class ResourceServlet extends HttpServlet {
 		if (code != null)
 			resp.setStatus(code);
 		resp.setContentLengthLong(size);
-		resp.setContentType(getServletContext().getMimeType(req.getServletPath()));
-		// TODO add cache config
+		if (mimeType != null)
+			resp.setContentType(mimeType);
 
 		if (!content)
 			return;
 		ServletOutputStream os = resp.getOutputStream();
-		try (InputStream is = getServletContext().getResourceAsStream(req.getServletPath())) {
-			Chunk c = Chunk.get();
-			byte[] b = c.b;
-			int l;
-			while ((l = is.read(b)) > 0)
-				os.write(b, 0, l);
-			Chunk.free(c);
-		}
-	}
-
-	@Override
-	public void init() throws ServletException {
+		os.write(data);
 	}
 
 	@Override

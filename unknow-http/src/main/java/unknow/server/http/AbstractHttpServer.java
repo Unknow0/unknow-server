@@ -11,12 +11,18 @@ import javax.servlet.ServletContainerInitializer;
 import javax.servlet.ServletException;
 
 import picocli.CommandLine.Option;
+import unknow.server.http.servlet.FilterConfigImpl;
+import unknow.server.http.servlet.ServletConfigImpl;
 import unknow.server.http.servlet.ServletContextImpl;
-import unknow.server.http.utils.EmptyQueue;
 import unknow.server.http.utils.EventManager;
 import unknow.server.http.utils.ServletManager;
 import unknow.server.nio.cli.NIOServerCli;
 
+/**
+ * Abstract server
+ * 
+ * @author unknow
+ */
 public abstract class AbstractHttpServer extends NIOServerCli {
 
 	/**
@@ -65,7 +71,9 @@ public abstract class AbstractHttpServer extends NIOServerCli {
 
 	protected abstract ServletContextImpl createContext();
 
-	protected abstract void initialize() throws ServletException;
+	protected abstract ServletConfigImpl[] createServlets();
+
+	protected abstract FilterConfigImpl[] createFilters();
 
 	private final void loadInitializer() throws ServletException {
 		for (ServletContainerInitializer i : ServiceLoader.load(ServletContainerInitializer.class)) {
@@ -85,10 +93,10 @@ public abstract class AbstractHttpServer extends NIOServerCli {
 		handler = co -> new HttpHandler(co, executor, ctx, keepAliveIdle);
 
 		loadInitializer();
-		initialize();
-		ctx.getEvents().fireContextInitialized(ctx);
+		servlets.initialize(createServlets(), createFilters());
+		events.fireContextInitialized(ctx);
 		Integer err = super.call();
-		ctx.getEvents().fireContextDestroyed(ctx);
+		events.fireContextDestroyed(ctx);
 		return err;
 	}
 }

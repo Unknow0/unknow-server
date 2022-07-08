@@ -18,7 +18,7 @@
 	</filter>
 	<filter-mapping>
 		<filter-name>test</filter-name>
-		<servlet-name>s</servlet-name>
+		<servlet-name>test</servlet-name>
 		<url-pattern>/foo/*</url-pattern>
 		<url-pattern>/test</url-pattern>
 		<dispatcher>REQUEST</dispatcher>
@@ -33,7 +33,6 @@
 		<exception-type></exception-type>
 		<location>/</location>
 	</error-page>
-
 
 
 	<!--jsp-config>
