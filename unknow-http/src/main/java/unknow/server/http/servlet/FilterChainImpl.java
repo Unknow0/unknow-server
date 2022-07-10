@@ -8,6 +8,7 @@ import java.io.IOException;
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.Servlet;
+import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
@@ -66,7 +67,8 @@ public final class FilterChainImpl implements FilterChain {
 
 		@Override
 		public String toString() {
-			return servlet.toString();
+			ServletConfig c = servlet.getServletConfig();
+			return c == null ? servlet.toString() : c.getServletName();
 		}
 	}
 

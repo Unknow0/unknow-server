@@ -20,6 +20,8 @@ import unknow.server.nio.util.BuffersInputStream;
  * @author unknow
  */
 public final class Connection {
+	private final Object mutex = new Object();
+
 	/** factory that created the handler */
 	private final Handler handler;
 
@@ -89,9 +91,14 @@ public final class Connection {
 		}
 		if (buf.hasRemaining()) // we didn't write all
 			pendingWrite.prepend(buf);
-		if (pendingWrite.isEmpty())
-			key.interestOps(SelectionKey.OP_READ);
+		toggleKeyOps();
 		handler.onWrite();
+	}
+
+	private void toggleKeyOps() throws InterruptedException {
+		synchronized (mutex) {
+			key.interestOps(pendingWrite.isEmpty() ? SelectionKey.OP_READ : SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+		}
 	}
 
 	/**
@@ -203,10 +210,10 @@ public final class Connection {
 				throw new IOException("already closed");
 			try {
 				h.pendingWrite.write(b);
+				h.toggleKeyOps();
 			} catch (InterruptedException e) {
 				throw new IOException(e);
 			}
-			h.key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 		}
 
 		/**
@@ -238,10 +245,10 @@ public final class Connection {
 				throw new IOException("already closed");
 			try {
 				h.pendingWrite.write(buf, off, len);
+				h.toggleKeyOps();
 			} catch (InterruptedException e) {
 				throw new IOException(e);
 			}
-			h.key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 		}
 
 		/**
@@ -271,6 +278,8 @@ public final class Connection {
 			if (h == null)
 				return;
 			try {
+				if (h.key.isValid())
+					h.toggleKeyOps();
 				if (!h.pendingWrite.isEmpty())
 					h.key.selector().wakeup();
 			} catch (InterruptedException e) {

@@ -84,7 +84,7 @@ public class PathTreeBuilder {
 			ends = new PathTree.Node[parts.size()];
 			int j = 0;
 			for (String s : parts)
-				ends[j++] = new PathTree.Node(s, getChain(ending.getOrDefault(s, n.def), n.defFilter, endingFilter.get(s)));
+				ends[j++] = new PathTree.Node(s, getChain(ending.getOrDefault(s, n.def), n.defFilter, endingFilter.getOrDefault(s, Collections.emptyList())));
 		} else if (!endingFilter.isEmpty()) {
 			ends = new PathTree.Node[endingFilter.size()];
 			int j = 0;
@@ -96,15 +96,6 @@ public class PathTreeBuilder {
 		FilterChain def = getChain(n.def, n.defFilter, Collections.emptyList());
 
 		return new PartNode(part, nexts, pattern, ends, exact, def);
-	}
-
-	private String name(Servlet s, List<Filter> filters) {
-
-		for (Filter f : filters)
-			sb.append(',').append(f.getClass().getName());
-		String str = sb.toString();
-		return str;
-
 	}
 
 	private FilterChain getChain(String name, Filter f, FilterChain next) {

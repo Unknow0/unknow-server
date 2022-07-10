@@ -51,7 +51,7 @@ public class PathTree {
 			PartNode n = next(last.nexts, part.get(i));
 			if (n == null)
 				break;
-			if (i == part.size()) {
+			if (i + 1 == part.size()) {
 				req.setPathInfo(i);
 				return n.exact;
 			}
@@ -78,6 +78,13 @@ public class PathTree {
 		}
 		req.setPathInfo(part.size());
 		return last.def;
+	}
+
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		root.toString(sb, new StringBuilder());
+		return sb.toString();
 	}
 
 	private static final PartNode next(PartNode[] nexts, String path) {
@@ -234,6 +241,27 @@ public class PathTree {
 			this.pattern = pattern;
 			this.ends = ends;
 			this.def = def;
+		}
+
+		public void toString(StringBuilder sb, StringBuilder name) {
+			int l = name.length();
+			sb.append(l == 0 ? "/" : name).append('\t').append(exact).append('\n');
+			for (int i = 0; i < nexts.length; i++) {
+				PartNode n = nexts[i];
+				name.append('/').append(n.part);
+				n.toString(sb, name);
+				name.setLength(l);
+			}
+			if (pattern != null) {
+				name.append("/{}");
+				pattern.toString(sb, name);
+				name.setLength(l);
+			}
+			name.append("/*");
+			sb.append(name).append('\t').append(def).append('\n');
+			for (int i = 0; i < ends.length; i++)
+				sb.append(name).append(ends[i].part).append('\t').append(ends[i].exact).append('\n');
+			name.setLength(l);
 		}
 	}
 

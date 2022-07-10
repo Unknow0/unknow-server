@@ -51,6 +51,8 @@ import unknow.server.http.servlet.session.SessionFactory;
  * @author unknow
  */
 public class ServletRequestImpl implements HttpServletRequest {
+	private static final Cookie[] EMPTY = new Cookie[0];
+
 	private final ArrayMap<Object> attributes = new ArrayMap<>();
 
 	private final ServletContextImpl ctx;
@@ -83,7 +85,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	private HttpSession session;
 
-	private Cookie[] cookies;
+	private Cookie[] cookies = EMPTY;
 
 	private List<Locale> locales;
 
@@ -104,6 +106,8 @@ public class ServletRequestImpl implements HttpServletRequest {
 		this.type = type;
 		this.res = res;
 		this.path = new ArrayList<>();
+
+		this.headers = new HashMap<>();
 	}
 
 	public void setMethod(String method) {
@@ -450,14 +454,14 @@ public class ServletRequestImpl implements HttpServletRequest {
 	@Override
 	public String getServletPath() {
 		if (servletPath == null)
-			servletPath = path.stream().limit(pathInfoIndex).collect(Collectors.joining("/"));
+			servletPath = path.stream().limit(pathInfoIndex).collect(Collectors.joining("/", "/", ""));
 		return servletPath;
 	}
 
 	@Override
 	public String getPathInfo() {
 		if (pathInfo == null)
-			pathInfo = path.stream().skip(pathInfoIndex).collect(Collectors.joining("/"));
+			pathInfo = path.stream().skip(pathInfoIndex).collect(Collectors.joining("/", "/", ""));
 		return pathInfo == "" ? null : pathInfo;
 	}
 

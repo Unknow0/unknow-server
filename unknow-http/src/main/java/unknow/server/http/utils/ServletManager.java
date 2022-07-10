@@ -11,6 +11,9 @@ import javax.servlet.FilterChain;
 import javax.servlet.Servlet;
 import javax.servlet.ServletException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import unknow.server.http.data.IntArrayMap;
 import unknow.server.http.data.ObjectArrayMap;
 import unknow.server.http.servlet.FilterChainImpl;
@@ -25,6 +28,7 @@ import unknow.server.http.servlet.ServletRequestImpl;
  */
 public final class ServletManager {
 	private static final Comparator<Class<?>> CMP = (a, b) -> a.getName().compareTo(b.getName());
+	private static final Logger logger = LoggerFactory.getLogger(ServletManager.class);
 
 	private ServletConfigImpl[] servlets;
 	private FilterConfigImpl[] filters;
@@ -90,6 +94,7 @@ public final class ServletManager {
 		this.servlets = servlets;
 		this.filters = filters;
 		this.request = new PathTreeBuilder(servlets, filters, DispatcherType.REQUEST).build();
+		logger.info("Servlet mapping:\n{}", this.request);
 
 		int l = errorCodeMapping.size();
 		int[] error = new int[l];

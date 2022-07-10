@@ -54,6 +54,7 @@ public class Buffers {
 			len++;
 			cond.signalAll();
 		} finally {
+			validate();
 			lock.unlock();
 		}
 	}
@@ -87,6 +88,7 @@ public class Buffers {
 			tail = writeInto(tail, buf, o, l);
 			cond.signalAll();
 		} finally {
+			validate();
 			lock.unlock();
 		}
 	}
@@ -107,6 +109,7 @@ public class Buffers {
 			tail = writeInto(tail, bb);
 			cond.signalAll();
 		} finally {
+			validate();
 			lock.unlock();
 		}
 	}
@@ -135,6 +138,7 @@ public class Buffers {
 				tail = c;
 			cond.signalAll();
 		} finally {
+			validate();
 			lock.unlock();
 		}
 	}
@@ -162,6 +166,7 @@ public class Buffers {
 				tail = c;
 			cond.signalAll();
 		} finally {
+			validate();
 			lock.unlock();
 		}
 	}
@@ -191,6 +196,7 @@ public class Buffers {
 				head = Chunk.free(head);
 			return r;
 		} finally {
+			validate();
 			lock.unlock();
 		}
 	}
@@ -235,6 +241,7 @@ public class Buffers {
 			}
 			return v;
 		} finally {
+			validate();
 			lock.unlock();
 		}
 	}
@@ -275,6 +282,7 @@ public class Buffers {
 			}
 			return true;
 		} finally {
+			validate();
 			lock.unlock();
 		}
 	}
@@ -299,15 +307,15 @@ public class Buffers {
 			if (l == 0 || head == null)
 				return;
 			Chunk h = head;
-			Chunk t = null;
+			Chunk last = null;
 			int read = 0;
 
 			Chunk c = head;
 			// read whole chunk
-			while (c != null && l > c.l) {
+			while (c != null && l >= c.l) {
 				l -= c.l;
 				read += c.l;
-				t = c;
+				last = c;
 				c = c.next;
 			}
 
@@ -318,33 +326,34 @@ public class Buffers {
 				c.l -= l;
 				n.l = l;
 				read += l;
-				if (t != null)
-					t.next = n;
+				if (last != null)
+					last.next = n;
 				else
 					h = n;
-				t = n;
+				last = n;
 			} else { // we move all
-				c = null;
-				if (t != null)
-					t.next = null;
+				if (last != null)
+					last.next = null;
 			}
-
-			len -= read;
-			head = c;
-			if (c == null)
-				tail = null;
 			buf.lock.lockInterruptibly();
 			try {
+				len -= read;
+				head = c;
+				if (c == null)
+					tail = null;
+
 				buf.len += read;
 				if (buf.head == null)
 					buf.head = h;
 				else
 					buf.tail.next = h;
-				buf.tail = t;
+				buf.tail = last;
 			} finally {
+				buf.validate();
 				buf.lock.unlock();
 			}
 		} finally {
+			validate();
 			lock.unlock();
 		}
 	}
@@ -374,6 +383,7 @@ public class Buffers {
 			} else
 				tail = null;
 		} finally {
+			validate();
 			lock.unlock();
 		}
 	}
@@ -392,6 +402,7 @@ public class Buffers {
 				c = Chunk.free(c);
 			head = tail = null;
 		} finally {
+			validate();
 			lock.unlock();
 		}
 	}
@@ -444,6 +455,7 @@ public class Buffers {
 			}
 			return l == 0 ? WalkResult.MAX : WalkResult.END;
 		} finally {
+			validate();
 			lock.unlock();
 		}
 	}
@@ -469,6 +481,7 @@ public class Buffers {
 			}
 			return b.b[b.o + off];
 		} finally {
+			validate();
 			lock.unlock();
 		}
 	}
@@ -525,6 +538,25 @@ public class Buffers {
 		} catch (InterruptedException e) {
 		}
 		return sb.toString();
+	}
+
+	private void validate() {
+		int l = 0;
+		Chunk c = head;
+		Chunk last = null;
+		while (c != null) {
+			l += c.l;
+			if (c.o > 4096 || c.o < 0)
+				throw new IllegalStateException("Invalid offset " + c.o);
+			if (c.l < 0 || c.l > 4096)
+				throw new IllegalStateException("Invalid length " + c.l);
+			last = c;
+			c = c.next;
+		}
+		if (l != len)
+			throw new IllegalStateException("Invalid total length " + l + " " + len);
+		if (last != tail)
+			throw new IllegalStateException("Wrong tail");
 	}
 
 	public interface Walker {

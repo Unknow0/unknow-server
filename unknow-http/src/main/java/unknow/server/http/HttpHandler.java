@@ -139,9 +139,15 @@ public class HttpHandler implements Handler, Runnable {
 		if (q < 0)
 			q = i;
 
-		int s = last + 1;
-		while ((s = BuffersUtils.indexOf(meta, SLASH, s, s - q)) > 0) {
-			BuffersUtils.toString(sb, meta, last, q - last);
+		int s = last;
+		while ((s = BuffersUtils.indexOf(meta, SLASH, s + 1, q - s - 1)) > 0) {
+			BuffersUtils.toString(sb, meta, last + 1, s - last - 1);
+			req.addPath(sb.toString());
+			sb.setLength(0);
+			last = s;
+		}
+		if (s == -2) {
+			BuffersUtils.toString(sb, meta, last + 1, q - last - 1);
 			req.addPath(sb.toString());
 			sb.setLength(0);
 		}
