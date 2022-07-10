@@ -3,13 +3,16 @@
  */
 package unknow.server.http.utils;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
@@ -27,6 +30,9 @@ import unknow.server.http.utils.PathTree.PartNode;
  * @author unknow
  */
 public class PathTreeBuilder {
+	private static final PathTree.Node[] EMPTY = new PathTree.Node[0];
+	private static final Comparator<PathTree.Node> CMP = (a, b) -> PathTree.compare(a.part, b.part);
+
 	private final ServletConfigImpl[] servlets;
 	private final FilterConfigImpl[] filters;
 
@@ -64,37 +70,63 @@ public class PathTreeBuilder {
 		return new PathTree(buildTree(null, root));
 	}
 
-	private PartNode buildTree(byte[] part, Node n) {
+	private PartNode buildTree(String part, Node n) {
 		PartNode[] nexts = new PartNode[n.nexts.size()];
 		int i = 0;
 		for (Entry<String, Node> e : n.nexts.entrySet())
-			nexts[i++] = buildTree(e.getKey().getBytes(StandardCharsets.UTF_8), e.getValue());
+			nexts[i++] = buildTree(e.getKey(), e.getValue());
+		Arrays.sort(nexts, CMP);
 		PartNode pattern = n.pattern == null ? null : buildTree(null, n.pattern);
-		PathTree.Node[] ends = null;
-		FilterChain exact = getChain(n.exact, n.exactsFilter);
-		FilterChain def = getChain(n.def, n.defFilter);
+		PathTree.Node[] ends = EMPTY;
+		if (n == root && (!endingFilter.isEmpty() || !ending.isEmpty())) {
+			Set<String> parts = new HashSet<>(endingFilter.keySet());
+			parts.addAll(ending.keySet());
+			ends = new PathTree.Node[parts.size()];
+			int j = 0;
+			for (String s : parts)
+				ends[j++] = new PathTree.Node(s, getChain(ending.getOrDefault(s, n.def), n.defFilter, endingFilter.get(s)));
+		} else if (!endingFilter.isEmpty()) {
+			ends = new PathTree.Node[endingFilter.size()];
+			int j = 0;
+			for (Entry<String, List<Filter>> e : endingFilter.entrySet())
+				ends[j++] = new PathTree.Node(e.getKey(), getChain(n.def, n.defFilter, e.getValue()));
+		}
+		Arrays.sort(ends, CMP);
+		FilterChain exact = getChain(n.exact, n.exactsFilter, Collections.emptyList());
+		FilterChain def = getChain(n.def, n.defFilter, Collections.emptyList());
 
 		return new PartNode(part, nexts, pattern, ends, exact, def);
 	}
 
 	private String name(Servlet s, List<Filter> filters) {
-		sb.append(s.getClass().getName());
+
 		for (Filter f : filters)
 			sb.append(',').append(f.getClass().getName());
 		String str = sb.toString();
-		sb.setLength(0);
 		return str;
 
 	}
 
-	private FilterChain getChain(Servlet s, List<Filter> filters) {
-		String name = name(s, filters);
+	private FilterChain getChain(String name, Filter f, FilterChain next) {
 		FilterChain c = chains.get(name);
-		if (c == null) {
-			c = new ServletFilter(s);
-			for (Filter f : filters)
-				c = new FilterChainImpl(f, c);
-			chains.put(name, c);
+		if (c == null)
+			chains.put(sb.toString(), c = new FilterChainImpl(f, next));
+		return c;
+	}
+
+	private FilterChain getChain(Servlet s, List<Filter> filters, List<Filter> filters2) { // TODO optimize object creation
+		sb.setLength(0);
+		sb.append(s.getClass().getName());
+		FilterChain c = chains.get(sb.toString());
+		if (c == null)
+			chains.put(sb.toString(), c = new ServletFilter(s));
+		for (Filter f : filters) {
+			sb.append(',').append(f.getClass().getName());
+			c = getChain(sb.toString(), f, c);
+		}
+		for (Filter f : filters2) {
+			sb.append(',').append(f.getClass().getName());
+			c = getChain(sb.toString(), f, c);
 		}
 		return c;
 	}

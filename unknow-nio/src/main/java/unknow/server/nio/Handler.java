@@ -16,6 +16,4 @@ public interface Handler {
 	boolean closed(long now, boolean close);
 
 	void free();
-
-	void reset();
 }

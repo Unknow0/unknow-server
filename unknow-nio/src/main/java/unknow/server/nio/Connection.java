@@ -175,20 +175,10 @@ public final class Connection {
 	 * @throws InterruptedException
 	 */
 	public final void free() throws InterruptedException {
-		reset();
 		handler.free();
-	}
-
-	/**
-	 * reset this handler
-	 * 
-	 * @throws InterruptedException
-	 */
-	public void reset() throws InterruptedException {
 		out.close();
 		pendingWrite.clear();
 		pendingRead.clear();
-		handler.reset();
 	}
 
 	@Override
@@ -262,10 +252,10 @@ public final class Connection {
 		public synchronized void close() {
 			flush();
 			h = null;
-			Exception e = new Exception();
-			StackTraceElement[] stackTrace = e.getStackTrace();
-			if (stackTrace.length < 2 || !"unknow.server.nio.Connection".equals(stackTrace[1].getClassName()) || !"reset".equals(stackTrace[1].getMethodName()))
-				e.printStackTrace();
+//			Exception e = new Exception();
+//			StackTraceElement[] stackTrace = e.getStackTrace();
+//			if (stackTrace.length < 2 || !"unknow.server.nio.Connection".equals(stackTrace[1].getClassName()) || !"reset".equals(stackTrace[1].getMethodName()))
+//				e.printStackTrace();
 		}
 
 		public synchronized boolean isClosed() {

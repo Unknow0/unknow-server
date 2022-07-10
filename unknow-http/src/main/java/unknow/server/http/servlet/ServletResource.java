@@ -78,4 +78,9 @@ public final class ServletResource extends HttpServlet {
 	protected long getLastModified(HttpServletRequest req) {
 		return lastModified;
 	}
+
+	@Override
+	public String toString() {
+		return "Resource:" + path;
+	}
 }

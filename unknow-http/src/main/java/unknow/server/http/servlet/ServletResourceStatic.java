@@ -44,7 +44,6 @@ public final class ServletResourceStatic extends HttpServlet {
 		} catch (IOException e) {
 			throw new ServletException(e);
 		}
-		System.out.println(path + ": " + new String(data));
 	}
 
 	/**
@@ -82,5 +81,10 @@ public final class ServletResourceStatic extends HttpServlet {
 	@Override
 	protected long getLastModified(HttpServletRequest req) {
 		return lastModified;
+	}
+
+	@Override
+	public String toString() {
+		return "ResourceStatic:" + path;
 	}
 }

@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 import javax.servlet.AsyncContext;
 import javax.servlet.DispatcherType;
@@ -53,9 +54,12 @@ public class ServletRequestImpl implements HttpServletRequest {
 	private final ArrayMap<Object> attributes = new ArrayMap<>();
 
 	private final ServletContextImpl ctx;
-	public final HttpHandler req;
+	private final HttpHandler req;
 	private final DispatcherType type;
 	private final ServletResponseImpl res;
+
+	private final List<String> path;
+	private int pathInfoIndex;
 
 	private String protocol = null;
 	private String method = null;
@@ -99,6 +103,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 		this.req = req;
 		this.type = type;
 		this.res = res;
+		this.path = new ArrayList<>();
 	}
 
 	public void setMethod(String method) {
@@ -117,15 +122,27 @@ public class ServletRequestImpl implements HttpServletRequest {
 		this.headers = headers;
 	}
 
+	public List<String> getPaths() {
+		return path;
+	}
+
+	public void addPath(String path) {
+		this.path.add(path);
+	}
+
+	public void setPathInfo(int index) {
+		pathInfoIndex = index;
+	}
+
 	private void parseParam() {
 		if (parameter != null)
 			return;
 		parameter = new HashMap<>();
 		Map<String, List<String>> p = new HashMap<>();
-		req.parseQueryParam(p);
-
-		if ("POST".equals(getMethod()) && "application/x-www-form-urlencoded".equalsIgnoreCase(getContentType()))
-			req.parseContentParam(p);
+//		req.parseQueryParam(p);
+//
+//		if ("POST".equals(getMethod()) && "application/x-www-form-urlencoded".equalsIgnoreCase(getContentType()))
+//			req.parseContentParam(p);
 
 		String[] s = new String[0];
 		for (Entry<String, List<String>> e : p.entrySet())
@@ -188,24 +205,18 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public String getHeader(String name) {
-		if (headers == null)
-			headers = req.parseHeader();
 		List<String> list = headers.get(name.toLowerCase());
 		return list == null || list.isEmpty() ? null : list.get(0);
 	}
 
 	@Override
 	public Enumeration<String> getHeaders(String name) {
-		if (headers == null)
-			headers = req.parseHeader();
 		List<String> list = headers.get(name.toLowerCase());
 		return list == null || list.isEmpty() ? Collections.emptyEnumeration() : Collections.enumeration(list);
 	}
 
 	@Override
 	public Enumeration<String> getHeaderNames() {
-		if (headers == null)
-			headers = req.parseHeader();
 		return Collections.enumeration(headers.keySet());
 	}
 
@@ -323,22 +334,16 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public String getMethod() {
-		if (method == null)
-			method = req.parseMethod();
 		return method;
 	}
 
 	@Override
 	public String getQueryString() {
-		if (query == null)
-			query = req.parseQuery();
 		return query.isEmpty() ? null : query;
 	}
 
 	@Override
 	public String getProtocol() {
-		if (protocol == null)
-			protocol = req.parseProtocol();
 		return protocol;
 	}
 
@@ -445,14 +450,14 @@ public class ServletRequestImpl implements HttpServletRequest {
 	@Override
 	public String getServletPath() {
 		if (servletPath == null)
-			servletPath = req.parseServletPath();
+			servletPath = path.stream().limit(pathInfoIndex).collect(Collectors.joining("/"));
 		return servletPath;
 	}
 
 	@Override
 	public String getPathInfo() {
 		if (pathInfo == null)
-			pathInfo = req.parsePathInfo();
+			pathInfo = path.stream().skip(pathInfoIndex).collect(Collectors.joining("/"));
 		return pathInfo == "" ? null : pathInfo;
 	}
 
@@ -482,8 +487,6 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public Cookie[] getCookies() {
-		if (cookies == null)
-			cookies = req.parseCookie();
 		return cookies.length == 0 ? null : cookies;
 	}
 

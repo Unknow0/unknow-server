@@ -4,12 +4,12 @@
 package unknow.server.http.utils;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import javax.servlet.FilterChain;
 
-import unknow.server.http.HttpHandler;
+import unknow.server.http.servlet.ServletRequestImpl;
 import unknow.server.nio.util.Buffers;
-import unknow.server.nio.util.BuffersUtils;
 
 /**
  * the calculated path tree to FilterChains
@@ -17,7 +17,7 @@ import unknow.server.nio.util.BuffersUtils;
  * @author unknow
  */
 public class PathTree {
-	private final PartNode root;
+	final PartNode root;
 
 	/**
 	 * create a new PathTree
@@ -35,58 +35,52 @@ public class PathTree {
 	 * @return the chain
 	 * @throws InterruptedException
 	 */
-	public FilterChain find(HttpHandler req) throws InterruptedException {
-		req.setPathInfoStart(1);
-		FilterChain f = tryFind(req, root, req.meta, req.pathStart() + 1, req.pathEnd());
+	public FilterChain find(ServletRequestImpl req) throws InterruptedException {
+		req.setPathInfo(1);
+		FilterChain f = tryFind(req, root, req.getPaths(), 0);
 		return f == null ? root.def : f;
 	}
 
-	private FilterChain tryFind(HttpHandler req, PartNode last, Buffers path, int o, int e) throws InterruptedException {
-		if (o == e) {
-			req.setPathInfoStart(e);
+	private FilterChain tryFind(ServletRequestImpl req, PartNode last, List<String> part, int i) throws InterruptedException {
+		if (i == part.size()) {
+			req.setPathInfo(part.size());
 			return last.exact;
 		}
 
 		while (last.nexts != null) {
-			int i = BuffersUtils.indexOf(path, (byte) '/', o, e - o);
-			if (i < 0)
-				i = e;
-			if (i == 14) // XXX
-				BuffersUtils.indexOf(path, (byte) '/', o, e - o);
-			PartNode n = next(last.nexts, path, o, i);
+			PartNode n = next(last.nexts, part.get(i));
 			if (n == null)
 				break;
-			if (i == e) {
-				req.setPathInfoStart(e);
+			if (i == part.size()) {
+				req.setPathInfo(i);
 				return n.exact;
 			}
 			last = n;
-			o = i + 1;
+			i++;
 		}
 		if (last.pattern != null) {
-			int i = BuffersUtils.indexOf(path, (byte) '/', o, e - o);
-			if (i > 0) {
-				FilterChain f = tryFind(req, last.pattern, path, i + 1, e);
+			if (i + 1 < part.size()) {
+				FilterChain f = tryFind(req, last.pattern, part, i + 1);
 				if (f != null) // contextPath already set
 					return f;
 			} else {
-				req.setPathInfoStart(e);
+				req.setPathInfo(i);
 				return last.pattern.exact;
 			}
 		}
 
 		if (last.ends != null) {
-			Node n = ends(last.ends, path, o, e);
+			Node n = ends(last.ends, part.get(part.size() - 1));
 			if (n != null) {
-				req.setPathInfoStart(e);
+				req.setPathInfo(part.size());
 				return n.exact;
 			}
 		}
-		req.setPathInfoStart(o);
+		req.setPathInfo(part.size());
 		return last.def;
 	}
 
-	private static final PartNode next(PartNode[] nexts, Buffers path, int o, int e) throws InterruptedException {
+	private static final PartNode next(PartNode[] nexts, String path) {
 		int low = 0;
 		int high = nexts.length - 1;
 
@@ -94,7 +88,7 @@ public class PathTree {
 			int mid = (low + high) >>> 1;
 
 			PartNode n = nexts[mid];
-			int c = compare(n.part, path, o, e);
+			int c = compare(n.part, path);
 			if (c < 0)
 				low = mid + 1;
 			else if (c > 0)
@@ -105,7 +99,7 @@ public class PathTree {
 		return null;
 	}
 
-	private static final Node ends(Node[] nexts, Buffers path, int o, int e) throws InterruptedException {
+	private static final Node ends(Node[] nexts, String path) {
 		int low = 0;
 		int high = nexts.length - 1;
 
@@ -113,7 +107,7 @@ public class PathTree {
 			int mid = (low + high) >>> 1;
 
 			Node n = nexts[mid];
-			int c = compare(n.part, path, Math.max(o, e - n.part.length), e);
+			int c = compare(n.part, path, n.part.length());
 			if (c < 0)
 				low = mid + 1;
 			else if (c > 0)
@@ -164,12 +158,46 @@ public class PathTree {
 	}
 
 	/**
+	 * compare two part
+	 * 
+	 * @param a one
+	 * @param b two
+	 * @return -1,1 or 0 if a <,> or = to b
+	 */
+	public static int compare(String a, String b) {
+		return compare(a, b, -1);
+	}
+
+	/**
+	 * compare two part
+	 * 
+	 * @param a   one
+	 * @param b   two
+	 * @param max max number of char to compare
+	 * @return -1,1 or 0 if a <,> or = to b
+	 */
+	public static int compare(String a, String b, int max) {
+		if (max == 0)
+			return 0;
+		int ai = a.length();
+		int bi = b.length();
+		while (bi > 0 && ai > 0) {
+			int c = a.charAt(--ai) - b.charAt(--bi);
+			if (c != 0)
+				return c;
+			if (max > 0 && --max == 0)
+				return 0;
+		}
+		return a.length() - b.length();
+	}
+
+	/**
 	 * node for ending
 	 * 
 	 * @author unknow
 	 */
 	public static class Node {
-		final byte[] part;
+		final String part;
 		final FilterChain exact;
 
 		/**
@@ -178,7 +206,7 @@ public class PathTree {
 		 * @param part
 		 * @param chain
 		 */
-		public Node(byte[] part, FilterChain chain) {
+		public Node(String part, FilterChain chain) {
 			this.part = part;
 			this.exact = chain;
 		}
@@ -200,7 +228,7 @@ public class PathTree {
 		 * @param exact   the "" pattern chains
 		 * @param def     the "/*" pattern
 		 */
-		public PartNode(byte[] part, PartNode[] nexts, PartNode pattern, Node[] ends, FilterChain exact, FilterChain def) {
+		public PartNode(String part, PartNode[] nexts, PartNode pattern, Node[] ends, FilterChain exact, FilterChain def) {
 			super(part, exact);
 			this.nexts = nexts;
 			this.pattern = pattern;

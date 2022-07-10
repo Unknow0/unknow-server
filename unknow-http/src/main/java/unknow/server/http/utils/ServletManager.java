@@ -79,7 +79,7 @@ public final class ServletManager {
 	public FilterChain find(ServletRequestImpl req) throws InterruptedException {
 		switch (req.getDispatcherType()) {
 			case REQUEST:
-				return request.find(req.req);
+				return request.find(req);
 			default:
 				System.out.println("WTF");
 				return null;

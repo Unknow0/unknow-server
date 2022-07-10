@@ -22,4 +22,9 @@ public class ServletDefault extends HttpServlet {
 	protected void service(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
 		res.sendError(404);
 	}
+
+	@Override
+	public String toString() {
+		return "ServletDefault";
+	}
 }

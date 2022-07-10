@@ -26,8 +26,8 @@ public class Buffers {
 	 * @throws InterruptedException
 	 */
 	public int length() throws InterruptedException {
+		lock.lockInterruptibly();
 		try {
-			lock.lockInterruptibly();
 			return len;
 		} finally {
 			lock.unlock();
@@ -356,6 +356,10 @@ public class Buffers {
 	 * @throws InterruptedException
 	 */
 	public void skip(int l) throws InterruptedException {
+		if (l < 0)
+			throw new IllegalArgumentException("length < 0");
+		if (l == 0)
+			return;
 		lock.lockInterruptibly();
 		try {
 			while (head != null && l > head.l) {
@@ -405,130 +409,6 @@ public class Buffers {
 		}
 	}
 
-//	/**
-//	 * find a byte in the buffers
-//	 * 
-//	 * @param b   the byte to find
-//	 * @param max the maximum number of byte to read
-//	 * @return -1 if not found, -2 if max reached
-//	 * @throws InterruptedException
-//	 */
-//	public int indexOf(byte b, int max) throws InterruptedException {
-//		return indexOf(b, 0, max);
-//	}
-//
-//	/**
-//	 * find a byte in the buffers
-//	 * 
-//	 * @param b   the byte to find
-//	 * @param off start offset
-//	 * @param max the maximum number of byte to read
-//	 * @return -1 if not found, -2 if max reached
-//	 * @throws InterruptedException
-//	 */
-//	public int indexOf(byte b, int off, int max) throws InterruptedException {
-//		lock.lockInterruptibly();
-//		try {
-//			if (max == 0)
-//				return -1;
-//			if (max < 0)
-//				max = len;
-//			else
-//				max += off;
-//			Chunk c = head;
-//			int l = off;
-//			while (c != null && c.l < off) {
-//				off -= c.l;
-//				c = c.next;
-//			}
-//			if (c == null)
-//				return -1;
-//			for (int i = off; i < Math.min(c.l, max); i++) {
-//				if (c.b[i + c.o] == b)
-//					return l + i - off;
-//			}
-//			l += c.l - off;
-//			if (l > max)
-//				return -2;
-//			c = c.next;
-//			while (c != null) {
-//				int e = c.o + Math.min(c.l, max - l);
-//				for (int i = 0; i < e; i++) {
-//					if (c.b[i + c.o] == b)
-//						return l + i;
-//				}
-//				l += c.l;
-//				if (l > max)
-//					return -2;
-//				c = c.next;
-//			}
-//			return -1;
-//		} finally {
-//			lock.unlock();
-//		}
-//	}
-//
-//	/**
-//	 * find a bytes in the buffers
-//	 * 
-//	 * @param b   the byte to find
-//	 * @param max the maximum number of byte to read
-//	 * @return -1 if not found, -2 if max reached
-//	 * @throws InterruptedException
-//	 */
-//	public int indexOf(byte[] b, int max) throws InterruptedException {
-//		return indexOf(b, 0, max);
-//	}
-//
-//	/**
-//	 * find a bytes in the buffers
-//	 * 
-//	 * @param b   the byte to find
-//	 * @param o   first index to check
-//	 * @param max the maximum number of byte to read
-//	 * @return -1 if not found, -2 if max reached
-//	 * @throws InterruptedException
-//	 */
-//	public int indexOf(byte[] b, int o, int max) throws InterruptedException {
-//		lock.lockInterruptibly();
-//		try {
-//			if (len - o < b.length)
-//				return -1;
-//			if (b.length == 0)
-//				return o;
-//			max += o;
-//			Chunk c = head;
-//			int l = o;
-//			while (c != null && c.l < o) {
-//				o -= c.l;
-//				c = c.next;
-//			}
-//			if (c == null)
-//				return -1;
-//			for (int i = o; i < c.l; i++) {
-//				if (startsWith(c, b, i))
-//					return i + l - o;
-//			}
-//			l += c.l - o;
-//			if (max >= 0 && l > max)
-//				return -2;
-//			c = c.next;
-//			while (c != null) {
-//				for (int i = 0; i < c.l; i++) {
-//					if (startsWith(c, b, i))
-//						return l + i;
-//				}
-//				l += c.l;
-//				if (max >= 0 && l > max)
-//					return -2;
-//				c = c.next;
-//			}
-//			return -1;
-//		} finally {
-//			lock.unlock();
-//		}
-//	}
-
 	/**
 	 * iterate over the chunk
 	 * 
@@ -567,124 +447,6 @@ public class Buffers {
 			lock.unlock();
 		}
 	}
-//
-//	/**
-//	 * get index of next byte that is one of
-//	 * 
-//	 * @param b   byte to look for
-//	 * @param off first index
-//	 * @param len max length
-//	 * @return index of or -1 if not found, -2 if len reached
-//	 */
-//	public synchronized int indexOfOne(byte[] b, int off, int len) {
-//		if (this.len - off < 1)
-//			return -1;
-//		if (len < 0)
-//			len = this.len + 1;
-//		Chunk c = head;
-//		int l;
-//		int o = off;
-//		while (c.l < off) {
-//			off -= c.l;
-//			c = c.next;
-//			if (c == null)
-//				return -1;
-//		}
-//		if (off > 0) {
-//			l = Math.min(c.l, len);
-//			for (int i = 0; i < l; i++) {
-//				int k = i + off + c.o;
-//				for (int j = 0; j < b.length; j++) {
-//					if (c.b[k] == b[j])
-//						return o + i;
-//				}
-//			}
-//			len -= l;
-//			o += l;
-//			if (len == 0)
-//				return -2;
-//			c = c.next;
-//			if (c == null)
-//				return -1;
-//		}
-//		for (;;) {
-//			l = Math.min(c.l, len);
-//			for (int i = 0; i < l; i++) {
-//				int k = i + off + c.o;
-//				for (int j = 0; j < b.length; j++) {
-//					if (c.b[k] == b[j])
-//						return o + i;
-//				}
-//			}
-//			len -= l;
-//			o += l;
-//			if (len == 0)
-//				return -2;
-//			c = c.next;
-//			if (c == null)
-//				return -1;
-//		}
-//	}
-//
-//	/**
-//	 * get index of next byte that isn't one of
-//	 * 
-//	 * @param b   byte to not look for
-//	 * @param off first index
-//	 * @param len max length
-//	 * @return index of or -1 if not found, -2 if len reached
-//	 */
-//	public synchronized int indexOfNot(byte[] b, int off, int len) {
-//		if (this.len - off < 1)
-//			return -1;
-//		if (len < 0)
-//			len = this.len + 1;
-//		Chunk c = head;
-//		int l;
-//		int o = off;
-//		while (c.l < off) {
-//			off -= c.l;
-//			c = c.next;
-//			if (c == null)
-//				return -1;
-//		}
-//		if (off > 0) {
-//			l = Math.min(c.l, len);
-//			loop: for (int i = 0; i < l; i++) {
-//				int k = i + off + c.o;
-//				for (int j = 0; j < b.length; j++) {
-//					if (c.b[k] == b[j])
-//						continue loop;
-//				}
-//				return o + i;
-//			}
-//			len -= l;
-//			o += l;
-//			if (len == 0)
-//				return -2;
-//			c = c.next;
-//			if (c == null)
-//				return -1;
-//		}
-//		for (;;) {
-//			l = Math.min(c.l, len);
-//			loop: for (int i = 0; i < l; i++) {
-//				int k = i + off + c.o;
-//				for (int j = 0; j < b.length; j++) {
-//					if (c.b[k] == b[j])
-//						continue loop;
-//				}
-//				return o + i;
-//			}
-//			len -= l;
-//			o += l;
-//			if (len == 0)
-//				return -2;
-//			c = c.next;
-//			if (c == null)
-//				return -1;
-//		}
-//	}
 
 	/**
 	 * get a single byte
@@ -710,59 +472,6 @@ public class Buffers {
 			lock.unlock();
 		}
 	}
-
-	/**
-	 * @param p
-	 * @param off
-	 * @param len
-	 */
-//	public synchronized void get(byte[] p, int off, int len) {
-//		Chunk b = head;
-//		if (b == null)
-//			return;
-//		if (len == 0 || off >= length())
-//			return;
-//		if (len == -1)
-//			len = length() - off;
-//		int o = 0;
-//		do {
-//			if (b.l < off) {
-//				off -= b.l;
-//				continue;
-//			}
-//			int w = b.l - off;
-//			System.arraycopy(b.b, b.o, p, o, w);
-//			off = 0;
-//			len -= w;
-//			o += w;
-//		} while (len > 0 && (b = b.next) != null);
-//	}
-
-	/**
-	 * @param part
-	 * @param o
-	 * @return true if the part equals
-	 */
-//	public synchronized boolean equals(byte[] part, int o) {
-//		if (len - o < part.length)
-//			return false;
-//		Chunk c = head;
-//		while (c != null && c.l < o) {
-//			o -= c.l;
-//			c = c.next;
-//		}
-//		int j = 0;
-//		while (c != null) {
-//			for (int i = c.o + o; i < c.o + c.l; i++) {
-//				if (c.b[i] != part[j++])
-//					return false;
-//				if (j == part.length)
-//					return true;
-//			}
-//			c = c.next;
-//		}
-//		return false;
-//	}
 
 	/**
 	 * write data in the chunk

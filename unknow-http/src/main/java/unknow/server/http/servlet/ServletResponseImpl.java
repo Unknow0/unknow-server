@@ -345,7 +345,9 @@ public class ServletResponseImpl implements HttpServletResponse {
 	public void reset() {
 		resetBuffer();
 		status = 200;
+		List<String> list = headers.get("connection");
 		headers.clear();
+		headers.put("connection", list);
 		servletOut = null;
 	}
 

@@ -80,9 +80,5 @@ public abstract class ProtobufHandlerFactory<T> implements HandlerFactory {
 		@Override
 		public void free() {
 		}
-
-		@Override
-		public void reset() {
-		}
 	}
 }
