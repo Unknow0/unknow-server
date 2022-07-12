@@ -371,7 +371,7 @@ public class Buffers {
 			return;
 		lock.lockInterruptibly();
 		try {
-			while (head != null && l > head.l) {
+			while (head != null && l >= head.l) {
 				l -= head.l;
 				len -= head.l;
 				head = Chunk.free(head);
@@ -541,26 +541,34 @@ public class Buffers {
 	}
 
 	private void validate() {
-		int l = 0;
-		Chunk c = head;
-		Chunk last = null;
-		while (c != null) {
-			l += c.l;
-			if (c.o > 4096 || c.o < 0)
-				throw new IllegalStateException("Invalid offset " + c.o);
-			if (c.l < 0 || c.l > 4096)
-				throw new IllegalStateException("Invalid length " + c.l);
-			last = c;
-			c = c.next;
-		}
-		if (l != len)
-			throw new IllegalStateException("Invalid total length " + l + " " + len);
-		if (last != tail)
-			throw new IllegalStateException("Wrong tail");
+//		int l = 0;
+//		Chunk c = head;
+//		Chunk last = null;
+//		while (c != null) {
+//			l += c.l;
+//			if (c.o > 4096 || c.o < 0)
+//				throw new IllegalStateException("Invalid offset " + c.o);
+//			if (c.l < 0 || c.l > 4096)
+//				throw new IllegalStateException("Invalid length " + c.l);
+//			last = c;
+//			c = c.next;
+//		}
+//		if (l != len)
+//			throw new IllegalStateException("Invalid total length " + l + " " + len);
+//		if (last != tail)
+//			throw new IllegalStateException("Wrong tail");
 	}
 
 	public interface Walker {
-		boolean apply(byte[] b, int o, int l);
+		/**
+		 * apply a bloc of data
+		 * 
+		 * @param b data
+		 * @param o start index
+		 * @param e end index
+		 * @return false to stop the walk
+		 */
+		boolean apply(byte[] b, int o, int e);
 	}
 
 	public static enum WalkResult {

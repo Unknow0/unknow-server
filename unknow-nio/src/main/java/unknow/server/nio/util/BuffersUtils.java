@@ -50,67 +50,6 @@ public final class BuffersUtils {
 	}
 
 	/**
-	 * check if the data endsWith
-	 * 
-	 * @param buf    buff to look into
-	 * @param lookup data too lookup
-	 * @return true if we stars with "lookup"
-	 */
-//	public static boolean endsWith(Buffers buf, byte[] lookup) {
-//		synchronized (buf) {
-//			Chunk b = buf.getHead();
-//			int l = lookup.length;
-//			int o = buf.length() - l;
-//			if (b == null || o < 0)
-//				return false;
-//			int i = 0;
-//			// skip
-//			while (o > b.l) {
-//				o -= b.l;
-//				b = b.next;
-//			}
-//			do {
-//				int e = b.o + b.l - o;
-//				for (int j = b.o + o; j < e && i < l; i++, j++) {
-//					if (lookup[i] != b.b[j])
-//						return false;
-//				}
-//				o = 0;
-//			} while ((b = b.next) != null);
-//		}
-//		return true;
-//	}
-
-	/**
-	 * check if the data equals
-	 * 
-	 * @param buf    buff to look into
-	 * @param lookup data too lookup
-	 * @return true if we stars with "lookup"
-	 * @throws InterruptedException
-	 */
-//	public static boolean equals(Buffers buf, byte[] lookup) {
-//		synchronized (buf) {
-//			Chunk b = buf.getHead();
-//			int l = lookup.length;
-//			if (b == null || buf.length() != l)
-//				return false;
-//			int i = 0;
-//			int e, j;
-//			do {
-//				e = b.o + b.l;
-//				j = b.o;
-//				while (j < e && i < l) {
-//					if (lookup[i++] != b.b[j++])
-//						return false;
-//				}
-//				if (i == l)
-//					return true;
-//			} while ((b = b.next) != null);
-//		}
-//		return false;
-//	}
-	/**
 	 * get index of
 	 * 
 	 * @param buf    buff to look into
@@ -145,6 +84,50 @@ public final class BuffersUtils {
 			while (o < e) {
 				if (lookup == b[o])
 					return false;
+				i++;
+				o++;
+			}
+			return true;
+		}
+	}
+
+	/**
+	 * get first index of one of the lookup bytes
+	 * 
+	 * @param buf    buff to look into
+	 * @param lookup data too lookup
+	 * @param o      first index to check
+	 * @param l      max number of bytes to check
+	 * @return the index or -1 if not found, -2 if max reached
+	 * @throws InterruptedException
+	 */
+	public static int indexOfOne(Buffers buf, byte[] lookup, int o, int l) throws InterruptedException {
+		IndexOfOne w = new IndexOfOne(lookup);
+		switch (buf.walk(w, o, l)) {
+			case MAX:
+				return -2;
+			case STOPED:
+				return w.i + o;
+			default:
+				return -1;
+		}
+	}
+
+	private static final class IndexOfOne implements Walker {
+		private final byte[] lookup;
+		int i = 0;
+
+		public IndexOfOne(byte[] lookup) {
+			this.lookup = lookup;
+		}
+
+		@Override
+		public boolean apply(byte[] b, int o, int e) {
+			while (o < e) {
+				for (int i = 0; i < lookup.length; i++) {
+					if (lookup[i] == b[o])
+						return false;
+				}
 				i++;
 				o++;
 			}
@@ -213,14 +196,14 @@ public final class BuffersUtils {
 	 * @throws InterruptedException
 	 */
 	public static void toString(StringBuilder sb, Buffers buf, int off, int len) throws InterruptedException {
-		ToString w = new ToString(sb);
+		ToStringAscii w = new ToStringAscii(sb);
 		buf.walk(w, off, len);
 	}
 
-	private static final class ToString implements Walker {
+	private static final class ToStringAscii implements Walker {
 		private final StringBuilder sb;
 
-		public ToString(StringBuilder sb) {
+		public ToStringAscii(StringBuilder sb) {
 			this.sb = sb;
 		}
 
@@ -229,11 +212,6 @@ public final class BuffersUtils {
 			while (o < e)
 				sb.append((char) b[o++]);
 			return true;
-		}
-
-		@Override
-		public String toString() {
-			return sb.toString();
 		}
 	}
 }

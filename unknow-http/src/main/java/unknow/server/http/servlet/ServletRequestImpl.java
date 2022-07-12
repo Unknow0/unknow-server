@@ -68,6 +68,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 	private String servletPath = null;
 	private String pathInfo = null;
 	private String query = null;
+	private Map<String, List<String>> queryParam = null;
 
 	private String encoding = null;
 	private long contentLength = -2;
@@ -118,6 +119,10 @@ public class ServletRequestImpl implements HttpServletRequest {
 		this.query = query;
 	}
 
+	public void setQueryParam(Map<String, List<String>> query) {
+		this.queryParam = query;
+	}
+
 	public void setProtocol(String protocol) {
 		this.protocol = protocol;
 	}
@@ -142,11 +147,11 @@ public class ServletRequestImpl implements HttpServletRequest {
 		if (parameter != null)
 			return;
 		parameter = new HashMap<>();
-		Map<String, List<String>> p = new HashMap<>();
-//		req.parseQueryParam(p);
-//
-//		if ("POST".equals(getMethod()) && "application/x-www-form-urlencoded".equalsIgnoreCase(getContentType()))
-//			req.parseContentParam(p);
+		Map<String, List<String>> p = new HashMap<>(queryParam);
+
+		// TODO
+		if ("POST".equals(getMethod()) && "application/x-www-form-urlencoded".equalsIgnoreCase(getContentType()))
+			req.parseContentParam(p);
 
 		String[] s = new String[0];
 		for (Entry<String, List<String>> e : p.entrySet())

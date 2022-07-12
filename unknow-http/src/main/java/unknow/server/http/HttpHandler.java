@@ -7,6 +7,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CoderResult;
+import java.nio.charset.CodingErrorAction;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -30,17 +36,19 @@ import unknow.server.nio.Connection;
 import unknow.server.nio.Connection.Out;
 import unknow.server.nio.Handler;
 import unknow.server.nio.util.Buffers;
+import unknow.server.nio.util.Buffers.Walker;
 import unknow.server.nio.util.BuffersUtils;
 
 public class HttpHandler implements Handler, Runnable {
 	private static final Logger log = LoggerFactory.getLogger(HttpHandler.class);
 	private static final Cookie[] COOKIE = new Cookie[0];
 
-	private static final byte[] CRLF = new byte[] { '\r', '\n' };
-	private static final byte[] CRLF2 = new byte[] { '\r', '\n', '\r', '\n' };
+	private static final byte[] CRLF = { '\r', '\n' };
+	private static final byte[] CRLF2 = { '\r', '\n', '\r', '\n' };
 	private static final byte[] WS = new byte[] { ' ', '\t' };
 	private static final byte[] SEP = new byte[] { ' ', '\t', '"', ',' };
 	private static final byte[] COOKIE_SEP = new byte[] { ';', ' ' };
+	private static final byte[] PARAM_SEP = { '&', '=' };
 	private static final byte SPACE = ' ';
 	private static final byte QUESTION = '?';
 	private static final byte COLON = ':';
@@ -69,6 +77,7 @@ public class HttpHandler implements Handler, Runnable {
 
 	public final Buffers meta;
 	private final StringBuilder sb;
+	private final Decode decode;
 
 	private Future<?> f;
 
@@ -86,6 +95,7 @@ public class HttpHandler implements Handler, Runnable {
 		this.keepAliveIdle = keepAliveIdle;
 		meta = new Buffers();
 		sb = new StringBuilder();
+		decode = new Decode();
 	}
 
 	@Override
@@ -141,7 +151,9 @@ public class HttpHandler implements Handler, Runnable {
 
 		int s = last;
 		while ((s = BuffersUtils.indexOf(meta, SLASH, s + 1, q - s - 1)) > 0) {
-			BuffersUtils.toString(sb, meta, last + 1, s - last - 1);
+			meta.walk(decode, last + 1, s - last - 1);
+			if (!decode.done())
+				return false;
 			req.addPath(sb.toString());
 			sb.setLength(0);
 			last = s;
@@ -155,7 +167,11 @@ public class HttpHandler implements Handler, Runnable {
 		BuffersUtils.toString(sb, meta, q, i - q);
 		req.setQuery(sb.toString());
 		sb.setLength(0);
-		last = i + 1;
+
+		Map<String, List<String>> map = new HashMap<>();
+		parseParam(map, meta, q + 1, i);
+		req.setQueryParam(map);
+		last = i;
 
 		i = BuffersUtils.indexOf(meta, CRLF, last, MAX_VERSION_SIZE);
 		if (i < 0) {
@@ -167,7 +183,7 @@ public class HttpHandler implements Handler, Runnable {
 		sb.setLength(0);
 		last = i + 2;
 
-		Map<String, List<String>> map = new HashMap<>();
+		map = new HashMap<>();
 		while ((i = BuffersUtils.indexOf(meta, CRLF, last, MAX_HEADER_SIZE)) > 0) {
 			int c = BuffersUtils.indexOf(meta, COLON, last, i - last);
 			if (c < 0) {
@@ -191,6 +207,40 @@ public class HttpHandler implements Handler, Runnable {
 			last = i + 2;
 		}
 		req.setHeaders(map);
+		return true;
+	}
+
+	public void parseContentParam(Map<String, List<String>> map) {
+		// TODO
+	}
+
+	private boolean parseParam(Map<String, List<String>> map, Buffers data, int o, int e) throws InterruptedException {
+		while (o < e) {
+			int i = BuffersUtils.indexOfOne(data, PARAM_SEP, o, o - e);
+			if (i < 0)
+				i = e;
+			data.walk(decode, o, i - o);
+			if (!decode.done())
+				return false;
+			String key = sb.toString();
+			sb.setLength(0);
+			List<String> list = map.get(key);
+			if (list == null)
+				map.put(key, list = new ArrayList<>(1));
+
+			o = i + 1;
+			if (i < e && data.get(i) == EQUAL) {
+				i = BuffersUtils.indexOf(data, AMPERSAMP, o, o - e);
+				if (i < 0)
+					i = e;
+				data.walk(decode, o, i - o);
+				if (!decode.done())
+					return false;
+				list.add(sb.toString());
+				sb.setLength(0);
+				o = i + 1;
+			}
+		}
 		return true;
 	}
 
@@ -303,5 +353,65 @@ public class HttpHandler implements Handler, Runnable {
 	 */
 	public InputStream getIn() {
 		return co.getIn();
+	}
+
+	private final class Decode implements Walker {
+		private final CharsetDecoder d = StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPLACE).onUnmappableCharacter(CodingErrorAction.REPLACE);
+		private final char[] tmp = new char[2048];
+		private final CharBuffer cbuf = CharBuffer.wrap(tmp);
+		private final ByteBuffer bbuf = ByteBuffer.allocate(4096);
+
+		private int m = 0;
+		private byte pending = 0;
+
+		@Override
+		public boolean apply(byte[] b, int o, int e) {
+			while (o < e) {
+				byte c = b[o++];
+				if (m > 0) {
+					pending = (byte) ((pending << 4) + c - '0');
+					if (--m == 0) {
+						bbuf.put(pending);
+						pending = 0;
+					}
+				} else if (c == PERCENT)
+					m = 2;
+				else
+					bbuf.put(c);
+				if (bbuf.remaining() == 0)
+					decode();
+
+			}
+			return false;
+		}
+
+		private void decode() {
+			bbuf.flip();
+			CoderResult r;
+			do {
+				r = d.decode(bbuf, cbuf, false);
+				cbuf.flip();
+				int l = cbuf.length();
+				cbuf.get(tmp, 0, l);
+				sb.append(tmp, 0, l);
+				cbuf.clear();
+			} while (r.isOverflow());
+			bbuf.compact();
+		}
+
+		public boolean done() {
+			try {
+				if (m != 0)
+					return false;
+				if (bbuf.position() > 0)
+					decode();
+				if (bbuf.position() > 0)
+					return false;
+				return true;
+			} finally {
+				cbuf.clear();
+				bbuf.clear();
+			}
+		}
 	}
 }
