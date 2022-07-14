@@ -11,13 +11,14 @@ import java.io.OutputStream;
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.Parser;
 
+import unknow.server.nio.Connection;
 import unknow.server.nio.Handler;
 import unknow.server.nio.HandlerFactory;
 
 /**
  * @author unknow
  */
-public abstract class ProtobufHandlerFactory<T> extends HandlerFactory {
+public abstract class ProtobufHandlerFactory<T> implements HandlerFactory {
 	private final Parser<T> parser;
 
 	public ProtobufHandlerFactory(Parser<T> parser) {
@@ -25,34 +26,33 @@ public abstract class ProtobufHandlerFactory<T> extends HandlerFactory {
 	}
 
 	@Override
-	protected Handler create() {
-		return new ProtobufHandler(this);
+	public Handler create(Connection co) {
+		return new ProtobufHandler(co);
 	}
 
 	protected abstract void process(T t, OutputStream h);
 
-	private final class ProtobufHandler extends Handler {
+	private final class ProtobufHandler implements Handler {
+		private final Connection co;
 		private final LimitedInputStream limited;
 
-		public ProtobufHandler(HandlerFactory factory) {
-			super(factory);
-			this.limited = new LimitedInputStream(getIn());
+		public ProtobufHandler(Connection co) {
+			this.co = co;
+			this.limited = new LimitedInputStream(co.getIn());
 		}
 
 		@Override
-		public void handle(InputStream in, OutputStream out) {
+		public void onRead() {
+			InputStream in = co.getIn();
 			try {
 				in.mark(4096);
 				int len = readInt(in);
 				if (len < 0 || len < in.available())
 					return;
 				limited.setLimit(len);
-				process(parser.parseFrom(limited), out);
+				process(parser.parseFrom(limited), co.getOut());
 			} catch (IOException e) {
-				try {
-					out.close();
-				} catch (IOException e1) { // OK
-				}
+				co.getOut().close();
 			} finally {
 				try {
 					in.reset();
@@ -66,6 +66,19 @@ public abstract class ProtobufHandlerFactory<T> extends HandlerFactory {
 			if (read == -1)
 				return -1;
 			return CodedInputStream.readRawVarint32(read, in);
+		}
+
+		@Override
+		public void onWrite() {
+		}
+
+		@Override
+		public boolean closed(long now, boolean close) {
+			return close;
+		}
+
+		@Override
+		public void free() {
 		}
 	}
 }

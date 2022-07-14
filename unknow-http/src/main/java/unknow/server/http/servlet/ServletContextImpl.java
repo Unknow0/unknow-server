@@ -25,8 +25,8 @@ import javax.servlet.SessionCookieConfig;
 import javax.servlet.SessionTrackingMode;
 import javax.servlet.descriptor.JspConfigDescriptor;
 
+import unknow.server.http.data.ArrayMap;
 import unknow.server.http.servlet.session.SessionFactory;
-import unknow.server.http.utils.ArrayMap;
 import unknow.server.http.utils.EventManager;
 import unknow.server.http.utils.ServletManager;
 
@@ -159,7 +159,7 @@ public class ServletContextImpl implements ServletContext {
 
 	@Override
 	public void setAttribute(String name, Object object) {
-		Object old = attributes.set(name, object);
+		Object old = attributes.put(name, object);
 		events.fireContextAttribute(this, name, object, old);
 	}
 
@@ -238,7 +238,7 @@ public class ServletContextImpl implements ServletContext {
 
 	@Override
 	public boolean setInitParameter(String name, String value) {
-		return parameters.setOnce(name, value);
+		return parameters.putOnce(name, value);
 	}
 
 	@Override
@@ -249,11 +249,11 @@ public class ServletContextImpl implements ServletContext {
 	@Deprecated
 	@Override
 	public Servlet getServlet(String name) throws ServletException {
-		Servlet[] servlets = this.servlets.getServlets();
+		ServletConfigImpl[] servlets = this.servlets.getServlets();
 		for (int i = 0; i < servlets.length; i++) {
-			Servlet s = servlets[i];
-			if (name.equals(s.getServletConfig().getServletName()))
-				return s;
+			ServletConfigImpl s = servlets[i];
+			if (name.equals(s.getName()))
+				return s.getServlet();
 		}
 		return null;
 	}
@@ -262,7 +262,7 @@ public class ServletContextImpl implements ServletContext {
 	@Override
 	public Enumeration<Servlet> getServlets() {
 		return new Enumeration<Servlet>() {
-			private final Servlet[] s = servlets.getServlets();
+			private final ServletConfigImpl[] s = servlets.getServlets();
 			private int i = 0;
 
 			@Override
@@ -272,7 +272,7 @@ public class ServletContextImpl implements ServletContext {
 
 			@Override
 			public Servlet nextElement() {
-				return s[i++];
+				return s[i++].getServlet();
 			}
 		};
 	}
@@ -281,7 +281,7 @@ public class ServletContextImpl implements ServletContext {
 	@Override
 	public Enumeration<String> getServletNames() {
 		return new Enumeration<String>() {
-			private final Servlet[] s = servlets.getServlets();
+			private final ServletConfigImpl[] s = servlets.getServlets();
 			private int i = 0;
 
 			@Override
@@ -291,7 +291,7 @@ public class ServletContextImpl implements ServletContext {
 
 			@Override
 			public String nextElement() {
-				return s[i++].getServletConfig().getServletName();
+				return s[i++].getName();
 			}
 		};
 	}

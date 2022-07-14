@@ -26,7 +26,7 @@ public class AccessLogFilter implements Filter {
 	/** format used to log */
 	private String format = "%1$tFT%1$tT %2$s %3$s \"%4$s\" %5$d %6$d%n";
 
-	private final Thread t = new Thread() {
+	private final Thread t = new Thread("AsyncLog") {
 		@Override
 		public void run() {
 			try {

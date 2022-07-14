@@ -3,39 +3,12 @@
  */
 package unknow.server.nio;
 
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
-
 /**
  * factory of handler
  * 
  * @author unknow
  */
-public abstract class HandlerFactory {
-	/** idle handlers cache */
-	private final Queue<Handler> cache = new ConcurrentLinkedQueue<>();
-
-	/**
-	 * get or create a handler
-	 * 
-	 * @return a handler
-	 */
-	public final Handler get() {
-		Handler h = cache.poll();
-		if (h == null)
-			h = create();
-		return h;
-	}
-
-	/**
-	 * free a unused handler
-	 * 
-	 * @param h handler
-	 */
-	public final void free(Handler h) {
-		cache.offer(h);
-	}
-
+public interface HandlerFactory {
 	/** create a new handler */
-	protected abstract Handler create();
+	Handler create(Connection c);
 }

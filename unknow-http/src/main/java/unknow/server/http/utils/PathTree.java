@@ -4,10 +4,11 @@
 package unknow.server.http.utils;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import javax.servlet.FilterChain;
 
-import unknow.server.http.HttpHandler;
+import unknow.server.http.servlet.ServletRequestImpl;
 import unknow.server.nio.util.Buffers;
 
 /**
@@ -16,7 +17,7 @@ import unknow.server.nio.util.Buffers;
  * @author unknow
  */
 public class PathTree {
-	private final PartNode root;
+	final PartNode root;
 
 	/**
 	 * create a new PathTree
@@ -32,57 +33,61 @@ public class PathTree {
 	 * 
 	 * @param req the request
 	 * @return the chain
+	 * @throws InterruptedException
 	 */
-	public FilterChain find(HttpHandler req) {
-		req.setPathInfoStart(1);
-		FilterChain f = tryFind(req, root, req.meta, req.pathStart() + 1, req.pathEnd());
+	public FilterChain find(ServletRequestImpl req) throws InterruptedException {
+		req.setPathInfo(1);
+		FilterChain f = tryFind(req, root, req.getPaths(), 0);
 		return f == null ? root.def : f;
 	}
 
-	private FilterChain tryFind(HttpHandler req, PartNode last, Buffers path, int o, int e) {
-		if (o == e) {
-			req.setPathInfoStart(e);
+	private FilterChain tryFind(ServletRequestImpl req, PartNode last, List<String> part, int i) throws InterruptedException {
+		if (i == part.size()) {
+			req.setPathInfo(part.size());
 			return last.exact;
 		}
 
 		while (last.nexts != null) {
-			int i = path.indexOf((byte) '/', o, e - o);
-			if (i < 0)
-				i = e;
-			PartNode n = next(last.nexts, path, o, i);
+			PartNode n = next(last.nexts, part.get(i));
 			if (n == null)
 				break;
-			if (i == e) {
-				req.setPathInfoStart(e);
+			if (i + 1 == part.size()) {
+				req.setPathInfo(i);
 				return n.exact;
 			}
 			last = n;
-			o = i + 1;
+			i++;
 		}
 		if (last.pattern != null) {
-			int i = path.indexOf((byte) '/', o, e - o);
-			if (i > 0) {
-				FilterChain f = tryFind(req, last.pattern, path, i + 1, e);
+			if (i + 1 < part.size()) {
+				FilterChain f = tryFind(req, last.pattern, part, i + 1);
 				if (f != null) // contextPath already set
 					return f;
 			} else {
-				req.setPathInfoStart(e);
+				req.setPathInfo(i);
 				return last.pattern.exact;
 			}
 		}
 
 		if (last.ends != null) {
-			Node n = ends(last.ends, path, o, e);
+			Node n = ends(last.ends, part.get(part.size() - 1));
 			if (n != null) {
-				req.setPathInfoStart(e);
+				req.setPathInfo(part.size());
 				return n.exact;
 			}
 		}
-		req.setPathInfoStart(o);
+		req.setPathInfo(part.size());
 		return last.def;
 	}
 
-	private static final PartNode next(PartNode[] nexts, Buffers path, int o, int e) {
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		root.toString(sb, new StringBuilder());
+		return sb.toString();
+	}
+
+	private static final PartNode next(PartNode[] nexts, String path) {
 		int low = 0;
 		int high = nexts.length - 1;
 
@@ -90,7 +95,7 @@ public class PathTree {
 			int mid = (low + high) >>> 1;
 
 			PartNode n = nexts[mid];
-			int c = compare(n.part, path, o, e);
+			int c = compare(n.part, path);
 			if (c < 0)
 				low = mid + 1;
 			else if (c > 0)
@@ -101,7 +106,7 @@ public class PathTree {
 		return null;
 	}
 
-	private static final Node ends(Node[] nexts, Buffers path, int o, int e) {
+	private static final Node ends(Node[] nexts, String path) {
 		int low = 0;
 		int high = nexts.length - 1;
 
@@ -109,7 +114,7 @@ public class PathTree {
 			int mid = (low + high) >>> 1;
 
 			Node n = nexts[mid];
-			int c = compare(n.part, path, Math.max(o, e - n.part.length), e);
+			int c = compare(n.part, path, n.part.length());
 			if (c < 0)
 				low = mid + 1;
 			else if (c > 0)
@@ -146,8 +151,9 @@ public class PathTree {
 	 * @param o start of the part in the buffer
 	 * @param e end of the part
 	 * @return -1,1 or 0 if a <,> or = to b
+	 * @throws InterruptedException
 	 */
-	public static int compare(byte[] a, Buffers b, int o, int e) {
+	public static int compare(byte[] a, Buffers b, int o, int e) throws InterruptedException {
 		int i = a.length;
 		int bl = e - o;
 		while (o < e && i >= 0) {
@@ -159,12 +165,46 @@ public class PathTree {
 	}
 
 	/**
+	 * compare two part
+	 * 
+	 * @param a one
+	 * @param b two
+	 * @return -1,1 or 0 if a <,> or = to b
+	 */
+	public static int compare(String a, String b) {
+		return compare(a, b, -1);
+	}
+
+	/**
+	 * compare two part
+	 * 
+	 * @param a   one
+	 * @param b   two
+	 * @param max max number of char to compare
+	 * @return -1,1 or 0 if a <,> or = to b
+	 */
+	public static int compare(String a, String b, int max) {
+		if (max == 0)
+			return 0;
+		int ai = a.length();
+		int bi = b.length();
+		while (bi > 0 && ai > 0) {
+			int c = a.charAt(--ai) - b.charAt(--bi);
+			if (c != 0)
+				return c;
+			if (max > 0 && --max == 0)
+				return 0;
+		}
+		return a.length() - b.length();
+	}
+
+	/**
 	 * node for ending
 	 * 
 	 * @author unknow
 	 */
 	public static class Node {
-		final byte[] part; // .jsp
+		final String part;
 		final FilterChain exact;
 
 		/**
@@ -173,7 +213,7 @@ public class PathTree {
 		 * @param part
 		 * @param chain
 		 */
-		public Node(byte[] part, FilterChain chain) {
+		public Node(String part, FilterChain chain) {
 			this.part = part;
 			this.exact = chain;
 		}
@@ -195,12 +235,33 @@ public class PathTree {
 		 * @param exact   the "" pattern chains
 		 * @param def     the "/*" pattern
 		 */
-		public PartNode(byte[] part, PartNode[] nexts, PartNode pattern, Node[] ends, FilterChain exact, FilterChain def) {
+		public PartNode(String part, PartNode[] nexts, PartNode pattern, Node[] ends, FilterChain exact, FilterChain def) {
 			super(part, exact);
 			this.nexts = nexts;
 			this.pattern = pattern;
 			this.ends = ends;
 			this.def = def;
+		}
+
+		public void toString(StringBuilder sb, StringBuilder name) {
+			int l = name.length();
+			sb.append(l == 0 ? "/" : name).append('\t').append(exact).append('\n');
+			for (int i = 0; i < nexts.length; i++) {
+				PartNode n = nexts[i];
+				name.append('/').append(n.part);
+				n.toString(sb, name);
+				name.setLength(l);
+			}
+			if (pattern != null) {
+				name.append("/{}");
+				pattern.toString(sb, name);
+				name.setLength(l);
+			}
+			name.append("/*");
+			sb.append(name).append('\t').append(def).append('\n');
+			for (int i = 0; i < ends.length; i++)
+				sb.append(name).append(ends[i].part).append('\t').append(ends[i].exact).append('\n');
+			name.setLength(l);
 		}
 	}
 

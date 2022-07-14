@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 import javax.servlet.AsyncContext;
 import javax.servlet.DispatcherType;
@@ -40,28 +41,34 @@ import javax.servlet.http.HttpUpgradeHandler;
 import javax.servlet.http.Part;
 
 import unknow.server.http.HttpHandler;
+import unknow.server.http.data.ArrayMap;
 import unknow.server.http.servlet.in.ChunckedInputStream;
 import unknow.server.http.servlet.in.EmptyInputStream;
 import unknow.server.http.servlet.in.LengthInputStream;
 import unknow.server.http.servlet.session.SessionFactory;
-import unknow.server.http.utils.ArrayMap;
 
 /**
  * @author unknow
  */
 public class ServletRequestImpl implements HttpServletRequest {
+	private static final Cookie[] EMPTY = new Cookie[0];
+
 	private final ArrayMap<Object> attributes = new ArrayMap<>();
 
 	private final ServletContextImpl ctx;
-	public final HttpHandler req;
+	private final HttpHandler req;
 	private final DispatcherType type;
 	private final ServletResponseImpl res;
+
+	private final List<String> path;
+	private int pathInfoIndex;
 
 	private String protocol = null;
 	private String method = null;
 	private String servletPath = null;
 	private String pathInfo = null;
 	private String query = null;
+	private Map<String, List<String>> queryParam = null;
 
 	private String encoding = null;
 	private long contentLength = -2;
@@ -79,7 +86,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	private HttpSession session;
 
-	private Cookie[] cookies;
+	private Cookie[] cookies = EMPTY;
 
 	private List<Locale> locales;
 
@@ -99,15 +106,50 @@ public class ServletRequestImpl implements HttpServletRequest {
 		this.req = req;
 		this.type = type;
 		this.res = res;
+		this.path = new ArrayList<>();
+
+		this.headers = new HashMap<>();
+	}
+
+	public void setMethod(String method) {
+		this.method = method;
+	}
+
+	public void setQuery(String query) {
+		this.query = query;
+	}
+
+	public void setQueryParam(Map<String, List<String>> query) {
+		this.queryParam = query;
+	}
+
+	public void setProtocol(String protocol) {
+		this.protocol = protocol;
+	}
+
+	public void setHeaders(Map<String, List<String>> headers) {
+		this.headers = headers;
+	}
+
+	public List<String> getPaths() {
+		return path;
+	}
+
+	public void addPath(String path) {
+		this.path.add(path);
+	}
+
+	public void setPathInfo(int index) {
+		pathInfoIndex = index;
 	}
 
 	private void parseParam() {
 		if (parameter != null)
 			return;
 		parameter = new HashMap<>();
-		Map<String, List<String>> p = new HashMap<>();
-		req.parseQueryParam(p);
+		Map<String, List<String>> p = new HashMap<>(queryParam);
 
+		// TODO
 		if ("POST".equals(getMethod()) && "application/x-www-form-urlencoded".equalsIgnoreCase(getContentType()))
 			req.parseContentParam(p);
 
@@ -121,6 +163,8 @@ public class ServletRequestImpl implements HttpServletRequest {
 	 */
 	public void setServletPath(String servletPath) {
 		this.servletPath = servletPath;
+		this.pathInfo = "";
+		this.query = "";
 	}
 
 	@Override
@@ -140,7 +184,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public void setAttribute(String name, Object o) {
-		Object old = attributes.set(name, o);
+		Object old = attributes.put(name, o);
 		ctx.getEvents().fireRequestAttribute(this, name, o, old);
 	}
 
@@ -170,24 +214,18 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public String getHeader(String name) {
-		if (headers == null)
-			headers = req.parseHeader();
 		List<String> list = headers.get(name.toLowerCase());
 		return list == null || list.isEmpty() ? null : list.get(0);
 	}
 
 	@Override
 	public Enumeration<String> getHeaders(String name) {
-		if (headers == null)
-			headers = req.parseHeader();
 		List<String> list = headers.get(name.toLowerCase());
 		return list == null || list.isEmpty() ? Collections.emptyEnumeration() : Collections.enumeration(list);
 	}
 
 	@Override
 	public Enumeration<String> getHeaderNames() {
-		if (headers == null)
-			headers = req.parseHeader();
 		return Collections.enumeration(headers.keySet());
 	}
 
@@ -305,22 +343,16 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public String getMethod() {
-		if (method == null)
-			method = req.parseMethod();
 		return method;
 	}
 
 	@Override
 	public String getQueryString() {
-		if (query == null)
-			query = req.parseQuery();
 		return query.isEmpty() ? null : query;
 	}
 
 	@Override
 	public String getProtocol() {
-		if (protocol == null)
-			protocol = req.parseProtocol();
 		return protocol;
 	}
 
@@ -427,14 +459,14 @@ public class ServletRequestImpl implements HttpServletRequest {
 	@Override
 	public String getServletPath() {
 		if (servletPath == null)
-			servletPath = req.parseServletPath();
+			servletPath = path.stream().limit(pathInfoIndex).collect(Collectors.joining("/", "/", ""));
 		return servletPath;
 	}
 
 	@Override
 	public String getPathInfo() {
 		if (pathInfo == null)
-			pathInfo = req.parsePathInfo();
+			pathInfo = path.stream().skip(pathInfoIndex).collect(Collectors.joining("/", "/", ""));
 		return pathInfo == "" ? null : pathInfo;
 	}
 
@@ -464,8 +496,6 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public Cookie[] getCookies() {
-		if (cookies == null)
-			cookies = req.parseCookie();
 		return cookies.length == 0 ? null : cookies;
 	}
 

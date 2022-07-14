@@ -4,7 +4,6 @@
 package unknow.server.http.servlet;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.nio.charset.Charset;
@@ -37,6 +36,7 @@ import unknow.server.http.servlet.out.LengthOutputStream;
 import unknow.server.http.servlet.out.Output;
 import unknow.server.http.servlet.out.ServletWriter;
 import unknow.server.http.utils.ServletManager;
+import unknow.server.nio.Connection.Out;
 
 /**
  * @author unknow
@@ -66,7 +66,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 	private static final DateTimeFormatter RFC1123 = DateTimeFormatter.RFC_1123_DATE_TIME.withZone(ZoneOffset.UTC);
 
 	private final ServletContextImpl ctx;
-	private final OutputStream out;
+	private final Out out;
 	private final HttpHandler req;
 	private Output servletOut;
 
@@ -91,7 +91,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 	 * @param out the raw output
 	 * @param req the original request
 	 */
-	public ServletResponseImpl(ServletContextImpl ctx, OutputStream out, HttpHandler req) {
+	public ServletResponseImpl(ServletContextImpl ctx, Out out, HttpHandler req) {
 		this.ctx = ctx;
 		this.out = out;
 		this.req = req;
@@ -206,6 +206,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 		FilterChain f = manager.getError(sc, t);
 		if (f != null) {
 			ServletRequestImpl r = new ServletRequestImpl(ctx, req, DispatcherType.ERROR, this);
+			r.setMethod("GET");
 			r.setAttribute("javax.servlet.error.status_code", sc);
 			if (t != null) {
 				r.setAttribute("javax.servlet.error.exception_type", t.getClass());
@@ -240,7 +241,6 @@ public class ServletResponseImpl implements HttpServletResponse {
 		out.write(ERROR_START);
 		out.write(bytes);
 		out.write(ERROR_END);
-		out.flush();
 	}
 
 	@SuppressWarnings("unchecked")
@@ -345,7 +345,9 @@ public class ServletResponseImpl implements HttpServletResponse {
 	public void reset() {
 		resetBuffer();
 		status = 200;
+		List<String> list = headers.get("connection");
 		headers.clear();
+		headers.put("connection", list);
 		servletOut = null;
 	}
 

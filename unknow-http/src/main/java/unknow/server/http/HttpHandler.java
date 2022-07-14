@@ -6,6 +6,7 @@ package unknow.server.http;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.CharsetDecoder;
@@ -31,21 +32,27 @@ import unknow.server.http.servlet.ServletRequestImpl;
 import unknow.server.http.servlet.ServletResponseImpl;
 import unknow.server.http.utils.EventManager;
 import unknow.server.http.utils.ServletManager;
+import unknow.server.nio.Connection;
+import unknow.server.nio.Connection.Out;
 import unknow.server.nio.Handler;
-import unknow.server.nio.HandlerFactory;
 import unknow.server.nio.util.Buffers;
+import unknow.server.nio.util.Buffers.Walker;
+import unknow.server.nio.util.BuffersUtils;
 
-public class HttpHandler extends Handler implements Runnable {
+public class HttpHandler implements Handler, Runnable {
 	private static final Logger log = LoggerFactory.getLogger(HttpHandler.class);
 	private static final Cookie[] COOKIE = new Cookie[0];
 
-	private static final byte[] CRLF = new byte[] { '\r', '\n' };
+	private static final byte[] CRLF = { '\r', '\n' };
+	private static final byte[] CRLF2 = { '\r', '\n', '\r', '\n' };
 	private static final byte[] WS = new byte[] { ' ', '\t' };
 	private static final byte[] SEP = new byte[] { ' ', '\t', '"', ',' };
 	private static final byte[] COOKIE_SEP = new byte[] { ';', ' ' };
+	private static final byte[] PARAM_SEP = { '&', '=' };
 	private static final byte SPACE = ' ';
 	private static final byte QUESTION = '?';
 	private static final byte COLON = ':';
+	private static final byte SLASH = '/';
 	private static final byte AMPERSAMP = '&';
 	private static final byte PERCENT = '%';
 	private static final byte QUOTE = '"';
@@ -57,12 +64,9 @@ public class HttpHandler extends Handler implements Runnable {
 	private static final int MAX_VERSION_SIZE = 12;
 	private static final int MAX_HEADER_SIZE = 512;
 
-	private static final int METHOD = 0;
-	private static final int PATH = 1;
-	private static final int QUERY = 2;
-	private static final int PROTOCOL = 3;
-	private static final int HEADER = 4;
-	private static final int CONTENT = 5;
+	private static final int MAX_START_SIZE = 8192;
+
+	private final Connection co;
 
 	private final ExecutorService executor;
 	private final int keepAliveIdle;
@@ -71,26 +75,19 @@ public class HttpHandler extends Handler implements Runnable {
 	private final ServletManager servlets;
 	private final EventManager events;
 
-	private int step = METHOD;
-	private int last = 0;
-	private int infoStart = -1;
 	public final Buffers meta;
 	private final StringBuilder sb;
-	private final int[] part = new int[4];
-	private final int[] headers = new int[255];
-	private int headerCount = 0;
-
-//	private String method;
-//	private String path;
-//	private String version;
+	private final Decode decode;
 
 	private Future<?> f;
+
+	private volatile boolean running = false;
 
 	/**
 	 * create new RequestBuilder
 	 */
-	public HttpHandler(HandlerFactory factory, ExecutorService executor, ServletContextImpl ctx, int keepAliveIdle) {
-		super(factory);
+	public HttpHandler(Connection co, ExecutorService executor, ServletContextImpl ctx, int keepAliveIdle) {
+		this.co = co;
 		this.executor = executor;
 		this.ctx = ctx;
 		this.servlets = ctx.getServletManager();
@@ -98,316 +95,175 @@ public class HttpHandler extends Handler implements Runnable {
 		this.keepAliveIdle = keepAliveIdle;
 		meta = new Buffers();
 		sb = new StringBuilder();
+		decode = new Decode();
 	}
 
 	@Override
-	protected void handle(InputStream in, OutputStream out) {
-		if (step == METHOD)
-			tryRead(SPACE, MAX_METHOD_SIZE, PATH, HttpError.BAD_REQUEST);
-		if (step == PATH) {
-			int e = pendingRead.indexOf(SPACE, last, MAX_PATH_SIZE);
-			if (e == -2)
-				error(HttpError.URI_TOO_LONG);
-			if (e < 0)
-				return;
-			int q = pendingRead.indexOf(QUESTION, last, e - last);
-			if (q < 0)
-				q = e;
-			part[PATH] = q;
-			part[QUERY] = e;
-			step = PROTOCOL;
-			last = e + 1;
+	public final void onRead() throws InterruptedException {
+		if (running)
+			return;
+		int i = BuffersUtils.indexOf(co.pendingRead, CRLF2, 0, MAX_START_SIZE);
+		if (i == -1)
+			return;
+		if (i == -2) {
+			error(HttpError.BAD_REQUEST);
+			return;
 		}
-		if (step == PROTOCOL)
-			tryRead(CRLF, MAX_VERSION_SIZE, HEADER, HttpError.BAD_REQUEST);
-		if (step == HEADER) {
-			int k;
-			while ((k = pendingRead.indexOf(CRLF, last, MAX_HEADER_SIZE)) > 0) {
-				if (k == last) {
-					pendingRead.read(meta, last);
-					pendingRead.skip(2);
-					step = CONTENT;
-					break;
-				}
-				headers[headerCount++] = k;
-				if (headerCount > headers.length) {
-					error(HttpError.BAD_REQUEST);
-					return;
-				}
-				last = k + 2;
-			}
-
-			if (k == -2)
-				error(HttpError.HEADER_TOO_LARGE);
-		}
-		if (step == CONTENT && f == null)
-			f = executor.submit(this);
+		co.pendingRead.read(meta, i + 2, false);
+		co.pendingRead.skip(2);
+		running = true;
+		f = executor.submit(this);
 	}
 
-	private boolean tryRead(byte lookup, int limit, int next, HttpError e) {
-		int i = pendingRead.indexOf(lookup, last, limit);
-		if (i < 0) {
-			if (i == -2)
-				error(e);
-			return false;
-		}
-		part[step] = i;
-		step = next;
-		last = i + 1;
-		return true;
-	}
-
-	private boolean tryRead(byte[] lookup, int limit, int next, HttpError e) {
-		int i = pendingRead.indexOf(lookup, last, limit);
-		if (i < 0) {
-			if (i == -2)
-				error(e);
-			return false;
-		}
-		part[step] = i;
-		step = next;
-		last = i + lookup.length;
-		return true;
-	}
-
-	/**
-	 * set path start index of path info
-	 * 
-	 * @param infoStart
-	 */
-	public final void setPathInfoStart(int infoStart) {
-		this.infoStart = infoStart;
-	}
-
-	/**
-	 * @return the http method as a string
-	 */
-	public String parseMethod() {
-		synchronized (sb) {
-			sb.setLength(0);
-			meta.toString(sb, 0, part[METHOD]);
-			return sb.toString();
-		}
-	}
-
-	/**
-	 * @return the servlet path as a string
-	 */
-	public String parseServletPath() {
-		int o = part[METHOD] + 1;
-		synchronized (sb) {
-			sb.setLength(0);
-			decodePath(sb, meta, o, infoStart < 0 ? part[PATH] : infoStart);
-			return sb.toString();
-		}
-	}
-
-	/**
-	 * @return the path info as a string
-	 */
-	public String parsePathInfo() {
-		int e = part[PATH];
-		synchronized (sb) {
-			sb.setLength(0);
-			decodePath(sb, meta, infoStart < 0 ? e : infoStart, e);
-			return sb.toString();
-		}
-	}
-
-	/**
-	 * @return the query string as a string
-	 */
-	public String parseQuery() {
-		synchronized (sb) {
-			sb.setLength(0);
-			int o = part[PATH] + 1;
-			int l = part[QUERY] - o;
-			if (l > 0)
-				meta.toString(sb, o, l);
-			return sb.toString();
-		}
-	}
-
-	/**
-	 * parse the query as parameters
-	 * 
-	 * @param param the output param
-	 */
-	public void parseQueryParam(Map<String, List<String>> param) {
-		parseParam(meta, part[PATH] + 1, part[QUERY], param);
-	}
-
-	/**
-	 * parse the content as parameters
-	 * 
-	 * @param param the output param
-	 */
-	public void parseContentParam(Map<String, List<String>> param) {
-		parseParam(pendingRead, 0, pendingRead.length(), param);
-	}
-
-	/**
-	 * @return the protocol as a string
-	 */
-	public String parseProtocol() {
-		synchronized (sb) {
-			sb.setLength(0);
-			int o = part[QUERY] + 1;
-			meta.toString(sb, o, part[PROTOCOL] - o);
-			return sb.toString();
-		}
-	}
-
-	/**
-	 * @return the headers as a string
-	 */
-	public Map<String, List<String>> parseHeader() {
-		Map<String, List<String>> map = new HashMap<>();
-
-		synchronized (sb) {
-			int o = part[PROTOCOL] + 2;
-			for (int i = 0; i < headerCount; i++) {
-				int e = headers[i];
-				int indexOf = meta.indexOf(COLON, o, e - o);
-				if (indexOf < 0)
-					indexOf = e;
-				sb.setLength(0);
-				meta.toString(sb, o, indexOf - o);
-				String k = sb.toString().toLowerCase();
-				List<String> list = map.get(k);
-				if (list == null)
-					map.put(k, list = new ArrayList<>());
-				if (indexOf < e && !parseHeaderValue(list, indexOf + 1, e)) {
-					list.clear();
-					sb.setLength(0);
-					meta.toString(sb, indexOf + 1, e - indexOf - 1);
-					list.add(sb.toString().trim());
-				}
-				o = e + 2;
-			}
-		}
-		return map;
-	}
-
-	/**
-	 * parse a header value
-	 * 
-	 * @param list the output value
-	 * @param o    the starting offset
-	 * @param e    the end offset
-	 * @return false if the parsing failed
-	 */
-	private boolean parseHeaderValue(List<String> list, int o, int e) {
-
-		for (;;) {
-			sb.setLength(0);
-			o = meta.indexOfNot(WS, o, e - o);
-			if (o < 0)
-				return true;
-			if (meta.get(o) == QUOTE) {
-				o++;
-				int i = meta.indexOf(QUOTE, o, e - o);
-				if (i < 0)
-					return false;
-				while (meta.get(i - 1) == '\\') {
-					meta.toString(sb, o, i - o);
-					o = i + 1;
-					i = meta.indexOf(QUOTE, o, e - o);
-					if (i == -1)
-						return false;
-				}
-				meta.toString(sb, o, i - o);
-				o = i + 1;
-			} else {
-				int i = meta.indexOfOne(SEP, o, e - o);
-				if (i < 0) { // we are done
-					meta.toString(sb, o, e - o);
-					list.add(sb.toString().trim());
-					return true;
-				}
-				meta.toString(sb, o, i - o);
-				o = i;
-			}
-			int j = meta.indexOf(COMA, o, e - o);
-			if (j != meta.indexOfNot(WS, o, e - o))
-				return false;
-			if (sb.length() > 0)
-				list.add(sb.toString());
-			if (j < 0)
-				return true;
-			o = j + 1;
-		}
-	}
-
-	/**
-	 * @return the cookies
-	 */
-	public Cookie[] parseCookie() {
-		List<Cookie> cookies = new ArrayList<>();
-		int o = part[PROTOCOL] + 2;
-		for (int i = 0; i < headerCount; i++) {
-			int e = headers[i];
-			int indexOf = meta.indexOf(COLON, o, e - o);
-			if (indexOf < 0) { // not cookie to parse there
-				o = e + 2;
-				continue;
-			}
-			synchronized (sb) {
-				sb.setLength(0);
-				meta.toString(sb, o, indexOf - o);
-				if (!"cookie".equals(sb.toString().toLowerCase())) {
-					o = e + 2;
-					continue;
-				}
-				o = meta.indexOfNot(WS, indexOf + 1, e);
-				if (o == -1) {
-					o = e + 2;
-					continue;
-				}
-				// parse cookie
-				int next;
-				do {
-					next = meta.indexOf(COOKIE_SEP, o, e - o);
-					if (next < 0)
-						next = e;
-					indexOf = meta.indexOf(EQUAL, o, next - o);
-					if (indexOf < 0)
-						break;
-					sb.setLength(0);
-					meta.toString(sb, o, indexOf - o);
-					String n = sb.toString();
-					sb.setLength(0);
-					meta.toString(sb, indexOf + 1, next - indexOf - 1);
-					cookies.add(new Cookie(n, sb.toString()));
-					o = next + 2;
-				} while (next < e);
-				o = e + 2;
-			}
-		}
-		return cookies.toArray(COOKIE);
+	@Override
+	public final void onWrite() {
 	}
 
 	private final void error(HttpError e) {
-		log.error("{}: {}", getRemote(), e);
+		log.error("{}: {}", co.getRemote(), e);
 		try {
-			getOut().write(e.empty());
-			getOut().close();
+			OutputStream out = co.getOut();
+			out.write(e.empty());
+			out.close();
 		} catch (IOException ex) { // OK
 		}
+	}
+
+	private boolean fillRequest(ServletRequestImpl req) throws InterruptedException {
+		int i = BuffersUtils.indexOf(meta, SPACE, 0, MAX_METHOD_SIZE);
+		if (i < 0) {
+			error(HttpError.BAD_REQUEST);
+			return false;
+		}
+		BuffersUtils.toString(sb, meta, 0, i);
+		req.setMethod(sb.toString());
+		sb.setLength(0);
+		int last = i + 1;
+
+		i = BuffersUtils.indexOf(meta, SPACE, last, MAX_PATH_SIZE);
+		if (i < 0) {
+			error(HttpError.URI_TOO_LONG);
+			return false;
+		}
+		int q = BuffersUtils.indexOf(meta, QUESTION, last, i - last);
+		if (q < 0)
+			q = i;
+
+		int s = last;
+		while ((s = BuffersUtils.indexOf(meta, SLASH, s + 1, q - s - 1)) > 0) {
+			meta.walk(decode, last + 1, s - last - 1);
+			if (!decode.done())
+				return false;
+			req.addPath(sb.toString());
+			sb.setLength(0);
+			last = s;
+		}
+		if (s == -2) {
+			BuffersUtils.toString(sb, meta, last + 1, q - last - 1);
+			req.addPath(sb.toString());
+			sb.setLength(0);
+		}
+
+		BuffersUtils.toString(sb, meta, q, i - q);
+		req.setQuery(sb.toString());
+		sb.setLength(0);
+
+		Map<String, List<String>> map = new HashMap<>();
+		parseParam(map, meta, q + 1, i);
+		req.setQueryParam(map);
+		last = i;
+
+		i = BuffersUtils.indexOf(meta, CRLF, last, MAX_VERSION_SIZE);
+		if (i < 0) {
+			error(HttpError.BAD_REQUEST);
+			return false;
+		}
+		BuffersUtils.toString(sb, meta, last, i - last);
+		req.setProtocol(sb.toString());
+		sb.setLength(0);
+		last = i + 2;
+
+		map = new HashMap<>();
+		while ((i = BuffersUtils.indexOf(meta, CRLF, last, MAX_HEADER_SIZE)) > 0) {
+			int c = BuffersUtils.indexOf(meta, COLON, last, i - last);
+			if (c < 0) {
+				error(HttpError.BAD_REQUEST);
+				return false;
+			}
+
+			BuffersUtils.toString(sb, meta, last, c - last);
+			String k = sb.toString().trim().toLowerCase();
+			sb.setLength(0);
+
+			BuffersUtils.toString(sb, meta, c + 1, i - c - 1);
+			String v = sb.toString().trim();
+			sb.setLength(0);
+
+			List<String> list = map.get(k);
+			if (list == null)
+				map.put(k, list = new ArrayList<>(1));
+			list.add(v);
+
+			last = i + 2;
+		}
+		req.setHeaders(map);
+		return true;
+	}
+
+	public void parseContentParam(Map<String, List<String>> map) {
+		// TODO
+	}
+
+	private boolean parseParam(Map<String, List<String>> map, Buffers data, int o, int e) throws InterruptedException {
+		while (o < e) {
+			int i = BuffersUtils.indexOfOne(data, PARAM_SEP, o, o - e);
+			if (i < 0)
+				i = e;
+			data.walk(decode, o, i - o);
+			if (!decode.done())
+				return false;
+			String key = sb.toString();
+			sb.setLength(0);
+			List<String> list = map.get(key);
+			if (list == null)
+				map.put(key, list = new ArrayList<>(1));
+
+			o = i + 1;
+			if (i < e && data.get(i) == EQUAL) {
+				i = BuffersUtils.indexOf(data, AMPERSAMP, o, o - e);
+				if (i < 0)
+					i = e;
+				data.walk(decode, o, i - o);
+				if (!decode.done())
+					return false;
+				list.add(sb.toString());
+				sb.setLength(0);
+				o = i + 1;
+			}
+		}
+		return true;
 	}
 
 	@Override
 	public void run() {
 		boolean close = false;
+
+		Out out = co.getOut();
 		try {
-			ServletResponseImpl res = new ServletResponseImpl(ctx, getOut(), this);
+			ServletResponseImpl res = new ServletResponseImpl(ctx, out, this);
 			ServletRequestImpl req = new ServletRequestImpl(ctx, this, DispatcherType.REQUEST, res);
+
+			if (!fillRequest(req))
+				return;
+
 			if ("100-continue".equals(req.getHeader("expect"))) {
-				getOut().write(HttpError.CONTINUE.encoded);
-				getOut().write(CRLF);
-				getOut().flush();
+				out.write(HttpError.CONTINUE.encoded);
+				out.write(CRLF);
+				out.flush();
 			}
-			close = keepAliveIdle <= 0 || !"keep-alive".equalsIgnoreCase(req.getHeader("connection"));
+			close = keepAliveIdle == 0 || !"keep-alive".equals(req.getHeader("connection"));
+			if (!close)
+				res.setHeader("connection", "keep-alive");
 			events.fireRequestInitialized(req);
 			FilterChain s = servlets.find(req);
 			if (s != null)
@@ -421,130 +277,140 @@ public class HttpHandler extends Handler implements Runnable {
 			else
 				res.sendError(404, null);
 			events.fireRequestDestroyed(req);
-			String connection = res.getHeader("connection");
-			if (!close && connection != null && !"keep-alive".equals(connection))
-				close = true;
 			res.close();
 		} catch (Exception e) {
 			log.error("processor error", e);
+			error(HttpError.SERVER_ERROR);
 		} finally {
-			if (close)
-				try {
-					getOut().close();
-				} catch (IOException e) { // OK
-				}
 			cleanup();
+			if (close)
+				out.close();
+			else
+				out.flush();
 		}
 	}
 
 	private void cleanup() {
-		meta.clear();
-		headerCount = last = 0;
-		step = METHOD;
-		f = null;
+		running = false;
+		try {
+			meta.clear();
+		} catch (InterruptedException e) {
+		}
 	}
 
 	@Override
-	public boolean isIdle() {
-		return f == null;
-	}
+	public boolean closed(long now, boolean stop) {
+		if (stop)
+			return !running;
 
-	@Override
-	public boolean isClosed() {
-		if (f == null && super.isClosed())
+		if (co.isClosed())
 			return true;
+		if (running)
+			return false;
+
 		if (keepAliveIdle > 0) {
-			long e = System.currentTimeMillis() - keepAliveIdle;
-			if (lastRead() < e && lastWrite() < e)
+			long e = now - keepAliveIdle;
+			if (co.lastRead() <= e && co.lastWrite() <= e)
 				return true;
 		}
+		try {
+			if (!co.pendingRead.isEmpty()) {
+				onRead();
+				return false;
+			}
+		} catch (InterruptedException e) {
+		}
+
 		// TODO check request timeout
 		return false;
 	}
 
 	@Override
-	public void reset() {
-		super.reset();
-		if (f != null)
+	public void free() {
+		if (running) {
 			f.cancel(true);
+			running = false;
+		}
 		cleanup();
 	}
 
-	public int pathStart() {
-		return part[METHOD] + 1;
+	/**
+	 * @return
+	 */
+	public InetSocketAddress getLocal() {
+		return co.getLocal();
 	}
 
-	public int pathEnd() {
-		return part[PATH];
+	/**
+	 * @return
+	 */
+	public InetSocketAddress getRemote() {
+		return co.getRemote();
 	}
 
-	private ByteBuffer DECODE_BB = ByteBuffer.allocate(10);
-	private CharBuffer DECODE_CB = CharBuffer.allocate(2);
-	private static final CharsetDecoder DECODER = StandardCharsets.UTF_8.newDecoder().onUnmappableCharacter(CodingErrorAction.REPLACE)
-			.onMalformedInput(CodingErrorAction.REPLACE);
-
-	private final void decodePath(StringBuilder sb, Buffers b, int o, int e) {
-		DECODE_BB.clear();
-		DECODE_CB.clear();
-		for (;;) {
-			int i = b.indexOf(PERCENT, o, e - o);
-			if (i != o && DECODE_BB.position() > 0) {
-				DECODE_BB.flip();
-				CoderResult r = DECODER.decode(DECODE_BB, DECODE_CB, true);
-				while (r.isOverflow()) {
-					CharBuffer tmp = CharBuffer.allocate(DECODE_CB.capacity() * 2);
-					DECODE_CB.flip();
-					tmp.put(DECODE_CB);
-					DECODE_CB = tmp;
-					r = DECODER.decode(DECODE_BB, DECODE_CB, true);
-				}
-				sb.append(DECODE_CB.array(), 0, DECODE_CB.position());
-				DECODE_BB.compact();
-			}
-			if (i >= 0) {
-				b.toString(sb, o, i++ - o);
-				if (DECODE_BB.remaining() == 0) {
-					ByteBuffer tmp = ByteBuffer.allocate(DECODE_BB.capacity() * 2);
-					DECODE_BB.flip();
-					tmp.put(DECODE_BB);
-					DECODE_BB = tmp;
-				}
-				DECODE_BB.put((byte) (Character.digit(b.get(i++), 16) * 16 + Character.digit(b.get(i++), 16)));
-				o = i;
-			} else {
-				b.toString(sb, o, e - o);
-				break;
-			}
-		}
+	/**
+	 * @return
+	 */
+	public InputStream getIn() {
+		return co.getIn();
 	}
 
-	private void parseParam(Buffers in, int o, int e, Map<String, List<String>> param) {
-		synchronized (sb) {
+	private final class Decode implements Walker {
+		private final CharsetDecoder d = StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPLACE).onUnmappableCharacter(CodingErrorAction.REPLACE);
+		private final char[] tmp = new char[2048];
+		private final CharBuffer cbuf = CharBuffer.wrap(tmp);
+		private final ByteBuffer bbuf = ByteBuffer.allocate(4096);
+
+		private int m = 0;
+		private byte pending = 0;
+
+		@Override
+		public boolean apply(byte[] b, int o, int e) {
 			while (o < e) {
-				int indexOf = in.indexOf(AMPERSAMP, o, e - o);
-				if (indexOf < 0)
-					indexOf = e;
-				int i = in.indexOf(EQUAL, o, indexOf - o);
-				String n;
-				String v;
-				if (i > 0) {
-					sb.setLength(0);
-					decodePath(sb, in, o, i);
-					n = sb.toString();
-					sb.setLength(0);
-					decodePath(sb, in, i + 1, indexOf);
-					v = sb.toString();
-				} else {
-					sb.setLength(0);
-					decodePath(sb, in, o, indexOf);
-					n = sb.toString();
-					v = "";
-				}
-				List<String> list = param.get(n);
-				if (list == null)
-					param.put(n, list = new ArrayList<>());
-				list.add(v);
-				o = indexOf + 1;
+				byte c = b[o++];
+				if (m > 0) {
+					pending = (byte) ((pending << 4) + c - '0');
+					if (--m == 0) {
+						bbuf.put(pending);
+						pending = 0;
+					}
+				} else if (c == PERCENT)
+					m = 2;
+				else
+					bbuf.put(c);
+				if (bbuf.remaining() == 0)
+					decode();
+
+			}
+			return false;
+		}
+
+		private void decode() {
+			bbuf.flip();
+			CoderResult r;
+			do {
+				r = d.decode(bbuf, cbuf, false);
+				cbuf.flip();
+				int l = cbuf.length();
+				cbuf.get(tmp, 0, l);
+				sb.append(tmp, 0, l);
+				cbuf.clear();
+			} while (r.isOverflow());
+			bbuf.compact();
+		}
+
+		public boolean done() {
+			try {
+				if (m != 0)
+					return false;
+				if (bbuf.position() > 0)
+					decode();
+				if (bbuf.position() > 0)
+					return false;
+				return true;
+			} finally {
+				cbuf.clear();
+				bbuf.clear();
 			}
 		}
 	}

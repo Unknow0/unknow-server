@@ -4,6 +4,7 @@
 package unknow.server.maven;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -25,7 +26,8 @@ import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.PrimitiveType;
 import com.github.javaparser.ast.type.Type;
 
-import unknow.server.http.utils.ArrayMap;
+import unknow.server.http.data.ArrayMap;
+import unknow.server.http.data.ArraySet;
 
 /**
  * @author unknow
@@ -124,6 +126,13 @@ public class Utils {
 			v.add(new StringLiteralExpr(map.get(key)));
 		}
 		return new ObjectCreationExpr(null, types.get(ArrayMap.class, TypeCache.EMPTY), list(array(types.get(String.class), k), array(types.get(String.class), v)));
+	}
+
+	public static ObjectCreationExpr arraySet(Collection<String> list, TypeCache types) {
+		NodeList<Expression> n = new NodeList<>();
+		for (String p : list)
+			n.add(new StringLiteralExpr(p));
+		return new ObjectCreationExpr(null, types.get(ArraySet.class, TypeCache.EMPTY), Utils.list(Utils.array(types.get(String.class), n)));
 	}
 
 	/**

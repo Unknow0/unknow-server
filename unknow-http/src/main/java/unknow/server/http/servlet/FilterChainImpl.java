@@ -8,6 +8,7 @@ import java.io.IOException;
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.Servlet;
+import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
@@ -37,6 +38,11 @@ public final class FilterChainImpl implements FilterChain {
 		filter.doFilter(request, response, next);
 	}
 
+	@Override
+	public String toString() {
+		return filter.toString() + "," + next.toString();
+	}
+
 	/**
 	 * A Filter chain that only run a Servlet
 	 * 
@@ -61,7 +67,8 @@ public final class FilterChainImpl implements FilterChain {
 
 		@Override
 		public String toString() {
-			return servlet.getServletConfig().getServletName();
+			ServletConfig c = servlet.getServletConfig();
+			return c == null ? servlet.toString() : c.getServletName();
 		}
 	}
 

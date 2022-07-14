@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
  */
 public class NIOServer implements Runnable {
 	private static final Logger log = LoggerFactory.getLogger(NIOServer.class);
+
 	/** the address we will bind to */
 	private final SocketAddress bindTo;
 
@@ -87,7 +88,8 @@ public class NIOServer implements Runnable {
 
 	/**
 	 * Gracefully stop the server
-	 * @throws InterruptedException 
+	 * 
+	 * @throws InterruptedException
 	 */
 	public void stop() throws InterruptedException {
 		t.interrupt();
@@ -101,7 +103,7 @@ public class NIOServer implements Runnable {
 	 * @throws IOException in case of error
 	 */
 	public void register(SocketChannel socket) throws IOException {
-		workers.register(socket, factory.get());
+		workers.register(socket, new Connection(factory));
 	}
 
 	/**

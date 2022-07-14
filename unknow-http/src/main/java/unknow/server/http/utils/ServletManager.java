@@ -3,47 +3,156 @@
  */
 package unknow.server.http.utils;
 
+import java.util.Comparator;
+
+import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.Servlet;
 import javax.servlet.ServletException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import unknow.server.http.data.IntArrayMap;
+import unknow.server.http.data.ObjectArrayMap;
+import unknow.server.http.servlet.FilterChainImpl;
+import unknow.server.http.servlet.FilterChainImpl.ChangePath;
+import unknow.server.http.servlet.FilterChainImpl.ServletFilter;
+import unknow.server.http.servlet.FilterConfigImpl;
+import unknow.server.http.servlet.ServletConfigImpl;
 import unknow.server.http.servlet.ServletRequestImpl;
 
 /**
  * @author unknow
  */
 public final class ServletManager {
-	private Servlet[] servlets;
-	private Filter[] filters;
+	private static final Comparator<Class<?>> CMP = (a, b) -> a.getName().compareTo(b.getName());
+	private static final Logger logger = LoggerFactory.getLogger(ServletManager.class);
+
+	private ServletConfigImpl[] servlets;
+	private FilterConfigImpl[] filters;
 	private PathTree request;
 
-	private final IntArrayMap<FilterChain> errorCode;
-	private final ObjectArrayMap<Class<?>, FilterChain> errorClazz;
+	private final IntArrayMap<String> errorCodeMapping;
+	private final ObjectArrayMap<Class<?>, String> errorClazzMapping;
 
-	public ServletManager(Servlet[] servlets, Filter[] filters, PathTree request, IntArrayMap<FilterChain> errorCode, ObjectArrayMap<Class<?>, FilterChain> errorClazz) {
-		this.servlets = servlets;
-		this.filters = filters;
-		this.request = request;
-		this.errorCode = errorCode;
-		this.errorClazz = errorClazz;
+	private IntArrayMap<FilterChain> errorCode;
+	private ObjectArrayMap<Class<?>, FilterChain> errorClazz;
+
+	public ServletManager(IntArrayMap<String> errorCode, ObjectArrayMap<Class<?>, String> errorClazz) {
+		this.errorCodeMapping = errorCode;
+		this.errorClazzMapping = errorClazz;
 	}
 
-	public Servlet[] getServlets() {
+	public ServletConfigImpl findServlet(String path) {
+		int l = 0;
+		ServletConfigImpl s = null;
+		for (int i = 0; i < servlets.length; i++) {
+			ServletConfigImpl sc = servlets[i];
+			for (String p : sc.getMappings()) {
+				if ((p.equals("/") || p.equals("/*")) && l == 0)
+					s = sc;
+				else if (p.length() > l && (p.startsWith("*.") && path.endsWith(p.substring(1))
+						|| p.endsWith("/*") && path.startsWith(path, p.length() - 2))) {
+					l = p.length();
+					s = sc;
+				} else if (p.equals("") && path.equals("/") || p.equals(path))
+					return sc;
+			}
+		}
+		return s;
+	}
+
+	public Servlet getServlet(int i) {
+		return servlets[i].getServlet();
+	}
+
+	public Filter getFilter(int i) {
+		return filters[i].getFilter();
+	}
+
+	public ServletConfigImpl[] getServlets() {
 		return servlets;
 	}
 
-	public Filter[] getFilters() {
+	public FilterConfigImpl[] getFilters() {
 		return filters;
 	}
 
-	public FilterChain find(ServletRequestImpl req) {
+	public FilterChain find(ServletRequestImpl req) throws InterruptedException {
 		switch (req.getDispatcherType()) {
 			case REQUEST:
-				return request.find(req.req);
+				return request.find(req);
 			default:
+				System.out.println("WTF");
 				return null;
 		}
+	}
+
+	public void initialize(ServletConfigImpl[] servlets, FilterConfigImpl[] filters) throws ServletException {
+		this.servlets = servlets;
+		this.filters = filters;
+		this.request = new PathTreeBuilder(servlets, filters, DispatcherType.REQUEST).build();
+		logger.info("Servlet mapping:\n{}", this.request);
+
+		int l = errorCodeMapping.size();
+		int[] error = new int[l];
+		FilterChain[] chain = new FilterChain[l];
+		int i = 0;
+		for (Integer e : errorCodeMapping.keySet()) {
+			String path = errorCodeMapping.get(e);
+			ServletConfigImpl s = findServlet(path);
+			if (s == null)
+				continue;
+			error[i] = e;
+			chain[i] = buildErrorChain(s, path);
+		}
+		errorCode = new IntArrayMap<>(error, chain);
+
+		l = errorClazzMapping.size();
+		Class<?>[] clazz = new Class[l];
+		chain = new FilterChain[l];
+		i = 0;
+		for (Class<?> c : errorClazzMapping.keySet()) {
+			String path = errorClazzMapping.get(c);
+			ServletConfigImpl s = findServlet(path);
+			if (s == null)
+				continue;
+			clazz[i] = c;
+			chain[i] = buildErrorChain(s, path);
+		}
+		errorClazz = new ObjectArrayMap<>(clazz, chain, CMP);
+
+		for (ServletConfigImpl s : servlets)
+			s.getServlet().init(s);
+		for (FilterConfigImpl f : this.filters)
+			f.getFilter().init(f);
+	}
+
+	private FilterChain buildErrorChain(ServletConfigImpl s, String path) {
+		FilterChain chain = new ServletFilter(s.getServlet());
+		String name = s.getServletName();
+		for (int i = 0; i < filters.length; i++) {
+			FilterConfigImpl f = filters[i];
+			if (!f.getDispatcherTypes().contains(DispatcherType.ERROR))
+				continue;
+
+			if (f.getServletNameMappings().contains(name)) {
+				chain = new FilterChainImpl(f.getFilter(), chain);
+				continue;
+			}
+			for (String p : f.getUrlPatternMappings()) {
+				if ((p.equals("/") || p.equals("/*")
+						|| p.startsWith("*.") && path.endsWith(p.substring(1))
+						|| p.endsWith("/*") && path.startsWith(path, p.length() - 2))
+						|| p.equals("") && path.equals("/") || p.equals(path)) {
+					chain = new FilterChainImpl(f.getFilter(), chain);
+					break;
+				}
+			}
+		}
+		return new ChangePath(path, chain);
 	}
 
 	public FilterChain getError(int code, Throwable t) {

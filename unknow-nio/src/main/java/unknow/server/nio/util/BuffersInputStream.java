@@ -11,7 +11,7 @@ import java.util.Arrays;
  * @author unknow
  */
 public class BuffersInputStream extends InputStream {
-	private Buffers buffers;
+	private final Buffers buffers;
 
 	private byte[] mark;
 	private int l = 0;
@@ -22,11 +22,14 @@ public class BuffersInputStream extends InputStream {
 
 	@Override
 	public int read() throws IOException {
-		waitData();
-		int b = buffers.read();
-		if (mark != null && b > 0)
-			mark[l++] = (byte) b;
-		return b;
+		try {
+			int b = buffers.read(true);
+			if (mark != null && b > 0)
+				mark[l++] = (byte) b;
+			return b;
+		} catch (InterruptedException e) {
+			throw new IOException(e);
+		}
 	}
 
 	@Override
@@ -36,8 +39,11 @@ public class BuffersInputStream extends InputStream {
 
 	@Override
 	public int read(byte[] b, int off, int len) throws IOException {
-		waitData();
-		len = buffers.read(b, off, len);
+		try {
+			len = buffers.read(b, off, len, true);
+		} catch (InterruptedException e) {
+			throw new IOException(e);
+		}
 		if (mark != null && len >= 0) {
 			ensureMark(l + len);
 			System.arraycopy(b, off, mark, l, len);
@@ -62,7 +68,11 @@ public class BuffersInputStream extends InputStream {
 	public synchronized void reset() throws IOException {
 		if (mark == null)
 			throw new IOException("not marked");
-		buffers.prepend(mark, 0, l);
+		try {
+			buffers.prepend(mark, 0, l);
+		} catch (InterruptedException e) {
+			throw new IOException(e);
+		}
 		mark = null;
 	}
 
@@ -73,17 +83,10 @@ public class BuffersInputStream extends InputStream {
 
 	@Override
 	public int available() throws IOException {
-		return buffers.length();
-	}
-
-	private void waitData() throws IOException {
-		synchronized (buffers) {
-			try {
-				while (buffers.length() == 0)
-					buffers.wait();
-			} catch (InterruptedException e) {
-				throw new IOException("interrupted");
-			}
+		try {
+			return buffers.length();
+		} catch (InterruptedException e) {
+			throw new IOException(e);
 		}
 	}
 }
