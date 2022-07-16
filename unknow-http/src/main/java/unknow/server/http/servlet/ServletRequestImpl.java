@@ -151,11 +151,15 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 		// TODO
 		if ("POST".equals(getMethod()) && "application/x-www-form-urlencoded".equalsIgnoreCase(getContentType()))
-			req.parseContentParam(p);
+			parseContentParam(p);
 
 		String[] s = new String[0];
 		for (Entry<String, List<String>> e : p.entrySet())
 			parameter.put(e.getKey(), e.getValue().toArray(s));
+	}
+
+	private void parseContentParam(Map<String, List<String>> p) {
+		// TODO read content
 	}
 
 	/**
@@ -326,7 +330,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 		if (parameter == null)
 			parseParam();
 		String[] strings = parameter.get(name);
-		return strings == null || strings.length == 0 ? null : strings[0];
+		return strings == null ? null : strings[0];
 	}
 
 	@Override
@@ -466,7 +470,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 	@Override
 	public String getPathInfo() {
 		if (pathInfo == null)
-			pathInfo = path.stream().skip(pathInfoIndex).collect(Collectors.joining("/", "/", ""));
+			pathInfo = pathInfoIndex == path.size() ? "" : path.stream().skip(pathInfoIndex).collect(Collectors.joining("/", "/", ""));
 		return pathInfo == "" ? null : pathInfo;
 	}
 
@@ -639,7 +643,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 	}
 
 	private ServletInputStream createInput() {
-		String tr = getHeader("transfert-encoding"); // TODO
+		String tr = getHeader("transfert-encoding");
 		if ("chunked".equalsIgnoreCase(tr))
 			return new ChunckedInputStream(req.getIn());
 		long l = getContentLengthLong();

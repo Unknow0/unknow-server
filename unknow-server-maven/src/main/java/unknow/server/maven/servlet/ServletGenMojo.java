@@ -58,7 +58,7 @@ import unknow.server.maven.servlet.sax.Context;
  * @author unknow
  */
 @Mojo(defaultPhase = LifecyclePhase.GENERATE_SOURCES, name = "servlet-generator", requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
-public class ServletServerGen extends AbstractMojo implements BuilderContext {
+public class ServletGenMojo extends AbstractMojo implements BuilderContext {
 	private static final List<Builder> BUILDER = Arrays.asList(new CreateEventManager(), new CreateServletManager(), new CreateContext(), new CreateServlets(), new CreateFilters(), new Main());
 
 	private final CompilationUnit cu = new CompilationUnit();

@@ -30,8 +30,15 @@ jobs:
     - uses: actions/upload-artifact@v3
       if: always()
       with: 
-        name: logs
-        path: |
-          ${{github.workspace}}/tomcat/logs
-          out
-          log
+        name: tomcat
+        path: ${{github.workspace}}/tomcat/logs
+    - uses: actions/upload-artifact@v3
+      if: always()
+      with: 
+        name: unknow
+        path: log
+    - uses: actions/upload-artifact@v3
+      if: always()
+      with: 
+        name: result
+        path: out

@@ -22,6 +22,7 @@ import java.util.concurrent.Future;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.FilterChain;
+import javax.servlet.UnavailableException;
 import javax.servlet.http.Cookie;
 
 import org.slf4j.Logger;
@@ -171,7 +172,7 @@ public class HttpHandler implements Handler, Runnable {
 		Map<String, List<String>> map = new HashMap<>();
 		parseParam(map, meta, q + 1, i);
 		req.setQueryParam(map);
-		last = i;
+		last = i + 1;
 
 		i = BuffersUtils.indexOf(meta, CRLF, last, MAX_VERSION_SIZE);
 		if (i < 0) {
@@ -210,13 +211,9 @@ public class HttpHandler implements Handler, Runnable {
 		return true;
 	}
 
-	public void parseContentParam(Map<String, List<String>> map) {
-		// TODO
-	}
-
 	private boolean parseParam(Map<String, List<String>> map, Buffers data, int o, int e) throws InterruptedException {
 		while (o < e) {
-			int i = BuffersUtils.indexOfOne(data, PARAM_SEP, o, o - e);
+			int i = BuffersUtils.indexOfOne(data, PARAM_SEP, o, e - o);
 			if (i < 0)
 				i = e;
 			data.walk(decode, o, i - o);
@@ -230,16 +227,16 @@ public class HttpHandler implements Handler, Runnable {
 
 			o = i + 1;
 			if (i < e && data.get(i) == EQUAL) {
-				i = BuffersUtils.indexOf(data, AMPERSAMP, o, o - e);
+				i = BuffersUtils.indexOf(data, AMPERSAMP, o, e - o);
 				if (i < 0)
 					i = e;
 				data.walk(decode, o, i - o);
 				if (!decode.done())
 					return false;
-				list.add(sb.toString());
-				sb.setLength(0);
 				o = i + 1;
 			}
+			list.add(sb.toString());
+			sb.setLength(0);
 		}
 		return true;
 	}
@@ -269,13 +266,14 @@ public class HttpHandler implements Handler, Runnable {
 			if (s != null)
 				try {
 					s.doFilter(req, res);
+				} catch (UnavailableException e) {
+					// TODO add page with retry-after
+					res.sendError(503, e, null);
 				} catch (Exception e) {
 					log.error("failed to service '{}'", s, e);
 					if (!res.isCommited())
 						res.sendError(500, null);
 				}
-			else
-				res.sendError(404, null);
 			events.fireRequestDestroyed(req);
 			res.close();
 		} catch (Exception e) {
