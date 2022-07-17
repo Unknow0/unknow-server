@@ -28,7 +28,6 @@ import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.Parameter;
-import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.ast.comments.LineComment;
 import com.github.javaparser.ast.expr.ArrayAccessExpr;
 import com.github.javaparser.ast.expr.ArrayInitializerExpr;
@@ -76,6 +75,7 @@ import unknow.server.maven.jaxws.model.XmlObject;
 import unknow.server.maven.jaxws.model.XmlObject.XmlField;
 import unknow.server.maven.jaxws.model.XmlType;
 import unknow.server.maven.jaxws.model.XmlTypeLoader;
+import unknow.server.maven.model.ModelLoader;
 
 /**
  * @author unknow
@@ -101,11 +101,11 @@ public class JaxwsServletBuilder {
 	private JaxSaxHandlerBuilder header;
 	private JaxSaxHandlerBuilder body;
 
-	public JaxwsServletBuilder(ClassOrInterfaceDeclaration serviceClass, Map<String, TypeDeclaration<?>> classes, JaxMarshallerBuilder mbuilder) {
+	public JaxwsServletBuilder(ClassOrInterfaceDeclaration serviceClass, ModelLoader loader, JaxMarshallerBuilder mbuilder, XmlTypeLoader xmlLoader) throws ClassNotFoundException {
 		this.serviceClass = serviceClass;
 		this.mbuilder = mbuilder;
 		// collect operations
-		this.service = Service.build(serviceClass, new XmlTypeLoader(classes));
+		this.service = Service.build(serviceClass, loader, xmlLoader);
 	}
 
 	public void generate(CompilationUnit cu, TypeCache types, String baseUrl) {

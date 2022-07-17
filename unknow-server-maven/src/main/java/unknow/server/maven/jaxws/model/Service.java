@@ -5,7 +5,6 @@ package unknow.server.maven.jaxws.model;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 import javax.jws.WebMethod;
 import javax.jws.WebParam;
@@ -15,25 +14,20 @@ import javax.jws.soap.SOAPBinding;
 import javax.jws.soap.SOAPBinding.ParameterStyle;
 import javax.jws.soap.SOAPBinding.Style;
 
-import com.github.javaparser.ast.NodeList;
-import com.github.javaparser.ast.body.MethodDeclaration;
-import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.body.TypeDeclaration;
-import com.github.javaparser.ast.expr.AnnotationExpr;
-import com.github.javaparser.ast.expr.Expression;
-import com.github.javaparser.ast.expr.MemberValuePair;
-import com.github.javaparser.ast.expr.NameExpr;
-import com.github.javaparser.ast.expr.NormalAnnotationExpr;
-import com.github.javaparser.ast.type.VoidType;
 
 import unknow.server.jaxws.UrlPattern;
+import unknow.server.maven.model.AnnotationModel;
+import unknow.server.maven.model.ClassModel;
+import unknow.server.maven.model.MethodModel;
+import unknow.server.maven.model.ModelLoader;
+import unknow.server.maven.model.ParamModel;
+import unknow.server.maven.model.TypeModel;
 
 /**
  * @author unknow
  */
 public class Service {
-	private static final AnnotationExpr SOAPBINDING = new NormalAnnotationExpr().addPair("style", new NameExpr("DOCUMENT")).addPair("parameterStyle", new NameExpr("WRAPPED"));
-
 	/** target name */
 	public final String name;
 	/** target namespace */
@@ -54,48 +48,33 @@ public class Service {
 		this.paramStyle = paramStyle;
 	}
 
-	public static Service build(TypeDeclaration<?> serviceClass, XmlTypeLoader typeLoader) {
-		AnnotationExpr a = serviceClass.getAnnotationByClass(WebService.class).get();
-		String name = a.findFirst(MemberValuePair.class, m -> "name".equals(m.getNameAsString())).map(m -> m.getValue().asStringLiteralExpr().asString())
-				.orElse(serviceClass.resolve().getClassName());
-		String ns = a.findFirst(MemberValuePair.class, m -> "targetNamespace".equals(m.getNameAsString())).map(m -> m.getValue().asStringLiteralExpr().asString())
-				.orElse(serviceClass.resolve().getPackageName());
+	public static Service build(TypeDeclaration<?> serviceClass, ModelLoader loader, XmlTypeLoader typeLoader) {
+		TypeModel clazz = loader.get(serviceClass.resolve().getQualifiedName());
+		AnnotationModel ws = clazz.annotation(WebService.class);
+		String name = ws.value("name").orElse(serviceClass.resolve().getClassName());
+		String ns = ws.value("targetNamespace").orElse(serviceClass.resolve().getPackageName());
 
-		Optional<AnnotationExpr> o = serviceClass.getAnnotationByClass(UrlPattern.class);
+		AnnotationModel a = clazz.annotation(UrlPattern.class);
 		String[] url = { "/" + name };
-		if (o.isPresent()) {
-			a = o.get();
-			Expression e;
-			if (a.isSingleMemberAnnotationExpr())
-				e = a.asSingleMemberAnnotationExpr().getMemberValue();
-			else
-				e = a.findFirst(MemberValuePair.class).get().getValue();
-			if (e.isStringLiteralExpr())
-				url[0] = e.asStringLiteralExpr().asString();
-			else {
-				NodeList<Expression> values = e.asArrayInitializerExpr().getValues();
-				url = new String[values.size()];
-				for (int i = 0; i < url.length; i++)
-					url[i] = values.get(i).asStringLiteralExpr().asString();
-			}
-		}
+		if (a != null)
+			url = a.values("value").orElse(url);
 
-		o = serviceClass.getAnnotationByClass(SOAPBinding.class);
-		Style style = SOAPBinding.Style.valueOf(o.orElse(SOAPBINDING).findFirst(MemberValuePair.class, m -> "style".equals(m.getNameAsString())).map(m -> styleName(m)).get());
-		ParameterStyle paramStyle = SOAPBinding.ParameterStyle
-				.valueOf(o.orElse(SOAPBINDING).findFirst(MemberValuePair.class, m -> "parameterStyle".equals(m.getNameAsString())).map(m -> styleName(m)).get());
+		Style style = Style.DOCUMENT;
+		ParameterStyle paramStyle = ParameterStyle.WRAPPED;
+		a = clazz.annotation(SOAPBinding.class);
+		if (a != null) {
+			style = a.value("style").map(s -> SOAPBinding.Style.valueOf(s)).orElse(SOAPBinding.Style.DOCUMENT);
+			paramStyle = a.value("parameterStyle").map(s -> SOAPBinding.ParameterStyle.valueOf(s)).orElse(SOAPBinding.ParameterStyle.WRAPPED);
+		}
 		Service service = new Service(name, ns, url, style, paramStyle);
 
-		String inter = a.findFirst(MemberValuePair.class, m -> "endpointInterface".equals(m.getNameAsString())).map(m -> m.getValue().asStringLiteralExpr().asString())
-				.orElse(null);
+		String inter = ws.value("endpointInterface").orElse(null);
 		if (inter != null) {
-			serviceClass = typeLoader.classes.get(inter);
-			if (serviceClass != null)
-				service.collectOp(service, serviceClass, typeLoader);
-			else // TODO load from classpath
-				throw new RuntimeException("can't find in source");
-		} else
-			service.collectOp(service, serviceClass, typeLoader);
+			clazz = loader.get(inter);
+			if (clazz == null)
+				throw new RuntimeException("can't find endpointInterface '" + inter + "'");
+		}
+		service.collectOp(clazz.asClass(), typeLoader);
 		return service;
 	}
 
@@ -103,63 +82,55 @@ public class Service {
 	 * @param cl
 	 * @param typeLoader
 	 */
-	private void collectOp(Service service, TypeDeclaration<?> cl, XmlTypeLoader typeLoader) {
-		for (MethodDeclaration m : cl.getMethods()) {
-			Optional<AnnotationExpr> o = m.getAnnotationByClass(WebMethod.class);
-			if (!o.isPresent())
+	private void collectOp(ClassModel cl, XmlTypeLoader typeLoader) {
+		for (MethodModel m : cl.methods()) {
+			AnnotationModel o = m.annotation(WebMethod.class);
+			if (o == null)
 				continue;
-			MemberValuePair orElse = o.get().findFirst(MemberValuePair.class, v -> "exclude".equals(v.getNameAsString())).orElse(null);
-			if (orElse != null && orElse.getValue().asBooleanLiteralExpr().getValue())
+			if (o.value("exclude").map(Boolean::parseBoolean).orElse(false))
 				continue;
-			String name = o.get().findFirst(MemberValuePair.class, v -> "operationName".equals(v.getNameAsString())).map(v -> v.getValue().asStringLiteralExpr().getValue())
-					.orElse(m.getNameAsString());
-			String action = o.get().findFirst(MemberValuePair.class, v -> "action".equals(v.getNameAsString())).map(v -> v.getValue().asStringLiteralExpr().getValue())
-					.orElse("");
+			String name = o.value("operationName").orElse(m.name());
+			String action = o.value("action").orElse("");
 
-			Style style = service.style;
-			ParameterStyle paramStyle = service.paramStyle;
-			o = m.getAnnotationByClass(SOAPBinding.class);
-			if (o.isPresent()) {
-				style = o.get().findFirst(MemberValuePair.class, v -> "style".equals(v.getNameAsString())).map(v -> Style.valueOf(styleName(v))).orElse(style);
-				paramStyle = o.get().findFirst(MemberValuePair.class, v -> "parameterStyle".equals(v.getNameAsString())).map(v -> ParameterStyle.valueOf(styleName(v)))
-						.orElse(paramStyle);
+			Style style = this.style;
+			ParameterStyle paramStyle = this.paramStyle;
+			o = m.annotation(SOAPBinding.class);
+			if (o != null) {
+				style = o.value("style").map(s -> SOAPBinding.Style.valueOf(s)).orElse(style);
+				paramStyle = o.value("parameterStyle").map(s -> SOAPBinding.ParameterStyle.valueOf(s)).orElse(paramStyle);
 			}
 
 			Param r = null;
-			if (!(m.getType() instanceof VoidType)) {
-				o = m.getAnnotationByClass(WebResult.class);
+			TypeModel type = m.type();
+			if (!type.isVoid()) {
+				o = m.annotation(WebResult.class);
 				String rns = "";
 				String rname = "";
 				boolean header = false;
-				if (o.isPresent()) {
-					header = o.get().findFirst(MemberValuePair.class, v -> "header".equals(v.getNameAsString())).map(v -> v.getValue().asBooleanLiteralExpr().getValue())
-							.orElse(false);
-					rname = o.get().findFirst(MemberValuePair.class, v -> "name".equals(v.getNameAsString())).map(v -> v.getValue().asStringLiteralExpr().getValue()).orElse("");
-					rns = o.get().findFirst(MemberValuePair.class, v -> "targetNamespace".equals(v.getNameAsString())).map(v -> v.getValue().asStringLiteralExpr().getValue())
-							.orElse("");
+				if (o != null) {
+					header = o.value("header").map(Boolean::parseBoolean).orElse(false);
+					rname = o.value("name").orElse("");
+					rns = o.value("targetNamespace").orElse("");
 				}
 
 				if (rname.isEmpty())
 					rname = style == Style.DOCUMENT && paramStyle == ParameterStyle.BARE ? name + "Response" : "return";
 				if (rns.isEmpty() && (style != Style.DOCUMENT || paramStyle != ParameterStyle.WRAPPED || header))
-					rns = service.ns;
+					rns = this.ns;
 
-				r = new Param(rns, rname, typeLoader.get(m.getType()), m.resolve().getQualifiedName(), header);
+				r = new Param(rns, rname, typeLoader.get(m.type()), type.name(), header);
 			}
-			Op op = new Op(m.getNameAsString(), name, ns, r, action, style, paramStyle);
-			for (Parameter p : m.getParameters()) {
+			Op op = new Op(m.name(), name, ns, r, action, style, paramStyle);
+			for (ParamModel p : m.parameters()) {
 				String ns = "##default";
 				name = "##default";
-				XmlType type = typeLoader.get(p.getType());
+				XmlType t = typeLoader.get(p.type());
 				boolean header = false;
-				Optional<AnnotationExpr> oa = p.getAnnotationByClass(WebParam.class);
-				if (oa.isPresent()) {
-					header = oa.get().findFirst(MemberValuePair.class, v -> "header".equals(v.getNameAsString())).map(v -> v.getValue().asBooleanLiteralExpr().getValue())
-							.orElse(false);
-					name = oa.get().findFirst(MemberValuePair.class, v -> "name".equals(v.getNameAsString())).map(v -> v.getValue().asStringLiteralExpr().getValue())
-							.orElse("##default");
-					ns = oa.get().findFirst(MemberValuePair.class, v -> "targetNamespace".equals(v.getNameAsString())).map(v -> v.getValue().asStringLiteralExpr().getValue())
-							.orElse("##default");
+				AnnotationModel oa = p.annotation(WebParam.class);
+				if (oa != null) {
+					header = oa.value("header").map(Boolean::parseBoolean).orElse(false);
+					name = oa.value("name").orElse("##default");
+					ns = oa.value("targetNamespace").orElse("##default");
 				}
 
 				if ("##default".equals(name))
@@ -167,17 +138,10 @@ public class Service {
 				if ("##default".equals(ns))
 					ns = paramStyle == ParameterStyle.WRAPPED && !header ? "" : this.ns;
 
-				op.params.add(new Param(ns, name, type, p.getType().resolve().describe(), header));
+				op.params.add(new Param(ns, name, t, p.type().name(), header));
 			}
 			operations.add(op);
 		}
-	}
-
-	private static String styleName(MemberValuePair m) {
-		Expression e = m.getValue();
-		if (e.isNameExpr())
-			return e.asNameExpr().getNameAsString();
-		return e.asFieldAccessExpr().getNameAsString();
 	}
 
 	public static class Op {
