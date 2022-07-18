@@ -16,7 +16,7 @@ jobs:
 
     - name: build
       run: mvn -B package
-	- name: build native image 
+    - name: build native image 
       run: native-image --install-exit-handlers --static -jar unknow-http-test/target/server.jar server-native
 
     - name: prepare test
