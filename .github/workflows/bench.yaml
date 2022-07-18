@@ -10,7 +10,7 @@ jobs:
     - uses: actions/checkout@v2
     - uses: graalvm/setup-graalvm@v1
       with:
-        version: lastest
+        version: latest
         java-version: 11
         components: native-image
         github-token: ${{ secrets.GITHUB_TOKEN }}
