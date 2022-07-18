@@ -89,7 +89,9 @@ public class JaxSaxHandlerBuilder {
 
 	public void setObjectCreation(String factory, String method) {
 		Expression create = new ObjectCreationExpr(null, types.get(clazz), Utils.list());
-		if (factory != null)
+		if (".qname".equals(factory))
+			create = new ObjectCreationExpr(null, types.get(clazz), Utils.list(QNAME));
+		else if (factory != null)
 			create = new MethodCallExpr(new TypeExpr(types.get(factory)), method);
 		attrs.addStatement(new AssignExpr(new VariableDeclarationExpr(types.get(clazz), "o"), create, AssignExpr.Operator.ASSIGN))
 				.addStatement(new MethodCallExpr(CONTEXT, "push", Utils.list(new NameExpr("o"))));
@@ -100,10 +102,6 @@ public class JaxSaxHandlerBuilder {
 	}
 
 	public void addAttr(XmlField a) {
-		if (a.type() == QNAME_PARAM) {
-			attrs.addStatement(new MethodCallExpr(new NameExpr("o"), a.setter, Utils.list(QNAME)));
-			return;
-		}
 		Expression var = new NameExpr("a");
 		if (firstAttr) {
 			firstAttr = false;

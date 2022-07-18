@@ -13,6 +13,7 @@ import javax.xml.bind.annotation.XmlType;
 @XmlType(propOrder = { "a", "b", "e", "loop" }, namespace = "unknow.test.xml")
 public class Complex {
 	@XmlEnum
+	@XmlType(namespace = "unknow.test.xml")
 	public enum E {
 		@XmlEnumValue("a")
 		_A,

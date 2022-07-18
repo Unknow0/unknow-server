@@ -39,8 +39,8 @@ public final class Envelope {
 	}
 
 	public String sig() {
-		if (body.size() == 1 & body.get(0) instanceof Operation)
-			return ((Operation) body.get(0)).qname;
+		if (body.size() == 1 & body.get(0) instanceof OperationWrapper)
+			return ((OperationWrapper) body.get(0)).getQName();
 		StringBuilder sb = new StringBuilder();
 		for (Object o : header)
 			Envelope.name(sb, o.getClass());
@@ -56,24 +56,5 @@ public final class Envelope {
 		else
 			sb.append(cl.getCanonicalName());
 		sb.append(';');
-	}
-
-	public static final class Operation {
-
-		public final List<Object> content = new ArrayList<>();
-
-		private String qname;
-
-		public void setQName(String qname) {
-			this.qname = qname;
-		}
-
-		public Object get(int i) {
-			return content.get(i);
-		}
-
-		public void add(Object o) {
-			content.add(o);
-		}
 	}
 }

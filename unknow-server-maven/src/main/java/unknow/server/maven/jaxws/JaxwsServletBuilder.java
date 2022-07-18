@@ -63,7 +63,6 @@ import unknow.sax.SaxHandler;
 import unknow.sax.SaxParser;
 import unknow.server.jaxws.Element;
 import unknow.server.jaxws.Envelope;
-import unknow.server.jaxws.Envelope.Operation;
 import unknow.server.jaxws.OperationWrapper;
 import unknow.server.jaxws.WSMethod;
 import unknow.server.maven.TypeCache;
@@ -87,8 +86,6 @@ public class JaxwsServletBuilder {
 	private static final Modifier.Keyword[] PSF = { Modifier.Keyword.PRIVATE, Modifier.Keyword.STATIC, Modifier.Keyword.FINAL };
 	private static final Modifier.Keyword[] PF = { Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL };
 
-	private static final List<XmlField> OP_ATTRS = Arrays.asList(new XmlField(JaxSaxHandlerBuilder.QNAME_PARAM, "", "setQName", "", ""));
-
 	private final ClassOrInterfaceDeclaration serviceClass;
 	private final JaxMarshallerBuilder mbuilder;
 
@@ -101,7 +98,7 @@ public class JaxwsServletBuilder {
 	private JaxSaxHandlerBuilder header;
 	private JaxSaxHandlerBuilder body;
 
-	public JaxwsServletBuilder(ClassOrInterfaceDeclaration serviceClass, ModelLoader loader, JaxMarshallerBuilder mbuilder, XmlTypeLoader xmlLoader) throws ClassNotFoundException {
+	public JaxwsServletBuilder(ClassOrInterfaceDeclaration serviceClass, ModelLoader loader, JaxMarshallerBuilder mbuilder, XmlTypeLoader xmlLoader) {
 		this.serviceClass = serviceClass;
 		this.mbuilder = mbuilder;
 		// collect operations
@@ -136,8 +133,8 @@ public class JaxwsServletBuilder {
 			BlockStmt b = new BlockStmt().addStatement(new AssignExpr(new VariableDeclarationExpr(types.get(Envelope.class), "r"),
 					new ObjectCreationExpr(null, types.get(Envelope.class), Utils.list()), Operator.ASSIGN));
 			if (o.paramStyle == ParameterStyle.WRAPPED)
-				b.addStatement(new AssignExpr(new VariableDeclarationExpr(types.get(Operation.class), "o"),
-						new CastExpr(types.get(Operation.class), new MethodCallExpr(new NameExpr("e"), "getBody", Utils.list(new IntegerLiteralExpr("0")))), Operator.ASSIGN));
+				b.addStatement(new AssignExpr(new VariableDeclarationExpr(types.get(OperationWrapper.class), "o"),
+						new CastExpr(types.get(OperationWrapper.class), new MethodCallExpr(new NameExpr("e"), "getBody", Utils.list(new IntegerLiteralExpr("0")))), Operator.ASSIGN));
 
 			NodeList<Expression> param = Utils.list();
 
@@ -333,7 +330,7 @@ public class JaxwsServletBuilder {
 		final String name;
 
 		public XmlOperation(String name, List<XmlField> elems) {
-			super(Operation.class.getCanonicalName(), null, OP_ATTRS, elems, null, null);
+			super(OperationWrapper.class.getCanonicalName(), new Factory(".qname", null), Collections.emptyList(), elems, null, null);
 			this.name = name;
 		}
 
