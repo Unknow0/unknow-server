@@ -18,7 +18,7 @@ jobs:
     - name: build
       run: mvn -B package
     - name: build native image 
-      run: native-image --install-exit-handlers --static -jar unknow-http-test/target/server.jar server-native
+      run: native-image --install-exit-handlers --static --no-fallback -jar unknow-http-test/target/server.jar server-native
 
     - name: prepare test
       run: bash bench/prepare.sh

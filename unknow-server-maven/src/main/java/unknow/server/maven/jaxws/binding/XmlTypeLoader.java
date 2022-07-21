@@ -1,7 +1,7 @@
 /**
  * 
  */
-package unknow.server.maven.jaxws.model;
+package unknow.server.maven.jaxws.binding;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -19,11 +19,11 @@ import javax.xml.bind.annotation.XmlEnumValue;
 import javax.xml.bind.annotation.XmlTransient;
 import javax.xml.bind.annotation.XmlValue;
 
-import unknow.server.maven.jaxws.model.XmlEnum.XmlEnumEntry;
-import unknow.server.maven.jaxws.model.XmlObject.Factory;
-import unknow.server.maven.jaxws.model.XmlObject.XmlElem;
-import unknow.server.maven.jaxws.model.XmlObject.XmlField;
-import unknow.server.maven.jaxws.model.XmlType.XmlList;
+import unknow.server.maven.jaxws.binding.XmlEnum.XmlEnumEntry;
+import unknow.server.maven.jaxws.binding.XmlObject.Factory;
+import unknow.server.maven.jaxws.binding.XmlObject.XmlElem;
+import unknow.server.maven.jaxws.binding.XmlObject.XmlField;
+import unknow.server.maven.jaxws.binding.XmlType.XmlList;
 import unknow.server.maven.model.AnnotationModel;
 import unknow.server.maven.model.ClassModel;
 import unknow.server.maven.model.EnumModel;
@@ -252,7 +252,7 @@ public class XmlTypeLoader {
 	 * @return
 	 */
 	private static SchemaData getSchema(TypeModel c) {
-		// TODO get namespace data ?
+		// TODO get namespace data from package annotation
 		String ns = "";
 		String name = c.simpleName();
 

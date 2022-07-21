@@ -37,11 +37,11 @@ import com.github.javaparser.ast.type.VoidType;
 import unknow.sax.SaxContext;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
-import unknow.server.maven.jaxws.model.SchemaData;
-import unknow.server.maven.jaxws.model.XmlObject;
-import unknow.server.maven.jaxws.model.XmlObject.XmlElem;
-import unknow.server.maven.jaxws.model.XmlObject.XmlField;
-import unknow.server.maven.jaxws.model.XmlType;
+import unknow.server.maven.jaxws.binding.SchemaData;
+import unknow.server.maven.jaxws.binding.XmlObject;
+import unknow.server.maven.jaxws.binding.XmlType;
+import unknow.server.maven.jaxws.binding.XmlObject.XmlElem;
+import unknow.server.maven.jaxws.binding.XmlObject.XmlField;
 
 public class JaxSaxHandlerBuilder {
 	private static final NameExpr CONTEXT = new NameExpr("context");

@@ -1,4 +1,4 @@
-package unknow.server.maven.jaxws.model;
+package unknow.server.maven.jaxws.binding;
 
 import java.time.Duration;
 import java.time.LocalDate;

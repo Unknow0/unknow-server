@@ -20,7 +20,7 @@ public interface TypeModel extends WithAnnotation {
 	default String simpleName() {
 		String name = name();
 		int i = name.lastIndexOf(".");
-		return i < 0 ? name : name.substring(i);
+		return i < 0 ? name : name.substring(i + 1);
 	}
 
 	/**

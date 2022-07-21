@@ -20,7 +20,7 @@ import com.github.javaparser.ast.expr.AnnotationExpr;
 
 import unknow.server.maven.AbstractMojo;
 import unknow.server.maven.TypeCache;
-import unknow.server.maven.jaxws.model.XmlTypeLoader;
+import unknow.server.maven.jaxws.binding.XmlTypeLoader;
 
 /**
  * @author unknow

@@ -16,16 +16,16 @@ import javax.jws.soap.SOAPBinding.ParameterStyle;
 
 import unknow.server.jaxws.XMLNsCollector;
 import unknow.server.jaxws.XMLOutput;
-import unknow.server.maven.jaxws.model.SchemaData;
-import unknow.server.maven.jaxws.model.Service;
-import unknow.server.maven.jaxws.model.Service.Op;
-import unknow.server.maven.jaxws.model.Service.Param;
-import unknow.server.maven.jaxws.model.XmlEnum;
-import unknow.server.maven.jaxws.model.XmlEnum.XmlEnumEntry;
-import unknow.server.maven.jaxws.model.XmlObject;
-import unknow.server.maven.jaxws.model.XmlObject.XmlField;
-import unknow.server.maven.jaxws.model.XmlType;
-import unknow.server.maven.jaxws.model.XmlType.XmlList;
+import unknow.server.maven.jaxws.binding.SchemaData;
+import unknow.server.maven.jaxws.binding.Service;
+import unknow.server.maven.jaxws.binding.XmlEnum;
+import unknow.server.maven.jaxws.binding.XmlObject;
+import unknow.server.maven.jaxws.binding.XmlType;
+import unknow.server.maven.jaxws.binding.Service.Op;
+import unknow.server.maven.jaxws.binding.Service.Param;
+import unknow.server.maven.jaxws.binding.XmlEnum.XmlEnumEntry;
+import unknow.server.maven.jaxws.binding.XmlObject.XmlField;
+import unknow.server.maven.jaxws.binding.XmlType.XmlList;
 
 /**
  * @author unknow

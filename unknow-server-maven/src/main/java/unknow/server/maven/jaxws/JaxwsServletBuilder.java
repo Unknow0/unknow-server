@@ -67,13 +67,13 @@ import unknow.server.jaxws.OperationWrapper;
 import unknow.server.jaxws.WSMethod;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
-import unknow.server.maven.jaxws.model.Service;
-import unknow.server.maven.jaxws.model.XmlEnum;
-import unknow.server.maven.jaxws.model.XmlEnum.XmlEnumEntry;
-import unknow.server.maven.jaxws.model.XmlObject;
-import unknow.server.maven.jaxws.model.XmlObject.XmlField;
-import unknow.server.maven.jaxws.model.XmlType;
-import unknow.server.maven.jaxws.model.XmlTypeLoader;
+import unknow.server.maven.jaxws.binding.Service;
+import unknow.server.maven.jaxws.binding.XmlEnum;
+import unknow.server.maven.jaxws.binding.XmlObject;
+import unknow.server.maven.jaxws.binding.XmlType;
+import unknow.server.maven.jaxws.binding.XmlTypeLoader;
+import unknow.server.maven.jaxws.binding.XmlEnum.XmlEnumEntry;
+import unknow.server.maven.jaxws.binding.XmlObject.XmlField;
 import unknow.server.maven.model.ModelLoader;
 
 /**

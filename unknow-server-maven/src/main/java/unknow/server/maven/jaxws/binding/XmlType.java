@@ -1,7 +1,7 @@
 /**
  * 
  */
-package unknow.server.maven.jaxws.model;
+package unknow.server.maven.jaxws.binding;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -17,6 +17,8 @@ import com.github.javaparser.ast.expr.StringLiteralExpr;
 import unknow.server.maven.TypeCache;
 
 /**
+ * an xmlType binding
+ * 
  * @author unknow
  */
 public interface XmlType {

@@ -44,11 +44,11 @@ import unknow.server.jaxws.XMLOutput;
 import unknow.server.jaxws.XMLWriter;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
-import unknow.server.maven.jaxws.model.XmlEnum;
-import unknow.server.maven.jaxws.model.XmlEnum.XmlEnumEntry;
-import unknow.server.maven.jaxws.model.XmlObject;
-import unknow.server.maven.jaxws.model.XmlObject.XmlElem;
-import unknow.server.maven.jaxws.model.XmlObject.XmlField;
+import unknow.server.maven.jaxws.binding.XmlEnum;
+import unknow.server.maven.jaxws.binding.XmlObject;
+import unknow.server.maven.jaxws.binding.XmlEnum.XmlEnumEntry;
+import unknow.server.maven.jaxws.binding.XmlObject.XmlElem;
+import unknow.server.maven.jaxws.binding.XmlObject.XmlField;
 
 public class JaxMarshallerBuilder {
 	private static final NameExpr R = new NameExpr("R");

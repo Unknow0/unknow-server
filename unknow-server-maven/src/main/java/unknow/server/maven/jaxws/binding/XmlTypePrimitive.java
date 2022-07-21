@@ -1,4 +1,4 @@
-package unknow.server.maven.jaxws.model;
+package unknow.server.maven.jaxws.binding;
 
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.expr.CastExpr;

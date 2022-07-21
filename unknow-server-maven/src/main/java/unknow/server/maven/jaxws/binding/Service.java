@@ -1,7 +1,7 @@
 /**
  * 
  */
-package unknow.server.maven.jaxws.model;
+package unknow.server.maven.jaxws.binding;
 
 import java.util.ArrayList;
 import java.util.List;
