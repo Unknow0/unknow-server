@@ -17,14 +17,14 @@ import unknow.server.jaxws.DateTimeFormat;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
 
-public class XmlTypeDate implements XmlType {
-	public static final XmlType DURATION = new XmlTypeDate(Duration.class.getCanonicalName(), Type.DURATION);
-	public static final XmlType LOCAL_DATE = new XmlTypeDate(LocalDate.class.getCanonicalName(), Type.DATE);
-	public static final XmlType LOCAL_TIME = new XmlTypeDate(LocalTime.class.getCanonicalName(), Type.TIME);
-	public static final XmlType LOCAL_DATETIME = new XmlTypeDate(LocalDateTime.class.getCanonicalName(), Type.DATETIME);
-	public static final XmlType OFFSET_TIME = new XmlTypeDate(OffsetTime.class.getCanonicalName(), Type.TIME);
-	public static final XmlType OFFSET_DATETIME = new XmlTypeDate(OffsetDateTime.class.getCanonicalName(), Type.DATETIME);
-	public static final XmlType ZONED_DATETIME = new XmlTypeDate(ZonedDateTime.class.getCanonicalName(), Type.DATETIME);
+public class XmlTypeDate extends XmlType<DummyModel> {
+	public static final XmlTypeDate DURATION = new XmlTypeDate(Duration.class.getCanonicalName(), Type.DURATION);
+	public static final XmlTypeDate LOCAL_DATE = new XmlTypeDate(LocalDate.class.getCanonicalName(), Type.DATE);
+	public static final XmlTypeDate LOCAL_TIME = new XmlTypeDate(LocalTime.class.getCanonicalName(), Type.TIME);
+	public static final XmlTypeDate LOCAL_DATETIME = new XmlTypeDate(LocalDateTime.class.getCanonicalName(), Type.DATETIME);
+	public static final XmlTypeDate OFFSET_TIME = new XmlTypeDate(OffsetTime.class.getCanonicalName(), Type.TIME);
+	public static final XmlTypeDate OFFSET_DATETIME = new XmlTypeDate(OffsetDateTime.class.getCanonicalName(), Type.DATETIME);
+	public static final XmlTypeDate ZONED_DATETIME = new XmlTypeDate(ZonedDateTime.class.getCanonicalName(), Type.DATETIME);
 
 	private static enum Type {
 		DURATION("duration"), DATE("date"), TIME("time"), DATETIME("dateTime");
@@ -41,39 +41,17 @@ public class XmlTypeDate implements XmlType {
 		}
 	}
 
-	private final String clazz;
-	private final Type type;
-	private final SchemaData schema;
-
-	private XmlTypeDate(String clazz, Type type) {
-		this.clazz = clazz;
-		this.type = type;
-		this.schema = new SchemaData(type.toString(), "http://www.w3.org/2001/XMLSchema", null, null);
+	private XmlTypeDate(String clazz, Type type) { // TODO
+		super(new DummyModel(clazz), "http://www.w3.org/2001/XMLSchema", type.name);
 	}
 
 	@Override
-	public Expression convert(TypeCache types, Expression v) {
-		return new MethodCallExpr(new TypeExpr(types.get(clazz)), "parse", Utils.list(v, new FieldAccessExpr(new TypeExpr(types.get(DateTimeFormat.class)), type.name())));
+	public Expression fromString(TypeCache types, Expression v) {
+		return new MethodCallExpr(new TypeExpr(types.get(javaType().name())), "parse", Utils.list(v, new FieldAccessExpr(new TypeExpr(types.get(DateTimeFormat.class)), javaType().name())));
 	}
 
 	@Override
 	public Expression toString(TypeCache types, Expression v) {
-		return new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(DateTimeFormat.class)), type.name()), "format", Utils.list(v));
+		return new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(DateTimeFormat.class)), javaType().name()), "format", Utils.list(v));
 	}
-
-	@Override
-	public String clazz() {
-		return clazz;
-	}
-
-	@Override
-	public String binaryName() {
-		return clazz + ';';
-	}
-
-	@Override
-	public SchemaData schema() {
-		return schema;
-	}
-
 }

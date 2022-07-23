@@ -124,7 +124,7 @@ public class Service {
 			for (ParamModel p : m.parameters()) {
 				String ns = "##default";
 				name = "##default";
-				XmlType t = typeLoader.get(p.type());
+				XmlType<?> t = typeLoader.get(p.type());
 				boolean header = false;
 				AnnotationModel oa = p.annotation(WebParam.class);
 				if (oa != null) {
@@ -171,12 +171,12 @@ public class Service {
 			StringBuilder sb = new StringBuilder();
 			for (Param p : params) {
 				if (p.header)
-					sb.append(p.type.binaryName());
+					sb.append(p.type.javaType().name()).append(';');
 			}
 			sb.append('#');
 			for (Param p : params) {
 				if (!p.header)
-					sb.append(p.type.binaryName());
+					sb.append(p.type.javaType().name()).append(';');
 			}
 			return sb.toString();
 		}
@@ -190,11 +190,11 @@ public class Service {
 	public static class Param {
 		public final String ns;
 		public final String name;
-		public final XmlType type;
+		public final XmlType<?> type;
 		public final String clazz;
 		public final boolean header;
 
-		public Param(String ns, String name, XmlType type, String clazz, boolean header) {
+		public Param(String ns, String name, XmlType<?> type, String clazz, boolean header) {
 			this.ns = ns;
 			this.name = name;
 			this.type = type;

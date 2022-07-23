@@ -26,7 +26,7 @@ import unknow.server.http.utils.PathTree.PartNode;
 public class PathTreeBuilderTest {
 	@Test
 	public void testDefault() {
-		PathTree build = new PathTreeBuilder(new ServletConfigImpl[0], new FilterConfigImpl[0], DispatcherType.REQUEST).build();
+		PathTree build = new PathTreeBuilder(null, new ServletConfigImpl[0], new FilterConfigImpl[0], DispatcherType.REQUEST).build();
 		System.out.println("default:\n" + build);
 		PartNode tree = build.root;
 		assertNode(tree, "ServletDefault", "ServletDefault");
@@ -41,7 +41,7 @@ public class PathTreeBuilderTest {
 		Set<String> urls = new HashSet<>(Arrays.asList("*.html"));
 		FilterConfigImpl[] filters = { new FilterConfigImpl(null, new F("f"), null, null, Collections.emptySet(), urls, dispatcher) };
 
-		PathTree build = new PathTreeBuilder(new ServletConfigImpl[0], filters, DispatcherType.REQUEST).build();
+		PathTree build = new PathTreeBuilder(null, new ServletConfigImpl[0], filters, DispatcherType.REQUEST).build();
 		System.out.println("end:\n" + build);
 		PartNode tree = build.root;
 		assertNode(tree, "ServletDefault", "ServletDefault");
@@ -55,7 +55,7 @@ public class PathTreeBuilderTest {
 	public void testServletExact() {
 		Set<String> urls = new HashSet<>(Arrays.asList("/test", ""));
 		ServletConfigImpl[] servlets = { new ServletConfigImpl("name", new S("s"), null, null, urls) };
-		PathTree build = new PathTreeBuilder(servlets, new FilterConfigImpl[0], DispatcherType.REQUEST).build();
+		PathTree build = new PathTreeBuilder(null, servlets, new FilterConfigImpl[0], DispatcherType.REQUEST).build();
 		System.out.println("exact:\n" + build);
 		PartNode tree = build.root;
 		assertNode(tree, "s", "ServletDefault");
@@ -69,7 +69,7 @@ public class PathTreeBuilderTest {
 	public void testServletDefault() {
 		Set<String> urls = new HashSet<>(Arrays.asList("/test/*"));
 		ServletConfigImpl[] servlets = { new ServletConfigImpl("name", new S("s"), null, null, urls) };
-		PathTree build = new PathTreeBuilder(servlets, new FilterConfigImpl[0], DispatcherType.REQUEST).build();
+		PathTree build = new PathTreeBuilder(null, servlets, new FilterConfigImpl[0], DispatcherType.REQUEST).build();
 		System.out.println("exact:\n" + build);
 		PartNode tree = build.root;
 		assertNode(tree, "ServletDefault", "ServletDefault");

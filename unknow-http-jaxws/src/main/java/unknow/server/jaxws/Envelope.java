@@ -52,7 +52,7 @@ public final class Envelope {
 
 	private static void name(StringBuilder sb, Class<?> cl) {
 		if (cl.isArray())
-			sb.append('[').append(cl.getCanonicalName());
+			sb.append('[').append(cl.getComponentType().getCanonicalName());
 		else
 			sb.append(cl.getCanonicalName());
 		sb.append(';');

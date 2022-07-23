@@ -17,12 +17,14 @@ import java.util.Set;
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
-import javax.servlet.Servlet;
 
+import unknow.server.http.data.ArrayMap;
+import unknow.server.http.data.ArraySet;
 import unknow.server.http.servlet.FilterChainImpl;
 import unknow.server.http.servlet.FilterChainImpl.ServletFilter;
 import unknow.server.http.servlet.FilterConfigImpl;
 import unknow.server.http.servlet.ServletConfigImpl;
+import unknow.server.http.servlet.ServletContextImpl;
 import unknow.server.http.servlet.ServletDefault;
 import unknow.server.http.utils.PathTree.PartNode;
 
@@ -39,14 +41,16 @@ public class PathTreeBuilder {
 	private final Map<String, FilterChain> chains;
 
 	private final Node root;
-	private final Map<String, Servlet> ending;
+	private final Map<String, ServletConfigImpl> ending;
 	private final Map<String, List<Filter>> endingFilter;
 
 	private final DispatcherType dispatcherType;
 
 	private final StringBuilder sb;
 
-	public PathTreeBuilder(ServletConfigImpl[] servlets, FilterConfigImpl[] filters, DispatcherType dispatcherType) {
+	private final ServletConfigImpl defaultServlet;
+
+	public PathTreeBuilder(ServletContextImpl ctx, ServletConfigImpl[] servlets, FilterConfigImpl[] filters, DispatcherType dispatcherType) {
 		this.servlets = servlets;
 		this.filters = filters;
 		this.dispatcherType = dispatcherType;
@@ -58,6 +62,8 @@ public class PathTreeBuilder {
 		this.endingFilter = new HashMap<>();
 
 		this.sb = new StringBuilder();
+
+		this.defaultServlet = new ServletConfigImpl("", ServletDefault.INSTANCE, ctx, new ArrayMap<>(new String[0], new String[0]), new ArraySet<>(new String[0]));
 	}
 
 	public PathTree build() {
@@ -65,8 +71,7 @@ public class PathTreeBuilder {
 			addServlet(servlets[i]);
 		for (int i = 0; i < filters.length; i++)
 			addFilter(filters[i]);
-
-		root.addDefault(ServletDefault.INSTANCE, Collections.emptyList());
+		root.addDefault(defaultServlet, Collections.emptyList());
 		return new PathTree(buildTree(null, root));
 	}
 
@@ -105,12 +110,12 @@ public class PathTreeBuilder {
 		return c;
 	}
 
-	private FilterChain getChain(Servlet s, List<Filter> filters, List<Filter> filters2) { // TODO optimize object creation
+	private FilterChain getChain(ServletConfigImpl s, List<Filter> filters, List<Filter> filters2) { // TODO optimize object creation
 		sb.setLength(0);
-		sb.append(s.getClass().getName());
+		sb.append(s.getName());
 		FilterChain c = chains.get(sb.toString());
 		if (c == null)
-			chains.put(sb.toString(), c = new ServletFilter(s));
+			chains.put(sb.toString(), c = new ServletFilter(s.getServlet()));
 		for (Filter f : filters) {
 			sb.append(',').append(f.getClass().getName());
 			c = getChain(sb.toString(), f, c);
@@ -125,15 +130,15 @@ public class PathTreeBuilder {
 	private void addServlet(ServletConfigImpl s) {
 		for (String p : s.getMappings()) {
 			if (p.startsWith("*."))
-				ending.put(p.substring(1), s.getServlet());
+				ending.put(p.substring(1), s);
 			else if (p.equals("/") || p.equals("/*"))
-				root.def = s.getServlet();
+				root.def = s;
 			else if (p.endsWith("/*"))
-				addPath(p.substring(1, p.length() - 2).split("/")).def = s.getServlet();
+				addPath(p.substring(1, p.length() - 2).split("/")).def = s;
 			else if (p.equals(""))
-				root.exact = s.getServlet();
+				root.exact = s;
 			else if (p.startsWith("/"))
-				addPath(p.substring(1).split("/")).exact = s.getServlet();
+				addPath(p.substring(1).split("/")).exact = s;
 		}
 	}
 
@@ -200,23 +205,24 @@ public class PathTreeBuilder {
 		return null;
 	}
 
-	public static class Node {
-		public final Map<String, Node> nexts = new HashMap<>();
+	static class Node {
+		final Map<String, Node> nexts = new HashMap<>();
 
-		public Servlet exact;
-		public final List<Filter> exactsFilter = new ArrayList<>();
+		ServletConfigImpl exact;
+		final List<Filter> exactsFilter = new ArrayList<>();
 
-		public Servlet def;
-		public final List<Filter> defFilter = new ArrayList<>();
+		ServletConfigImpl def;
+		final List<Filter> defFilter = new ArrayList<>();
 
-		public Node pattern;
+		Node pattern;
 
-		public void addDefault(Servlet def, List<Filter> defFilter) {
+		void addDefault(ServletConfigImpl def, List<Filter> defFilter) {
 			if (this.def == null)
 				this.def = def;
 			if (this.exact == null)
 				this.exact = this.def;
 			this.defFilter.addAll(defFilter);
+			this.exactsFilter.addAll(defFilter);
 			if (pattern != null)
 				pattern.addDefault(this.def, this.defFilter);
 			for (Node n : nexts.values())

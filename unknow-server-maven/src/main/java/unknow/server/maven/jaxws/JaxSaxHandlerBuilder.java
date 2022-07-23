@@ -37,36 +37,34 @@ import com.github.javaparser.ast.type.VoidType;
 import unknow.sax.SaxContext;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
-import unknow.server.maven.jaxws.binding.SchemaData;
 import unknow.server.maven.jaxws.binding.XmlObject;
-import unknow.server.maven.jaxws.binding.XmlType;
-import unknow.server.maven.jaxws.binding.XmlObject.XmlElem;
 import unknow.server.maven.jaxws.binding.XmlObject.XmlField;
+import unknow.server.maven.jaxws.binding.XmlType;
 
 public class JaxSaxHandlerBuilder {
 	private static final NameExpr CONTEXT = new NameExpr("context");
 	private static final NameExpr QNAME = new NameExpr("qname");
 	private static final NameExpr ATTRS = new NameExpr("attrs");
 
-	public static final XmlType QNAME_PARAM = new XmlType() {
-		@Override
-		public Expression convert(TypeCache types, Expression v) {
-			return null;
-		}
-
-		@Override
-		public String clazz() {
-			return "";
-		}
-
-		@Override
-		public SchemaData schema() {
-			return null;
-		};
-	};
+//	public static final XmlType QNAME_PARAM = new XmlType() {
+//		@Override
+//		public Expression convert(TypeCache types, Expression v) {
+//			return null;
+//		}
+//
+//		@Override
+//		public String clazz() {
+//			return "";
+//		}
+//
+//		@Override
+//		public SchemaData schema() {
+//			return null;
+//		};
+//	};
 
 	private final TypeCache types;
-	private final Function<XmlType, NameExpr> handlers;
+	private final Function<XmlType<?>, NameExpr> handlers;
 	private final String clazz;
 
 	private boolean firstAttr = true;
@@ -75,7 +73,7 @@ public class JaxSaxHandlerBuilder {
 	private IfStmt end;
 	private Statement last;
 
-	public JaxSaxHandlerBuilder(TypeCache types, Function<XmlType, NameExpr> handlers, String clazz) {
+	public JaxSaxHandlerBuilder(TypeCache types, Function<XmlType<?>, NameExpr> handlers, String clazz) {
 		this.types = types;
 		this.handlers = handlers;
 		this.clazz = clazz;
@@ -110,21 +108,21 @@ public class JaxSaxHandlerBuilder {
 		attrs
 				.addStatement(new AssignExpr(
 						var,
-						new MethodCallExpr(ATTRS, "getValue", Utils.list(new StringLiteralExpr(a.ns), new StringLiteralExpr(a.name))),
+						new MethodCallExpr(ATTRS, "getValue", Utils.list(new StringLiteralExpr(a.ns()), new StringLiteralExpr(a.name()))),
 						AssignExpr.Operator.ASSIGN))
 				.addStatement(new IfStmt(
 						new BinaryExpr(new NameExpr("a"), new NullLiteralExpr(), Operator.NOT_EQUALS),
 						new ExpressionStmt(
-								new MethodCallExpr(new NameExpr("o"), a.setter, Utils.list(a.type().convert(types, new NameExpr("a"))))),
+								new MethodCallExpr(new NameExpr("o"), a.setter, Utils.list(a.type().fromString(types, new NameExpr("a"))))),
 						null));
 	}
 
-	public void setValue(XmlElem value) {
+	public void setValue(XmlField value) {
 		last = new BlockStmt()
 				.addStatement(new MethodCallExpr(
 						new EnclosedExpr(new CastExpr(types.get(clazz), new MethodCallExpr(CONTEXT, "peek"))),
 						value.setter,
-						Utils.list(value.type().convert(types, new MethodCallExpr(CONTEXT, "textContent")))))
+						Utils.list(value.type().fromString(types, new MethodCallExpr(CONTEXT, "textContent")))))
 				.addStatement(new MethodCallExpr(CONTEXT, "previous"));
 	}
 
@@ -137,7 +135,7 @@ public class JaxSaxHandlerBuilder {
 		end = new IfStmt(
 				new MethodCallExpr(new StringLiteralExpr(a.qname()), "equals", Utils.list(QNAME)),
 				new BlockStmt()
-						.addStatement(Utils.assign(types.get(a.type().clazz()), "v", a.type().convert(types, new MethodCallExpr(CONTEXT, "pop"))))
+						.addStatement(Utils.assign(types.get(a.type().javaType().name()), "v", a.type().fromString(types, new MethodCallExpr(CONTEXT, "pop"))))
 						.addStatement(new MethodCallExpr(
 								new EnclosedExpr(new CastExpr(types.get(clazz), new MethodCallExpr(CONTEXT, "peek"))),
 								a.setter,
@@ -180,7 +178,7 @@ public class JaxSaxHandlerBuilder {
 		return list;
 	}
 
-	public static NodeList<BodyDeclaration<?>> build(TypeCache types, XmlType xml, Function<XmlType, NameExpr> handlers) {
+	public static NodeList<BodyDeclaration<?>> build(TypeCache types, XmlType<?> xml, Function<XmlType<?>, NameExpr> handlers) {
 		if (xml.isSimple()) {
 			return Utils.list(
 					new MethodDeclaration(
@@ -194,16 +192,16 @@ public class JaxSaxHandlerBuilder {
 											.addStatement(new MethodCallExpr(CONTEXT, "previous"))));
 		}
 		XmlObject o = (XmlObject) xml;
-		JaxSaxHandlerBuilder b = new JaxSaxHandlerBuilder(types, handlers, o.clazz);
+		JaxSaxHandlerBuilder b = new JaxSaxHandlerBuilder(types, handlers, o.javaType().name());
 		b.setObjectCreation(o.factoryClazz(), o.factoryMethod());
 
-		for (XmlField a : o.attrs)
+		for (XmlField a : o.attrs())
 			b.addAttr(a);
 
-		if (o.value != null)
-			b.setValue(o.value);
+		if (o.value() != null)
+			b.setValue(o.value());
 
-		for (XmlField a : o.elems)
+		for (XmlField a : o.elems())
 			b.addElem(a);
 		return b.build();
 	}

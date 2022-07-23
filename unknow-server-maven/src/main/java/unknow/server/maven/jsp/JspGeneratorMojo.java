@@ -110,6 +110,15 @@ public class JspGeneratorMojo {
 			if (c == ' ') {
 				String tag = sb.toString();
 				sb.setLength(0);
+				if ("%!--".equals(tag)) {
+					processComment(r);
+					return;
+				}
+				if ("%@".equals(tag)) {
+					print();
+					processDirective(r);
+					return;
+				}
 				if ("%=".equals(tag)) {
 					print();
 					processEcho(r);
@@ -119,7 +128,9 @@ public class JspGeneratorMojo {
 					print();
 					processScript(r);
 					return;
-				} // TODO other case
+				}
+				// TODO action jsp:include, jsp:forward
+				// TODO taglib
 				print.append('<').append(tag).append(' ');
 				while ((c = r.read()) != -1) {
 					print.append((char) c);
@@ -130,6 +141,34 @@ public class JspGeneratorMojo {
 				sb.append((char) c);
 		}
 		print.append(sb);
+		sb.setLength(0);
+	}
+
+	private void processComment(Reader r) throws IOException {
+		int c;
+
+	}
+
+	/**
+	 * process <%@ content
+	 * 
+	 * @param r
+	 * @throws IOException
+	 */
+	private void processDirective(Reader r) throws IOException {
+		int c;
+		while ((c = r.read()) != -1) {
+			if (c == '%') {
+				c = r.read();
+				if (c == '>')
+					break;
+				sb.append('%');
+				if (c == -1)
+					break;
+			}
+			sb.append((char) c);
+		}
+		System.out.println("@: " + sb);
 		sb.setLength(0);
 	}
 

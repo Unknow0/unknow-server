@@ -76,7 +76,7 @@ public class PathTree {
 				return n.exact;
 			}
 		}
-		req.setPathInfo(part.size());
+		req.setPathInfo(i);
 		return last.def;
 	}
 

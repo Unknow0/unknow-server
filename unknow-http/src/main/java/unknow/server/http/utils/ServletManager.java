@@ -21,6 +21,7 @@ import unknow.server.http.servlet.FilterChainImpl.ChangePath;
 import unknow.server.http.servlet.FilterChainImpl.ServletFilter;
 import unknow.server.http.servlet.FilterConfigImpl;
 import unknow.server.http.servlet.ServletConfigImpl;
+import unknow.server.http.servlet.ServletContextImpl;
 import unknow.server.http.servlet.ServletRequestImpl;
 
 /**
@@ -90,10 +91,10 @@ public final class ServletManager {
 		}
 	}
 
-	public void initialize(ServletConfigImpl[] servlets, FilterConfigImpl[] filters) throws ServletException {
+	public void initialize(ServletContextImpl ctx, ServletConfigImpl[] servlets, FilterConfigImpl[] filters) throws ServletException {
 		this.servlets = servlets;
 		this.filters = filters;
-		this.request = new PathTreeBuilder(servlets, filters, DispatcherType.REQUEST).build();
+		this.request = new PathTreeBuilder(ctx, servlets, filters, DispatcherType.REQUEST).build();
 		logger.info("Servlet mapping:\n{}", this.request);
 
 		int l = errorCodeMapping.size();

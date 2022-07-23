@@ -45,10 +45,10 @@ import unknow.server.jaxws.XMLWriter;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
 import unknow.server.maven.jaxws.binding.XmlEnum;
-import unknow.server.maven.jaxws.binding.XmlObject;
 import unknow.server.maven.jaxws.binding.XmlEnum.XmlEnumEntry;
-import unknow.server.maven.jaxws.binding.XmlObject.XmlElem;
+import unknow.server.maven.jaxws.binding.XmlObject;
 import unknow.server.maven.jaxws.binding.XmlObject.XmlField;
+import unknow.server.maven.model.TypeModel;
 
 public class JaxMarshallerBuilder {
 	private static final NameExpr R = new NameExpr("R");
@@ -58,7 +58,7 @@ public class JaxMarshallerBuilder {
 	private final TypeCache types;
 	private final ClassOrInterfaceDeclaration clazz;
 	private final BlockStmt init;
-	private final Set<String> processed;
+	private final Set<TypeModel> processed;
 
 	public JaxMarshallerBuilder(CompilationUnit cu, TypeCache types) {
 		this.types = types;
@@ -102,63 +102,64 @@ public class JaxMarshallerBuilder {
 	}
 
 	public void add(XmlEnum type) {
-		if (processed.contains(type.clazz))
+		if (processed.contains(type.javaType()))
 			return;
-		processed.add(type.clazz);
+		processed.add(type.javaType());
 
 		NodeList<SwitchEntry> list = Utils.list();
 		for (XmlEnumEntry e : type.entries)
 			list.add(new SwitchEntry(Utils.list(new NameExpr(e.name)), SwitchEntry.Type.STATEMENT_GROUP, Utils.list(new ReturnStmt(new StringLiteralExpr(e.value)))));
 		list.add(new SwitchEntry(Utils.list(), SwitchEntry.Type.STATEMENT_GROUP, Utils.list(new ReturnStmt(new StringLiteralExpr("")))));
-		clazz.addMethod(type.convertMethod, Keyword.PRIVATE, Keyword.STATIC, Keyword.FINAL).addParameter(types.get(type.clazz), "e").setType(types.get(String.class)).getBody()
+		clazz.addMethod(type.convertMethod, Keyword.PRIVATE, Keyword.STATIC, Keyword.FINAL).addParameter(types.get(type.javaType().name()), "e").setType(types.get(String.class)).getBody()
 				.get().addStatement(new SwitchStmt(new NameExpr("e"), list));
 	}
 
 	public void add(XmlObject type) {
-		if (processed.contains(type.clazz))
+		if (processed.contains(type.javaType()))
 			return;
-		processed.add(type.clazz);
+		processed.add(type.javaType());
 
 		BlockStmt b = new BlockStmt();
-		for (XmlField a : type.attrs) {
-			if (!a.type().isPrimitive()) {
-				b.addStatement(Utils.assign(types.get(a.type().clazz()), a.name, new MethodCallExpr(new NameExpr("t"), a.getter)));
-				b.addStatement(new IfStmt(new BinaryExpr(new NameExpr(a.name), new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS),
+		for (XmlField a : type.attrs()) {
+			TypeModel jtype = a.type().javaType();
+			if (!a.type().javaType().isPrimitive()) {
+				b.addStatement(Utils.assign(types.get(jtype.name()), a.name(), new MethodCallExpr(new NameExpr("t"), a.getter)));
+				b.addStatement(new IfStmt(new BinaryExpr(new NameExpr(a.name()), new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS),
 						new ExpressionStmt(new MethodCallExpr(new NameExpr("w"), "attribute",
-								Utils.list(new StringLiteralExpr(a.name), new StringLiteralExpr(a.ns), a.type().toString(types, new NameExpr(a.name))))),
+								Utils.list(new StringLiteralExpr(a.name()), new StringLiteralExpr(a.ns()), a.type().toString(types, new NameExpr(a.name()))))),
 						null));
 			} else
 				b.addStatement(new MethodCallExpr(new NameExpr("w"), "attribute",
-						Utils.list(new StringLiteralExpr(a.name), new StringLiteralExpr(a.ns), a.type().toString(types, new MethodCallExpr(new NameExpr("t"), a.getter)))));
+						Utils.list(new StringLiteralExpr(a.name()), new StringLiteralExpr(a.ns()), a.type().toString(types, new MethodCallExpr(new NameExpr("t"), a.getter)))));
 		}
-		for (XmlField f : type.elems) {
-			b.addStatement(new MethodCallExpr(new NameExpr("w"), "startElement", Utils.list(new StringLiteralExpr(f.name), new StringLiteralExpr(f.ns))));
+		for (XmlField f : type.elems()) {
+			b.addStatement(new MethodCallExpr(new NameExpr("w"), "startElement", Utils.list(new StringLiteralExpr(f.name()), new StringLiteralExpr(f.ns()))));
 			if (f.type() instanceof XmlObject) {
 				XmlObject t = (XmlObject) f.type();
 				add(t);
-				b.addStatement(Utils.assign(types.get(t.clazz()), f.name, new MethodCallExpr(new NameExpr("t"), f.getter)));
-				b.addStatement(new IfStmt(new BinaryExpr(new NameExpr(f.name), new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS),
-						new ExpressionStmt(new MethodCallExpr(new MethodCallExpr(new NameExpr("R"), "get", Utils.list(new ClassExpr(types.get(((XmlObject) f.type()).clazz)))),
-								"marshall", Utils.list(new NameExpr("m"), new NameExpr(f.name), new NameExpr("w")))),
+				b.addStatement(Utils.assign(types.get(t.javaType().name()), f.name(), new MethodCallExpr(new NameExpr("t"), f.getter)));
+				b.addStatement(new IfStmt(new BinaryExpr(new NameExpr(f.name()), new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS),
+						new ExpressionStmt(new MethodCallExpr(new MethodCallExpr(new NameExpr("R"), "get", Utils.list(new ClassExpr(types.get(f.type().javaType().name())))),
+								"marshall", Utils.list(new NameExpr("m"), new NameExpr(f.name()), new NameExpr("w")))),
 						null));
 			} else {
 				if (f.type() instanceof XmlEnum)
 					add((XmlEnum) f.type());
-				if (!f.type().isPrimitive()) {
-					b.addStatement(Utils.assign(types.get(f.type().clazz()), f.name, new MethodCallExpr(new NameExpr("t"), f.getter)));
-					b.addStatement(new IfStmt(new BinaryExpr(new NameExpr(f.name), new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS),
+				if (!f.type().javaType().isPrimitive()) {
+					b.addStatement(Utils.assign(types.get(f.type().javaType().name()), f.name(), new MethodCallExpr(new NameExpr("t"), f.getter)));
+					b.addStatement(new IfStmt(new BinaryExpr(new NameExpr(f.name()), new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS),
 							new ExpressionStmt(
 									new MethodCallExpr(new NameExpr("w"), "text", Utils.list(f.type().toString(types, new MethodCallExpr(new NameExpr("t"), f.getter))))),
 							null));
 				} else
 					b.addStatement(new MethodCallExpr(new NameExpr("w"), "text", Utils.list(f.type().toString(types, new MethodCallExpr(new NameExpr("t"), f.getter)))));
 			}
-			b.addStatement(new MethodCallExpr(new NameExpr("w"), "endElement", Utils.list(new StringLiteralExpr(f.name), new StringLiteralExpr(f.ns))));
+			b.addStatement(new MethodCallExpr(new NameExpr("w"), "endElement", Utils.list(new StringLiteralExpr(f.name()), new StringLiteralExpr(f.ns()))));
 		}
-		if (type.value != null) {
-			XmlElem f = type.value;
-			if (!type.value.type().isPrimitive()) {
-				b.addStatement(Utils.assign(types.get(f.type().clazz()), "$v$", new MethodCallExpr(new NameExpr("t"), f.getter)));
+		if (type.value() != null) {
+			XmlField f = type.value();
+			if (!f.type().javaType().isPrimitive()) {
+				b.addStatement(Utils.assign(types.get(f.type().javaType().name()), "$v$", new MethodCallExpr(new NameExpr("t"), f.getter)));
 				b.addStatement(
 						new IfStmt(new BinaryExpr(new NameExpr("$v$"), new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS),
 								new ExpressionStmt(
@@ -168,7 +169,7 @@ public class JaxMarshallerBuilder {
 				b.addStatement(new MethodCallExpr(new NameExpr("w"), "text", Utils.list(f.type().toString(types, new MethodCallExpr(new NameExpr("t"), f.getter)))));
 		}
 
-		init.addStatement(new MethodCallExpr(new NameExpr("R"), "register", Utils.list(new ClassExpr(types.get(type.clazz)),
+		init.addStatement(new MethodCallExpr(new NameExpr("R"), "register", Utils.list(new ClassExpr(types.get(type.javaType().name())),
 				new LambdaExpr(Utils.list(new Parameter(new UnknownType(), "m"), new Parameter(new UnknownType(), "t"), new Parameter(new UnknownType(), "w")), b))));
 	}
 }

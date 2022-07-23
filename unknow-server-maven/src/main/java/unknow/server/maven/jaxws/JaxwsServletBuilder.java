@@ -69,12 +69,13 @@ import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
 import unknow.server.maven.jaxws.binding.Service;
 import unknow.server.maven.jaxws.binding.XmlEnum;
+import unknow.server.maven.jaxws.binding.XmlEnum.XmlEnumEntry;
 import unknow.server.maven.jaxws.binding.XmlObject;
+import unknow.server.maven.jaxws.binding.XmlObject.XmlField;
 import unknow.server.maven.jaxws.binding.XmlType;
 import unknow.server.maven.jaxws.binding.XmlTypeLoader;
-import unknow.server.maven.jaxws.binding.XmlEnum.XmlEnumEntry;
-import unknow.server.maven.jaxws.binding.XmlObject.XmlField;
 import unknow.server.maven.model.ModelLoader;
+import unknow.server.maven.model.impl.JvmClass;
 
 /**
  * @author unknow
@@ -260,14 +261,14 @@ public class JaxwsServletBuilder {
 
 			for (Service.Param p : o.params) {
 				if (p.header)
-					header.addElem(new XmlField(p.type, "", "addHeader", p.name, p.ns));
+					header.addElem(new XmlField(p.type, p.ns, p.name, "", "addHeader"));
 				else if (o.paramStyle == ParameterStyle.WRAPPED)
-					childs.add(new XmlField(p.type, "", "add", p.name, p.ns));
+					childs.add(new XmlField(p.type, p.ns, p.name, "", "add"));
 				else
-					body.addElem(new XmlField(p.type, "", "addBody", p.name, p.ns));
+					body.addElem(new XmlField(p.type, p.ns, p.name, "", "addBody"));
 			}
 			if (o.paramStyle == ParameterStyle.WRAPPED)
-				body.addElem(new XmlField(new XmlOperation(o.name, childs), "", "addBody", o.name, service.ns));
+				body.addElem(new XmlField(new XmlOperation(o.ns, o.name, childs), service.ns, o.name, "", "addBody"));
 		}
 
 		ClassOrInterfaceType t = types.get(SaxHandler.class, types.get(SaxContext.class));
@@ -292,7 +293,7 @@ public class JaxwsServletBuilder {
 	 * @param type
 	 * @param types
 	 */
-	private NameExpr generateHandler(XmlType type, TypeCache types) {
+	private NameExpr generateHandler(XmlType<?> type, TypeCache types) {
 		if (type instanceof XmlEnum) {
 			XmlEnum e = (XmlEnum) type;
 			NodeList<Expression> values = Utils.list();
@@ -300,7 +301,7 @@ public class JaxwsServletBuilder {
 			for (XmlEnumEntry c : e.entries)
 				values.add(new StringLiteralExpr(c.value));
 			servlet.addFieldWithInitializer(types.array(String.class), e.convertMethod, Utils.array(types.get(String.class), values), PSF);
-			servlet.addMethod(e.convertMethod, PSF).addParameter(types.get(String.class), "s").setType(types.get(e.clazz))
+			servlet.addMethod(e.convertMethod, PSF).addParameter(types.get(String.class), "s").setType(types.get(e.javaType().name()))
 					.addThrownException(types.get(SAXException.class))
 					.getBody().get()
 					.addStatement(Utils.assign(types.get(int.class), "i", new MethodCallExpr(
@@ -309,9 +310,9 @@ public class JaxwsServletBuilder {
 							new BinaryExpr(new NameExpr("i"), new IntegerLiteralExpr("0"), BinaryExpr.Operator.LESS),
 							new ThrowStmt(new ObjectCreationExpr(null, types.get(SAXException.class), Utils.list(new BinaryExpr(new StringLiteralExpr("Invalid enum constant: "), new NameExpr("s"), BinaryExpr.Operator.PLUS)))),
 							null))
-					.addStatement(new ReturnStmt(new ArrayAccessExpr(new MethodCallExpr(new TypeExpr(types.get(e.clazz)), "values"), new NameExpr("i"))));
+					.addStatement(new ReturnStmt(new ArrayAccessExpr(new MethodCallExpr(new TypeExpr(types.get(e.javaType().name())), "values"), new NameExpr("i"))));
 		}
-		String k = type.isSimple() ? "" : type.binaryName();
+		String k = type.isSimple() ? "" : type.javaType().name();
 		NameExpr nameExpr = saxHandlers.get(k);
 		if (nameExpr != null)
 			return nameExpr;
@@ -327,16 +328,15 @@ public class JaxwsServletBuilder {
 
 	private static class XmlOperation extends XmlObject {
 
-		final String name;
-
-		public XmlOperation(String name, List<XmlField> elems) {
-			super(OperationWrapper.class.getCanonicalName(), new Factory(".qname", null), Collections.emptyList(), elems, null, null);
-			this.name = name;
+		public XmlOperation(String ns, String name, List<XmlField> elems) {
+			super(new JvmClass(null, OperationWrapper.class), ns, name, new Factory(".qname", null), null);
+			this.elems = elems;
+			this.attrs = Collections.emptyList();
 		}
 
 		@Override
-		public String binaryName() {
-			return "op:" + name;
+		public String name() {
+			return "op:" + qname();
 		}
 	}
 

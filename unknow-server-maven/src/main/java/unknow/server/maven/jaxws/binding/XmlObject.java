@@ -3,33 +3,44 @@
  */
 package unknow.server.maven.jaxws.binding;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
+import java.util.Optional;
+
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlTransient;
+import javax.xml.bind.annotation.XmlValue;
 
 import com.github.javaparser.ast.expr.CastExpr;
 import com.github.javaparser.ast.expr.Expression;
 
 import unknow.server.maven.TypeCache;
+import unknow.server.maven.model.AnnotationModel;
+import unknow.server.maven.model.ClassModel;
+import unknow.server.maven.model.FieldModel;
+import unknow.server.maven.model.MethodModel;
 
 /**
  * @author unknow
  */
-public class XmlObject implements XmlType {
-	public final String clazz;
-	public final Factory factory;
-	public final List<XmlField> attrs;
-	public final List<XmlField> elems;
-	public final XmlElem value;
+public class XmlObject extends XmlType<ClassModel> {
+	private final XmlTypeLoader loader;
+	private final Factory factory;
+	protected List<XmlField> elems;
+	protected List<XmlField> attrs;
+	protected XmlField value;
 
-	private final SchemaData schema;
-
-	public XmlObject(String clazz, Factory factory, List<XmlField> attrs, List<XmlField> elems, XmlElem value, SchemaData schema) {
-		this.clazz = clazz;
+	public XmlObject(ClassModel clazz, String ns, String name, Factory factory, XmlTypeLoader loader) {
+		super(clazz, ns, name);
 		this.factory = factory;
-		this.attrs = attrs;
-		this.elems = elems;
-		this.value = value;
-		this.schema = schema;
+		this.loader = loader;
 	}
 
 	public String factoryClazz() {
@@ -41,8 +52,8 @@ public class XmlObject implements XmlType {
 	}
 
 	@Override
-	public Expression convert(TypeCache types, Expression v) {
-		return new CastExpr(types.get(clazz), v);
+	public Expression fromString(TypeCache types, Expression v) {
+		return new CastExpr(types.get(javaType().name()), v);
 	}
 
 	@Override
@@ -50,14 +61,130 @@ public class XmlObject implements XmlType {
 		return false;
 	}
 
-	@Override
-	public String clazz() {
-		return clazz;
+	public List<XmlField> elems() {
+		if (elems == null)
+			init();
+		return elems;
 	}
 
-	@Override
-	public SchemaData schema() {
-		return schema;
+	public List<XmlField> attrs() {
+		if (elems == null)
+			init();
+		return attrs;
+	}
+
+	public XmlField value() {
+		if (elems == null)
+			init();
+		return value;
+	}
+
+	private void init() {
+		ClassModel c = javaType();
+
+		AnnotationModel a = c.annotation(XmlAccessorType.class);
+		XmlAccessType type = XmlAccessType.PUBLIC_MEMBER;
+		if (a != null)
+			type = a.value("value").map(XmlAccessType::valueOf).orElse(XmlAccessType.PUBLIC_MEMBER);
+
+		List<String> propOrder = null;
+		if (a != null)
+			propOrder = a.values("propOrder").map(Arrays::asList).orElse(null);
+
+		Map<String, FieldModel> fields = new HashMap<>();
+
+		for (FieldModel f : c.fields()) {
+			if (f.isStatic() || f.isTransient() || f.annotation(XmlTransient.class) != null)
+				continue;
+
+			a = f.annotation(XmlElement.class);
+			if (a == null)
+				a = f.annotation(XmlAttribute.class);
+			if (a == null)
+				a = f.annotation(XmlValue.class);
+
+			if (a == null && type != XmlAccessType.FIELD && (type != XmlAccessType.PUBLIC_MEMBER || !f.isPublic()))
+				continue;
+			String setter = "set" + Character.toUpperCase(f.name().charAt(0)) + f.name().substring(1);
+			String getter = "get" + Character.toUpperCase(f.name().charAt(0)) + f.name().substring(1);
+			// TODO check also is* for boolean
+
+			Optional<MethodModel> s = c.methods().stream().filter(m -> m.name().equals(setter))
+					.filter(m -> m.parameters().size() == 1 && m.parameters().get(0).type().name().equals(f.type().name()))
+					.findFirst();
+			Optional<MethodModel> g = c.methods().stream().filter(m -> m.name().equals(getter)).filter(m -> m.parameters().size() == 0)
+					.findFirst();
+			if (!s.isPresent())
+				throw new RuntimeException("missing setter for '" + f.name() + "' field in '" + c.name() + "' class");
+			if (!g.isPresent()) // TODO check is* if boolean
+				throw new RuntimeException("missing setter for '" + f.name() + "' field in '" + c.name() + "' class");
+
+			fields.put(f.name(), f);
+		}
+
+		attrs = new ArrayList<>();
+		elems = new ArrayList<>();
+		for (MethodModel m : c.methods()) {
+			// skip non getter
+			if (m.parameters().size() > 0 || !m.name().startsWith("get"))
+				continue;
+			String n = Character.toLowerCase(m.name().charAt(3)) + m.name().substring(4);
+
+			AnnotationModel elem = m.annotation(XmlElement.class);
+			AnnotationModel attr = m.annotation(XmlAttribute.class);
+			AnnotationModel v = m.annotation(XmlValue.class);
+
+			FieldModel f = fields.get(n);
+			if (f != null && elem == null && attr == null && v == null) {
+				elem = f.annotation(XmlElement.class);
+				attr = f.annotation(XmlAttribute.class);
+				v = f.annotation(XmlValue.class);
+			}
+
+			if (elem != null || attr != null || v != null || type == XmlAccessType.FIELD && f != null || type == XmlAccessType.PUBLIC_MEMBER && m.isPublic()) {
+				String setter = "set" + m.name().substring(3);
+
+				Optional<MethodModel> s = c.methods().stream().filter(e -> e.name().equals(setter))
+						.filter(e -> e.parameters().size() == 1 && e.parameters().get(0).type().name().equals(m.type().name())).findFirst();
+				if (!s.isPresent())
+					throw new RuntimeException("missing setter for '" + n + "' field in '" + c.name() + "' class");
+				XmlType<?> t = loader.get(m.type());
+				if (v != null) {
+					if (value != null)
+						throw new RuntimeException("multiple value for '" + c.name() + "'");
+					value = new XmlField(t, "", "", m.name(), setter);
+				} else if (attr != null) {
+					if (!t.isSimple())
+						throw new RuntimeException("only simple type allowed in attribute in '" + c.name() + "'");
+					n = attr.value("name").map(i -> "##default".equals(i) ? null : i).orElse(n);
+					String ns = attr.value("namespace").map(i -> "##default".equals(i) ? null : i).orElse("");
+					attrs.add(new XmlField(t, ns, n, m.name(), setter));
+				} else {
+					String ns = "";
+					if (elem != null) {
+						n = elem.value("name").map(i -> "##default".equals(i) ? null : i).orElse(n);
+						ns = elem.value("namespace").map(i -> "##default".equals(i) ? null : i).orElse("");
+					}
+					elems.add(new XmlField(t, ns, n, m.name(), setter));
+				}
+			}
+		}
+		if (propOrder != null) {
+			List<String> order = propOrder;
+			Collections.sort(elems, (o, b) -> {
+				String an = Character.toLowerCase(o.getter.charAt(3)) + o.getter.substring(4);
+				String bn = Character.toLowerCase(b.getter.charAt(3)) + b.getter.substring(4);
+				int ai = order.indexOf(an);
+				int bi = order.indexOf(bn);
+				if (bi >= 0 && ai >= 0)
+					return ai - bi;
+				if (ai < 0 && bi < 0)
+					return 0; // TODO default ordering @XmlAccessorOrder
+				if (bi < 0)
+					return -1;
+				return 1;
+			});
+		}
 	}
 
 	public static class Factory {
@@ -76,73 +203,14 @@ public class XmlObject implements XmlType {
 		}
 	}
 
-	public static class XmlElem {
-		protected final XmlType type;
+	public static class XmlField extends XmlElem {
 		public final String getter;
 		public final String setter;
 
-		public XmlElem(XmlType type, String getter, String setter) {
-			this.type = type;
+		public XmlField(XmlType<?> type, String ns, String name, String getter, String setter) {
+			super(type, ns, name);
 			this.getter = getter;
 			this.setter = setter;
 		}
-
-		@Override
-		public int hashCode() {
-			return Objects.hash(type(), getter, setter);
-		}
-
-		public XmlType type() {
-			if (type instanceof XmlTypeWrapper)
-				return ((XmlTypeWrapper) type).delegate;
-			return type;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (!(obj instanceof XmlElem))
-				return false;
-			XmlElem other = (XmlElem) obj;
-			return Objects.equals(type(), other.type()) && Objects.equals(getter, other.getter) && Objects.equals(setter, other.setter);
-		}
-
-		@Override
-		public String toString() {
-			return "XmlElem [type=" + type() + ", getter=" + getter + ", setter=" + setter + "]";
-		}
 	}
-
-	public static class XmlField extends XmlElem {
-		public final String name;
-		public final String ns;
-
-		public XmlField(XmlType type, String getter, String setter, String name, String ns) {
-			super(type, getter, setter);
-			this.name = name;
-			this.ns = ns;
-		}
-
-		public String qname() {
-			return (ns == null || ns.isEmpty() ? "" : '{' + ns + '}') + name;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (!(obj instanceof XmlField))
-				return false;
-			XmlField other = (XmlField) obj;
-			return Objects.equals(type, other.type) && Objects.equals(getter, other.getter) && Objects.equals(setter, other.setter) && Objects.equals(name, other.name)
-					&& Objects.equals(ns, other.ns);
-		}
-
-		@Override
-		public String toString() {
-			return "XmlField [type=" + type + ", name=" + name + ", ns=" + ns + ", getter=" + getter + ", setter=" + setter + "]";
-		}
-	}
-
 }
