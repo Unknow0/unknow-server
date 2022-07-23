@@ -2,8 +2,8 @@
 +{http://schemas.xmlsoap.org/soap/envelope/}Body
 +{http://test.unknow}bareResponse
 +{http://test.unknow}bareResponse@value=4
-+{http://webservice.unknow}elem
++elem
 content
--{http://webservice.unknow}elem
+-elem
 -{http://test.unknow}bareResponse
 -{http://schemas.xmlsoap.org/soap/envelope/}Body

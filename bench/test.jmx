@@ -100,9 +100,9 @@
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
                 <stringProp name="Argument.value">&lt;e:Envelope xmlns:e=&quot;http://schemas.xmlsoap.org/soap/envelope/&quot;&gt;&#xd;
         &lt;e:Body&gt;&#xd;
-                &lt;Root xmlns=&quot;http://webservice.unknow&quot; value=&quot;4&quot;&gt;&#xd;
+                &lt;a:Root xmlns:a=&quot;http://webservice.unknow&quot; value=&quot;4&quot;&gt;&#xd;
                         &lt;elem&gt;content&lt;/elem&gt;&#xd;
-                &lt;/Root&gt;&#xd;
+                &lt;/a:Root&gt;&#xd;
         &lt;/e:Body&gt;&#xd;
 &lt;/e:Envelope&gt;</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
@@ -133,9 +133,9 @@
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
                 <stringProp name="Argument.value">&lt;e:Envelope xmlns:e=&quot;http://schemas.xmlsoap.org/soap/envelope/&quot;&gt;&#xd;
         &lt;e:Body&gt;&#xd;
-                &lt;Root xmlns=&quot;http://webservice.unknow&quot; value=&quot;4&quot;&gt;&#xd;
+                &lt;a:Root xmlns:a=&quot;http://webservice.unknow&quot; value=&quot;4&quot;&gt;&#xd;
                         &lt;elem&gt;content&lt;/elem&gt;&#xd;
-                &lt;/Root&gt;&#xd;
+                &lt;/a:Root&gt;&#xd;
         &lt;/e:Body&gt;&#xd;
 &lt;/e:Envelope&gt;</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
@@ -292,9 +292,9 @@
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
                 <stringProp name="Argument.value">&lt;e:Envelope xmlns:e=&quot;http://schemas.xmlsoap.org/soap/envelope/&quot;&gt;&#xd;
         &lt;e:Body&gt;&#xd;
-                &lt;Root xmlns=&quot;http://webservice.unknow&quot; value=&quot;4&quot;&gt;&#xd;
+                &lt;a:Root xmlns:a=&quot;http://webservice.unknow&quot; value=&quot;4&quot;&gt;&#xd;
                         &lt;elem&gt;content&lt;/elem&gt;&#xd;
-                &lt;/Root&gt;&#xd;
+                &lt;/a:Root&gt;&#xd;
         &lt;/e:Body&gt;&#xd;
 &lt;/e:Envelope&gt;</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
@@ -340,9 +340,9 @@
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
                 <stringProp name="Argument.value">&lt;e:Envelope xmlns:e=&quot;http://schemas.xmlsoap.org/soap/envelope/&quot;&gt;&#xd;
         &lt;e:Body&gt;&#xd;
-                &lt;Root xmlns=&quot;http://webservice.unknow&quot; value=&quot;4&quot;&gt;&#xd;
+                &lt;a:Root xmlns:a=&quot;http://webservice.unknow&quot; value=&quot;4&quot;&gt;&#xd;
                         &lt;elem&gt;content&lt;/elem&gt;&#xd;
-                &lt;/Root&gt;&#xd;
+                &lt;/a:Root&gt;&#xd;
         &lt;/e:Body&gt;&#xd;
 &lt;/e:Envelope&gt;</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
