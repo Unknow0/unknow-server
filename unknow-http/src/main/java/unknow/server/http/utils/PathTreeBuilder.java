@@ -42,7 +42,7 @@ public class PathTreeBuilder {
 
 	private final Node root;
 	private final Map<String, ServletConfigImpl> ending;
-	private final Map<String, List<Filter>> endingFilter;
+	private final Map<String, List<FilterConfigImpl>> endingFilter;
 
 	private final DispatcherType dispatcherType;
 
@@ -93,7 +93,7 @@ public class PathTreeBuilder {
 		} else if (!endingFilter.isEmpty()) {
 			ends = new PathTree.Node[endingFilter.size()];
 			int j = 0;
-			for (Entry<String, List<Filter>> e : endingFilter.entrySet())
+			for (Entry<String, List<FilterConfigImpl>> e : endingFilter.entrySet())
 				ends[j++] = new PathTree.Node(e.getKey(), getChain(n.def, n.defFilter, e.getValue()));
 		}
 		Arrays.sort(ends, CMP);
@@ -110,19 +110,19 @@ public class PathTreeBuilder {
 		return c;
 	}
 
-	private FilterChain getChain(ServletConfigImpl s, List<Filter> filters, List<Filter> filters2) { // TODO optimize object creation
+	private FilterChain getChain(ServletConfigImpl s, List<FilterConfigImpl> filters, List<FilterConfigImpl> filters2) {
 		sb.setLength(0);
 		sb.append(s.getName());
 		FilterChain c = chains.get(sb.toString());
 		if (c == null)
 			chains.put(sb.toString(), c = new ServletFilter(s.getServlet()));
-		for (Filter f : filters) {
-			sb.append(',').append(f.getClass().getName());
-			c = getChain(sb.toString(), f, c);
+		for (FilterConfigImpl f : filters) {
+			sb.append(',').append(f.getFilterName());
+			c = getChain(sb.toString(), f.getFilter(), c);
 		}
-		for (Filter f : filters2) {
-			sb.append(',').append(f.getClass().getName());
-			c = getChain(sb.toString(), f, c);
+		for (FilterConfigImpl f : filters2) {
+			sb.append(',').append(f.getFilterName());
+			c = getChain(sb.toString(), f.getFilter(), c);
 		}
 		return c;
 	}
@@ -157,31 +157,30 @@ public class PathTreeBuilder {
 	}
 
 	private void addFilter(FilterConfigImpl f, String url) {
-		Filter filter = f.getFilter();
 		if (url.startsWith("*.")) {
-			List<Filter> list = endingFilter.get(url.substring(1));
+			List<FilterConfigImpl> list = endingFilter.get(url.substring(1));
 			if (list == null)
 				endingFilter.put(url.substring(1), list = new ArrayList<>());
-			if (!list.contains(filter))
-				list.add(filter);
+			if (!list.contains(f))
+				list.add(f);
 		} else if (url.equals("/") || url.equals("/*")) {
-			if (!root.defFilter.contains(filter))
-				root.defFilter.add(filter);
-			if (!root.exactsFilter.contains(filter))
-				root.exactsFilter.add(filter);
+			if (!root.defFilter.contains(f))
+				root.defFilter.add(f);
+			if (!root.exactsFilter.contains(f))
+				root.exactsFilter.add(f);
 		} else if (url.endsWith("/*")) {
 			Node n = addPath(url.substring(1, url.length() - 2).split("/"));
-			if (!n.exactsFilter.contains(filter))
-				n.exactsFilter.add(filter);
-			if (!n.defFilter.contains(filter))
-				n.defFilter.add(filter);
+			if (!n.exactsFilter.contains(f))
+				n.exactsFilter.add(f);
+			if (!n.defFilter.contains(f))
+				n.defFilter.add(f);
 		} else if (url.equals("")) {
-			if (!root.exactsFilter.contains(filter))
-				root.exactsFilter.add(filter);
+			if (!root.exactsFilter.contains(f))
+				root.exactsFilter.add(f);
 		} else if (url.startsWith("/")) {
 			Node n = addPath(url.substring(1).split("/"));
-			if (!n.exactsFilter.contains(filter))
-				n.exactsFilter.add(filter);
+			if (!n.exactsFilter.contains(f))
+				n.exactsFilter.add(f);
 		}
 	}
 
@@ -209,14 +208,14 @@ public class PathTreeBuilder {
 		final Map<String, Node> nexts = new HashMap<>();
 
 		ServletConfigImpl exact;
-		final List<Filter> exactsFilter = new ArrayList<>();
+		final List<FilterConfigImpl> exactsFilter = new ArrayList<>();
 
 		ServletConfigImpl def;
-		final List<Filter> defFilter = new ArrayList<>();
+		final List<FilterConfigImpl> defFilter = new ArrayList<>();
 
 		Node pattern;
 
-		void addDefault(ServletConfigImpl def, List<Filter> defFilter) {
+		void addDefault(ServletConfigImpl def, List<FilterConfigImpl> defFilter) {
 			if (this.def == null)
 				this.def = def;
 			if (this.exact == null)

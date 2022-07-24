@@ -25,6 +25,9 @@ import javax.servlet.SessionCookieConfig;
 import javax.servlet.SessionTrackingMode;
 import javax.servlet.descriptor.JspConfigDescriptor;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import unknow.server.http.data.ArrayMap;
 import unknow.server.http.servlet.session.SessionFactory;
 import unknow.server.http.utils.EventManager;
@@ -34,6 +37,8 @@ import unknow.server.http.utils.ServletManager;
  * @author unknow
  */
 public class ServletContextImpl implements ServletContext {
+	private static final Logger log = LoggerFactory.getLogger(ServletContextImpl.class);
+
 	private static final String SERVER_INFO = "UnknowServer/" + ServletContextImpl.class.getPackage().getImplementationVersion();
 	private final String name;
 	private final String vhost;
@@ -199,25 +204,22 @@ public class ServletContextImpl implements ServletContext {
 
 	@Override
 	public void log(String msg) {
-		// TODO Auto-generated method stub
+		log.info("{}", msg);
 	}
 
 	@Deprecated
 	@Override
 	public void log(Exception exception, String msg) {
-		// TODO Auto-generated method stub
-
+		log.info("{}", msg, exception);
 	}
 
 	@Override
 	public void log(String message, Throwable throwable) {
-		// TODO Auto-generated method stub
-
+		log.info("{}", message, throwable);
 	}
 
 	@Override
 	public String getRealPath(String path) {
-		// TODO Auto-generated method stub
 		return null;
 	}
 

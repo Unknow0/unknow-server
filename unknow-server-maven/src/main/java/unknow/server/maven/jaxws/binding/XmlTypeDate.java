@@ -41,7 +41,7 @@ public class XmlTypeDate extends XmlType<DummyModel> {
 		}
 	}
 
-	private XmlTypeDate(String clazz, Type type) { // TODO
+	private XmlTypeDate(String clazz, Type type) {
 		super(new DummyModel(clazz), "http://www.w3.org/2001/XMLSchema", type.name);
 	}
 

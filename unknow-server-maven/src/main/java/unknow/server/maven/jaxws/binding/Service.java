@@ -6,6 +6,8 @@ package unknow.server.maven.jaxws.binding;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import javax.jws.WebMethod;
 import javax.jws.WebParam;
 import javax.jws.WebResult;
@@ -14,6 +16,7 @@ import javax.jws.soap.SOAPBinding;
 import javax.jws.soap.SOAPBinding.ParameterStyle;
 import javax.jws.soap.SOAPBinding.Style;
 
+import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
 
 import unknow.server.jaxws.UrlPattern;
@@ -37,6 +40,9 @@ public class Service {
 
 	public final Style style;
 	public final ParameterStyle paramStyle;
+
+	public String postConstruct;
+	public String preDestroy;
 
 	public final List<Op> operations = new ArrayList<>();
 
@@ -75,6 +81,23 @@ public class Service {
 				throw new RuntimeException("can't find endpointInterface '" + inter + "'");
 		}
 		service.collectOp(clazz.asClass(), typeLoader);
+
+		for (MethodDeclaration m : serviceClass.getMethods()) {
+			if (m.getAnnotationByClass(PostConstruct.class).isPresent()) {
+				if (m.getParameters().size() != 0)
+					throw new RuntimeException("PostConstruct method can't have parameters on " + clazz.name());
+				if (service.postConstruct != null)
+					throw new RuntimeException("only one method can be annoted with @PostConstruct on " + clazz.name());
+				service.postConstruct = m.getNameAsString();
+			}
+			if (m.getAnnotationByClass(PreDestroy.class).isPresent()) {
+				if (m.getParameters().size() != 0)
+					throw new RuntimeException("@PreDestroy method can't have parameters on " + clazz.name());
+				if (service.postConstruct != null)
+					throw new RuntimeException("only one method can be annoted with @PreDestroy on " + clazz.name());
+				service.preDestroy = m.getNameAsString();
+			}
+		}
 		return service;
 	}
 

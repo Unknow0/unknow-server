@@ -121,7 +121,6 @@ public class JaxwsServletBuilder {
 				new MethodCallExpr(new TypeExpr(types.get(LoggerFactory.class)), "getLogger", Utils.list(new ClassExpr(types.get(servlet)))), PSF);
 
 		servlet.addFieldWithInitializer(types.get(serviceClass), "WS", new ObjectCreationExpr(null, types.get(serviceClass), Utils.list()), PSF);
-		// TODO life cycle @PostConstruct, @PreDestroy
 
 		Collections.sort(service.operations, (o1, o2) -> o1.sig().compareTo(o2.sig()));
 		servlet.addFieldWithInitializer(types.get(String[].class), "OP_SIG", Utils.array(types.get(String.class), service.operations.size()), PSF);
@@ -159,7 +158,6 @@ public class JaxwsServletBuilder {
 			else {
 				b.addStatement(
 						new AssignExpr(new VariableDeclarationExpr(types.get(Object.class), "ro"), new MethodCallExpr(new NameExpr("WS"), o.m, param), Operator.ASSIGN));
-//			TODO if(o.result.header)
 				e = new ObjectCreationExpr(null, types.get(Element.class),
 						Utils.list(new StringLiteralExpr(o.result.ns), new StringLiteralExpr(o.result.name), new NameExpr("ro")));
 			}
@@ -173,7 +171,7 @@ public class JaxwsServletBuilder {
 				// TODO out param
 			}
 			if (e != null)
-				b.addStatement(new MethodCallExpr(new NameExpr("r"), "addBody", Utils.list(e)));
+				b.addStatement(new MethodCallExpr(new NameExpr("r"), o.result != null && o.result.header ? "addHeader" : "addBody", Utils.list(e)));
 			b.addStatement(new ReturnStmt(new NameExpr("r")));
 
 			init.addStatement(new AssignExpr(new ArrayAccessExpr(new NameExpr("OP_CALL"), new IntegerLiteralExpr("" + oi)),
@@ -182,6 +180,11 @@ public class JaxwsServletBuilder {
 		}
 
 		generateHandlers(types);
+
+		if (service.postConstruct != null)
+			servlet.addMethod("init", PF).addMarkerAnnotation(Override.class).getBody().get().addStatement(new MethodCallExpr(new NameExpr("WS"), service.postConstruct));
+		if (service.preDestroy != null)
+			servlet.addMethod("destroy", PF).addMarkerAnnotation(Override.class).getBody().get().addStatement(new MethodCallExpr(new NameExpr("WS"), service.preDestroy));
 
 		byte[] wsdl = new WsdlBuilder(service, baseUrl).build();
 		servlet.addFieldWithInitializer(types.get(byte[].class), "WSDL", Utils.byteArray(wsdl), PSF);
@@ -212,7 +215,6 @@ public class JaxwsServletBuilder {
 												.addStatement(new MethodCallExpr(null, "fault", Utils.list(new NameExpr("res"), new StringLiteralExpr("unknown request"))))
 												.addStatement(new ReturnStmt()),
 										null))
-								// TODO if i<0 return soap fault
 								.addStatement(
 										new MethodCallExpr(new NameExpr("Marshallers"), "marshall",
 												Utils.list(

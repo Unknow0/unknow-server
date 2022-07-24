@@ -11,7 +11,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import javax.xml.bind.annotation.XmlAccessOrder;
 import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorOrder;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
@@ -26,6 +28,7 @@ import unknow.server.maven.model.AnnotationModel;
 import unknow.server.maven.model.ClassModel;
 import unknow.server.maven.model.FieldModel;
 import unknow.server.maven.model.MethodModel;
+import unknow.server.maven.model.PrimitiveModel;
 
 /**
  * @author unknow
@@ -87,9 +90,9 @@ public class XmlObject extends XmlType<ClassModel> {
 		if (a != null)
 			type = a.value("value").map(XmlAccessType::valueOf).orElse(XmlAccessType.PUBLIC_MEMBER);
 
-		List<String> propOrder = null;
+		List<String> propOrder = Collections.emptyList();
 		if (a != null)
-			propOrder = a.values("propOrder").map(Arrays::asList).orElse(null);
+			propOrder = a.values("propOrder").map(Arrays::asList).orElse(propOrder);
 
 		Map<String, FieldModel> fields = new HashMap<>();
 
@@ -107,16 +110,17 @@ public class XmlObject extends XmlType<ClassModel> {
 				continue;
 			String setter = "set" + Character.toUpperCase(f.name().charAt(0)) + f.name().substring(1);
 			String getter = "get" + Character.toUpperCase(f.name().charAt(0)) + f.name().substring(1);
-			// TODO check also is* for boolean
 
 			Optional<MethodModel> s = c.methods().stream().filter(m -> m.name().equals(setter))
-					.filter(m -> m.parameters().size() == 1 && m.parameters().get(0).type().name().equals(f.type().name()))
-					.findFirst();
-			Optional<MethodModel> g = c.methods().stream().filter(m -> m.name().equals(getter)).filter(m -> m.parameters().size() == 0)
-					.findFirst();
+					.filter(m -> m.parameters().size() == 1 && m.parameters().get(0).type().name().equals(f.type().name())).findFirst();
+			Optional<MethodModel> g = c.methods().stream().filter(m -> m.name().equals(getter)).filter(m -> m.parameters().size() == 0).findFirst();
 			if (!s.isPresent())
 				throw new RuntimeException("missing setter for '" + f.name() + "' field in '" + c.name() + "' class");
-			if (!g.isPresent()) // TODO check is* if boolean
+			if (!g.isPresent() && (f.type() == PrimitiveModel.BOOLEAN || f.type().name().equals("java.lang.Boolean"))) {
+				String is = "is" + Character.toUpperCase(f.name().charAt(0)) + f.name().substring(1);
+				g = c.methods().stream().filter(m -> m.name().equals(is)).filter(m -> m.parameters().size() == 0).findFirst();
+			}
+			if (!g.isPresent())
 				throw new RuntimeException("missing setter for '" + f.name() + "' field in '" + c.name() + "' class");
 
 			fields.put(f.name(), f);
@@ -169,7 +173,10 @@ public class XmlObject extends XmlType<ClassModel> {
 				}
 			}
 		}
-		if (propOrder != null) {
+
+		XmlAccessOrder defaultOrder = a == null ? XmlAccessOrder.UNDEFINED : a.value("value").map(s -> XmlAccessOrder.UNDEFINED).orElse(XmlAccessOrder.UNDEFINED);
+
+		if (!propOrder.isEmpty() || defaultOrder != XmlAccessOrder.UNDEFINED) {
 			List<String> order = propOrder;
 			Collections.sort(elems, (o, b) -> {
 				String an = Character.toLowerCase(o.getter.charAt(3)) + o.getter.substring(4);
@@ -179,7 +186,7 @@ public class XmlObject extends XmlType<ClassModel> {
 				if (bi >= 0 && ai >= 0)
 					return ai - bi;
 				if (ai < 0 && bi < 0)
-					return 0; // TODO default ordering @XmlAccessorOrder
+					return defaultOrder == XmlAccessOrder.ALPHABETICAL ? an.compareTo(bn) : 0;
 				if (bi < 0)
 					return -1;
 				return 1;

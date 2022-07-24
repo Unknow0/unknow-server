@@ -358,8 +358,8 @@ public class ServletResponseImpl implements HttpServletResponse {
 
 	@Override
 	public void setLocale(Locale loc) {
-		// TODO check encoding list
-		ctx.getEncoding(loc);
+		if (charset == null)
+			setCharacterEncoding(ctx.getEncoding(loc));
 		this.locale = loc;
 	}
 

@@ -6,6 +6,7 @@ package unknow.server.http.servlet;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -40,6 +41,9 @@ import javax.servlet.http.HttpSession;
 import javax.servlet.http.HttpUpgradeHandler;
 import javax.servlet.http.Part;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import unknow.server.http.HttpHandler;
 import unknow.server.http.data.ArrayMap;
 import unknow.server.http.servlet.in.ChunckedInputStream;
@@ -51,6 +55,8 @@ import unknow.server.http.servlet.session.SessionFactory;
  * @author unknow
  */
 public class ServletRequestImpl implements HttpServletRequest {
+	private static final Logger log = LoggerFactory.getLogger(ServletRequestImpl.class);
+
 	private static final Cookie[] EMPTY = new Cookie[0];
 
 	private final ArrayMap<Object> attributes = new ArrayMap<>();
@@ -149,17 +155,52 @@ public class ServletRequestImpl implements HttpServletRequest {
 		parameter = new HashMap<>();
 		Map<String, List<String>> p = new HashMap<>(queryParam);
 
-		// TODO
-		if ("POST".equals(getMethod()) && "application/x-www-form-urlencoded".equalsIgnoreCase(getContentType()))
-			parseContentParam(p);
+		try {
+			if ("POST".equals(getMethod()) && "application/x-www-form-urlencoded".equalsIgnoreCase(getContentType()))
+				parseContentParam(p);
+		} catch (IOException e) {
+			log.error("failed to parse params from content", e);
+		}
 
 		String[] s = new String[0];
 		for (Entry<String, List<String>> e : p.entrySet())
 			parameter.put(e.getKey(), e.getValue().toArray(s));
 	}
 
-	private void parseContentParam(Map<String, List<String>> p) {
-		// TODO read content
+	/**
+	 * @param p
+	 * @throws IOException
+	 */
+	private void parseContentParam(Map<String, List<String>> p) throws IOException {
+		BufferedReader r = getReader();
+		int c;
+		String key;
+		StringBuilder sb = new StringBuilder();
+		do {
+			c = readParam(sb, r, true);
+			key = sb.toString();
+			sb.setLength(0);
+			if (c == '=')
+				c = readParam(sb, r, false);
+
+			List<String> list = p.get(key);
+			if (list == null)
+				p.put(key, list = new ArrayList<>(1));
+			list.add(sb.toString());
+			sb.setLength(0);
+		} while (c != -1);
+	}
+
+	private int readParam(StringBuilder sb, Reader r, boolean key) throws IOException {
+		int c;
+		while ((c = r.read()) != -1) {
+			if (c == '=' || key && c == '&')
+				return c;
+			if (c == '%') // TODO decode
+				;
+			sb.append((char) c);
+		}
+		return c;
 	}
 
 	/**
@@ -533,7 +574,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 			return sessionFromCookie;
 		if (sessionFromUrl != null)
 			return sessionFromUrl;
-//		ctx.getEffectiveSessionTrackingModes() TODO
+		ctx.getEffectiveSessionTrackingModes(); // TODO manage other session traking mode
 		SessionCookieConfig cookieCfg = ctx.getSessionCookieConfig();
 		if (cookieCfg != null) {
 			String name = cookieCfg.getName();
