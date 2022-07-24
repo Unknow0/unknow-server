@@ -1,6 +1,7 @@
 {
 	"bundles": [
-		{"name": "javax.servlet.http.LocalStrings"}
+		{"name": "javax.servlet.http.LocalStrings"},
+		{"name": "javax.servlet.LocalStrings"}
 	],
 	"resources": {
 		"includes": [
