@@ -26,7 +26,7 @@ public class DefaultOptionProvider implements IDefaultValueProvider {
 	 */
 	public DefaultOptionProvider() throws IOException {
 		prop = new Properties();
-		try (InputStream is = this.getClass().getResourceAsStream("/nioserver.properties")) {
+		try (InputStream is = this.getClass().getResourceAsStream("/META-INF/nioserver.properties")) {
 			if (is == null)
 				return;
 			try (Reader r = new InputStreamReader(is, StandardCharsets.UTF_8)) {
