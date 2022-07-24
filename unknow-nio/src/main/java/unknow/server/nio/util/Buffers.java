@@ -230,6 +230,7 @@ public class Buffers {
 				System.arraycopy(head.b, head.o, buf, o, r);
 				len -= r;
 				v += r;
+				o += r;
 				if (r == head.l) {
 					head = Chunk.free(head);
 					if (head == null)

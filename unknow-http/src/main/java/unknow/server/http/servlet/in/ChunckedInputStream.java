@@ -5,14 +5,9 @@ package unknow.server.http.servlet.in;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 
 import javax.servlet.ReadListener;
 import javax.servlet.ServletInputStream;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.WriteListener;
-
-import unknow.server.http.servlet.ServletResponseImpl;
 
 /**
  * Http chuncked entity
@@ -20,146 +15,97 @@ import unknow.server.http.servlet.ServletResponseImpl;
  * @author unknow
  */
 public class ChunckedInputStream extends ServletInputStream {
-	private static final byte[] CRLF = new byte[] { '\r', '\n' };
-	private static final byte[] END = new byte[] { '0', '\r', '\n', '\r', '\n' };
-	private final InputStream out;
-	private WriteListener listener;
+	private static final int START = 0;
+	private static final int CHUNK = 1;
+	private static final int DONE = 2;
 
-	private byte[] buf;
-	private int o = 0;
+	private final InputStream in;
 
-	private boolean closed;
+	private ReadListener listener;
+
+	private int step = 0;
+	private int chunkLen;
+	private final byte[] b = new byte[4096];
+	private int l;
+	private int o;
+
+	private final StringBuilder sb = new StringBuilder();
 
 	public ChunckedInputStream(InputStream in) {
-		this.out = in;
+		this.in = in;
 	}
-//
-//	private void ensureOpen() throws IOException {
-//		if (closed)
-//			throw new IOException("stream closed");
-//	}
-//
-//	@Override
-//	public boolean isReady() {
-//		return true;
-//	}
-//
-//	@Override
-//	public void setWriteListener(WriteListener writeListener) {
-//		this.listener = writeListener;
-//		if (listener != null) {
-//			try {
-//				listener.onWritePossible();
-//			} catch (Throwable t) {
-//				listener.onError(t);
-//			}
-//		}
-//	}
-//
-//	@Override
-//	public boolean isChuncked() {
-//		return true;
-//	}
-//
-//	@Override
-//	public void close() throws IOException {
-//		if (closed)
-//			return;
-//		flush();
-//		out.write(END);
-//		out.flush();
-//		closed = true;
-//	}
-//
-//	@Override
-//	public void flush() throws IOException {
-//		if (o == 0)
-//			return;
-//		res.commit();
-//		out.write(Integer.toString(o, 16).getBytes());
-//		out.write(CRLF);
-//		out.write(buf, 0, o);
-//		o = 0;
-//		out.write(CRLF);
-//	}
-//
-//	@Override
-//	public int getBufferSize() {
-//		return buf.length;
-//	}
-//
-//	@Override
-//	public void resetBuffers() {
-//		o = 0;
-//	}
-//
-//	@Override
-//	public void setBufferSize(int size) {
-//		byte[] b = new byte[size];
-//		if (o > 0)
-//			System.arraycopy(buf, 0, b, 0, o);
-//		buf = b;
-//	}
-//
-//	@Override
-//	public void write(int b) throws IOException {
-//		ensureOpen();
-//		buf[o] = (byte) b;
-//		writed(1);
-//	}
-//
-//	@Override
-//	public void write(byte[] b) throws IOException {
-//		ensureOpen();
-//		write(b, 0, b.length);
-//	}
-//
-//	@Override
-//	public void write(byte[] b, int off, int len) throws IOException {
-//		ensureOpen();
-//		if (o != 0) {
-//			int l = Math.min(len, buf.length - o);
-//			System.arraycopy(b, off, buf, o, l);
-//			writed(l);
-//			len -= l;
-//		}
-//		if (len == 0)
-//			return;
-//		if (len > buf.length) {
-//			res.commit();
-//			out.write(b, off, len);
-//		} else {
-//			System.arraycopy(b, off, buf, o, len);
-//			writed(len);
-//		}
-//	}
-//
-//	private void writed(int i) throws IOException {
-//		if ((o += i) == buf.length)
-//			flush();
-//	}
 
 	@Override
 	public boolean isFinished() {
-		// TODO Auto-generated method stub
-		return false;
+		return step == DONE;
 	}
 
 	@Override
 	public boolean isReady() {
-		// TODO Auto-generated method stub
-		return false;
+		return true;
 	}
 
 	@Override
-	public void setReadListener(ReadListener readListener) {
-		// TODO Auto-generated method stub
-		
+	public void setReadListener(ReadListener listener) {
+		this.listener = listener;
+	}
+
+	private void readData() throws IOException {
+		o = 0;
+		l = in.read(b, 0, Math.min(b.length, chunkLen));
+		chunkLen -= l;
+		if (chunkLen == 0) {
+			step = START;
+			if (in.read() != '\r')
+				throw new IOException("malformed chunked stream");
+			if (in.read() != '\n')
+				throw new IOException("malformed chunked stream");
+		}
+	}
+
+	private void ensureData() throws IOException {
+		if (o < l || step == DONE)
+			return;
+		if (step == CHUNK) {
+			readData();
+			return;
+		}
+		for (;;) {
+			int c = in.read();
+			if (c == -1)
+				throw new IOException("connection reset by peer");
+			if (c == '\r') {
+				c = in.read();
+				if (c != '\n')
+					throw new IOException("malformed chunked stream");
+				break;
+			}
+			sb.append((char) c);
+		}
+		chunkLen = Integer.parseInt(sb.toString(), 16);
+		sb.setLength(0);
+		if (chunkLen == 0) {
+			step = DONE;
+			return;
+		}
+		step = CHUNK;
+		readData();
 	}
 
 	@Override
 	public int read() throws IOException {
-		// TODO Auto-generated method stub
-		return 0;
+		ensureData();
+		return step == DONE ? -1 : b[o++];
+	}
+
+	@Override
+	public int read(byte[] buf, int off, int len) throws IOException {
+		ensureData();
+		if (step == DONE)
+			return -1;
+		len = Math.min(l, len);
+		System.arraycopy(b, o, buf, off, len);
+		o += len;
+		return len;
 	}
 }

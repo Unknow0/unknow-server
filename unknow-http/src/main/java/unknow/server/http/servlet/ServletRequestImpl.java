@@ -194,7 +194,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 	private int readParam(StringBuilder sb, Reader r, boolean key) throws IOException {
 		int c;
 		while ((c = r.read()) != -1) {
-			if (c == '=' || key && c == '&')
+			if (c == '&' || key && c == '=')
 				return c;
 			if (c == '%') // TODO decode
 				;
@@ -342,14 +342,18 @@ public class ServletRequestImpl implements HttpServletRequest {
 	public ServletInputStream getInputStream() throws IOException {
 		if (reader != null)
 			throw new IllegalStateException("getReader() called");
-		return input = createInput();
+		if (input == null)
+			input = createInput();
+		return input;
 	}
 
 	@Override
 	public BufferedReader getReader() throws IOException {
 		if (input != null)
 			throw new IllegalStateException("getInputStream() called");
-		return reader = new BufferedReader(new InputStreamReader(createInput(), getCharacterEncoding()));
+		if (reader == null)
+			reader = new BufferedReader(new InputStreamReader(createInput(), getCharacterEncoding()));
+		return reader;
 	}
 
 	@Override
@@ -684,7 +688,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 	}
 
 	private ServletInputStream createInput() {
-		String tr = getHeader("transfert-encoding");
+		String tr = getHeader("transfer-encoding");
 		if ("chunked".equalsIgnoreCase(tr))
 			return new ChunckedInputStream(req.getIn());
 		long l = getContentLengthLong();

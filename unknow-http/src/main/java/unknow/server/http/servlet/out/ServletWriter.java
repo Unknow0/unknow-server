@@ -79,7 +79,7 @@ public final class ServletWriter<T extends ServletOutputStream & Output> extends
 	public void write(String str, int off, int len) throws IOException {
 		while (len > 0) {
 			int l = Math.min(len, cb.remaining());
-			cb.put(str, off, l);
+			cb.put(str, off, off + l);
 			cb.flip();
 			enc.encode(cb, bb, true);
 			out.write(buf, 0, bb.position());
