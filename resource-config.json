@@ -5,7 +5,7 @@
 	],
 	"resources": {
 		"includes": [
-			{"pattern": "nioserver.properties"}
+			{"pattern": "META-INF/nioserver.properties"}
 		]
 	}
 }
