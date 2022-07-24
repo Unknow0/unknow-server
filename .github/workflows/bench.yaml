@@ -18,7 +18,7 @@ jobs:
     - name: build
       run: mvn -B package
     - name: build native image 
-      run: native-image --install-exit-handlers --static --no-fallback -jar unknow-http-test/target/server.jar server-native
+      run: native-image --install-exit-handlers --static --no-fallback -H:ResourceConfigurationFiles=resource-config.json -jar unknow-http-test/target/server.jar server-native
 
     - name: prepare test
       run: bash bench/prepare.sh
@@ -40,6 +40,11 @@ jobs:
       with: 
         name: unknow
         path: log
+    - uses: actions/upload-artifact@v3
+      if: always()
+      with: 
+        name: native
+        path: native
     - uses: actions/upload-artifact@v3
       if: always()
       with: 

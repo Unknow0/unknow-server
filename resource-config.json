@@ -1,0 +1,10 @@
+{
+	"bundles": [
+		{"name": "javax.servlet.http.LocalStrings"}
+	],
+	"resources": {
+		"includes": [
+			{"pattern": "nioserver.properties"}
+		]
+	}
+}

@@ -11,7 +11,7 @@ unknow_stop() {
 	sleep 2
 }
 native_start() {
-	./server-native >log 2>log &
+	./server-native >native 2>native &
 	pid=$!
 	sleep 5
 }
