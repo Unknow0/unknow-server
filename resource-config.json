@@ -2,7 +2,7 @@
 	"bundles": [
 		{"name": "javax.servlet.http.LocalStrings"},
 		{"name": "javax.servlet.LocalStrings"},
-		{"name": "org.apache.cxf.transport.servlet.messages"}
+		{"name": "org.apache.cxf.transport.servlet.Messages"}
 	],
 	"resources": {
 		"includes": [
