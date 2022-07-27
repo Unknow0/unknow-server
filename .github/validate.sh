@@ -5,4 +5,4 @@ pid=$!
 trap "kill -9 $pid" EXIT
 sleep 5
 
-exec .github/http_test.sh http://127.0.0.1:8080
+bash .github/http_test.sh http://127.0.0.1:8080
