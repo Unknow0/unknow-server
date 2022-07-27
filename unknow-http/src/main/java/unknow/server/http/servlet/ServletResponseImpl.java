@@ -347,7 +347,8 @@ public class ServletResponseImpl implements HttpServletResponse {
 		status = 200;
 		List<String> list = headers.get("connection");
 		headers.clear();
-		headers.put("connection", list);
+		if (list != null)
+			headers.put("connection", list);
 		servletOut = null;
 	}
 

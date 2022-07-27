@@ -315,6 +315,8 @@ public class JaxwsServletBuilder {
 					.addStatement(new ReturnStmt(new ArrayAccessExpr(new MethodCallExpr(new TypeExpr(types.get(e.javaType().name())), "values"), new NameExpr("i"))));
 		}
 		String k = type.isSimple() ? "" : type.javaType().name();
+		if (type instanceof XmlOperation)
+			k = type.name();
 		NameExpr nameExpr = saxHandlers.get(k);
 		if (nameExpr != null)
 			return nameExpr;
