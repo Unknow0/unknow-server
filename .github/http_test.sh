@@ -1,6 +1,6 @@
 #!/bin/sh
 
-URL=http://127.0.0.1:8080
+URL="$1"
 
 die() { echo $@; exit 1; }
 http_code() { curl -o /dev/null -s -w '%{http_code}' "$URL$1"; }
@@ -58,11 +58,6 @@ xml_parse()
 		[[ "$c" ]] && echo "$c"
 	done
 	}
-
-java -jar unknow-http-test/target/server.jar &
-pid=$!
-trap "kill -9 $pid" EXIT
-sleep 5
 
 [ "$(http_code "/error")" = "500" ] || die 'get /error'
 [ "$(http_code "/error?code=503")" = "503" ] || die 'get /error?code'

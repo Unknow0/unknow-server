@@ -1,9 +1,9 @@
 <e:Envelope xmlns:e="http://schemas.xmlsoap.org/soap/envelope/">
 	<e:Body>
-		<wrapped xmlns="http://test.unknow">
+		<b:wrapped xmlns:b="http://test.unknow">
 			<a:Root xmlns:a="http://webservice.unknow" value="4">
 				<elem>content</elem>
 			</a:Root>
-		</wrapped>
+		</b:wrapped>
 	</e:Body>
 </e:Envelope>
