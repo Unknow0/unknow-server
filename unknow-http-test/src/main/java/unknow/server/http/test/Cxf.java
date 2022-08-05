@@ -23,9 +23,9 @@ public class Cxf extends CXFNonSpringServlet {
 			super.loadBus(servletConfig);
 			BusFactory.setDefaultBus(getBus());
 
-			Endpoint.create(new Webservice()).publish("/ws");
+			Endpoint.publish("/ws", new Webservice());
 		} catch (Exception e) {
-			// ignore
+			e.printStackTrace();
 		}
 	}
 }

@@ -24,6 +24,15 @@ public interface TypeModel extends WithAnnotation {
 	}
 
 	/**
+	 * @return package
+	 */
+	default String packageName() {
+		String name = name();
+		int i = name.lastIndexOf(".");
+		return i < 0 ? "" : name.substring(0, i);
+	}
+
+	/**
 	 * @return true if it's a primitive type
 	 */
 	default boolean isPrimitive() {

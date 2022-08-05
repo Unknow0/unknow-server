@@ -120,7 +120,7 @@ public class JaxMarshallerBuilder {
 		processed.add(type.javaType());
 
 		BlockStmt b = new BlockStmt();
-		for (XmlField a : type.attrs()) {
+		for (XmlField<?> a : type.attrs()) {
 			TypeModel jtype = a.type().javaType();
 			if (!a.type().javaType().isPrimitive()) {
 				b.addStatement(Utils.assign(types.get(jtype.name()), a.name(), new MethodCallExpr(new NameExpr("t"), a.getter)));
@@ -132,7 +132,7 @@ public class JaxMarshallerBuilder {
 				b.addStatement(new MethodCallExpr(new NameExpr("w"), "attribute",
 						Utils.list(new StringLiteralExpr(a.name()), new StringLiteralExpr(a.ns()), a.type().toString(types, new MethodCallExpr(new NameExpr("t"), a.getter)))));
 		}
-		for (XmlField f : type.elems()) {
+		for (XmlField<?> f : type.elems()) {
 			b.addStatement(new MethodCallExpr(new NameExpr("w"), "startElement", Utils.list(new StringLiteralExpr(f.name()), new StringLiteralExpr(f.ns()))));
 			if (f.type() instanceof XmlObject) {
 				XmlObject t = (XmlObject) f.type();
@@ -157,7 +157,7 @@ public class JaxMarshallerBuilder {
 			b.addStatement(new MethodCallExpr(new NameExpr("w"), "endElement", Utils.list(new StringLiteralExpr(f.name()), new StringLiteralExpr(f.ns()))));
 		}
 		if (type.value() != null) {
-			XmlField f = type.value();
+			XmlField<?> f = type.value();
 			if (!f.type().javaType().isPrimitive()) {
 				b.addStatement(Utils.assign(types.get(f.type().javaType().name()), "$v$", new MethodCallExpr(new NameExpr("t"), f.getter)));
 				b.addStatement(

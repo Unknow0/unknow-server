@@ -13,7 +13,6 @@ import java.util.Optional;
 
 import javax.xml.bind.annotation.XmlAccessOrder;
 import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorOrder;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
@@ -36,9 +35,9 @@ import unknow.server.maven.model.PrimitiveModel;
 public class XmlObject extends XmlType<ClassModel> {
 	private final XmlTypeLoader loader;
 	private final Factory factory;
-	protected List<XmlField> elems;
-	protected List<XmlField> attrs;
-	protected XmlField value;
+	protected List<XmlField<?>> elems;
+	protected List<XmlField<?>> attrs;
+	protected XmlField<?> value;
 
 	public XmlObject(ClassModel clazz, String ns, String name, Factory factory, XmlTypeLoader loader) {
 		super(clazz, ns, name);
@@ -64,19 +63,19 @@ public class XmlObject extends XmlType<ClassModel> {
 		return false;
 	}
 
-	public List<XmlField> elems() {
+	public List<XmlField<?>> elems() {
 		if (elems == null)
 			init();
 		return elems;
 	}
 
-	public List<XmlField> attrs() {
+	public List<XmlField<?>> attrs() {
 		if (elems == null)
 			init();
 		return attrs;
 	}
 
-	public XmlField value() {
+	public XmlField<?> value() {
 		if (elems == null)
 			init();
 		return value;
@@ -156,20 +155,20 @@ public class XmlObject extends XmlType<ClassModel> {
 				if (v != null) {
 					if (value != null)
 						throw new RuntimeException("multiple value for '" + c.name() + "'");
-					value = new XmlField(t, "", "", m.name(), setter);
+					value = new XmlField<>(t, "", "", m.name(), setter);
 				} else if (attr != null) {
 					if (!t.isSimple())
 						throw new RuntimeException("only simple type allowed in attribute in '" + c.name() + "'");
 					n = attr.value("name").map(i -> "##default".equals(i) ? null : i).orElse(n);
 					String ns = attr.value("namespace").map(i -> "##default".equals(i) ? null : i).orElse("");
-					attrs.add(new XmlField(t, ns, n, m.name(), setter));
+					attrs.add(new XmlField<>(t, ns, n, m.name(), setter));
 				} else {
 					String ns = "";
 					if (elem != null) {
 						n = elem.value("name").map(i -> "##default".equals(i) ? null : i).orElse(n);
 						ns = elem.value("namespace").map(i -> "##default".equals(i) ? null : i).orElse("");
 					}
-					elems.add(new XmlField(t, ns, n, m.name(), setter));
+					elems.add(new XmlField<>(t, ns, n, m.name(), setter));
 				}
 			}
 		}
@@ -210,11 +209,11 @@ public class XmlObject extends XmlType<ClassModel> {
 		}
 	}
 
-	public static class XmlField extends XmlElem {
+	public static class XmlField<T extends XmlType<?>> extends XmlElem<T> {
 		public final String getter;
 		public final String setter;
 
-		public XmlField(XmlType<?> type, String ns, String name, String getter, String setter) {
+		public XmlField(T type, String ns, String name, String getter, String setter) {
 			super(type, ns, name);
 			this.getter = getter;
 			this.setter = setter;

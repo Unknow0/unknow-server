@@ -159,7 +159,7 @@ public class JaxwsServletBuilder {
 				b.addStatement(
 						new AssignExpr(new VariableDeclarationExpr(types.get(Object.class), "ro"), new MethodCallExpr(new NameExpr("WS"), o.m, param), Operator.ASSIGN));
 				e = new ObjectCreationExpr(null, types.get(Element.class),
-						Utils.list(new StringLiteralExpr(o.result.ns), new StringLiteralExpr(o.result.name), new NameExpr("ro")));
+						Utils.list(new StringLiteralExpr(o.result.ns()), new StringLiteralExpr(o.result.name()), new NameExpr("ro")));
 			}
 			if (o.paramStyle == ParameterStyle.WRAPPED) {
 				NodeList<Expression> p = Utils.list(new StringLiteralExpr(o.ns), new StringLiteralExpr(o.name + "Response"));
@@ -252,25 +252,25 @@ public class JaxwsServletBuilder {
 		for (Service.Op o : service.operations) {
 			System.out.println("building " + o);
 
-			List<XmlField> childs = new ArrayList<>();
+			List<XmlField<?>> childs = new ArrayList<>();
 
 			if (o.result != null) {
-				if (o.result.type instanceof XmlObject)
-					mbuilder.add((XmlObject) o.result.type);
-				else if (o.result.type instanceof XmlEnum)
-					mbuilder.add((XmlEnum) o.result.type);
+				if (o.result.type() instanceof XmlObject)
+					mbuilder.add((XmlObject) o.result.type());
+				else if (o.result.type() instanceof XmlEnum)
+					mbuilder.add((XmlEnum) o.result.type());
 			}
 
 			for (Service.Param p : o.params) {
 				if (p.header)
-					header.addElem(new XmlField(p.type, p.ns, p.name, "", "addHeader"));
+					header.addElem(new XmlField<>(p.type(), p.ns(), p.name(), "", "addHeader"));
 				else if (o.paramStyle == ParameterStyle.WRAPPED)
-					childs.add(new XmlField(p.type, p.ns, p.name, "", "add"));
+					childs.add(new XmlField<>(p.type(), p.ns(), p.name(), "", "add"));
 				else
-					body.addElem(new XmlField(p.type, p.ns, p.name, "", "addBody"));
+					body.addElem(new XmlField<>(p.type(), p.ns(), p.name(), "", "addBody"));
 			}
 			if (o.paramStyle == ParameterStyle.WRAPPED)
-				body.addElem(new XmlField(new XmlOperation(o.ns, o.name, childs), service.ns, o.name, "", "addBody"));
+				body.addElem(new XmlField<>(new XmlOperation(o.ns, o.name, childs), service.ns, o.name, "", "addBody"));
 		}
 
 		ClassOrInterfaceType t = types.get(SaxHandler.class, types.get(SaxContext.class));
@@ -332,7 +332,7 @@ public class JaxwsServletBuilder {
 
 	private static class XmlOperation extends XmlObject {
 
-		public XmlOperation(String ns, String name, List<XmlField> elems) {
+		public XmlOperation(String ns, String name, List<XmlField<?>> elems) {
 			super(new JvmClass(null, OperationWrapper.class), ns, name, new Factory(".qname", null), null);
 			this.elems = elems;
 			this.attrs = Collections.emptyList();

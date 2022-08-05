@@ -7,10 +7,17 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import javax.jws.soap.SOAPBinding.ParameterStyle;
 
@@ -19,6 +26,7 @@ import unknow.server.jaxws.XMLOutput;
 import unknow.server.maven.jaxws.binding.Service;
 import unknow.server.maven.jaxws.binding.Service.Op;
 import unknow.server.maven.jaxws.binding.Service.Param;
+import unknow.server.maven.jaxws.binding.XmlElem;
 import unknow.server.maven.jaxws.binding.XmlEnum;
 import unknow.server.maven.jaxws.binding.XmlEnum.XmlEnumEntry;
 import unknow.server.maven.jaxws.binding.XmlObject;
@@ -39,12 +47,32 @@ public class WsdlBuilder {
 	private final XMLOutput x;
 	private final Map<String, String> nsPrefix;
 
+	private final Map<String, Collection<XmlElem<?>>> elems;
+	private final Map<String, Collection<XmlType<?>>> types;
+
 	public WsdlBuilder(Service service, String address) {
-		Map<String, Integer> collectNs = collectNs(service);
+		this.types = new HashMap<>();
+		this.elems = new HashMap<>();
+		collectElems(service, t -> {
+			Collection<XmlType<?>> c = types.get(t.ns());
+			if (c == null)
+				types.put(t.ns(), c = new ArrayList<>());
+			c.add(t);
+		}, e -> {
+			Collection<XmlElem<?>> c = elems.get(e.ns());
+			if (c == null)
+				elems.put(e.ns(), c = new ArrayList<>());
+			c.add(e);
+		});
+		Map<String, Integer> collectNs = new HashMap<>();
+		for (Entry<String, Collection<XmlElem<?>>> e : elems.entrySet())
+			collectNs.merge(e.getKey(), e.getValue().size(), Integer::sum);
+		for (Entry<String, Collection<XmlType<?>>> e : types.entrySet())
+			collectNs.merge(e.getKey(), e.getValue().size(), Integer::sum);
 		collectNs.merge(XS, 1, Integer::sum);
 		collectNs.merge(WS, 1, Integer::sum);
 		collectNs.merge(WP, 1, Integer::sum);
-		nsPrefix = XMLNsCollector.buildNsMapping(collectNs);
+		this.nsPrefix = XMLNsCollector.buildNsMapping(collectNs);
 
 		this.service = service;
 		this.address = address;
@@ -57,8 +85,21 @@ public class WsdlBuilder {
 			x.startElement("definitions", WS);
 			x.attribute("targetNamespace", "", service.ns);
 			x.startElement("types", WS);
-			for (String s : nsPrefix.keySet())
-				appendSchema(s);
+
+			for (String ns : nsPrefix.keySet()) {
+				if (XS.equals(ns) || WS.equals(ns) || WP.equals(ns))
+					continue;
+				x.startElement("schema", XS);
+				x.attribute("targetNamespace", "", ns);
+				x.attribute("elementFormDefault", "", "qualified");
+
+				for (XmlType<?> t : types.getOrDefault(ns, Collections.emptyList()))
+					appendType(t);
+				for (XmlElem<?> e : elems.getOrDefault(ns, Collections.emptyList()))
+					appendElem(e, ns);
+
+				x.endElement("schema", XS);
+			}
 			x.endElement("types", WS);
 
 			for (Op o : service.operations)
@@ -94,69 +135,70 @@ public class WsdlBuilder {
 	 * @param s
 	 * @throws IOException
 	 */
-	private void appendSchema(String ns) throws IOException {
-		if (XS.equals(ns) || !schemaHasData(service, ns))
-			return;
-		x.startElement("schema", XS);
-		x.attribute("targetNamespace", "", ns);
-
-		Set<XmlType<?>> set = new HashSet<>();
-		for (Service.Op o : service.operations) {
-			if (o.result != null)
-				appendType(o.result.type, ns, set);
-			for (Service.Param p : o.params)
-				appendType(p.type, ns, set);
-
-			if (o.paramStyle == ParameterStyle.WRAPPED) {
-				if (!ns.equals(o.ns))
-					continue;
-				x.startElement("element", XS);
-				x.attribute("name", "", o.name);
-				x.startElement("complexType", XS);
-				x.startElement("sequence", XS);
-				for (Param p : o.params) {
-					x.startElement("element", XS);
-					x.attribute("name", "", p.name);
-					x.attribute("type", "", name(p.type));
-					x.endElement("element", XS);
-				}
-				x.endElement("sequence", XS);
-				x.endElement("complexType", XS);
-				x.endElement("element", XS);
-
-				x.startElement("element", XS);
-				x.attribute("name", "", o.name + "Response");
-				x.startElement("complexType", XS);
-				x.startElement("sequence", XS);
-				if (o.result != null) {
-					x.startElement("element", ns);
-					x.attribute("name", "", o.result.name);
-					x.attribute("type", "", name(o.result.type));
-					x.endElement("element", XS);
-				}
-				// TODO out param
-				x.endElement("sequence", XS);
-				x.endElement("complexType", XS);
-				x.endElement("element", XS);
-			} else {
-				for (Service.Param p : o.params) {
-					if (!ns.equals(p.ns))
-						continue;
-					x.startElement("element", XS);
-					x.attribute("name", "", p.name);
-					x.attribute("type", "", name(p.ns, p.name));
-					x.endElement("element", XS);
-				}
-				if (o.result != null && ns.equals(o.result.ns)) {
-					x.startElement("element", XS);
-					x.attribute("name", "", o.result.name);
-					x.attribute("type", "", name(o.result.type));
-					x.endElement("element", XS);
-				}
-			}
-		}
-		x.endElement("schema", XS);
-	}
+//	private void appendSchema(String ns) throws IOException {
+//		if (XS.equals(ns) || WS.equals(ns) || WP.equals(ns))
+//			return;
+//		x.startElement("schema", XS);
+//		x.attribute("targetNamespace", "", ns);
+//		x.attribute("elementFormDefault", "", "qualified");
+//
+//		Set<XmlType<?>> set = new HashSet<>();
+//		for (Service.Op o : service.operations) {
+//			if (o.result != null)
+//				appendType(o.result.type(), ns, set);
+//			for (Service.Param p : o.params)
+//				appendType(p.type(), ns, set);
+//
+//			if (o.paramStyle == ParameterStyle.WRAPPED) {
+//				if (!ns.equals(o.ns))
+//					continue;
+//				x.startElement("element", XS);
+//				x.attribute("name", "", o.name);
+//				x.startElement("complexType", XS);
+//				x.startElement("sequence", XS);
+//				for (Param p : o.params) {
+//					x.startElement("element", XS);
+//					x.attribute("name", "", p.name());
+//					x.attribute("type", "", name(p.type()));
+//					x.endElement("element", XS);
+//				}
+//				x.endElement("sequence", XS);
+//				x.endElement("complexType", XS);
+//				x.endElement("element", XS);
+//
+//				x.startElement("element", XS);
+//				x.attribute("name", "", o.name + "Response");
+//				x.startElement("complexType", XS);
+//				x.startElement("sequence", XS);
+//				if (o.result != null) {
+//					x.startElement("element", ns);
+//					x.attribute("name", "", o.result.name());
+//					x.attribute("type", "", name(o.result.type()));
+//					x.endElement("element", XS);
+//				}
+//				// TODO out param
+//				x.endElement("sequence", XS);
+//				x.endElement("complexType", XS);
+//				x.endElement("element", XS);
+//			} else {
+//				for (Service.Param p : o.params) {
+//					if (!ns.equals(p.ns))
+//						continue;
+//					x.startElement("element", XS);
+//					x.attribute("name", "", p.name());
+//					x.attribute("type", "", name(p.ns, p.name()));
+//					x.endElement("element", XS);
+//				}
+//				if (o.result != null && ns.equals(o.result.ns)) {
+//					x.startElement("element", XS);
+//					x.attribute("name", "", o.result.name());
+//					x.attribute("type", "", name(o.result.type()));
+//					x.endElement("element", XS);
+//				}
+//			}
+//		}
+//		x.endElement("schema", XS);
+//	}
 
 	/**
 	 * @param type
@@ -164,51 +206,100 @@ public class WsdlBuilder {
 	 * @param ns
 	 * @throws IOException
 	 */
-	private void appendType(XmlType<?> type, String ns, Set<XmlType<?>> processed) throws IOException {
-		if (processed.contains(type))
-			return;
-		processed.add(type);
-		if (type instanceof XmlObject)
-			appendType((XmlObject) type, ns, processed);
-		if (!ns.equals(type.ns()))
-			return;
+//	private void appendType(XmlType<?> type, String ns, Set<XmlType<?>> processed) throws IOException {
+//		if (processed.contains(type))
+//			return;
+//		processed.add(type);
+//		if (type instanceof XmlObject)
+//			appendType((XmlObject) type, ns, processed);
+//		if (!ns.equals(type.ns()))
+//			return;
+//
+//		if (type instanceof XmlEnum) {
+//			x.startElement("simpleType", XS);
+//			x.attribute("name", "", type.name());
+//			x.startElement("restriction", XS);
+//			x.attribute("base", "", name(XS, "string"));
+//			for (XmlEnumEntry e : ((XmlEnum) type).entries) {
+//				x.startElement("enumeration", XS);
+//				x.attribute("value", "", e.value);
+//				x.endElement("enumeration", XS);
+//			}
+//			x.endElement("restriction", XS);
+//			x.endElement("simpleType", XS);
+//		} else if (type instanceof XmlObject) {
+//		}
+//	}
 
-		if (type instanceof XmlEnum) {
+//	private void appendType(XmlObject o, String ns, Set<XmlType<?>> processed) throws IOException {
+//		String tns = o.ns();
+//		if (o.value() != null)
+//			appendType(o.value().type(), ns, processed);
+//		for (XmlField<?> e : o.elems())
+//			appendType(e.type(), ns, processed);
+//		for (XmlField<?> e : o.attrs())
+//			appendType(e.type(), ns, processed);
+//
+//		if (!ns.equals(tns))
+//			return;
+//		x.startElement("complexType", XS);
+//		x.attribute("name", "", o.name());
+//		if (o.elems().isEmpty() && o.value() != null) {
+//			x.startElement("simpleContent", XS);
+//			x.startElement("extension", XS);
+//			x.attribute("base", "", name(o.value().type()));
+//			for (XmlField<?> e : o.attrs()) { // TODO list ?
+//				x.startElement("attribute", XS);
+//				x.attribute("name", "", e.name());
+//				x.attribute("type", "", name(e.type()));
+//				x.endElement("attribute", XS);
+//			}
+//			x.endElement("extension", XS);
+//			x.endElement("simpleType", XS);
+//		} else {
+//			x.startElement("sequence", XS);
+//			for (XmlField<?> e : o.elems()) { // TODO list
+//				appendElem(e, tns);
+//			}
+//			x.endElement("sequence", XS);
+//			for (XmlField<?> e : o.attrs()) {// TODO list ?
+//				x.startElement("attribute", XS);
+//				x.attribute("name", "", e.name());
+//				x.attribute("type", "", name(e.type()));
+//				x.endElement("attribute", XS);
+//			}
+//		}
+//		x.endElement("complexType", XS);
+//
+//	}
+
+	private void appendType(XmlType<?> t) throws IOException {
+		if (t instanceof XmlEnum) {
 			x.startElement("simpleType", XS);
-			x.attribute("name", "", type.name());
+			x.attribute("name", "", t.name());
 			x.startElement("restriction", XS);
 			x.attribute("base", "", name(XS, "string"));
-			for (XmlEnumEntry e : ((XmlEnum) type).entries) {
+			for (XmlEnumEntry e : ((XmlEnum) t).entries) {
 				x.startElement("enumeration", XS);
 				x.attribute("value", "", e.value);
 				x.endElement("enumeration", XS);
 			}
 			x.endElement("restriction", XS);
 			x.endElement("simpleType", XS);
-		} else if (type instanceof XmlObject) {
-		}
-	}
-
-	private void appendType(XmlObject o, String ns, Set<XmlType<?>> processed) throws IOException {
-		String tns = o.ns();
-		if (o.value() != null)
-			appendType(o.value().type(), ns, processed);
-		for (XmlField e : o.elems())
-			appendType(e.type(), ns, processed);
-		for (XmlField e : o.attrs()) {
-			if (!tns.equals(e.ns()) && tns.equals(e.type().ns()))
-				appendElem(e.type().name(), name(e.type()));
-			appendType(e.type(), ns, processed);
-		}
-		if (!ns.equals(tns))
 			return;
+		}
+		if (!(t instanceof XmlObject))
+			return;
+
+		XmlObject o = (XmlObject) t;
+
 		x.startElement("complexType", XS);
 		x.attribute("name", "", o.name());
 		if (o.elems().isEmpty() && o.value() != null) {
 			x.startElement("simpleContent", XS);
 			x.startElement("extension", XS);
 			x.attribute("base", "", name(o.value().type()));
-			for (XmlField e : o.attrs()) { // TODO list ?
+			for (XmlField<?> e : o.attrs()) { // TODO list ?
 				x.startElement("attribute", XS);
 				x.attribute("name", "", e.name());
 				x.attribute("type", "", name(e.type()));
@@ -218,16 +309,10 @@ public class WsdlBuilder {
 			x.endElement("simpleType", XS);
 		} else {
 			x.startElement("sequence", XS);
-			for (XmlField e : o.elems()) { // TODO list
-				if (!tns.equals(e.ns()) && tns.equals(e.type().ns())) {
-					x.startElement("element", XS);
-					x.attribute("ref", "", e.type().name());
-					x.endElement("element", XS);
-				} else
-					appendElem(e.name(), name(e.type()));
-			}
+			for (XmlField<?> e : o.elems()) // TODO list
+				appendElem(e, o.ns());
 			x.endElement("sequence", XS);
-			for (XmlField e : o.attrs()) {// TODO list ?
+			for (XmlField<?> e : o.attrs()) {// TODO list ?
 				x.startElement("attribute", XS);
 				x.attribute("name", "", e.name());
 				x.attribute("type", "", name(e.type()));
@@ -235,13 +320,15 @@ public class WsdlBuilder {
 			}
 		}
 		x.endElement("complexType", XS);
-
 	}
 
-	private void appendElem(String name, String type) throws IOException {
+	private void appendElem(XmlElem<?> e, String ns) throws IOException {
 		x.startElement("element", XS);
-		x.attribute("name", "", name);
-		x.attribute("type", "", type);
+		if (e.ns().equals(ns)) {
+			x.attribute("name", "", e.name());
+			x.attribute("type", "", name(e.type()));
+		} else
+			x.attribute("ref", "", name(e.ns(), e.name()));
 		x.endElement("element", XS);
 	}
 
@@ -269,8 +356,8 @@ public class WsdlBuilder {
 		} else {
 			for (Param p : o.params) {
 				x.startElement("part", WS);
-				x.attribute("name", "", p.name);
-				x.attribute("element", "", name(p.type));
+				x.attribute("name", "", p.name());
+				x.attribute("element", "", name(p.type()));
 				x.endElement("part", WS);
 			}
 			x.endElement("message", WS);
@@ -279,7 +366,7 @@ public class WsdlBuilder {
 				x.attribute("name", "", o.name + "Response");
 				x.startElement("part", WS);
 				x.attribute("name", "", "param");
-				x.attribute("element", "", name(o.result.ns, o.result.name));
+				x.attribute("element", "", name(o.result.ns(), o.result.name()));
 				x.endElement("part", WS);
 				x.endElement("message", WS);
 			}
@@ -357,95 +444,50 @@ public class WsdlBuilder {
 		return name(type.ns(), type.name());
 	}
 
-	private static Map<String, Integer> collectNs(Service service) {
+	private static void collectElems(Service service, Consumer<XmlType<?>> types, Consumer<XmlElem<?>> elems) {
 		Set<XmlType<?>> collected = new HashSet<>();
-		Map<String, Integer> ns = new HashMap<>();
 		for (Service.Op o : service.operations) {
 			if (o.paramStyle == ParameterStyle.WRAPPED) {
-				ns.merge(o.ns, 1, Integer::sum);
+				XmlElem<?> e = new XmlElem<>(new XmlOp(o.ns, o.name, o.params), o.ns, o.name);
+				collectElems(e, types, elems, collected);
+
+				List<Param> r = o.result == null ? Collections.emptyList() : Arrays.asList(o.result);
+				e = new XmlElem<>(new XmlOp(o.ns, o.name + "Response", r), o.ns, o.name + "Response");
+				collectElems(e, types, elems, collected);
+			} else {
+				if (o.result != null)
+					collectElems(o.result, types, elems, collected);
 				for (Service.Param p : o.params)
-					ns.merge(p.ns, 1, Integer::sum);
-			} else if (o.result != null) {
-				ns.merge(o.result.ns, 1, Integer::sum);
-				collectNs(o.result.type, ns, collected);
-			}
-			for (Service.Param p : o.params) {
-				collectNs(p.type, ns, collected);
+					collectElems(p, types, elems, collected);
 			}
 		}
-		return ns;
 	}
 
-	/**
-	 * @param type
-	 * @param ns
-	 * @param collected
-	 * @param limit
-	 */
-	private static void collectNs(XmlType<?> type, Map<String, Integer> ns, Set<XmlType<?>> collected) {
-		if (collected.contains(type))
-			return;
-		collected.add(type);
-		ns.merge(type.ns(), 1, Integer::sum);
+	private static void collectElems(XmlElem<?> e, Consumer<XmlType<?>> types, Consumer<XmlElem<?>> elems, Set<XmlType<?>> collected) {
+		elems.accept(e);
+		collectElems(e.type(), types, elems, collected);
+	}
 
+	private static void collectElems(XmlType<?> type, Consumer<XmlType<?>> types, Consumer<XmlElem<?>> elems, Set<XmlType<?>> collected) {
+		if (!collected.add(type))
+			return;
+		types.accept(type);
 		if (!(type instanceof XmlObject))
 			return;
-
 		XmlObject o = (XmlObject) type;
-		for (XmlField e : o.elems()) {
-			ns.merge(e.ns(), 1, Integer::sum);
-			collectNs(e.type(), ns, collected);
+		for (XmlField<?> e : o.elems()) {
+			collectElems(e.type(), types, elems, collected);
+			if (!e.ns().equals(o.ns()))
+				elems.accept(e);
 		}
-		for (XmlField e : o.attrs()) {
-			ns.merge(e.ns(), 1, Integer::sum);
-			collectNs(e.type(), ns, collected);
-		}
-		if (o.value() != null)
-			collectNs(o.value().type(), ns, collected);
 	}
 
-	private static boolean schemaHasData(Service service, String ns) {
-		Set<XmlType<?>> collected = new HashSet<>();
-		for (Service.Op o : service.operations) {
-			if (o.paramStyle == ParameterStyle.WRAPPED) {
-				if (ns.equals(o.ns))
-					return true;
-				for (Service.Param p : o.params) {
-					if (ns.equals(p.ns))
-						return true;
-				}
-			} else if (o.result != null && (ns.equals(o.result.ns) || schemaHasData(o.result.type, ns, collected)))
-				return true;
-			for (Service.Param p : o.params) {
-				if (schemaHasData(p.type, ns, collected))
-					return true;
-			}
+	private static final class XmlOp extends XmlObject {
+		@SuppressWarnings("unchecked")
+		public XmlOp(String ns, String name, List<? extends XmlField<?>> elems) {
+			super(null, ns, name, null, null);
+			this.elems = (List<XmlField<?>>) elems;
+			this.attrs = Collections.emptyList();
 		}
-		return false;
 	}
-
-	private static boolean schemaHasData(XmlType<?> type, String ns, Set<XmlType<?>> collected) {
-		if (collected.contains(type))
-			return false;
-		collected.add(type);
-		if (ns.equals(type.ns()))
-			return true;
-
-		if (!(type instanceof XmlObject))
-			return false;
-
-		XmlObject o = (XmlObject) type;
-		for (XmlField e : o.elems()) {
-			if (ns.equals(e.ns()) || schemaHasData(e.type(), ns, collected))
-				return true;
-		}
-		for (XmlField e : o.attrs()) {
-			if (ns.equals(e.ns()) || schemaHasData(e.type(), ns, collected))
-				return true;
-		}
-		if (o.value() != null && schemaHasData(o.value().type(), ns, collected))
-			return true;
-		return false;
-	}
-
 }

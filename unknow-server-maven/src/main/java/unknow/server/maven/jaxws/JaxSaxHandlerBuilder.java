@@ -99,7 +99,7 @@ public class JaxSaxHandlerBuilder {
 		attrs.addStatement(new AssignExpr(new FieldAccessExpr(new NameExpr("o"), field), QNAME, AssignExpr.Operator.ASSIGN));
 	}
 
-	public void addAttr(XmlField a) {
+	public void addAttr(XmlField<?> a) {
 		Expression var = new NameExpr("a");
 		if (firstAttr) {
 			firstAttr = false;
@@ -117,7 +117,7 @@ public class JaxSaxHandlerBuilder {
 						null));
 	}
 
-	public void setValue(XmlField value) {
+	public void setValue(XmlField<?> value) {
 		last = new BlockStmt()
 				.addStatement(new MethodCallExpr(
 						new EnclosedExpr(new CastExpr(types.get(clazz), new MethodCallExpr(CONTEXT, "peek"))),
@@ -126,7 +126,7 @@ public class JaxSaxHandlerBuilder {
 				.addStatement(new MethodCallExpr(CONTEXT, "previous"));
 	}
 
-	public void addElem(XmlField a) {
+	public void addElem(XmlField<?> a) {
 		start = new IfStmt(
 				new MethodCallExpr(new StringLiteralExpr(a.qname()), "equals", Utils.list(QNAME)),
 				new ExpressionStmt(new MethodCallExpr(CONTEXT, "next", Utils.list(handlers.apply(a.type())))),
@@ -195,13 +195,13 @@ public class JaxSaxHandlerBuilder {
 		JaxSaxHandlerBuilder b = new JaxSaxHandlerBuilder(types, handlers, o.javaType().name());
 		b.setObjectCreation(o.factoryClazz(), o.factoryMethod());
 
-		for (XmlField a : o.attrs())
+		for (XmlField<?> a : o.attrs())
 			b.addAttr(a);
 
 		if (o.value() != null)
 			b.setValue(o.value());
 
-		for (XmlField a : o.elems())
+		for (XmlField<?> a : o.elems())
 			b.addElem(a);
 		return b.build();
 	}

@@ -20,6 +20,7 @@ import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
 
 import unknow.server.jaxws.UrlPattern;
+import unknow.server.maven.jaxws.binding.XmlObject.XmlField;
 import unknow.server.maven.model.AnnotationModel;
 import unknow.server.maven.model.ClassModel;
 import unknow.server.maven.model.MethodModel;
@@ -194,12 +195,12 @@ public class Service {
 			StringBuilder sb = new StringBuilder();
 			for (Param p : params) {
 				if (p.header)
-					sb.append(p.type.javaType().name()).append(';');
+					sb.append(p.type().javaType().name()).append(';');
 			}
 			sb.append('#');
 			for (Param p : params) {
 				if (!p.header)
-					sb.append(p.type.javaType().name()).append(';');
+					sb.append(p.type().javaType().name()).append(';');
 			}
 			return sb.toString();
 		}
@@ -210,24 +211,19 @@ public class Service {
 		}
 	}
 
-	public static class Param {
-		public final String ns;
-		public final String name;
-		public final XmlType<?> type;
+	public static class Param extends XmlField<XmlType<?>> {
 		public final String clazz;
 		public final boolean header;
 
 		public Param(String ns, String name, XmlType<?> type, String clazz, boolean header) {
-			this.ns = ns;
-			this.name = name;
-			this.type = type;
+			super(type, ns, name, "", "");
 			this.clazz = clazz;
 			this.header = header;
 		}
 
 		@Override
 		public String toString() {
-			return (ns == null ? "" : '{' + ns + '}') + name + " " + type + " " + header;
+			return qname() + " " + type() + " " + header;
 		}
 	}
 }
