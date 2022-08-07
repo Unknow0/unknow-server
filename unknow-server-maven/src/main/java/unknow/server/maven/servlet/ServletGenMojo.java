@@ -82,12 +82,13 @@ public class ServletGenMojo extends AbstractMojo implements BuilderContext {
 	@Parameter(name = "graalvm", defaultValue = "true")
 	private boolean graalvm;
 
-	@Parameter(name = "graalvm", defaultValue = "${project.build.outputDirectory}/META-INF/native-image/servletgen/resource-config.json")
-	private Path graalvmFile;
+	@Parameter(name = "graalvmResouceConfig", defaultValue = "${project.build.outputDirectory}/META-INF/native-image/servletgen/resource-config.json")
+	private String graalvmResouceConfig;
 
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
 		init();
+
 		cu.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolSolver);
 
 		if (webXml != null) {
@@ -132,8 +133,9 @@ public class ServletGenMojo extends AbstractMojo implements BuilderContext {
 	 */
 	private void generateGraalvmResources() throws MojoFailureException {
 		try {
-			Files.createDirectories(graalvmFile.getParent());
-			try (BufferedWriter w = Files.newBufferedWriter(graalvmFile)) {
+			Path path = Paths.get(graalvmResouceConfig);
+			Files.createDirectories(path.getParent());
+			try (BufferedWriter w = Files.newBufferedWriter(path)) {
 				w.write("{\"resources\":{\"includes\":[");
 				Iterator<String> it = descriptor.resources.keySet().iterator();
 				w.append('"').append(it.next().substring(1)).write('"');
