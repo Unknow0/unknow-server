@@ -27,7 +27,9 @@ jobs:
       run: mvn -B package
 
     - name: install xmllint
-      run: sudo apt-get install libxml2-utils
+      run: |-
+	  	sudo apt update
+	  	sudo apt install libxml2-utils
     - name: validate
       run: bash .github/validate.sh
 
