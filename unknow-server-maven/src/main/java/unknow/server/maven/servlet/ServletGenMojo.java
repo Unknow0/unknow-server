@@ -138,9 +138,9 @@ public class ServletGenMojo extends AbstractMojo implements BuilderContext {
 			try (BufferedWriter w = Files.newBufferedWriter(path)) {
 				w.write("{\"resources\":{\"includes\":[");
 				Iterator<String> it = descriptor.resources.keySet().iterator();
-				w.append('"').append(it.next().substring(1)).write('"');
+				w.append(",{\"pattern\": \"").append(it.next().substring(1)).write("\"}");
 				while (it.hasNext())
-					w.append(",\"").append(it.next().substring(1)).write('"');
+					w.append(",{\"pattern\": \"").append(it.next().substring(1)).write("\"}");
 				w.write("]}}");
 			}
 		} catch (IOException e) {
