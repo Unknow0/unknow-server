@@ -1,5 +1,6 @@
 package unknow.server.maven.servlet;
 
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.FileVisitResult;
@@ -9,6 +10,7 @@ import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -77,6 +79,12 @@ public class ServletGenMojo extends AbstractMojo implements BuilderContext {
 	@Parameter(name = "sessionFactory", defaultValue = "unknow.server.http.servlet.session.NoSessionFactory")
 	private String sessionFactory;
 
+	@Parameter(name = "graalvm", defaultValue = "true")
+	private boolean graalvm;
+
+	@Parameter(name = "graalvm", defaultValue = "${project.build.outputDirectory}/META-INF/native-image/servletgen/resource-config.json")
+	private Path graalvmFile;
+
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
 		init();
@@ -95,9 +103,9 @@ public class ServletGenMojo extends AbstractMojo implements BuilderContext {
 		}
 
 		processSrc(descriptor);
-		SD d = descriptor.findServlet("/");
-		if (d == null)
-			generateResources();
+		generateResources();
+		if (graalvm && !descriptor.resources.isEmpty())
+			generateGraalvmResources();
 
 		getLog().info("descriptor:\n" + descriptor);
 
@@ -115,6 +123,26 @@ public class ServletGenMojo extends AbstractMojo implements BuilderContext {
 			out.save(cu);
 		} catch (IOException e) {
 			throw new MojoFailureException("failed to save output class", e);
+		}
+	}
+
+	/**
+	 * @throws MojoFailureException
+	 * 
+	 */
+	private void generateGraalvmResources() throws MojoFailureException {
+		try {
+			Files.createDirectories(graalvmFile.getParent());
+			try (BufferedWriter w = Files.newBufferedWriter(graalvmFile)) {
+				w.write("{\"resources\":{\"includes\":[");
+				Iterator<String> it = descriptor.resources.keySet().iterator();
+				w.append('"').append(it.next().substring(1)).write('"');
+				while (it.hasNext())
+					w.append(",\"").append(it.next().substring(1)).write('"');
+				w.write("]}}");
+			}
+		} catch (IOException e) {
+			throw new MojoFailureException("failed generate graalvm resources", e);
 		}
 	}
 
