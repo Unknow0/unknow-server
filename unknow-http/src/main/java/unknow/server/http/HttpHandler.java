@@ -50,6 +50,7 @@ public class HttpHandler implements Handler, Runnable {
 	private static final byte[] SEP = new byte[] { ' ', '\t', '"', ',' };
 	private static final byte[] COOKIE_SEP = new byte[] { ';', ' ' };
 	private static final byte[] PARAM_SEP = { '&', '=' };
+	private static final byte[] SPACE_SLASH = { ' ', '/' };
 	private static final byte SPACE = ' ';
 	private static final byte QUESTION = '?';
 	private static final byte COLON = ':';
@@ -117,7 +118,7 @@ public class HttpHandler implements Handler, Runnable {
 	}
 
 	@Override
-	public final void onWrite() {
+	public final void onWrite() { // OK
 	}
 
 	private final void error(HttpError e) {
@@ -131,7 +132,7 @@ public class HttpHandler implements Handler, Runnable {
 	}
 
 	private boolean fillRequest(ServletRequestImpl req) throws InterruptedException {
-		int i = BuffersUtils.indexOf(meta, SPACE, 0, MAX_METHOD_SIZE);
+		int i = BuffersUtils.indexOf(meta, SPACE_SLASH, 0, MAX_METHOD_SIZE);
 		if (i < 0) {
 			error(HttpError.BAD_REQUEST);
 			return false;
@@ -159,7 +160,7 @@ public class HttpHandler implements Handler, Runnable {
 			sb.setLength(0);
 			last = s;
 		}
-		if (s == -2) {
+		if (s == -2 && last + 1 < q) {
 			BuffersUtils.toString(sb, meta, last + 1, q - last - 1);
 			req.addPath(sb.toString());
 			sb.setLength(0);
