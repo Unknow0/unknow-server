@@ -435,7 +435,7 @@ public class WsdlBuilder {
 
 	private String name(String ns, String name) {
 		String n = nsPrefix.get(ns);
-		if (n == null || ns.isEmpty())
+		if (n == null || n.isEmpty())
 			return name;
 		return n + ':' + name;
 	}

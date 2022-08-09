@@ -89,9 +89,8 @@ public class XmlObject extends XmlType<ClassModel> {
 		if (a != null)
 			type = a.value("value").map(XmlAccessType::valueOf).orElse(XmlAccessType.PUBLIC_MEMBER);
 
-		List<String> propOrder = Collections.emptyList();
-		if (a != null)
-			propOrder = a.values("propOrder").map(Arrays::asList).orElse(propOrder);
+		a = c.annotation(javax.xml.bind.annotation.XmlType.class);
+		List<String> propOrder = a == null ? Collections.emptyList() : a.values("propOrder").map(Arrays::asList).orElse(Collections.emptyList());
 
 		Map<String, FieldModel> fields = new HashMap<>();
 
@@ -176,12 +175,11 @@ public class XmlObject extends XmlType<ClassModel> {
 		XmlAccessOrder defaultOrder = a == null ? XmlAccessOrder.UNDEFINED : a.value("value").map(s -> XmlAccessOrder.UNDEFINED).orElse(XmlAccessOrder.UNDEFINED);
 
 		if (!propOrder.isEmpty() || defaultOrder != XmlAccessOrder.UNDEFINED) {
-			List<String> order = propOrder;
 			Collections.sort(elems, (o, b) -> {
 				String an = Character.toLowerCase(o.getter.charAt(3)) + o.getter.substring(4);
 				String bn = Character.toLowerCase(b.getter.charAt(3)) + b.getter.substring(4);
-				int ai = order.indexOf(an);
-				int bi = order.indexOf(bn);
+				int ai = propOrder.indexOf(an);
+				int bi = propOrder.indexOf(bn);
 				if (bi >= 0 && ai >= 0)
 					return ai - bi;
 				if (ai < 0 && bi < 0)

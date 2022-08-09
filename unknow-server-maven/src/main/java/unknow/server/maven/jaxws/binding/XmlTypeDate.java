@@ -41,17 +41,21 @@ public class XmlTypeDate extends XmlType<DummyModel> {
 		}
 	}
 
+	private final Type type;
+
 	private XmlTypeDate(String clazz, Type type) {
 		super(new DummyModel(clazz), "http://www.w3.org/2001/XMLSchema", type.name);
+		this.type = type;
 	}
 
 	@Override
 	public Expression fromString(TypeCache types, Expression v) {
-		return new MethodCallExpr(new TypeExpr(types.get(javaType().name())), "parse", Utils.list(v, new FieldAccessExpr(new TypeExpr(types.get(DateTimeFormat.class)), javaType().name())));
+		return new MethodCallExpr(new TypeExpr(types.get(javaType().name())), "parse",
+				Utils.list(v, new FieldAccessExpr(new TypeExpr(types.get(DateTimeFormat.class)), type.name())));
 	}
 
 	@Override
 	public Expression toString(TypeCache types, Expression v) {
-		return new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(DateTimeFormat.class)), javaType().name()), "format", Utils.list(v));
+		return new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(DateTimeFormat.class)), type.name()), "format", Utils.list(v));
 	}
 }
