@@ -99,6 +99,9 @@ public class ServletRequestImpl implements HttpServletRequest {
 	private BufferedReader reader;
 	private ServletInputStream input;
 
+	private final InetSocketAddress remote;
+	private final InetSocketAddress local;
+
 	/**
 	 * create new ServletRequestImpl
 	 * 
@@ -115,6 +118,9 @@ public class ServletRequestImpl implements HttpServletRequest {
 		this.path = new ArrayList<>();
 
 		this.headers = new HashMap<>();
+
+		this.remote = req != null ? req.getRemote() : null;
+		this.local = req != null ? req.getLocal() : null;
 	}
 
 	public void setMethod(String method) {
@@ -435,39 +441,39 @@ public class ServletRequestImpl implements HttpServletRequest {
 	@Override
 	public String getRemoteAddr() {
 		if (remoteAddr == null)
-			remoteAddr = getAddr(req.getRemote());
+			remoteAddr = getAddr(remote);
 		return remoteAddr;
 	}
 
 	@Override
 	public String getRemoteHost() {
 		if (remoteHost == null)
-			remoteHost = req.getRemote().getHostName();
+			remoteHost = remote.getHostName();
 		return remoteHost;
 	}
 
 	@Override
 	public int getRemotePort() {
-		return req.getRemote().getPort();
+		return remote.getPort();
 	}
 
 	@Override
 	public String getLocalName() {
 		if (localHost == null)
-			localHost = req.getLocal().getHostString();
+			localHost = local.getHostString();
 		return localHost;
 	}
 
 	@Override
 	public String getLocalAddr() {
 		if (localAddr == null)
-			localAddr = getAddr(req.getLocal());
+			localAddr = getAddr(local);
 		return localAddr;
 	}
 
 	@Override
 	public int getLocalPort() {
-		return req.getLocal().getPort();
+		return local.getPort();
 	}
 
 	@Override
