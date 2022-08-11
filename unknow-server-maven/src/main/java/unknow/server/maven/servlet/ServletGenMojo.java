@@ -14,6 +14,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import javax.servlet.DispatcherType;
+
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
@@ -30,6 +32,7 @@ import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 
 import unknow.sax.SaxParser;
 import unknow.server.http.AbstractHttpServer;
+import unknow.server.http.AccessLogFilter;
 import unknow.server.http.servlet.ServletResource;
 import unknow.server.http.servlet.ServletResourceStatic;
 import unknow.server.http.utils.Resource;
@@ -53,6 +56,14 @@ import unknow.server.maven.servlet.sax.Context;
 public class ServletGenMojo extends AbstractMojo implements BuilderContext {
 	private static final List<Builder> BUILDER = Arrays.asList(new CreateEventManager(), new CreateServletManager(), new CreateContext(), new CreateServlets(), new CreateFilters(), new Main());
 
+	private static final SD ACCESSLOG = new SD(0);
+	static {
+		ACCESSLOG.clazz = AccessLogFilter.class.getName();
+		ACCESSLOG.dispatcher.add(DispatcherType.REQUEST);
+		ACCESSLOG.pattern.add("/*");
+		ACCESSLOG.name = "acessLog";
+	}
+
 	private final CompilationUnit cu = new CompilationUnit();
 
 	private TypeCache types;
@@ -64,33 +75,38 @@ public class ServletGenMojo extends AbstractMojo implements BuilderContext {
 	@Parameter(defaultValue = "${project}", readonly = true, required = true)
 	private MavenProject project;
 
-	@Parameter(name = "className", defaultValue = "Server")
+	@Parameter(defaultValue = "Server")
 	private String className;
 
-	@Parameter(name = "web-xml", defaultValue = "${project.basedir}/src/main/resources/WEB-INF/web.xml")
+	@Parameter(defaultValue = "${project.basedir}/src/main/resources/WEB-INF/web.xml")
 	private String webXml;
 
-	@Parameter(name = "resources", defaultValue = "${project.basedir}/src/main/resources")
+	@Parameter(defaultValue = "${project.basedir}/src/main/resources")
 	private String resources;
 
-	@Parameter(name = "staticResourceSize", defaultValue = "4096")
+	@Parameter(defaultValue = "4096")
 	private int staticResourceSize;
 
-	@Parameter(name = "sessionFactory", defaultValue = "unknow.server.http.servlet.session.NoSessionFactory")
+	@Parameter(defaultValue = "unknow.server.http.servlet.session.NoSessionFactory")
 	private String sessionFactory;
 
-	@Parameter(name = "graalvm", defaultValue = "true")
+	@Parameter(defaultValue = "true")
 	private boolean graalvm;
 
-	@Parameter(name = "graalvmResouceConfig", defaultValue = "${project.build.outputDirectory}/META-INF/native-image/servletgen/resource-config.json")
+	@Parameter(defaultValue = "${project.build.outputDirectory}/META-INF/native-image/servletgen/resource-config.json")
 	private String graalvmResouceConfig;
+
+	@Parameter(defaultValue = "true")
+	private boolean addAccessLog;
 
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
 		init();
 
 		cu.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolSolver);
-
+		if (addAccessLog)
+			descriptor.filters.add(ACCESSLOG);
+		
 		if (webXml != null) {
 			Path path = Paths.get(webXml);
 			if (Files.exists(path)) {
