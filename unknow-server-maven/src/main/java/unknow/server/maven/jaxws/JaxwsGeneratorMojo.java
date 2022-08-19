@@ -6,8 +6,6 @@ package unknow.server.maven.jaxws;
 import java.io.IOException;
 import java.util.Optional;
 
-import javax.jws.WebService;
-
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
@@ -18,6 +16,7 @@ import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.ast.expr.AnnotationExpr;
 
+import jakarta.jws.WebService;
 import unknow.server.maven.AbstractMojo;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.jaxws.binding.XmlTypeLoader;

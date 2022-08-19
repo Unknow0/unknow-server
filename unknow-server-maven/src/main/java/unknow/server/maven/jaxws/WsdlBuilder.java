@@ -19,8 +19,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Consumer;
 
-import javax.jws.soap.SOAPBinding.ParameterStyle;
-
+import jakarta.jws.soap.SOAPBinding.ParameterStyle;
 import unknow.server.jaxws.XMLNsCollector;
 import unknow.server.jaxws.XMLOutput;
 import unknow.server.maven.jaxws.binding.Service;
