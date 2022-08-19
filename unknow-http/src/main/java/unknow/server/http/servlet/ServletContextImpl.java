@@ -13,21 +13,20 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-import javax.servlet.Filter;
-import javax.servlet.FilterRegistration;
-import javax.servlet.RequestDispatcher;
-import javax.servlet.Servlet;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRegistration;
-import javax.servlet.ServletRegistration.Dynamic;
-import javax.servlet.SessionCookieConfig;
-import javax.servlet.SessionTrackingMode;
-import javax.servlet.descriptor.JspConfigDescriptor;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import jakarta.servlet.Filter;
+import jakarta.servlet.FilterRegistration;
+import jakarta.servlet.RequestDispatcher;
+import jakarta.servlet.Servlet;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRegistration;
+import jakarta.servlet.ServletRegistration.Dynamic;
+import jakarta.servlet.SessionCookieConfig;
+import jakarta.servlet.SessionTrackingMode;
+import jakarta.servlet.descriptor.JspConfigDescriptor;
 import unknow.server.http.data.ArrayMap;
 import unknow.server.http.servlet.session.SessionFactory;
 import unknow.server.http.utils.EventManager;
@@ -207,12 +206,6 @@ public class ServletContextImpl implements ServletContext {
 		log.info("{}", msg);
 	}
 
-	@Deprecated
-	@Override
-	public void log(Exception exception, String msg) {
-		log.info("{}", msg, exception);
-	}
-
 	@Override
 	public void log(String message, Throwable throwable) {
 		log.info("{}", message, throwable);
@@ -246,56 +239,6 @@ public class ServletContextImpl implements ServletContext {
 	@Override
 	public String getServletContextName() {
 		return name;
-	}
-
-	@Deprecated
-	@Override
-	public Servlet getServlet(String name) throws ServletException {
-		ServletConfigImpl[] servlets = this.servlets.getServlets();
-		for (int i = 0; i < servlets.length; i++) {
-			ServletConfigImpl s = servlets[i];
-			if (name.equals(s.getName()))
-				return s.getServlet();
-		}
-		return null;
-	}
-
-	@Deprecated
-	@Override
-	public Enumeration<Servlet> getServlets() {
-		return new Enumeration<Servlet>() {
-			private final ServletConfigImpl[] s = servlets.getServlets();
-			private int i = 0;
-
-			@Override
-			public boolean hasMoreElements() {
-				return i < s.length;
-			}
-
-			@Override
-			public Servlet nextElement() {
-				return s[i++].getServlet();
-			}
-		};
-	}
-
-	@Deprecated
-	@Override
-	public Enumeration<String> getServletNames() {
-		return new Enumeration<String>() {
-			private final ServletConfigImpl[] s = servlets.getServlets();
-			private int i = 0;
-
-			@Override
-			public boolean hasMoreElements() {
-				return i < s.length;
-			}
-
-			@Override
-			public String nextElement() {
-				return s[i++].getName();
-			}
-		};
 	}
 
 	@Override
@@ -341,19 +284,19 @@ public class ServletContextImpl implements ServletContext {
 	}
 
 	@Override
-	public javax.servlet.FilterRegistration.Dynamic addFilter(String filterName, String className) {
+	public FilterRegistration.Dynamic addFilter(String filterName, String className) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public javax.servlet.FilterRegistration.Dynamic addFilter(String filterName, Filter filter) {
+	public FilterRegistration.Dynamic addFilter(String filterName, Filter filter) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public javax.servlet.FilterRegistration.Dynamic addFilter(String filterName, Class<? extends Filter> filterClass) {
+	public FilterRegistration.Dynamic addFilter(String filterName, Class<? extends Filter> filterClass) {
 		// TODO Auto-generated method stub
 		return null;
 	}

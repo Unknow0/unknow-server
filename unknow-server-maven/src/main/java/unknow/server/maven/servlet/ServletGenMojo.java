@@ -14,8 +14,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import javax.servlet.DispatcherType;
-
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
@@ -30,6 +28,7 @@ import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 
+import jakarta.servlet.DispatcherType;
 import unknow.sax.SaxParser;
 import unknow.server.http.AbstractHttpServer;
 import unknow.server.http.AccessLogFilter;
@@ -106,7 +105,7 @@ public class ServletGenMojo extends AbstractMojo implements BuilderContext {
 		cu.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolSolver);
 		if (addAccessLog)
 			descriptor.filters.add(ACCESSLOG);
-		
+
 		if (webXml != null) {
 			Path path = Paths.get(webXml);
 			if (Files.exists(path)) {

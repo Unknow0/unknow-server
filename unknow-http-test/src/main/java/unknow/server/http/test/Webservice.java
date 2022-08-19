@@ -3,14 +3,13 @@
  */
 package unknow.server.http.test;
 
-import static javax.jws.soap.SOAPBinding.ParameterStyle.BARE;
+import static jakarta.jws.soap.SOAPBinding.ParameterStyle.BARE;
 
-import javax.jws.WebMethod;
-import javax.jws.WebParam;
-import javax.jws.WebService;
-import javax.jws.soap.SOAPBinding;
-import javax.jws.soap.SOAPBinding.ParameterStyle;
-
+import jakarta.jws.WebMethod;
+import jakarta.jws.WebParam;
+import jakarta.jws.WebService;
+import jakarta.jws.soap.SOAPBinding;
+import jakarta.jws.soap.SOAPBinding.ParameterStyle;
 import unknow.server.http.test.xml.Complex;
 import unknow.server.http.test.xml.Mixed;
 import unknow.server.http.test.xml.Root;

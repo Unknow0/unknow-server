@@ -3,87 +3,109 @@
  */
 package unknow.server.http.servlet;
 
-import javax.servlet.SessionCookieConfig;
+import java.util.Collections;
+import java.util.Map;
+
+import jakarta.servlet.SessionCookieConfig;
+import unknow.server.http.data.ArrayMap;
 
 /**
  * @author unknow
  */
 public class ServletCookieConfigImpl implements SessionCookieConfig {
-	private String name;
-	private String domain;
-	private String path;
-	private String comment;
-	private boolean httpOnly;
-	private boolean secure;
-	private int maxAge;
+	public static final String NAME = "name";
+	public static final String DOMAIN = "domain";
+	public static final String PATH = "path";
+	public static final String HTTP_ONLY = "http-only";
+	public static final String SECURE = "secure";
+	public static final String MAX_AGE = "max-age";
+
+	private final Map<String, String> attributes = new ArrayMap<>();
 
 	@Override
 	public String getName() {
-		return name;
+		return getAttribute(NAME);
 	}
 
 	@Override
 	public void setName(String name) {
-		this.name = name;
+		setAttribute(NAME, name);
 	}
 
 	@Override
 	public String getDomain() {
-		return domain;
+		return getAttribute(DOMAIN);
 	}
 
 	@Override
 	public void setDomain(String domain) {
-		this.domain = domain;
+		setAttribute(DOMAIN, domain);
 	}
 
 	@Override
 	public String getPath() {
-		return path;
+		return getAttribute(PATH);
 	}
 
 	@Override
 	public void setPath(String path) {
-		this.path = path;
+		setAttribute(PATH, path);
 	}
 
+	@Deprecated
 	@Override
 	public String getComment() {
-		return comment;
+		return null;
 	}
 
+	@Deprecated
 	@Override
 	public void setComment(String comment) {
-		this.comment = comment;
 	}
 
 	@Override
 	public boolean isHttpOnly() {
-		return httpOnly;
+		return Boolean.parseBoolean(getAttribute(HTTP_ONLY));
 	}
 
 	@Override
 	public void setHttpOnly(boolean httpOnly) {
-		this.httpOnly = httpOnly;
+		setAttribute(HTTP_ONLY, Boolean.toString(httpOnly));
 	}
 
 	@Override
 	public boolean isSecure() {
-		return secure;
+		return Boolean.parseBoolean(getAttribute(SECURE));
 	}
 
 	@Override
 	public void setSecure(boolean secure) {
-		this.secure = secure;
+		setAttribute(SECURE, Boolean.toString(secure));
 	}
 
 	@Override
 	public int getMaxAge() {
-		return maxAge;
+		String s = getAttribute(MAX_AGE);
+		return s == null ? -1 : Integer.parseInt(s);
 	}
 
 	@Override
 	public void setMaxAge(int maxAge) {
-		this.maxAge = maxAge;
+		setAttribute(MAX_AGE, Integer.toString(maxAge));
+	}
+
+	@Override
+	public void setAttribute(String name, String value) {
+		attributes.put(name.toLowerCase(), value);
+	}
+
+	@Override
+	public String getAttribute(String name) {
+		return attributes.get(name.toLowerCase());
+	}
+
+	@Override
+	public Map<String, String> getAttributes() {
+		return Collections.unmodifiableMap(attributes);
 	}
 }

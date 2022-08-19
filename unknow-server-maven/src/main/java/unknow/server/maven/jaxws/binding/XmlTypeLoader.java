@@ -90,13 +90,13 @@ public class XmlTypeLoader {
 		String name = c.simpleName();
 
 		Factory factory = null;
-		AnnotationModel a = c.annotation(javax.xml.bind.annotation.XmlType.class);
+		AnnotationModel a = c.annotation(jakarta.xml.bind.annotation.XmlType.class);
 		if (a != null) {
 			String cl = a.value("factoryClass").orElse(null);
 			String method = a.value("factoryMethod").orElse("");
 
 			if (!method.isEmpty()) {
-				if (javax.xml.bind.annotation.XmlType.DEFAULT.class.getCanonicalName().equals(cl))
+				if (jakarta.xml.bind.annotation.XmlType.DEFAULT.class.getCanonicalName().equals(cl))
 					factory = new Factory(c.name(), method);
 				else
 					factory = new Factory(cl, method);
@@ -111,7 +111,7 @@ public class XmlTypeLoader {
 	private static String getNs(TypeModel c) {
 		// TODO get namespace data from package annotation
 		String ns = "";
-		AnnotationModel a = c.annotation(javax.xml.bind.annotation.XmlType.class);
+		AnnotationModel a = c.annotation(jakarta.xml.bind.annotation.XmlType.class);
 		if (a != null)
 			ns = a.value("namespace").map(v -> "##default".equals(v) ? null : v).orElse(ns);
 		return ns;
@@ -119,7 +119,7 @@ public class XmlTypeLoader {
 
 	private static String getName(TypeModel c) {
 		String name = c.simpleName();
-		AnnotationModel a = c.annotation(javax.xml.bind.annotation.XmlType.class);
+		AnnotationModel a = c.annotation(jakarta.xml.bind.annotation.XmlType.class);
 		if (a != null)
 			name = a.value("name").map(v -> "##default".equals(v) ? null : v).orElse(name);
 		return name;
