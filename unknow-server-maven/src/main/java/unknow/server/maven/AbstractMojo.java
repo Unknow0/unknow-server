@@ -64,7 +64,7 @@ public abstract class AbstractMojo extends org.apache.maven.plugin.AbstractMojo 
 	protected final ModelLoader loader = new ModelLoader(classes);
 
 	protected void init() throws MojoFailureException {
-		resolver = new CombinedTypeSolver(new ReflectionTypeSolver(), new JavaParserTypeSolver(src));
+		resolver = new CombinedTypeSolver(new ReflectionTypeSolver(false), new JavaParserTypeSolver(src));
 		javaSymbolSolver = new JavaSymbolSolver(resolver);
 		parser = new JavaParser(new ParserConfiguration().setStoreTokens(true).setSymbolResolver(javaSymbolSolver));
 

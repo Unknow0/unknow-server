@@ -3,7 +3,7 @@
  */
 package unknow.server.http.servlet.session;
 
-import javax.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpSession;
 
 /**
  * @author unknow
@@ -24,4 +24,5 @@ public class NoSessionFactory implements SessionFactory {
 	public void changeId(HttpSession session, String newId) {
 		throw new UnsupportedOperationException();
 	}
+
 }

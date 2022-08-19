@@ -3,8 +3,6 @@
  */
 package unknow.server.maven.servlet.builder;
 
-import javax.servlet.DispatcherType;
-
 import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.expr.Expression;
@@ -17,6 +15,7 @@ import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.stmt.ReturnStmt;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 
+import jakarta.servlet.DispatcherType;
 import unknow.server.http.data.ArraySet;
 import unknow.server.http.servlet.FilterConfigImpl;
 import unknow.server.maven.TypeCache;

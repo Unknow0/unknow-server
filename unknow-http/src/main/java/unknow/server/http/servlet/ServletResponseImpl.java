@@ -19,16 +19,15 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import javax.servlet.DispatcherType;
-import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletResponse;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import unknow.server.http.HttpError;
 import unknow.server.http.HttpHandler;
 import unknow.server.http.servlet.out.ChunckedOutputStream;
@@ -384,18 +383,6 @@ public class ServletResponseImpl implements HttpServletResponse {
 		return url;
 	}
 
-	@Deprecated
-	@Override
-	public String encodeUrl(String url) {
-		return encodeURL(url);
-	}
-
-	@Deprecated
-	@Override
-	public String encodeRedirectUrl(String url) {
-		return encodeRedirectURL(url);
-	}
-
 	@Override
 	public void sendError(int sc, String msg) throws IOException {
 		sendError(sc, null, msg);
@@ -484,12 +471,6 @@ public class ServletResponseImpl implements HttpServletResponse {
 	@Override
 	public void setStatus(int sc) {
 		this.status = sc;
-	}
-
-	@Deprecated
-	@Override
-	public void setStatus(int sc, String sm) {
-		setStatus(sc);
 	}
 
 	@Override

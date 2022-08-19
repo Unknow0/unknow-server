@@ -3,7 +3,7 @@
  */
 package unknow.server.http.utils;
 
-import javax.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServlet;
 
 /**
  * @author unknow

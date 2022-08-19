@@ -11,7 +11,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CodingErrorAction;
 
-import javax.servlet.ServletOutputStream;
+import jakarta.servlet.ServletOutputStream;
 
 public final class ServletWriter<T extends ServletOutputStream & Output> extends Writer implements Output {
 	private final T out;

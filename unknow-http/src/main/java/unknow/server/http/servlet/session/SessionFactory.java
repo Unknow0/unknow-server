@@ -3,7 +3,7 @@
  */
 package unknow.server.http.servlet.session;
 
-import javax.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpSession;
 
 /**
  * @author unknow

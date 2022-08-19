@@ -8,7 +8,7 @@
 	<artifactId>unknow-http-test</artifactId>
 
 	<properties>
-		<cxf.version>3.3.11</cxf.version>
+		<cxf.version>3.5.3</cxf.version>
 	</properties>
 
 	<build>
@@ -49,7 +49,6 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-shade-plugin</artifactId>
-				<version>3.2.4</version>
 				<executions>
 					<execution>
 						<phase>package</phase>
@@ -128,22 +127,18 @@
 		<dependency>
 			<groupId>javax.annotation</groupId>
 			<artifactId>javax.annotation-api</artifactId>
-			<version>1.3.2</version>
 		</dependency>
 		<dependency>
 			<groupId>javax.xml.bind</groupId>
 			<artifactId>jaxb-api</artifactId>
-			<version>2.3.1</version>
 		</dependency>
 		<dependency>
 			<groupId>javax.jws</groupId>
 			<artifactId>javax.jws-api</artifactId>
-			<version>1.1</version>
 		</dependency>
 		<dependency>
 			<groupId>javax.xml.ws</groupId>
 			<artifactId>jaxws-api</artifactId>
-			<version>2.3.1</version>
 		</dependency>
 	</dependencies>
 </project>

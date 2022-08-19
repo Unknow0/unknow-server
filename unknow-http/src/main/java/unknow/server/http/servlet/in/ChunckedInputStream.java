@@ -6,8 +6,8 @@ package unknow.server.http.servlet.in;
 import java.io.IOException;
 import java.io.InputStream;
 
-import javax.servlet.ReadListener;
-import javax.servlet.ServletInputStream;
+import jakarta.servlet.ReadListener;
+import jakarta.servlet.ServletInputStream;
 
 /**
  * Http chuncked entity

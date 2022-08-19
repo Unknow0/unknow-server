@@ -13,23 +13,22 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 
-import javax.servlet.DispatcherType;
-import javax.servlet.ServletContextAttributeListener;
-import javax.servlet.ServletContextListener;
-import javax.servlet.ServletRequestAttributeListener;
-import javax.servlet.ServletRequestListener;
-import javax.servlet.annotation.WebFilter;
-import javax.servlet.annotation.WebListener;
-import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.HttpSessionAttributeListener;
-import javax.servlet.http.HttpSessionIdListener;
-import javax.servlet.http.HttpSessionListener;
-
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.resolution.types.ResolvedReferenceType;
 
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.ServletContextAttributeListener;
+import jakarta.servlet.ServletContextListener;
+import jakarta.servlet.ServletRequestAttributeListener;
+import jakarta.servlet.ServletRequestListener;
+import jakarta.servlet.annotation.WebFilter;
+import jakarta.servlet.annotation.WebListener;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpSessionAttributeListener;
+import jakarta.servlet.http.HttpSessionIdListener;
+import jakarta.servlet.http.HttpSessionListener;
 import unknow.server.http.servlet.ServletCookieConfigImpl;
 import unknow.server.http.utils.Resource;
 

@@ -25,25 +25,25 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
-import javax.servlet.AsyncContext;
-import javax.servlet.DispatcherType;
-import javax.servlet.RequestDispatcher;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.ServletInputStream;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.SessionCookieConfig;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
-import javax.servlet.http.HttpUpgradeHandler;
-import javax.servlet.http.Part;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import jakarta.servlet.AsyncContext;
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.RequestDispatcher;
+import jakarta.servlet.ServletConnection;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletInputStream;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.SessionCookieConfig;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpUpgradeHandler;
+import jakarta.servlet.http.Part;
 import unknow.server.http.HttpHandler;
 import unknow.server.http.data.ArrayMap;
 import unknow.server.http.servlet.in.ChunckedInputStream;
@@ -432,12 +432,6 @@ public class ServletRequestImpl implements HttpServletRequest {
 		return null;
 	}
 
-	@Deprecated
-	@Override
-	public String getRealPath(String path) {
-		return null;
-	}
-
 	@Override
 	public String getRemoteAddr() {
 		if (remoteAddr == null)
@@ -642,12 +636,6 @@ public class ServletRequestImpl implements HttpServletRequest {
 		return sessionFromUrl != null;
 	}
 
-	@Deprecated
-	@Override
-	public boolean isRequestedSessionIdFromUrl() {
-		return isRequestedSessionIdFromURL();
-	}
-
 	@Override
 	public boolean authenticate(HttpServletResponse response) throws IOException, ServletException {
 		// TODO Auto-generated method stub
@@ -710,5 +698,21 @@ public class ServletRequestImpl implements HttpServletRequest {
 		if (address == null)
 			return "127.0.0.1";
 		return address.getHostAddress();
+	}
+
+	@Override
+	public String getRequestId() { // TODO add value for keep-alive connection
+		return getServletConnection().getConnectionId();
+	}
+
+	@Override
+	public String getProtocolRequestId() {
+		return getServletConnection().getProtocolConnectionId();
+	}
+
+	@Override
+	public ServletConnection getServletConnection() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }
