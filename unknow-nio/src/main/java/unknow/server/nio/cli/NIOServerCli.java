@@ -64,8 +64,21 @@ public class NIOServerCli implements Callable<Integer> {
 		return new InetSocketAddress(address, port);
 	}
 
+	/**
+	 * called before the server start but after the property are parsed
+	 */
+	protected void init() throws Exception {
+	}
+
+	/**
+	 * called after the server shut down
+	 */
+	protected void destroy() throws Exception {
+	}
+
 	@Override
-	public Integer call() throws Exception {
+	public final Integer call() throws Exception {
+		init();
 		if (selectTime < 0)
 			throw new IllegalArgumentException("selectTime should not be <0");
 
@@ -82,6 +95,7 @@ public class NIOServerCli implements Callable<Integer> {
 		if (shutdownPort > 0)
 			new Shutdown(nioServer).start();
 		nioServer.run();
+		destroy();
 		return 0;
 	}
 

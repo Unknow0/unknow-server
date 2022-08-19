@@ -81,8 +81,8 @@ public abstract class AbstractHttpServer extends NIOServerCli {
 		}
 	}
 
-	@Override()
-	public final Integer call() throws Exception {
+	@Override
+	protected final void init() throws Exception {
 		AtomicInteger i = new AtomicInteger();
 		ExecutorService executor = new ThreadPoolExecutor(execMin, execMax, execIdle, TimeUnit.SECONDS, new SynchronousQueue<Runnable>(), r -> {
 			Thread t = new Thread(r, "exec-" + i.getAndIncrement());
@@ -95,8 +95,10 @@ public abstract class AbstractHttpServer extends NIOServerCli {
 		loadInitializer();
 		servlets.initialize(ctx, createServlets(), createFilters());
 		events.fireContextInitialized(ctx);
-		Integer err = super.call();
+	}
+
+	@Override
+	protected final void destroy() {
 		events.fireContextDestroyed(ctx);
-		return err;
 	}
 }
