@@ -3,7 +3,7 @@ package unknow.server.protobuf;
 import java.io.IOException;
 import java.io.InputStream;
 
-final class LimitedInputStream extends InputStream {
+public final class LimitedInputStream extends InputStream {
 	private final InputStream in;
 	private int limit;
 
