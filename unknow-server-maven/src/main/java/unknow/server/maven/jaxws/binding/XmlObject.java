@@ -11,17 +11,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import javax.xml.bind.annotation.XmlAccessOrder;
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlAttribute;
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlTransient;
-import javax.xml.bind.annotation.XmlValue;
-
 import com.github.javaparser.ast.expr.CastExpr;
 import com.github.javaparser.ast.expr.Expression;
 
+import jakarta.xml.bind.annotation.XmlAccessOrder;
+import jakarta.xml.bind.annotation.XmlAccessType;
+import jakarta.xml.bind.annotation.XmlAccessorType;
+import jakarta.xml.bind.annotation.XmlAttribute;
+import jakarta.xml.bind.annotation.XmlElement;
+import jakarta.xml.bind.annotation.XmlTransient;
+import jakarta.xml.bind.annotation.XmlValue;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.model.AnnotationModel;
 import unknow.server.maven.model.ClassModel;
@@ -89,7 +88,7 @@ public class XmlObject extends XmlType<ClassModel> {
 		if (a != null)
 			type = a.value("value").map(XmlAccessType::valueOf).orElse(XmlAccessType.PUBLIC_MEMBER);
 
-		a = c.annotation(javax.xml.bind.annotation.XmlType.class);
+		a = c.annotation(jakarta.xml.bind.annotation.XmlType.class);
 		List<String> propOrder = a == null ? Collections.emptyList() : a.values("propOrder").map(Arrays::asList).orElse(Collections.emptyList());
 
 		Map<String, FieldModel> fields = new HashMap<>();

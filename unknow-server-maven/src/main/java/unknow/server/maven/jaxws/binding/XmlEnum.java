@@ -6,11 +6,10 @@ package unknow.server.maven.jaxws.binding;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.xml.bind.annotation.XmlEnumValue;
-
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 
+import jakarta.xml.bind.annotation.XmlEnumValue;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
 import unknow.server.maven.model.EnumModel;

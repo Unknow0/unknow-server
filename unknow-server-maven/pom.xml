@@ -17,7 +17,6 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-plugin-plugin</artifactId>
-				<version>3.6.0</version>
 				<configuration>
 					<mojoDependencies />
 					<skipErrorNoDescriptorsFound>true</skipErrorNoDescriptorsFound>
@@ -88,16 +87,16 @@
 			<artifactId>jakarta.servlet-api</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>javax.xml.bind</groupId>
-			<artifactId>jaxb-api</artifactId>
+			<groupId>jakarta.xml.bind</groupId>
+			<artifactId>jakarta.xml.bind-api</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>javax.jws</groupId>
 			<artifactId>javax.jws-api</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>javax.annotation</groupId>
-			<artifactId>javax.annotation-api</artifactId>
+			<groupId>jakarta.annotation</groupId>
+			<artifactId>jakarta.annotation-api</artifactId>
 		</dependency>
 	</dependencies>
 </project>

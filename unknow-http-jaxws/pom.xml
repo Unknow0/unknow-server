@@ -11,7 +11,11 @@
 		<dependency>
 			<groupId>unknow.sax</groupId>
 			<artifactId>unknow-sax</artifactId>
-			<version>${unknow-sax.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>jakarta.xml.bind</groupId>
+			<artifactId>jakarta.xml.bind-api</artifactId>
 		</dependency>
 	</dependencies>
 </project>

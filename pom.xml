@@ -73,6 +73,11 @@
 					<artifactId>maven-shade-plugin</artifactId>
 					<version>3.2.4</version>
 				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-plugin-plugin</artifactId>
+					<version>3.6.0</version>
+				</plugin>
 			</plugins>
 		</pluginManagement>
 	</build>
@@ -96,9 +101,9 @@
 				<version>2.3.3</version>
 			</dependency>
 			<dependency>
-				<groupId>javax.xml.bind</groupId>
-				<artifactId>jaxb-api</artifactId>
-				<version>2.3.1</version>
+				<groupId>jakarta.xml.bind</groupId>
+				<artifactId>jakarta.xml.bind-api</artifactId>
+				<version>4.0.0</version>
 			</dependency>
 			<dependency>
 				<groupId>javax.jws</groupId>
@@ -106,9 +111,9 @@
 				<version>1.1</version>
 			</dependency>
 			<dependency>
-				<groupId>javax.annotation</groupId>
-				<artifactId>javax.annotation-api</artifactId>
-				<version>1.3.2</version>
+				<groupId>jakarta.annotation</groupId>
+				<artifactId>jakarta.annotation-api</artifactId>
+				<version>2.1.1</version>
 			</dependency>
 			<dependency>
 				<groupId>javax.xml.ws</groupId>
@@ -146,6 +151,18 @@
 				<groupId>javax.inject</groupId>
 				<artifactId>javax.inject</artifactId>
 				<version>1</version>
+			</dependency>
+
+			<dependency>
+				<groupId>info.picocli</groupId>
+				<artifactId>picocli</artifactId>
+				<version>${picocli.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.slf4j</groupId>
+				<artifactId>slf4j-simple</artifactId>
+				<version>${slf4j.version}</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>

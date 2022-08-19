@@ -6,8 +6,6 @@ package unknow.server.maven.jaxws.binding;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
 import javax.jws.WebMethod;
 import javax.jws.WebParam;
 import javax.jws.WebResult;
@@ -19,6 +17,8 @@ import javax.jws.soap.SOAPBinding.Style;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
 
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import unknow.server.jaxws.UrlPattern;
 import unknow.server.maven.jaxws.binding.XmlObject.XmlField;
 import unknow.server.maven.model.AnnotationModel;
