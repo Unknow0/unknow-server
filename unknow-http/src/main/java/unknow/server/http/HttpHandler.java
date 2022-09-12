@@ -290,10 +290,7 @@ public class HttpHandler implements Handler, Runnable {
 
 	private void cleanup() {
 		running = false;
-		try {
-			meta.clear();
-		} catch (InterruptedException e) {
-		}
+		meta.clear();
 	}
 
 	@Override

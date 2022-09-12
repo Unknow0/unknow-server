@@ -6,9 +6,6 @@ package unknow.server.nio;
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 /**
  * @author unknow
  */
@@ -16,7 +13,7 @@ public interface NIOWorkers {
 	/**
 	 * register a socket to an IOWorker
 	 * 
-	 * @param socket the socket to register
+	 * @param socket  the socket to register
 	 * @param handler the handler
 	 * @throws IOException
 	 */
@@ -33,36 +30,9 @@ public interface NIOWorkers {
 	void stop();
 
 	/**
-	 * only one worker will be use
-	 * 
-	 * @author unknow
+	 * wait for the worker to stop
 	 */
-	public static final class Single implements NIOWorkers {
-		private final IOWorker worker;
-
-		public Single(IOWorker worker) {
-			this.worker = worker;
-		}
-
-		@Override
-		public void register(SocketChannel socket, Connection handler) throws IOException {
-			worker.register(socket, handler);
-		}
-
-		@Override
-		public void start() {
-			worker.start();
-		}
-
-		@Override
-		public void stop() {
-			worker.interrupt();
-			try {
-				worker.join();
-			} catch (InterruptedException e) { // OK
-			}
-		}
-	}
+	void await();
 
 	/**
 	 * socket will register between workers in round robin
@@ -70,11 +40,10 @@ public interface NIOWorkers {
 	 * @author unknow
 	 */
 	public static class RoundRobin implements NIOWorkers {
-		private static final Logger log = LoggerFactory.getLogger(RoundRobin.class);
-		private final IOWorker[] w;
+		private final NIOWorker[] w;
 		private int i;
 
-		public RoundRobin(IOWorker[] workers) {
+		public RoundRobin(NIOWorker[] workers) {
 			this.w = workers;
 			this.i = 0;
 		}
@@ -95,13 +64,13 @@ public interface NIOWorkers {
 		@Override
 		public void stop() {
 			for (int i = 0; i < w.length; i++)
-				w[i].interrupt();
-			try {
-				for (int i = 0; i < w.length; i++)
-					w[i].join();
-			} catch (InterruptedException e) {
-				log.info("", e);
-			}
+				w[i].stop();
+		}
+
+		@Override
+		public void await() {
+			for (int i = 0; i < w.length; i++)
+				w[i].await();
 		}
 	}
 }

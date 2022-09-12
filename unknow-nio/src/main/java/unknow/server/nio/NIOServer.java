@@ -4,9 +4,8 @@
 package unknow.server.nio;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.channels.ClosedByInterruptException;
+import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
@@ -18,114 +17,80 @@ import org.slf4j.LoggerFactory;
  * 
  * @author unknow
  */
-public class NIOServer implements Runnable {
+public class NIOServer extends NIOLoop {
 	private static final Logger log = LoggerFactory.getLogger(NIOServer.class);
 
-	/** the address we will bind to */
-	private final SocketAddress bindTo;
-
-	/** the listener */
-	private final NIOServerListener listener;
-	/** the channel from which we accept connection */
-	private final ServerSocketChannel channel;
 	/** the workers to handle the connection */
 	private final NIOWorkers workers;
-
-	/** the HandlerFactory */
-	private final HandlerFactory factory;
-
-	private Thread t;
+	/** the listener */
+	private final NIOServerListener listener;
 
 	/**
 	 * create new Server
 	 * 
-	 * @param bindTo   address to bind to
 	 * @param workers  workers handler
 	 * @param listener listener
 	 * 
 	 * @throws IOException
 	 */
-	public NIOServer(SocketAddress bindTo, NIOWorkers workers, HandlerFactory factory, NIOServerListener listener) throws IOException {
-		log.debug("Creating new NIOServer on {}", bindTo);
-		this.bindTo = bindTo;
+	public NIOServer(NIOWorkers workers, NIOServerListener listener) throws IOException {
+		super("NIOServer", 0);
 		this.workers = workers;
-		this.factory = factory;
 		this.listener = listener == null ? NIOServerListener.NOP : listener;
-		this.channel = ServerSocketChannel.open();
-
 	}
 
 	/**
-	 * wait and accept new connection
+	 * bind the server on an address
+	 * 
+	 * @param a
+	 * @param handler
+	 * @throws IOException
 	 */
+	public void bind(SocketAddress a, HandlerFactory handler) throws IOException {
+		log.info("Server bind to {}", a);
+		ServerSocketChannel open = ServerSocketChannel.open();
+		open.configureBlocking(false);
+		open.register(selector, SelectionKey.OP_ACCEPT, handler);
+		open.bind(a);
+	}
+
 	@Override
-	public void run() {
-		if (t != null)
-			throw new IllegalStateException("server already running");
-		t = Thread.currentThread();
+	protected void onStartup() {
+		workers.start();
 		listener.starting(this);
+	}
+
+	@Override
+	protected void selected(SelectionKey key) throws IOException {
 		try {
-			workers.start();
-			channel.bind(bindTo);
-			while (!Thread.interrupted())
-				register(channel.accept());
-			listener.closing(this, null);
-		} catch (ClosedByInterruptException e) {
-			Thread.interrupted(); // clean interrupted state for join
-			listener.closing(this, null);
+			HandlerFactory factory = (HandlerFactory) key.attachment();
+			SocketChannel socket = ((ServerSocketChannel) key.channel()).accept();
+			workers.register(socket, new Connection(factory));
 		} catch (IOException e) {
-			listener.closing(this, e);
-			log.error("error on {}", this, e);
+			log.warn("Failed to accept", e);
 		}
+	}
+
+	@Override
+	protected void beforeStop() {
+		workers.stop();
+		workers.await();
 		try {
-			channel.close();
-			workers.stop();
-		} catch (Exception e) { // OK
-			log.warn("error on closing {}", this, e);
-		}
-		log.info("done");
-	}
-
-	/**
-	 * Gracefully stop the server
-	 * 
-	 * @throws InterruptedException
-	 */
-	public void stop() throws InterruptedException {
-		t.interrupt();
-		t.join();
-	}
-
-	/**
-	 * register a client socket to one ioworker
-	 * 
-	 * @param socket socket to register
-	 * @throws IOException in case of error
-	 */
-	public void register(SocketChannel socket) throws IOException {
-		workers.register(socket, new Connection(factory));
-	}
-
-	/**
-	 * return the address this server listen to
-	 * 
-	 * @return the address this server is bound to
-	 */
-	public InetSocketAddress getLocalAddress() {
-		try {
-			return (InetSocketAddress) channel.getLocalAddress();
+			selector.close();
 		} catch (IOException e) {
-			return null;
+			log.error("failed to close selecctor", e);
 		}
+	}
+
+	@Override
+	protected void afterStop() {
+		listener.closing(this, null);
 	}
 
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder("NIOServer[");
-		if (channel.isOpen())
-			sb.append(bindTo);
-		else
-			sb.append("closed");
+		// TODO
 		return sb.append(']').toString();
 	}
 }
