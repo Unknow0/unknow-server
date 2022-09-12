@@ -52,6 +52,10 @@ public final class Connection {
 		lastRead = lastWrite = System.currentTimeMillis();
 	}
 
+	protected final void init() {
+		handler.init();
+	}
+
 	/**
 	 * read data from the channel and try to handles it
 	 * 
@@ -95,7 +99,7 @@ public final class Connection {
 		handler.onWrite();
 	}
 
-	private void toggleKeyOps() throws InterruptedException {
+	private void toggleKeyOps() {
 		synchronized (mutex) {
 			key.interestOps(pendingWrite.isEmpty() ? SelectionKey.OP_READ : SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 		}
@@ -142,6 +146,7 @@ public final class Connection {
 		try {
 			return (InetSocketAddress) ((SocketChannel) key.channel()).getRemoteAddress();
 		} catch (IOException e) {
+			Thread.currentThread().interrupt();
 			return null;
 		}
 	}
@@ -165,11 +170,7 @@ public final class Connection {
 	 * @return true if we should close this handler
 	 */
 	public boolean isClosed() {
-		try {
-			return out.isClosed() && pendingWrite.isEmpty();
-		} catch (InterruptedException e) {
-			return true;
-		}
+		return out.isClosed() && pendingWrite.isEmpty();
 	}
 
 	public boolean closed(long now, boolean stop) {
@@ -178,10 +179,8 @@ public final class Connection {
 
 	/**
 	 * free the handler
-	 * 
-	 * @throws InterruptedException
 	 */
-	public final void free() throws InterruptedException {
+	public final void free() {
 		handler.free();
 		out.close();
 		pendingWrite.clear();
@@ -190,11 +189,7 @@ public final class Connection {
 
 	@Override
 	public String toString() {
-		try {
-			return key.channel().toString() + " closed: " + isClosed() + " pending: " + pendingWrite.length();
-		} catch (InterruptedException e) {
-			return "";
-		}
+		return key.channel().toString() + " closed: " + isClosed() + " pending: " + pendingWrite.length();
 	}
 
 	public static final class Out extends OutputStream {
@@ -212,6 +207,7 @@ public final class Connection {
 				h.pendingWrite.write(b);
 				h.toggleKeyOps();
 			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
 				throw new IOException(e);
 			}
 		}
@@ -247,6 +243,7 @@ public final class Connection {
 				h.pendingWrite.write(buf, off, len);
 				h.toggleKeyOps();
 			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
 				throw new IOException(e);
 			}
 		}
@@ -277,13 +274,10 @@ public final class Connection {
 		public synchronized void flush() {
 			if (h == null)
 				return;
-			try {
-				if (h.key.isValid())
-					h.toggleKeyOps();
-				if (!h.pendingWrite.isEmpty())
-					h.key.selector().wakeup();
-			} catch (InterruptedException e) {
-			}
+			if (h.key.isValid())
+				h.toggleKeyOps();
+			if (!h.pendingWrite.isEmpty())
+				h.key.selector().wakeup();
 		}
 	}
 }

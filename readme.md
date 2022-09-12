@@ -2,11 +2,19 @@
  
 ## unknow-http
  
-implements of javax.servlet
+partial implementation of jakarta.servlet
  
 ## unknow-server-maven
  
-maven plugin to genrerate a complete http server
+various maven plugin to generate server part
+
+### servlet-generator
+
+parse web.xml and jakarta.servlet annotation to generate an application server
+
+### jaxws-generator
+
+parse @jakarta.jws.WebService to generate a servlet   
  
 ## unknow-nio
 

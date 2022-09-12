@@ -4,20 +4,21 @@
 package unknow.server.nio.cli;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.ServerSocket;
 import java.util.concurrent.Callable;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
+import unknow.server.nio.Connection;
+import unknow.server.nio.Handler;
 import unknow.server.nio.HandlerFactory;
-import unknow.server.nio.IOWorker;
 import unknow.server.nio.NIOServer;
 import unknow.server.nio.NIOServerListener;
+import unknow.server.nio.NIOWorker;
 import unknow.server.nio.NIOWorkers;
 import unknow.server.nio.NIOWorkers.RoundRobin;
-import unknow.server.nio.NIOWorkers.Single;
 
 /**
  * NioServer configuration
@@ -84,17 +85,19 @@ public class NIOServerCli implements Callable<Integer> {
 
 		NIOWorkers workers;
 		if (iothread == 1)
-			workers = new Single(new IOWorker(0, listener, selectTime));
+			workers = new NIOWorker(0, listener, selectTime);
 		else {
-			IOWorker[] w = new IOWorker[iothread];
+			NIOWorker[] w = new NIOWorker[iothread];
 			for (int i = 0; i < iothread; i++)
-				w[i] = new IOWorker(i, listener, selectTime);
+				w[i] = new NIOWorker(i, listener, selectTime);
 			workers = new RoundRobin(w);
 		}
-		NIOServer nioServer = new NIOServer(getInetAddress(), workers, handler, listener);
+		NIOServer nioServer = new NIOServer(workers, listener);
+		nioServer.bind(getInetAddress(), handler);
 		if (shutdownPort > 0)
-			new Shutdown(nioServer).start();
-		nioServer.run();
+			nioServer.bind(new InetSocketAddress(InetAddress.getLocalHost(), shutdownPort), new ShutdownHandler(nioServer));
+		nioServer.start();
+		nioServer.await();
 		destroy();
 		return 0;
 	}
@@ -108,27 +111,38 @@ public class NIOServerCli implements Callable<Integer> {
 		System.exit(new CommandLine(new NIOServerCli()).execute(arg));
 	}
 
-	private class Shutdown extends Thread {
-		private final NIOServer nioServer;
-		private final ServerSocket socket;
+	private static class ShutdownHandler implements Handler, HandlerFactory {
+		private final NIOServer server;
 
-		public Shutdown(NIOServer nioServer) throws IOException {
-			super("Shutdown handler");
-			setDaemon(true);
-			this.nioServer = nioServer;
-			this.socket = new ServerSocket(shutdownPort);
+		public ShutdownHandler(NIOServer server) {
+			this.server = server;
 		}
 
 		@Override
-		public void run() {
-			while (true) {
-				try {
-					socket.accept();
-					nioServer.stop();
-					break;
-				} catch (Exception e) { // OK
-				}
-			}
+		public Handler create(Connection c) {
+			return this;
+		}
+
+		@Override
+		public void init() {
+			server.stop();
+		}
+
+		@Override
+		public void onRead() throws InterruptedException, IOException {
+		}
+
+		@Override
+		public void onWrite() throws InterruptedException, IOException {
+		}
+
+		@Override
+		public boolean closed(long now, boolean close) {
+			return true;
+		}
+
+		@Override
+		public void free() {
 		}
 	}
 }

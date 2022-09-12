@@ -23,10 +23,9 @@ public class Buffers {
 	/**
 	 * 
 	 * @return the current number of bytes
-	 * @throws InterruptedException
 	 */
-	public int length() throws InterruptedException {
-		lock.lockInterruptibly();
+	public int length() {
+		lock.lock();
 		try {
 			return len;
 		} finally {
@@ -392,10 +391,9 @@ public class Buffers {
 	/**
 	 * clear this buffers
 	 * 
-	 * @throws InterruptedException
 	 */
-	public void clear() throws InterruptedException {
-		lock.lockInterruptibly();
+	public void clear() {
+		lock.lock();
 		try {
 			len = 0;
 			Chunk c = head;
@@ -410,10 +408,9 @@ public class Buffers {
 
 	/**
 	 * @return true if this buffers is empty
-	 * @throws InterruptedException
 	 */
-	public boolean isEmpty() throws InterruptedException {
-		lock.lockInterruptibly();
+	public boolean isEmpty() {
+		lock.lock();
 		try {
 			return len == 0;
 		} finally {

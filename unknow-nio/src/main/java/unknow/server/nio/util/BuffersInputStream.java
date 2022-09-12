@@ -83,10 +83,6 @@ public class BuffersInputStream extends InputStream {
 
 	@Override
 	public int available() throws IOException {
-		try {
-			return buffers.length();
-		} catch (InterruptedException e) {
-			throw new IOException(e);
-		}
+		return buffers.length();
 	}
 }
