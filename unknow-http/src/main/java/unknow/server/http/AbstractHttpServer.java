@@ -74,7 +74,7 @@ public abstract class AbstractHttpServer extends NIOServerCli {
 
 	protected abstract FilterConfigImpl[] createFilters();
 
-	private final void loadInitializer() throws ServletException {
+	protected void loadInitializer() throws ServletException {
 		for (ServletContainerInitializer i : ServiceLoader.load(ServletContainerInitializer.class)) {
 			i.onStartup(null, ctx);
 		}

@@ -75,12 +75,14 @@ public class PathTreeBuilder {
 	}
 
 	private PartNode buildTree(String part, Node n) {
+		Node d = n.nexts.remove("\u0000");
+		PartNode pattern = d == null ? null : buildTree("{}", d);
+
 		PartNode[] nexts = new PartNode[n.nexts.size()];
 		int i = 0;
 		for (Entry<String, Node> e : n.nexts.entrySet())
 			nexts[i++] = buildTree(e.getKey(), e.getValue());
 		Arrays.sort(nexts, CMP);
-		PartNode pattern = n.pattern == null ? null : buildTree(null, n.pattern);
 		PathTree.Node[] ends = EMPTY;
 		if (n == root && (!endingFilter.isEmpty() || !ending.isEmpty())) {
 			Set<String> parts = new HashSet<>(endingFilter.keySet());
@@ -212,8 +214,6 @@ public class PathTreeBuilder {
 		ServletConfigImpl def;
 		final List<FilterConfigImpl> defFilter = new ArrayList<>();
 
-		Node pattern;
-
 		void addDefault(ServletConfigImpl def, List<FilterConfigImpl> defFilter) {
 			if (this.def == null)
 				this.def = def;
@@ -221,8 +221,6 @@ public class PathTreeBuilder {
 				this.exact = this.def;
 			this.defFilter.addAll(defFilter);
 			this.exactsFilter.addAll(defFilter);
-			if (pattern != null)
-				pattern.addDefault(this.def, this.defFilter);
 			for (Node n : nexts.values())
 				n.addDefault(this.def, this.defFilter);
 		}

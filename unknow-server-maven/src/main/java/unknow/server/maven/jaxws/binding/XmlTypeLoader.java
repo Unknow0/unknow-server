@@ -5,6 +5,7 @@ package unknow.server.maven.jaxws.binding;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import unknow.server.maven.jaxws.binding.XmlObject.Factory;
 import unknow.server.maven.model.AnnotationModel;
@@ -90,20 +91,18 @@ public class XmlTypeLoader {
 		String name = c.simpleName();
 
 		Factory factory = null;
-		AnnotationModel a = c.annotation(jakarta.xml.bind.annotation.XmlType.class);
-		if (a != null) {
-			String cl = a.value("factoryClass").orElse(null);
-			String method = a.value("factoryMethod").orElse("");
+		Optional<AnnotationModel> o = c.annotation(jakarta.xml.bind.annotation.XmlType.class);
+		String cl = o.flatMap(a -> a.value("factoryClass")).orElse(null);
+		String method = o.flatMap(a -> a.value("factoryMethod")).orElse("");
 
-			if (!method.isEmpty()) {
-				if (jakarta.xml.bind.annotation.XmlType.DEFAULT.class.getCanonicalName().equals(cl))
-					factory = new Factory(c.name(), method);
-				else
-					factory = new Factory(cl, method);
-			}
-			name = a.value("name").map(v -> "##default".equals(v) ? null : v).orElse(name);
-			namespace = a.value("namespace").map(v -> "##default".equals(v) ? null : v).orElse(namespace);
+		if (!method.isEmpty()) {
+			if (jakarta.xml.bind.annotation.XmlType.DEFAULT.class.getCanonicalName().equals(cl))
+				factory = new Factory(c.name(), method);
+			else
+				factory = new Factory(cl, method);
 		}
+		name = o.flatMap(a -> a.value("name")).map(v -> "##default".equals(v) ? null : v).orElse(name);
+		namespace = o.flatMap(a -> a.value("namespace")).map(v -> "##default".equals(v) ? null : v).orElse(namespace);
 
 		return new XmlObject(c, namespace, name, factory, this);
 	}
@@ -111,17 +110,11 @@ public class XmlTypeLoader {
 	private static String getNs(TypeModel c) {
 		// TODO get namespace data from package annotation
 		String ns = "";
-		AnnotationModel a = c.annotation(jakarta.xml.bind.annotation.XmlType.class);
-		if (a != null)
-			ns = a.value("namespace").map(v -> "##default".equals(v) ? null : v).orElse(ns);
-		return ns;
+		return c.annotation(jakarta.xml.bind.annotation.XmlType.class).flatMap(a -> a.value("namespace")).map(v -> "##default".equals(v) ? null : v).orElse(ns);
 	}
 
 	private static String getName(TypeModel c) {
 		String name = c.simpleName();
-		AnnotationModel a = c.annotation(jakarta.xml.bind.annotation.XmlType.class);
-		if (a != null)
-			name = a.value("name").map(v -> "##default".equals(v) ? null : v).orElse(name);
-		return name;
+		return c.annotation(jakarta.xml.bind.annotation.XmlType.class).flatMap(a -> a.value("name")).map(v -> "##default".equals(v) ? null : v).orElse(name);
 	}
 }

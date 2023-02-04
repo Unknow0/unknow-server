@@ -35,14 +35,13 @@ public class PathTree {
 	 * @throws InterruptedException
 	 */
 	public FilterChain find(ServletRequestImpl req) throws InterruptedException {
-		req.setPathInfo(1);
 		FilterChain f = tryFind(req, root, req.getPaths(), 0);
 		return f == null ? root.def : f;
 	}
 
 	private FilterChain tryFind(ServletRequestImpl req, PartNode last, List<String> part, int i) throws InterruptedException {
 		if (i == part.size()) {
-			req.setPathInfo(part.size());
+			req.setPathInfo(i);
 			return last.exact;
 		}
 
@@ -50,22 +49,21 @@ public class PathTree {
 			PartNode n = next(last.nexts, part.get(i));
 			if (n == null)
 				break;
-			if (i + 1 == part.size()) {
+			if (++i == part.size()) {
 				req.setPathInfo(i);
 				return n.exact;
 			}
 			last = n;
-			i++;
 		}
 		if (last.pattern != null) {
-			if (i + 1 < part.size()) {
-				FilterChain f = tryFind(req, last.pattern, part, i + 1);
-				if (f != null) // contextPath already set
-					return f;
-			} else {
+			if (++i == part.size()) {
 				req.setPathInfo(i);
 				return last.pattern.exact;
 			}
+
+			FilterChain f = tryFind(req, last.pattern, part, i);
+			if (f != null) // contextPath already set
+				return f;
 		}
 
 		if (last.ends != null) {

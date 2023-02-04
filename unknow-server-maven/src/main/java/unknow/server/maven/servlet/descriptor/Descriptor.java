@@ -59,6 +59,8 @@ public class Descriptor implements Consumer<CompilationUnit> {
 
 	public final ServletCookieConfigImpl cookieConfig = new ServletCookieConfigImpl();
 
+	public final List<String> initializer = new ArrayList<>();
+
 	/**
 	 * create new Descriptor
 	 */

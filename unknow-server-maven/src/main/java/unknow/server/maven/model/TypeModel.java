@@ -4,15 +4,24 @@
 package unknow.server.maven.model;
 
 import unknow.server.maven.model.util.WithAnnotation;
+import unknow.server.maven.model.util.WithName;
 
 /**
  * @author unknow
  */
-public interface TypeModel extends WithAnnotation {
+public interface TypeModel extends WithAnnotation, WithName {
 	/**
 	 * @return type fully qualified name
 	 */
+	@Override
 	String name();
+
+	/**
+	 * @return java internalName
+	 */
+	default String internalName() {
+		return "L" + name() + ";";
+	}
 
 	/**
 	 * @return simpleName
@@ -36,7 +45,7 @@ public interface TypeModel extends WithAnnotation {
 	 * @return true if it's a primitive type
 	 */
 	default boolean isPrimitive() {
-		return false;
+		return this instanceof PrimitiveModel;
 	}
 
 	default PrimitiveModel asPrimitive() {
@@ -49,7 +58,7 @@ public interface TypeModel extends WithAnnotation {
 	 * @return true if it's a class type
 	 */
 	default boolean isClass() {
-		return false;
+		return this instanceof ClassModel;
 	}
 
 	default ClassModel asClass() {
@@ -59,10 +68,33 @@ public interface TypeModel extends WithAnnotation {
 	}
 
 	/**
+	 * Determines if the class or interface represented by this {@code TypeModel} object is either the same as, or is a superclass or superinterface of, the class or interface represented by the specified {@code TypeModel} parameter
+	 * 
+	 * @param t the clazz
+	 * @return true is clazz c = this works
+	 */
+	default boolean isAssignableFrom(TypeModel t) {
+		return t.name().equals(name());
+	}
+
+	/**
+	 * @return true if it's a parameterized class type
+	 */
+	default boolean isParamClass() {
+		return this instanceof ParameterizedClassModel;
+	}
+
+	default ParameterizedClassModel asParamClass() {
+		if (this instanceof ParameterizedClassModel)
+			return (ParameterizedClassModel) this;
+		throw new RuntimeException();
+	}
+
+	/**
 	 * @return true if it's an array
 	 */
 	default boolean isArray() {
-		return false;
+		return this instanceof ArrayModel;
 	}
 
 	/**
@@ -78,7 +110,7 @@ public interface TypeModel extends WithAnnotation {
 	 * @return true if it's an enum
 	 */
 	default boolean isEnum() {
-		return false;
+		return this instanceof EnumModel;
 	}
 
 	/**

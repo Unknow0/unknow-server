@@ -79,6 +79,11 @@ public final class ServletResourceStatic extends HttpServlet {
 	}
 
 	@Override
+	protected void doOptions(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		resp.setHeader("Allow", "GET,HEAD,OPTIONS,TRACE");
+	}
+
+	@Override
 	protected long getLastModified(HttpServletRequest req) {
 		return lastModified;
 	}

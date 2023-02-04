@@ -49,7 +49,7 @@ public final class ServletResource extends HttpServlet {
 			resp.setStatus(code);
 		resp.setContentLengthLong(size);
 		resp.setContentType(mimeType);
-
+		
 		if (!content)
 			return;
 		ServletOutputStream os = resp.getOutputStream();
@@ -71,6 +71,11 @@ public final class ServletResource extends HttpServlet {
 	@Override
 	protected void doHead(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		process(req, resp, false);
+	}
+
+	@Override
+	protected void doOptions(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		resp.setHeader("Allow", "GET,HEAD,OPTIONS,TRACE");
 	}
 
 	@Override

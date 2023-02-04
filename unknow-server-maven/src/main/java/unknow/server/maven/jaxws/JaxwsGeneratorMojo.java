@@ -3,7 +3,6 @@
  */
 package unknow.server.maven.jaxws;
 
-import java.io.IOException;
 import java.util.Optional;
 
 import org.apache.maven.plugin.MojoExecutionException;
@@ -20,8 +19,6 @@ import jakarta.jws.WebService;
 import unknow.server.maven.AbstractMojo;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.jaxws.binding.XmlTypeLoader;
-import unknow.server.maven.model.AnnotationModel;
-import unknow.server.maven.model.TypeModel;
 
 /**
  * @author unknow
@@ -37,7 +34,7 @@ public class JaxwsGeneratorMojo extends AbstractMojo {
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
 		init();
-		processSrc(cu -> cu.walk(TypeDeclaration.class, t -> processService(loader.get(t.resolve().getQualifiedName()))));
+		processSrc();
 
 		CompilationUnit marshallers = new CompilationUnit(packageName);
 		marshallers.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolSolver);
@@ -60,21 +57,7 @@ public class JaxwsGeneratorMojo extends AbstractMojo {
 				throw new MojoFailureException("failed to generate/save output class", e);
 			}
 		}
-		if (find) {
-			try {
-				out.save(marshallers);
-			} catch (IOException e) {
-				throw new MojoFailureException("failed to save output class", e);
-			}
-		}
-	}
-
-	private void processService(TypeModel t) {
-		AnnotationModel a = t.annotation(WebService.class);
-		if (a == null)
-			return;
-		CompilationUnit cu = new CompilationUnit(packageName);
-		cu.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolSolver);
-//		TypeCache types = new TypeCache(cu, existingClass);
+		if (find)
+			out.save(marshallers);
 	}
 }

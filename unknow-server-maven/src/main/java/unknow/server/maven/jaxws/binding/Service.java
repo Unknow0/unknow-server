@@ -5,6 +5,7 @@ package unknow.server.maven.jaxws.binding;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
@@ -18,7 +19,7 @@ import jakarta.jws.WebService;
 import jakarta.jws.soap.SOAPBinding;
 import jakarta.jws.soap.SOAPBinding.ParameterStyle;
 import jakarta.jws.soap.SOAPBinding.Style;
-import unknow.server.jaxws.UrlPattern;
+import unknow.server.jaxws.UrlMapping;
 import unknow.server.maven.jaxws.binding.XmlObject.XmlField;
 import unknow.server.maven.model.AnnotationModel;
 import unknow.server.maven.model.ClassModel;
@@ -56,22 +57,15 @@ public class Service {
 
 	public static Service build(TypeDeclaration<?> serviceClass, ModelLoader loader, XmlTypeLoader typeLoader) {
 		TypeModel clazz = loader.get(serviceClass.resolve().getQualifiedName());
-		AnnotationModel ws = clazz.annotation(WebService.class);
+		AnnotationModel ws = clazz.annotation(WebService.class).get();
 		String name = ws.value("name").orElse(serviceClass.resolve().getClassName());
 		String ns = ws.value("targetNamespace").orElse(serviceClass.resolve().getPackageName());
 
-		AnnotationModel a = clazz.annotation(UrlPattern.class);
-		String[] url = { "/" + name };
-		if (a != null)
-			url = a.values("value").orElse(url);
+		String[] url = clazz.annotation(UrlMapping.class).flatMap(a -> a.values()).orElse(new String[] { "/" + name });
 
-		Style style = Style.DOCUMENT;
-		ParameterStyle paramStyle = ParameterStyle.WRAPPED;
-		a = clazz.annotation(SOAPBinding.class);
-		if (a != null) {
-			style = a.value("style").map(s -> SOAPBinding.Style.valueOf(s)).orElse(SOAPBinding.Style.DOCUMENT);
-			paramStyle = a.value("parameterStyle").map(s -> SOAPBinding.ParameterStyle.valueOf(s)).orElse(SOAPBinding.ParameterStyle.WRAPPED);
-		}
+		Style style = clazz.annotation(SOAPBinding.class).flatMap(a -> a.value("style")).map(s -> Style.valueOf(s)).orElse(Style.DOCUMENT);
+		ParameterStyle paramStyle = clazz.annotation(SOAPBinding.class).flatMap(a -> a.value("parameterStyle")).map(s -> ParameterStyle.valueOf(s)).orElse(ParameterStyle.WRAPPED);
+
 		Service service = new Service(name, ns, url, style, paramStyle);
 
 		String inter = ws.value("endpointInterface").orElse(null);
@@ -107,34 +101,23 @@ public class Service {
 	 */
 	private void collectOp(ClassModel cl, XmlTypeLoader typeLoader) {
 		for (MethodModel m : cl.methods()) {
-			AnnotationModel o = m.annotation(WebMethod.class);
-			if (o == null)
+			Optional<AnnotationModel> o = m.annotation(WebMethod.class);
+			if (o.isEmpty())
 				continue;
-			if (o.value("exclude").map(Boolean::parseBoolean).orElse(false))
+			if (o.get().value("exclude").map(Boolean::parseBoolean).orElse(false))
 				continue;
-			String name = o.value("operationName").orElse(m.name());
-			String action = o.value("action").orElse("");
+			String name = o.get().value("operationName").orElse(m.name());
+			String action = o.get().value("action").orElse("");
 
-			Style style = this.style;
-			ParameterStyle paramStyle = this.paramStyle;
-			o = m.annotation(SOAPBinding.class);
-			if (o != null) {
-				style = o.value("style").map(s -> SOAPBinding.Style.valueOf(s)).orElse(style);
-				paramStyle = o.value("parameterStyle").map(s -> SOAPBinding.ParameterStyle.valueOf(s)).orElse(paramStyle);
-			}
+			Style style = m.annotation(SOAPBinding.class).flatMap(a -> a.value("style")).map(s -> Style.valueOf(s)).orElse(this.style);
+			ParameterStyle paramStyle = m.annotation(SOAPBinding.class).flatMap(a -> a.value("parameterStyle")).map(s -> ParameterStyle.valueOf(s)).orElse(this.paramStyle);
 
 			Param r = null;
 			TypeModel type = m.type();
 			if (!type.isVoid()) {
-				o = m.annotation(WebResult.class);
-				String rns = "";
-				String rname = "";
-				boolean header = false;
-				if (o != null) {
-					header = o.value("header").map(Boolean::parseBoolean).orElse(false);
-					rname = o.value("name").orElse("");
-					rns = o.value("targetNamespace").orElse("");
-				}
+				boolean header = m.annotation(WebResult.class).flatMap(a -> a.value("header")).map(Boolean::parseBoolean).orElse(false);
+				String rname = m.annotation(WebResult.class).flatMap(a -> a.value("name")).orElse("");
+				String rns = m.annotation(WebResult.class).flatMap(a -> a.value("targetNamespace")).orElse("");
 
 				if (rname.isEmpty())
 					rname = style == Style.DOCUMENT && paramStyle == ParameterStyle.BARE ? name + "Response" : "return";
@@ -145,16 +128,10 @@ public class Service {
 			}
 			Op op = new Op(m.name(), name, ns, r, action, style, paramStyle);
 			for (ParamModel p : m.parameters()) {
-				String ns = "##default";
-				name = "##default";
 				XmlType<?> t = typeLoader.get(p.type());
-				boolean header = false;
-				AnnotationModel oa = p.annotation(WebParam.class);
-				if (oa != null) {
-					header = oa.value("header").map(Boolean::parseBoolean).orElse(false);
-					name = oa.value("name").orElse("##default");
-					ns = oa.value("targetNamespace").orElse("##default");
-				}
+				boolean header = p.annotation(WebParam.class).flatMap(a -> a.value("header")).map(Boolean::parseBoolean).orElse(false);
+				name = p.annotation(WebParam.class).flatMap(a -> a.value("name")).orElse("##default");
+				String ns = p.annotation(WebParam.class).flatMap(a -> a.value("targetNamespace")).orElse("##default");
 
 				if ("##default".equals(name))
 					name = paramStyle == ParameterStyle.BARE ? op.name : "arg" + op.params.size();

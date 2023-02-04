@@ -3,6 +3,7 @@
  */
 package unknow.server.maven;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -11,11 +12,17 @@ import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
+import org.apache.maven.model.Resource;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.project.MavenProject;
+import org.codehaus.plexus.util.DirectoryWalkListener;
+import org.codehaus.plexus.util.DirectoryWalker;
 
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParserConfiguration;
@@ -33,8 +40,9 @@ import unknow.server.maven.model.ModelLoader;
  * @author unknow
  */
 public abstract class AbstractMojo extends org.apache.maven.plugin.AbstractMojo {
-	@Parameter(name = "src", defaultValue = "${project.build.sourceDirectory}")
-	protected String src;
+
+	@Parameter(defaultValue = "${project}", required = true, readonly = true)
+	protected MavenProject project;
 
 	@Parameter(name = "packageName")
 	protected String packageName;
@@ -64,12 +72,18 @@ public abstract class AbstractMojo extends org.apache.maven.plugin.AbstractMojo 
 	protected final ModelLoader loader = new ModelLoader(classes);
 
 	protected void init() throws MojoFailureException {
-		resolver = new CombinedTypeSolver(new ReflectionTypeSolver(false), new JavaParserTypeSolver(src));
+		List<String> compileSourceRoots = project.getCompileSourceRoots();
+		TypeSolver[] solver = new TypeSolver[compileSourceRoots.size() + 1];
+		int i = 0;
+		solver[i++] = new ReflectionTypeSolver(false);
+		for (String s : compileSourceRoots)
+			solver[i++] = new JavaParserTypeSolver(s);
+		resolver = new CombinedTypeSolver(solver);
 		javaSymbolSolver = new JavaSymbolSolver(resolver);
 		parser = new JavaParser(new ParserConfiguration().setStoreTokens(true).setSymbolResolver(javaSymbolSolver));
 
 		if (output == null)
-			output = src;
+			output = compileSourceRoots.get(0);
 
 		try {
 			out = new Output(output, packageName);
@@ -78,9 +92,12 @@ public abstract class AbstractMojo extends org.apache.maven.plugin.AbstractMojo 
 		}
 	}
 
+	protected void processSrc() throws MojoFailureException {
+		processSrc(null);
+	}
+
 	protected void processSrc(Consumer<CompilationUnit> consumer) throws MojoFailureException {
-		final Path local = Paths.get(src, packageName == null ? new String[0] : packageName.split("\\."));
-		final int count = local.getNameCount() + 1;
+		String[] part = packageName == null ? new String[0] : packageName.split("\\.");
 
 		Consumer<CompilationUnit> p = consumer == null ? c : cu -> {
 			c.accept(cu);
@@ -88,22 +105,67 @@ public abstract class AbstractMojo extends org.apache.maven.plugin.AbstractMojo 
 		};
 
 		try { // Collect annotation
-			Files.walkFileTree(Paths.get(src), new SimpleFileVisitor<Path>() {
-				@Override
-				public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-					if (!file.getFileName().toString().endsWith(".java"))
+			for (String s : project.getCompileSourceRoots()) {
+				final Path local = Paths.get(s, part);
+				final int count = local.getNameCount();
+
+				Files.walkFileTree(Paths.get(s), new SimpleFileVisitor<Path>() {
+					@Override
+					public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+						if (!file.getFileName().toString().endsWith(".java"))
+							return FileVisitResult.CONTINUE;
+						parser.parse(file).ifSuccessful(p);
+						if (count == file.getNameCount() && file.startsWith(local)) {
+							String string = file.getFileName().toString();
+							string = string.substring(0, string.length() - 5);
+							existingClass.put(string, packageName + "." + string);
+						}
 						return FileVisitResult.CONTINUE;
-					parser.parse(file).ifSuccessful(p);
-					if (count == file.getNameCount() && file.startsWith(local)) {
-						String string = file.getFileName().toString();
-						string = string.substring(0, string.length() - 5);
-						existingClass.put(string, packageName + "." + string);
 					}
-					return FileVisitResult.CONTINUE;
-				}
-			});
+				});
+			}
 		} catch (IOException e) {
 			throw new MojoFailureException("failed to get source failed", e);
+		}
+	}
+
+	protected void processResources(BiConsumer<Path, Path> c) {
+		DirectoryWalker scanner = new DirectoryWalker();
+		L l = new L(c);
+		scanner.addDirectoryWalkListener(l);
+		for (Resource r : project.getResources()) {
+			l.root = Paths.get(r.getDirectory());
+			scanner.setBaseDir(l.root.toFile());
+			scanner.setIncludes(r.getIncludes());
+			scanner.setExcludes(r.getExcludes());
+			scanner.scan();
+		}
+	}
+
+	private static class L implements DirectoryWalkListener {
+		final BiConsumer<Path, Path> c;
+		Path root;
+
+		L(BiConsumer<Path, Path> c) {
+			this.c = c;
+		}
+
+		@Override
+		public void directoryWalkStep(int percentage, File file) {
+			Path path = file.toPath();
+			c.accept(path, root.relativize(path));
+		}
+
+		@Override
+		public void directoryWalkStarting(File basedir) {
+		}
+
+		@Override
+		public void directoryWalkFinished() {
+		}
+
+		@Override
+		public void debug(String message) {
 		}
 	}
 }

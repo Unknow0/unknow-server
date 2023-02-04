@@ -14,10 +14,10 @@ import java.util.Set;
 /**
  * @author unknow
  */
-public class ObjectArrayMap<K, T> implements Map<K, T> {
+public class ObjectArrayMap<K, V> implements Map<K, V> {
 	private final Comparator<K> cmp;
 	private K[] key;
-	private T[] value;
+	private V[] value;
 	private int len;
 
 	/**
@@ -27,14 +27,14 @@ public class ObjectArrayMap<K, T> implements Map<K, T> {
 	public ObjectArrayMap(Comparator<K> cmp) {
 		this.cmp = cmp;
 		key = (K[]) new Object[10];
-		value = (T[]) new Object[10];
+		value = (V[]) new Object[10];
 		len = 0;
 	}
 
 	/**
 	 * create a new arrayMap with these key/value /!\ key should already be sorted
 	 */
-	public ObjectArrayMap(K[] key, T[] value, Comparator<K> cmp) {
+	public ObjectArrayMap(K[] key, V[] value, Comparator<K> cmp) {
 		if (key.length != value.length)
 			throw new IllegalArgumentException("different number of key and value");
 		this.cmp = cmp;
@@ -45,7 +45,7 @@ public class ObjectArrayMap<K, T> implements Map<K, T> {
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public T get(Object name) {
+	public V get(Object name) {
 		int i = Arrays.binarySearch(key, 0, len, (K) name, cmp);
 		return i < 0 ? null : value[i];
 	}
@@ -55,7 +55,7 @@ public class ObjectArrayMap<K, T> implements Map<K, T> {
 	}
 
 	@Override
-	public T put(K name, T o) {
+	public V put(K name, V o) {
 		int i = Arrays.binarySearch(key, 0, len, name, cmp);
 		if (i >= 0) {
 			value[i] = o;
@@ -67,13 +67,13 @@ public class ObjectArrayMap<K, T> implements Map<K, T> {
 		}
 		ensure(len++);
 		i = -i - 1;
-		T old = value[i];
+		V old = value[i];
 		key[i] = name;
 		value[i] = o;
 		return old;
 	}
 
-	public boolean putOnce(K name, T o) {
+	public boolean putOnce(K name, V o) {
 		int i = Arrays.binarySearch(key, 0, len, name, cmp);
 		if (i >= 0)
 			return false;
@@ -90,7 +90,7 @@ public class ObjectArrayMap<K, T> implements Map<K, T> {
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public T remove(Object name) {
+	public V remove(Object name) {
 		return put((K) name, null);
 	}
 
@@ -110,7 +110,7 @@ public class ObjectArrayMap<K, T> implements Map<K, T> {
 	}
 
 	@Override
-	public Set<Entry<K, T>> entrySet() {
+	public Set<Entry<K, V>> entrySet() {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -126,14 +126,14 @@ public class ObjectArrayMap<K, T> implements Map<K, T> {
 	}
 
 	@Override
-	public Collection<T> values() {
+	public Collection<V> values() {
 		return null;
 	}
 
 	@Override
-	public void putAll(Map<? extends K, ? extends T> m) {
+	public void putAll(Map<? extends K, ? extends V> m) {
 		ensure(len + m.size());
-		for (Entry<? extends K, ? extends T> e : m.entrySet())
+		for (Entry<? extends K, ? extends V> e : m.entrySet())
 			put(e.getKey(), e.getValue());
 	}
 

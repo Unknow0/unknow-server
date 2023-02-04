@@ -22,6 +22,5 @@ public abstract class Builder {
 		TypeCache type();
 
 		String sessionFactory();
-
 	}
 }

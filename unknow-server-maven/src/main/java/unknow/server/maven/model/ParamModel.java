@@ -4,18 +4,15 @@
 package unknow.server.maven.model;
 
 import unknow.server.maven.model.util.WithAnnotation;
+import unknow.server.maven.model.util.WithName;
+import unknow.server.maven.model.util.WithType;
 
 /**
  * @author unknow
  */
-public interface ParamModel extends WithAnnotation {
+public interface ParamModel extends WithAnnotation, WithType, WithName {
 	/**
-	 * @return parameter name
+	 * @return the method owning this parameter
 	 */
-	String name();
-
-	/**
-	 * @return parameter type
-	 */
-	TypeModel type();
+	MethodModel method();
 }

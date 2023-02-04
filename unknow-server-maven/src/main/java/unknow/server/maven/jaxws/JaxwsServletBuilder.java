@@ -74,7 +74,7 @@ import unknow.server.maven.jaxws.binding.XmlObject.XmlField;
 import unknow.server.maven.jaxws.binding.XmlType;
 import unknow.server.maven.jaxws.binding.XmlTypeLoader;
 import unknow.server.maven.model.ModelLoader;
-import unknow.server.maven.model.impl.JvmClass;
+import unknow.server.maven.model.jvm.JvmClass;
 
 /**
  * @author unknow

@@ -29,4 +29,9 @@ public class DummyModel implements TypeModel {
 	public String name() {
 		return name;
 	}
+
+	@Override
+	public boolean isAssignableFrom(TypeModel t) {
+		return name.equals(t.name());
+	}
 }

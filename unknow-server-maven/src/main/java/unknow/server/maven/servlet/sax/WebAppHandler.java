@@ -24,7 +24,7 @@ import unknow.server.maven.servlet.descriptor.SD;
 public class WebAppHandler implements SaxHandler<Context> {
 	public static final WebAppHandler INSTANCE = new WebAppHandler();
 
-	private static final SaxHandler<Context> CONTEXT_PARAM = new SaxHandler<Context>() {
+	private static final SaxHandler<Context> CONTEXT_PARAM = new SaxHandler<>() {
 		@Override
 		public void attributes(String uri, String name, Attributes atts, Context context) {
 			if ("context-param".equals(name))
@@ -44,7 +44,7 @@ public class WebAppHandler implements SaxHandler<Context> {
 			}
 		}
 	};
-	private static final SaxHandler<Context> INIT_PARAM = new SaxHandler<Context>() {
+	private static final SaxHandler<Context> INIT_PARAM = new SaxHandler<>() {
 		@Override
 		public void attributes(String uri, String name, Attributes atts, Context context) {
 			if ("init-param".equals(name))
@@ -65,7 +65,7 @@ public class WebAppHandler implements SaxHandler<Context> {
 		}
 	};
 
-	private static final SaxHandler<Context> DISPLAY = new SaxHandler<Context>() {
+	private static final SaxHandler<Context> DISPLAY = new SaxHandler<>() {
 		@Override
 		public void endElement(String uri, String name, Context context) {
 			context.descriptor.name = context.textContent();
@@ -73,7 +73,7 @@ public class WebAppHandler implements SaxHandler<Context> {
 		}
 	};
 
-	private static final SaxHandler<Context> ERROR_PAGE = new SaxHandler<Context>() {
+	private static final SaxHandler<Context> ERROR_PAGE = new SaxHandler<>() {
 		@Override
 		public void attributes(String uri, String name, Attributes atts, Context context) {
 			if ("error-page".equals(name))
@@ -99,7 +99,7 @@ public class WebAppHandler implements SaxHandler<Context> {
 		}
 	};
 
-	private static final SaxHandler<Context> FILTER = new SaxHandler<Context>() {
+	private static final SaxHandler<Context> FILTER = new SaxHandler<>() {
 		@Override
 		public void startElement(String ns, String name, Context context) {
 			if ("init-param".equals(name))
@@ -122,7 +122,7 @@ public class WebAppHandler implements SaxHandler<Context> {
 		}
 	};
 
-	private static final SaxHandler<Context> FILTER_MAPPING = new SaxHandler<Context>() {
+	private static final SaxHandler<Context> FILTER_MAPPING = new SaxHandler<>() {
 		@Override
 		public void endElement(String uri, String name, Context context) throws SAXException {
 			if ("filter-name".equals(name)) {
@@ -146,7 +146,7 @@ public class WebAppHandler implements SaxHandler<Context> {
 		}
 	};
 
-	private static final SaxHandler<Context> LISTENER = new SaxHandler<Context>() {
+	private static final SaxHandler<Context> LISTENER = new SaxHandler<>() {
 		@Override
 		public void endElement(String uri, String name, Context context) throws SAXException {
 			if ("listener-class".equals(name)) {
@@ -169,7 +169,7 @@ public class WebAppHandler implements SaxHandler<Context> {
 		}
 	};
 
-	private static final SaxHandler<Context> LOCAL_ENCODING = new SaxHandler<Context>() {
+	private static final SaxHandler<Context> LOCAL_ENCODING = new SaxHandler<>() {
 		@Override
 		public void attributes(String uri, String name, Attributes atts, Context context) {
 			if ("locale-encoding-mapping".equals(name))
@@ -189,7 +189,7 @@ public class WebAppHandler implements SaxHandler<Context> {
 			}
 		}
 	};
-	private static final SaxHandler<Context> MIMETYPE = new SaxHandler<Context>() {
+	private static final SaxHandler<Context> MIMETYPE = new SaxHandler<>() {
 		@Override
 		public void attributes(String uri, String name, Attributes atts, Context context) {
 			if ("mime-mapping".equals(name))
@@ -210,7 +210,7 @@ public class WebAppHandler implements SaxHandler<Context> {
 		}
 	};
 
-	private static final SaxHandler<Context> SERVLET = new SaxHandler<Context>() {
+	private static final SaxHandler<Context> SERVLET = new SaxHandler<>() {
 		@Override
 		public void startElement(String ns, String name, Context context) {
 			if ("init-param".equals(name))
@@ -235,7 +235,7 @@ public class WebAppHandler implements SaxHandler<Context> {
 			}
 		}
 	};
-	private static final SaxHandler<Context> SERVLET_MAPPING = new SaxHandler<Context>() {
+	private static final SaxHandler<Context> SERVLET_MAPPING = new SaxHandler<>() {
 		@Override
 		public void endElement(String uri, String name, Context context) throws SAXException {
 			if ("servet-name".equals(name)) {
@@ -254,7 +254,7 @@ public class WebAppHandler implements SaxHandler<Context> {
 		}
 	};
 
-	private static final SaxHandler<Context> SESSION_CONFIG = new SaxHandler<Context>() {
+	private static final SaxHandler<Context> SESSION_CONFIG = new SaxHandler<>() {
 		@Override
 		public void startElement(String ns, String name, Context context) {
 			if ("cookie-config".equals(name))
@@ -272,13 +272,11 @@ public class WebAppHandler implements SaxHandler<Context> {
 		}
 	};
 
-	private static final SaxHandler<Context> COOKIE_CONFIG = new SaxHandler<Context>() {
+	private static final SaxHandler<Context> COOKIE_CONFIG = new SaxHandler<>() {
 		@Override
 		public void endElement(String uri, String name, Context context) throws SAXException {
 			if ("name".equals(name))
 				context.descriptor.cookieConfig.setName(context.textContent());
-			else if ("comment".equals(name))
-				context.descriptor.cookieConfig.setComment(context.textContent());
 			else if ("domain".equals(name))
 				context.descriptor.cookieConfig.setDomain(context.textContent());
 			else if ("path".equals(name))

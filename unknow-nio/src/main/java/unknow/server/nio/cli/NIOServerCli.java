@@ -79,26 +79,34 @@ public class NIOServerCli implements Callable<Integer> {
 
 	@Override
 	public final Integer call() throws Exception {
-		init();
-		if (selectTime < 0)
-			throw new IllegalArgumentException("selectTime should not be <0");
+		NIOServer nioServer = null;
+		try {
+			init();
+			if (selectTime < 0)
+				throw new IllegalArgumentException("selectTime should not be <0");
 
-		NIOWorkers workers;
-		if (iothread == 1)
-			workers = new NIOWorker(0, listener, selectTime);
-		else {
-			NIOWorker[] w = new NIOWorker[iothread];
-			for (int i = 0; i < iothread; i++)
-				w[i] = new NIOWorker(i, listener, selectTime);
-			workers = new RoundRobin(w);
+			NIOWorkers workers;
+			if (iothread == 1)
+				workers = new NIOWorker(0, listener, selectTime);
+			else {
+				NIOWorker[] w = new NIOWorker[iothread];
+				for (int i = 0; i < iothread; i++)
+					w[i] = new NIOWorker(i, listener, selectTime);
+				workers = new RoundRobin(w);
+			}
+			nioServer = new NIOServer(workers, listener);
+			nioServer.bind(getInetAddress(), handler);
+			if (shutdownPort > 0)
+				nioServer.bind(new InetSocketAddress(InetAddress.getLocalHost(), shutdownPort), new ShutdownHandler(nioServer));
+			nioServer.start();
+			nioServer.await();
+		} finally {
+			if (nioServer != null) {
+				nioServer.stop();
+				nioServer.await();
+			}
+			destroy();
 		}
-		NIOServer nioServer = new NIOServer(workers, listener);
-		nioServer.bind(getInetAddress(), handler);
-		if (shutdownPort > 0)
-			nioServer.bind(new InetSocketAddress(InetAddress.getLocalHost(), shutdownPort), new ShutdownHandler(nioServer));
-		nioServer.start();
-		nioServer.await();
-		destroy();
 		return 0;
 	}
 

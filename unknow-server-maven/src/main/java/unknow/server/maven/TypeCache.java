@@ -13,13 +13,17 @@ import com.github.javaparser.ast.type.ArrayType;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.Type;
 import com.github.javaparser.ast.type.UnknownType;
+import com.github.javaparser.ast.type.WildcardType;
 import com.github.javaparser.resolution.declarations.ResolvedReferenceTypeDeclaration;
+
+import unknow.server.maven.model.TypeModel;
 
 /**
  * @author unknow
  */
 public class TypeCache {
 	public static final Type EMPTY = new UnknownType();
+	public static final Type ANY = new WildcardType();
 
 	private final Map<String, ClassOrInterfaceType> types;
 
@@ -38,6 +42,10 @@ public class TypeCache {
 
 	public ArrayType array(Class<?> cl, Type... param) {
 		return new ArrayType(get(cl, param));
+	}
+
+	public ClassOrInterfaceType get(TypeModel c) {
+		return get(c.name());
 	}
 
 	public ClassOrInterfaceType get(ClassOrInterfaceDeclaration decl) {
@@ -67,7 +75,9 @@ public class TypeCache {
 			sb.append('<');
 			for (int i = 0; i < param.length; i++) {
 				Type t = param[i];
-				if (t != EMPTY)
+				if (t == ANY)
+					sb.append('?');
+				else if (t != EMPTY)
 					sb.append(t.asString());
 			}
 			sb.append('>');

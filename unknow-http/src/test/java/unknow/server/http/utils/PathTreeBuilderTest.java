@@ -69,12 +69,26 @@ public class PathTreeBuilderTest {
 		Set<String> urls = new HashSet<>(Arrays.asList("/test/*"));
 		ServletConfigImpl[] servlets = { new ServletConfigImpl("name", new S("s"), null, null, urls) };
 		PathTree build = new PathTreeBuilder(null, servlets, new FilterConfigImpl[0], DispatcherType.REQUEST).build();
-		System.out.println("exact:\n" + build);
+		System.out.println("default:\n" + build);
 		PartNode tree = build.root;
 		assertNode(tree, "ServletDefault", "ServletDefault");
 		assertEquals(1, tree.nexts.length);
 		assertNode(tree.nexts[0], "s", "s");
 		assertNull(tree.pattern);
+		assertEquals(0, tree.ends.length);
+	}
+
+	@Test
+	public void testServletPattern() {
+		Set<String> urls = new HashSet<>(Arrays.asList("/\u0000"));
+		ServletConfigImpl[] servlets = { new ServletConfigImpl("name", new S("s"), null, null, urls) };
+		PathTree build = new PathTreeBuilder(null, servlets, new FilterConfigImpl[0], DispatcherType.REQUEST).build();
+		System.out.println("pattern:\n" + build);
+		PartNode tree = build.root;
+		assertNode(tree, "ServletDefault", "ServletDefault");
+		assertEquals(0, tree.nexts.length);
+		assertNotNull(tree.pattern);
+		assertNode(tree.pattern, "s", "ServletDefault");
 		assertEquals(0, tree.ends.length);
 	}
 

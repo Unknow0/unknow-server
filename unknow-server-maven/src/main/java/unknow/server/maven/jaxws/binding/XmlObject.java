@@ -16,6 +16,7 @@ import com.github.javaparser.ast.expr.Expression;
 
 import jakarta.xml.bind.annotation.XmlAccessOrder;
 import jakarta.xml.bind.annotation.XmlAccessType;
+import jakarta.xml.bind.annotation.XmlAccessorOrder;
 import jakarta.xml.bind.annotation.XmlAccessorType;
 import jakarta.xml.bind.annotation.XmlAttribute;
 import jakarta.xml.bind.annotation.XmlElement;
@@ -83,13 +84,9 @@ public class XmlObject extends XmlType<ClassModel> {
 	private void init() {
 		ClassModel c = javaType();
 
-		AnnotationModel a = c.annotation(XmlAccessorType.class);
-		XmlAccessType type = XmlAccessType.PUBLIC_MEMBER;
-		if (a != null)
-			type = a.value("value").map(XmlAccessType::valueOf).orElse(XmlAccessType.PUBLIC_MEMBER);
+		XmlAccessType type = c.annotation(XmlAccessorType.class).flatMap(a -> a.value()).map(XmlAccessType::valueOf).orElse(XmlAccessType.PUBLIC_MEMBER);
 
-		a = c.annotation(jakarta.xml.bind.annotation.XmlType.class);
-		List<String> propOrder = a == null ? Collections.emptyList() : a.values("propOrder").map(Arrays::asList).orElse(Collections.emptyList());
+		List<String> propOrder = c.annotation(jakarta.xml.bind.annotation.XmlType.class).flatMap(a -> a.values("propOrder")).map(Arrays::asList).orElse(Collections.emptyList());
 
 		Map<String, FieldModel> fields = new HashMap<>();
 
@@ -97,13 +94,9 @@ public class XmlObject extends XmlType<ClassModel> {
 			if (f.isStatic() || f.isTransient() || f.annotation(XmlTransient.class) != null)
 				continue;
 
-			a = f.annotation(XmlElement.class);
-			if (a == null)
-				a = f.annotation(XmlAttribute.class);
-			if (a == null)
-				a = f.annotation(XmlValue.class);
+			boolean annoted = f.annotation(XmlElement.class).or(() -> f.annotation(XmlAttribute.class)).or(() -> f.annotation(XmlValue.class)).isPresent();
 
-			if (a == null && type != XmlAccessType.FIELD && (type != XmlAccessType.PUBLIC_MEMBER || !f.isPublic()))
+			if (annoted && type != XmlAccessType.FIELD && (type != XmlAccessType.PUBLIC_MEMBER || !f.isPublic()))
 				continue;
 			String setter = "set" + Character.toUpperCase(f.name().charAt(0)) + f.name().substring(1);
 			String getter = "get" + Character.toUpperCase(f.name().charAt(0)) + f.name().substring(1);
@@ -131,18 +124,18 @@ public class XmlObject extends XmlType<ClassModel> {
 				continue;
 			String n = Character.toLowerCase(m.name().charAt(3)) + m.name().substring(4);
 
-			AnnotationModel elem = m.annotation(XmlElement.class);
-			AnnotationModel attr = m.annotation(XmlAttribute.class);
-			AnnotationModel v = m.annotation(XmlValue.class);
+			Optional<AnnotationModel> elem = m.annotation(XmlElement.class);
+			Optional<AnnotationModel> attr = m.annotation(XmlAttribute.class);
+			Optional<AnnotationModel> v = m.annotation(XmlValue.class);
 
 			FieldModel f = fields.get(n);
-			if (f != null && elem == null && attr == null && v == null) {
+			if (f != null && elem.isEmpty() && attr.isEmpty() && v.isEmpty()) {
 				elem = f.annotation(XmlElement.class);
 				attr = f.annotation(XmlAttribute.class);
 				v = f.annotation(XmlValue.class);
 			}
 
-			if (elem != null || attr != null || v != null || type == XmlAccessType.FIELD && f != null || type == XmlAccessType.PUBLIC_MEMBER && m.isPublic()) {
+			if (elem.isPresent() || attr.isPresent() || v.isPresent() || type == XmlAccessType.FIELD && f != null || type == XmlAccessType.PUBLIC_MEMBER && m.isPublic()) {
 				String setter = "set" + m.name().substring(3);
 
 				Optional<MethodModel> s = c.methods().stream().filter(e -> e.name().equals(setter))
@@ -150,28 +143,25 @@ public class XmlObject extends XmlType<ClassModel> {
 				if (!s.isPresent())
 					throw new RuntimeException("missing setter for '" + n + "' field in '" + c.name() + "' class");
 				XmlType<?> t = loader.get(m.type());
-				if (v != null) {
+				if (v.isPresent()) {
 					if (value != null)
 						throw new RuntimeException("multiple value for '" + c.name() + "'");
 					value = new XmlField<>(t, "", "", m.name(), setter);
-				} else if (attr != null) {
+				} else if (attr.isPresent()) {
 					if (!t.isSimple())
 						throw new RuntimeException("only simple type allowed in attribute in '" + c.name() + "'");
-					n = attr.value("name").map(i -> "##default".equals(i) ? null : i).orElse(n);
-					String ns = attr.value("namespace").map(i -> "##default".equals(i) ? null : i).orElse("");
+					n = attr.flatMap(a -> a.value("name")).map(i -> "##default".equals(i) ? null : i).orElse(n);
+					String ns = attr.flatMap(a -> a.value("namespace")).map(i -> "##default".equals(i) ? null : i).orElse("");
 					attrs.add(new XmlField<>(t, ns, n, m.name(), setter));
 				} else {
-					String ns = "";
-					if (elem != null) {
-						n = elem.value("name").map(i -> "##default".equals(i) ? null : i).orElse(n);
-						ns = elem.value("namespace").map(i -> "##default".equals(i) ? null : i).orElse("");
-					}
+					n = elem.flatMap(a -> a.value("name")).map(i -> "##default".equals(i) ? null : i).orElse(n);
+					String ns = elem.flatMap(a -> a.value("namespace")).map(i -> "##default".equals(i) ? null : i).orElse("");
 					elems.add(new XmlField<>(t, ns, n, m.name(), setter));
 				}
 			}
 		}
 
-		XmlAccessOrder defaultOrder = a == null ? XmlAccessOrder.UNDEFINED : a.value("value").map(s -> XmlAccessOrder.UNDEFINED).orElse(XmlAccessOrder.UNDEFINED);
+		XmlAccessOrder defaultOrder = c.annotation(XmlAccessorOrder.class).flatMap(a -> a.value()).map(a -> XmlAccessOrder.valueOf(a)).orElse(XmlAccessOrder.UNDEFINED);
 
 		if (!propOrder.isEmpty() || defaultOrder != XmlAccessOrder.UNDEFINED) {
 			Collections.sort(elems, (o, b) -> {
