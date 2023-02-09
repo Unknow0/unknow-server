@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -507,15 +506,23 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public String getServletPath() {
-		if (servletPath == null)
-			servletPath = path.stream().limit(pathInfoIndex).collect(Collectors.joining("/", "/", ""));
+		if (servletPath == null) {
+			StringBuilder sb = new StringBuilder();
+			for (int i = 0; i < pathInfoIndex; i++)
+				sb.append('/').append(path.get(i));
+			servletPath = sb.length() == 0 ? "/" : sb.toString();
+		}
 		return servletPath;
 	}
 
 	@Override
 	public String getPathInfo() {
-		if (pathInfo == null)
-			pathInfo = pathInfoIndex == path.size() ? "" : path.stream().skip(pathInfoIndex).collect(Collectors.joining("/", "/", ""));
+		if (pathInfo == null) {
+			StringBuilder sb = new StringBuilder();
+			for (int i = pathInfoIndex; i < path.size(); i++)
+				sb.append('/').append(path.get(i));
+			pathInfo = sb.toString();
+		}
 		return pathInfo == "" ? null : pathInfo;
 	}
 

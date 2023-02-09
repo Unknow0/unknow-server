@@ -187,10 +187,15 @@ class ResponseImpl extends Response {
 	}
 
 	@Override
-	public MultivaluedMap<String, String> getStringHeaders() {
+	public MultivaluedMap<String, String> getStringHeaders() { // TODO replace with an internal class
 		MultivaluedMap<String, String> h = new MultivaluedHashMap<>();
-		for (Entry<String, List<Object>> e : headers.entrySet())
+		for (Entry<String, List<Object>> e : headers.entrySet()) {
+			String key = e.getKey();
+			for (Object v : e.getValue()) {
+				JaxrsRuntime.header(v);
+			}
 			h.put(e.getKey(), e.getValue().stream().map(JaxrsRuntime::header).collect(Collectors.toList()));
+		}
 		return h;
 	}
 
@@ -199,6 +204,12 @@ class ResponseImpl extends Response {
 		List<Object> list = headers.get(name);
 		if (list == null)
 			return null;
-		return list.stream().map(JaxrsRuntime::header).collect(Collectors.joining(","));
+		StringBuilder sb = new StringBuilder();
+		for (Object o : list) {
+			if (sb.length() > 0)
+				sb.append(',');
+			sb.append(JaxrsRuntime.header(o));
+		}
+		return sb.toString();
 	}
 }
