@@ -118,8 +118,8 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 		this.headers = new HashMap<>();
 
-		this.remote = req != null ? req.getRemote() : null;
-		this.local = req != null ? req.getLocal() : null;
+		this.remote = null;// req != null ? req.getRemote() : null;
+		this.local = null;// req != null ? req.getLocal() : null;
 	}
 
 	public void setMethod(String method) {
