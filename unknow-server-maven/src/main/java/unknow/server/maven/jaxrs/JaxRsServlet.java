@@ -387,15 +387,16 @@ public class JaxRsServlet extends AbstractMojo {
 				.addParameter(types.get(HttpServletRequest.class), "req")
 				.addParameter(types.get(HttpServletResponse.class), "res")
 				.addThrownException(IOException.class).addThrownException(ServletException.class)
-				.getBody().get().addStatement(new TryStmt(b, Utils.list(
+				.getBody().get()
+				.addStatement(Utils.create(types.get(JaxrsReq.class), "r", Utils.list(new NameExpr("req"), new NameExpr(mapping.var + "$paths"))))
+				.addStatement(new TryStmt(b, Utils.list(
 						new CatchClause(
 								new com.github.javaparser.ast.body.Parameter(types.get(Throwable.class), "e"),
 								new BlockStmt()
 										.addStatement(new MethodCallExpr(null, "log", Utils.list(new StringLiteralExpr("failed to process"), new NameExpr("e"))))
-										.addStatement(new MethodCallExpr(new TypeExpr(types.get(JaxrsContext.class)), "sendError", Utils.list(new NameExpr("e"), new NameExpr("res")))))),
+										.addStatement(new MethodCallExpr(new TypeExpr(types.get(JaxrsContext.class)), "sendError", Utils.list(new NameExpr("r"), new NameExpr("e"), new NameExpr("res")))))),
 						null));
 
-		b.addStatement(Utils.create(types.get(JaxrsReq.class), "r", Utils.list(new NameExpr("req"), new NameExpr(mapping.var + "$paths"))));
 		for (JaxrsParam p : mapping.params)
 			b.addStatement(Utils.assign(types.get(p.type), p.var, getParam(p)));
 
