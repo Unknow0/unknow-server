@@ -1,7 +1,7 @@
 /**
  * 
  */
-package unknow.server.http.jaxrs.impl;
+package unknow.server.http.jaxrs.builder;
 
 import java.lang.annotation.Annotation;
 import java.net.URI;
@@ -22,6 +22,8 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.Response.ResponseBuilder;
 import jakarta.ws.rs.core.Variant;
 import jakarta.ws.rs.ext.RuntimeDelegate;
+import unknow.server.http.jaxrs.header.MediaTypeDelegate;
+import unknow.server.http.jaxrs.impl.ResponseImpl;
 
 /**
  * @author unknow

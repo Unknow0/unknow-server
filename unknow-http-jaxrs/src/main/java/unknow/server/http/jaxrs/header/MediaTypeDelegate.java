@@ -1,7 +1,7 @@
 /**
  * 
  */
-package unknow.server.http.jaxrs.impl;
+package unknow.server.http.jaxrs.header;
 
 import java.util.HashMap;
 import java.util.Map;

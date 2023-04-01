@@ -5,7 +5,6 @@ package unknow.server.http.jaxrs;
 
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -13,7 +12,10 @@ import java.util.concurrent.CompletionStage;
 import jakarta.ws.rs.SeBootstrap.Configuration;
 import jakarta.ws.rs.SeBootstrap.Instance;
 import jakarta.ws.rs.core.Application;
+import jakarta.ws.rs.core.CacheControl;
+import jakarta.ws.rs.core.Cookie;
 import jakarta.ws.rs.core.EntityPart;
+import jakarta.ws.rs.core.EntityTag;
 import jakarta.ws.rs.core.Link;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.NewCookie;
@@ -21,23 +23,35 @@ import jakarta.ws.rs.core.Response.ResponseBuilder;
 import jakarta.ws.rs.core.UriBuilder;
 import jakarta.ws.rs.core.Variant.VariantListBuilder;
 import jakarta.ws.rs.ext.RuntimeDelegate;
-import unknow.server.http.jaxrs.impl.DateDelegate;
-import unknow.server.http.jaxrs.impl.MediaTypeDelegate;
-import unknow.server.http.jaxrs.impl.NewCookieDelegate;
-import unknow.server.http.jaxrs.impl.ResponseBuilderImpl;
+import unknow.server.http.jaxrs.builder.ConfigurationBuilderImpl;
+import unknow.server.http.jaxrs.builder.LinkBuilderImpl;
+import unknow.server.http.jaxrs.builder.ResponseBuilderImpl;
+import unknow.server.http.jaxrs.builder.UriBuilderImpl;
+import unknow.server.http.jaxrs.builder.VariantListBuilderImpl;
+import unknow.server.http.jaxrs.header.CacheControlDelegate;
+import unknow.server.http.jaxrs.header.CookieDelegate;
+import unknow.server.http.jaxrs.header.DateDelegate;
+import unknow.server.http.jaxrs.header.EntityTagDelegate;
+import unknow.server.http.jaxrs.header.LinkDelegate;
+import unknow.server.http.jaxrs.header.MediaTypeDelegate;
+import unknow.server.http.jaxrs.header.NewCookieDelegate;
 
 /**
  * @author unknow
  */
 public class JaxrsRuntime extends RuntimeDelegate {
 	/*
-	 * following values for type: {@link jakarta.ws.rs.core.CacheControl}, {@link jakarta.ws.rs.core.Cookie}, {@link jakarta.ws.rs.core.EntityTag}, {@link jakarta.ws.rs.core.Link}
+	 * {@link jakarta.ws.rs.core.EntityTag} , {@link jakarta.ws.rs.core.Link}
 	 */
 	private static final Map<Class<?>, HeaderDelegate<?>> headers = new HashMap<>();
 	static {
+		headers.put(CacheControl.class, CacheControlDelegate.INSTANCE);
+		headers.put(Cookie.class, CookieDelegate.INSTANCE);
+		headers.put(Date.class, DateDelegate.INSTANCE);
+		headers.put(EntityTag.class, EntityTagDelegate.INSTANCE);
+		headers.put(Link.class, LinkDelegate.INSTANCE);
 		headers.put(MediaType.class, MediaTypeDelegate.INSTANCE);
 		headers.put(NewCookie.class, NewCookieDelegate.INSTANCE);
-		headers.put(Date.class, DateDelegate.INSTANCE);
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
@@ -50,8 +64,7 @@ public class JaxrsRuntime extends RuntimeDelegate {
 
 	@Override
 	public UriBuilder createUriBuilder() {
-		// TODO Auto-generated method stub
-		return null;
+		return new UriBuilderImpl();
 	}
 
 	@Override
@@ -61,8 +74,7 @@ public class JaxrsRuntime extends RuntimeDelegate {
 
 	@Override
 	public VariantListBuilder createVariantListBuilder() {
-		// TODO Auto-generated method stub
-		return null;
+		return new VariantListBuilderImpl();
 	}
 
 	@Override
@@ -78,14 +90,12 @@ public class JaxrsRuntime extends RuntimeDelegate {
 
 	@Override
 	public Link.Builder createLinkBuilder() {
-		// TODO Auto-generated method stub
-		return null;
+		return new LinkBuilderImpl();
 	}
 
 	@Override
 	public Configuration.Builder createConfigurationBuilder() {
-		// TODO Auto-generated method stub
-		return null;
+		return new ConfigurationBuilderImpl();
 	}
 
 	@Override

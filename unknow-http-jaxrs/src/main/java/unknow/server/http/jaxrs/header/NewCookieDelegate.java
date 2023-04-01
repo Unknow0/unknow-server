@@ -1,7 +1,7 @@
 /**
  * 
  */
-package unknow.server.http.jaxrs.impl;
+package unknow.server.http.jaxrs.header;
 
 import jakarta.ws.rs.core.NewCookie;
 import jakarta.ws.rs.core.NewCookie.SameSite;

@@ -26,7 +26,7 @@ import jakarta.ws.rs.core.NewCookie;
 import jakarta.ws.rs.core.Response;
 import unknow.server.http.jaxrs.JaxrsRuntime;
 
-class ResponseImpl extends Response {
+public class ResponseImpl extends Response {
 	private final int status;
 	private final Object entity;
 	private final Annotation[] annotations;

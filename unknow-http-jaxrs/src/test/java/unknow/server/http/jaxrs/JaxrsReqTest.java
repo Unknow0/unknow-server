@@ -53,4 +53,24 @@ public class JaxrsReqTest {
 				Arguments.of("n", "a=a&n=n&b=b", "d"),
 				Arguments.of("n", "a=a&n=n&n=b", "d"));
 	}
+
+	@ParameterizedTest(name = "matrix {1}")
+	@MethodSource
+	public void matrix(String expected, String path, String def) {
+		HttpServletRequest r = Mockito.mock(HttpServletRequest.class);
+		JaxrsReq req = new JaxrsReq(r, new JaxrsPath[0]);
+		Mockito.when(r.getQueryString()).thenReturn(path);
+		assertEquals(expected, req.getQuery("n", def, JaxrsContext.STRING));
+	}
+
+	public static final Stream<Arguments> matrix() {
+		return Stream.of(
+				Arguments.of(null, null, null),
+				Arguments.of("d", "/test", "d"),
+				Arguments.of("d", "/test;a=a", "d"),
+				Arguments.of("n", "/test;n=n", "d"),
+				Arguments.of("n", "/test;a=a;n=n", "d"),
+				Arguments.of("n", "/test;a=a;n=n;b=b", "d"),
+				Arguments.of("n", "/test;a=a;n=n;n=b", "d"));
+	}
 }

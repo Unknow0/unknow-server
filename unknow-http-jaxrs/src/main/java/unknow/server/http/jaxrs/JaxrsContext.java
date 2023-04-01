@@ -26,8 +26,8 @@ import jakarta.ws.rs.ext.MessageBodyReader;
 import jakarta.ws.rs.ext.MessageBodyWriter;
 import jakarta.ws.rs.ext.ParamConverter;
 import jakarta.ws.rs.ext.ParamConverterProvider;
-import unknow.server.http.jaxrs.impl.DateDelegate;
-import unknow.server.http.jaxrs.impl.NewCookieDelegate;
+import unknow.server.http.jaxrs.header.DateDelegate;
+import unknow.server.http.jaxrs.header.NewCookieDelegate;
 
 /**
  * @author unknow

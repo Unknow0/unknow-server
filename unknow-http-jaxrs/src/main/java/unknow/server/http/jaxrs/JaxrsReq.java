@@ -145,7 +145,7 @@ public class JaxrsReq {
 	private void initQueries() {
 		if (queries != null)
 			return;
-		parseQueryString(queries = new MultivaluedHashMap<>(), r.getQueryString());
+		parseQueryString(r.getQueryString(), queries = new MultivaluedHashMap<>());
 	}
 
 	private void initForms() throws IOException {
@@ -159,7 +159,7 @@ public class JaxrsReq {
 			while ((l = r.read(cbuf)) != -1)
 				sb.append(cbuf, 0, l);
 		}
-		parseQueryString(forms = new MultivaluedHashMap<>(), sb.toString());
+		parseQueryString(sb.toString(), forms = new MultivaluedHashMap<>());
 	}
 
 	private void initCookies() {
@@ -183,16 +183,14 @@ public class JaxrsReq {
 		String p = r.getServletPath();
 		int e = p.lastIndexOf('/');
 		e = p.indexOf(';', e < 0 ? 0 : e);
-		while (e > 0) {
-			// TODO
-		}
+		parseMatrix(p, e, matrix);
 	}
 
 	/**
-	 * @param map
 	 * @param query
+	 * @param map
 	 */
-	private void parseQueryString(MultivaluedMap<String, String> map, String query) {
+	public static void parseQueryString(String query, MultivaluedMap<String, String> map) {
 		if (query == null)
 			return;
 		int i = 0;
@@ -211,5 +209,21 @@ public class JaxrsReq {
 			map.add(URLDecoder.decode(query.substring(i, q), StandardCharsets.UTF_8), value);
 			i = e + 1;
 		}
+	}
+
+	public static void parseMatrix(String path, int start, MultivaluedMap<String, String> matrix) {
+		int l = path.length();
+		do {
+			int end = path.indexOf(';', start);
+			if (end == -1)
+				end = l;
+			int equals = path.indexOf('=', start);
+
+			if (equals == -1 || equals > end)
+				matrix.add(path.substring(start, end), "");
+			else
+				matrix.add(path.substring(start, equals), path.substring(equals + 1, end));
+			start = end + 1;
+		} while (start < l);
 	}
 }
