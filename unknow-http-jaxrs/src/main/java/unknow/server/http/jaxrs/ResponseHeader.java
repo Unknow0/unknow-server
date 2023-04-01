@@ -5,6 +5,7 @@ package unknow.server.http.jaxrs;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -47,11 +48,11 @@ public class ResponseHeader implements MultivaluedMap<String, Object> {
 		return false;
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
-	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public List<Object> get(Object key) {
-		Collection<String> headers = res.getHeaders(String.valueOf(key));
-		return headers == null ? null : headers instanceof List ? (List) headers : new ArrayList<>(headers);
+		Collection<?> headers = res.getHeaders(String.valueOf(key));
+		return headers == null ? null : headers instanceof List ? (List<Object>) headers : new ArrayList<>(headers);
 	}
 
 	@Override
@@ -80,7 +81,7 @@ public class ResponseHeader implements MultivaluedMap<String, Object> {
 
 	@Override
 	public Set<String> keySet() {
-		throw new UnsupportedOperationException();
+		return new HashSet<>(res.getHeaderNames());
 	}
 
 	@Override
@@ -95,12 +96,12 @@ public class ResponseHeader implements MultivaluedMap<String, Object> {
 
 	@Override
 	public void putSingle(String key, Object value) {
-		res.setHeader(key, value == null ? null : value.toString());
+		res.setHeader(key, JaxrsRuntime.header(value));
 	}
 
 	@Override
 	public void add(String key, Object value) {
-		res.addHeader(key, value == null ? null : value.toString());
+		res.addHeader(key, JaxrsRuntime.header(value));
 	}
 
 	@Override
@@ -128,7 +129,6 @@ public class ResponseHeader implements MultivaluedMap<String, Object> {
 
 	@Override
 	public boolean equalsIgnoreValueOrder(MultivaluedMap<String, Object> otherMap) {
-		// TODO Auto-generated method stub
-		return false;
+		throw new UnsupportedOperationException();
 	}
 }

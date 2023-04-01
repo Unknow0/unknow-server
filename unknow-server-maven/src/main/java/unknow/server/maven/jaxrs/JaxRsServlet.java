@@ -66,8 +66,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.ParamConverter;
 import jakarta.ws.rs.ext.RuntimeDelegate;
-import unknow.server.http.jaxrs.JaxrsBody;
 import unknow.server.http.jaxrs.JaxrsContext;
+import unknow.server.http.jaxrs.JaxrsEntityReader;
+import unknow.server.http.jaxrs.JaxrsEntityWriter;
 import unknow.server.http.jaxrs.JaxrsPath;
 import unknow.server.http.jaxrs.JaxrsReq;
 import unknow.server.http.jaxrs.JaxrsRuntime;
@@ -240,8 +241,8 @@ public class JaxRsServlet extends AbstractMojo {
 				processConverter(p, m.var + "$" + i, i++, b);
 
 			if (!m.m.type().isVoid()) {
-				cl.addField(types.get(JaxrsBody.class, types.get(m.m.type())), m.var + "$r", PSF);
-				b.addStatement(new AssignExpr(new NameExpr(m.var + "$r"), new ObjectCreationExpr(null, types.get(JaxrsBody.class, TypeCache.EMPTY), Utils.list(
+				cl.addField(types.get(JaxrsEntityWriter.class, types.get(m.m.type())), m.var + "$r", PSF);
+				b.addStatement(new AssignExpr(new NameExpr(m.var + "$r"), new MethodCallExpr(new TypeExpr(types.get(JaxrsEntityWriter.class)), "create", Utils.list(
 						new ClassExpr(types.get(m.m.type())),
 						new NameExpr("r"),
 						new NameExpr("ra"))), AssignExpr.Operator.ASSIGN));
@@ -310,8 +311,8 @@ public class JaxRsServlet extends AbstractMojo {
 		converterVar.put(p, n);
 		TypeModel m = p.type.isPrimitive() ? loader.get(p.type.asPrimitive().boxed()) : p.type;
 		if (p instanceof JaxrsBodyParam) {
-			cl.addField(types.get(JaxrsBody.class, types.get(m)), n, PSF);
-			b.addStatement(new AssignExpr(new NameExpr(n), new ObjectCreationExpr(null, types.get(JaxrsBody.class, TypeCache.EMPTY), Utils.list(
+			cl.addField(types.get(JaxrsEntityReader.class, types.get(m)), n, PSF);
+			b.addStatement(new AssignExpr(new NameExpr(n), new ObjectCreationExpr(null, types.get(JaxrsEntityReader.class, TypeCache.EMPTY), Utils.list(
 					new ClassExpr(types.get(p.type)),
 					new ArrayAccessExpr(new NameExpr("t"), new IntegerLiteralExpr("" + i)),
 					new ArrayAccessExpr(new NameExpr("a"), new IntegerLiteralExpr("" + i)))), AssignExpr.Operator.ASSIGN));
@@ -357,7 +358,7 @@ public class JaxRsServlet extends AbstractMojo {
 				null));
 
 		if (p instanceof JaxrsBodyParam) {
-			cl.addField(types.get(JaxrsBody.class, types.get(p.type)), n, PSF);
+			cl.addField(types.get(JaxrsEntityReader.class, types.get(p.type)), n, PSF);
 			b.addStatement(new AssignExpr(new NameExpr(n), new MethodCallExpr(new TypeExpr(types.get(JaxrsContext.class)), "reader", Utils.list(
 					new ClassExpr(types.get(p.type)),
 					new NameExpr("t"),

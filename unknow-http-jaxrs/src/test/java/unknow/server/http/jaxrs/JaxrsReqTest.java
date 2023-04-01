@@ -59,13 +59,13 @@ public class JaxrsReqTest {
 	public void matrix(String expected, String path, String def) {
 		HttpServletRequest r = Mockito.mock(HttpServletRequest.class);
 		JaxrsReq req = new JaxrsReq(r, new JaxrsPath[0]);
-		Mockito.when(r.getQueryString()).thenReturn(path);
-		assertEquals(expected, req.getQuery("n", def, JaxrsContext.STRING));
+		Mockito.when(r.getServletPath()).thenReturn(path);
+		assertEquals(expected, req.getMatrix("n", def, JaxrsContext.STRING));
 	}
 
 	public static final Stream<Arguments> matrix() {
 		return Stream.of(
-				Arguments.of(null, null, null),
+				Arguments.of(null, "", null),
 				Arguments.of("d", "/test", "d"),
 				Arguments.of("d", "/test;a=a", "d"),
 				Arguments.of("n", "/test;n=n", "d"),

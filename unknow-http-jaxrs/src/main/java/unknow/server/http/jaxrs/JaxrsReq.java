@@ -13,6 +13,7 @@ import java.util.Map;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.MultivaluedHashMap;
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.ext.ParamConverter;
@@ -44,6 +45,13 @@ public class JaxrsReq {
 
 	public HttpServletRequest getRequest() {
 		return r;
+	}
+
+	public MediaType getAccept() {
+		String contentType = r.getHeader("Accept");
+		if (contentType == null)
+			contentType = "*/*";
+		return MediaType.valueOf(contentType);
 	}
 
 	public <T> T getPath(String path, String def, ParamConverter<T> c) {
@@ -183,6 +191,8 @@ public class JaxrsReq {
 		String p = r.getServletPath();
 		int e = p.lastIndexOf('/');
 		e = p.indexOf(';', e < 0 ? 0 : e);
+		if (e < 0)
+			return;
 		parseMatrix(p, e, matrix);
 	}
 

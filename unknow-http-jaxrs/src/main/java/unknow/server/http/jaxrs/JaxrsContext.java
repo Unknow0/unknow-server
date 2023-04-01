@@ -13,33 +13,35 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.ws.rs.InternalServerErrorException;
 import jakarta.ws.rs.NotSupportedException;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.MultivaluedMap;
-import jakarta.ws.rs.core.NewCookie;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.ExceptionMapper;
 import jakarta.ws.rs.ext.MessageBodyReader;
 import jakarta.ws.rs.ext.MessageBodyWriter;
 import jakarta.ws.rs.ext.ParamConverter;
 import jakarta.ws.rs.ext.ParamConverterProvider;
-import unknow.server.http.jaxrs.header.DateDelegate;
-import unknow.server.http.jaxrs.header.NewCookieDelegate;
 
 /**
  * @author unknow
  */
 @SuppressWarnings("rawtypes")
 public class JaxrsContext {
+	private static final Logger logger = LoggerFactory.getLogger(JaxrsContext.class);
 	private static final String[] ALL = { "*/*" };
 	private static final List<ParamConverterProvider> params = new ArrayList<>(Arrays.asList(new DefaultConvert()));
 	private static final Map<Class, ExceptionMapper> exceptions = new HashMap<>();
 
-	private static final Map<String, List<MessageBodyWriter>> writers = new HashMap<>();
-	private static final Map<String, List<MessageBodyReader>> readers = new HashMap<>();
+	private static final Map<String, List<MessageBodyWriter<Object>>> writers = new HashMap<>();
+	private static final Map<String, List<MessageBodyReader<Object>>> readers = new HashMap<>();
+
+	private static final JaxrsEntityWriter<Response> RESPONSE = JaxrsEntityWriter.create(Response.class, Response.class, new Annotation[0]);
 
 	static {
 		exceptions.put(WebApplicationException.class, new WebAppExceptionMapping());
@@ -53,12 +55,12 @@ public class JaxrsContext {
 		params.add(param);
 	}
 
-	public static void registerReader(MessageBodyReader<?> reader, String... mimes) {
+	public static void registerReader(MessageBodyReader<Object> reader, String... mimes) {
 		if (mimes.length == 0)
 			mimes = ALL;
 		for (String mime : mimes) {
 			synchronized (readers) {
-				List<MessageBodyReader> list = readers.get(mime);
+				List<MessageBodyReader<Object>> list = readers.get(mime);
 				if (list == null)
 					readers.put(mime, list = new ArrayList<>(1));
 				list.add(reader);
@@ -66,12 +68,12 @@ public class JaxrsContext {
 		}
 	}
 
-	public static void registerWriter(MessageBodyWriter<?> writer, String... mimes) {
+	public static void registerWriter(MessageBodyWriter<Object> writer, String... mimes) {
 		if (mimes.length == 0)
 			mimes = ALL;
 		for (String mime : mimes) {
 			synchronized (writers) {
-				List<MessageBodyWriter> list = writers.get(mime);
+				List<MessageBodyWriter<Object>> list = writers.get(mime);
 				if (list == null)
 					writers.put(mime, list = new ArrayList<>(1));
 				list.add(writer);
@@ -89,15 +91,16 @@ public class JaxrsContext {
 	}
 
 	@SuppressWarnings("unchecked")
-	public static void sendError(Throwable t, HttpServletResponse res) throws IOException {
+	public static void sendError(JaxrsReq r, Throwable t, HttpServletResponse res) throws IOException {
 		Class<?> c = t.getClass();
 		do {
 			ExceptionMapper<Throwable> m = exceptions.get(c);
 			if (m != null) {
-				sendResponse(m.toResponse(t), res);
+				RESPONSE.write(r, m.toResponse(t), res);
 				return;
 			}
 		} while ((c = c.getSuperclass()) != Throwable.class);
+		logger.warn("Unmanaged error", t);
 		res.sendError(500);
 	}
 
@@ -124,35 +127,26 @@ public class JaxrsContext {
 		throw new NotSupportedException("No reader for " + clazz + " " + t);
 	}
 
-	@SuppressWarnings("unchecked")
-	public static <T> MessageBodyWriter<T> writer(Class<T> clazz, Type genericType, Annotation[] annotations, MediaType t) {
-		for (MessageBodyWriter<?> m : writers.getOrDefault(t.getType() + "/" + t.getSubtype(), Collections.emptyList())) {
+	public static MessageBodyWriter<Object> writer(Class clazz, Type genericType, Annotation[] annotations, MediaType t) {
+		for (MessageBodyWriter<Object> m : writers.getOrDefault(t.getType() + "/" + t.getSubtype(), Collections.emptyList())) {
 			if (!m.isWriteable(clazz, genericType, annotations, t))
 				continue;
 			// TODO priorities
-			return (MessageBodyWriter<T>) m;
+			return m;
 		}
-		for (MessageBodyWriter<?> m : writers.getOrDefault(t.getType() + "/*", Collections.emptyList())) {
+		for (MessageBodyWriter<Object> m : writers.getOrDefault(t.getType() + "/*", Collections.emptyList())) {
 			if (!m.isWriteable(clazz, genericType, annotations, t))
 				continue;
 			// TODO priorities
-			return (MessageBodyWriter<T>) m;
+			return m;
 		}
-		for (MessageBodyWriter<?> m : writers.getOrDefault("*/*", Collections.emptyList())) {
+		for (MessageBodyWriter<Object> m : writers.getOrDefault("*/*", Collections.emptyList())) {
 			if (!m.isWriteable(clazz, genericType, annotations, t))
 				continue;
 			// TODO priorities
-			return (MessageBodyWriter<T>) m;
+			return m;
 		}
 		throw new InternalServerErrorException("No writer for " + clazz + " " + t);
-	}
-
-	public static void sendResponse(Response r, HttpServletResponse res) {
-		res.setStatus(r.getStatus());
-
-		MultivaluedMap<String, Object> headers = r.getHeaders();
-		// limit header response to 8192
-
 	}
 
 	public static final ParamConverter<String> STRING = new ParamConverter<>() {

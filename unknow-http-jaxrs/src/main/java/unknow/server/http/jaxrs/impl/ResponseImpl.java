@@ -26,6 +26,9 @@ import jakarta.ws.rs.core.NewCookie;
 import jakarta.ws.rs.core.Response;
 import unknow.server.http.jaxrs.JaxrsRuntime;
 
+/**
+ * @author unknow
+ */
 public class ResponseImpl extends Response {
 	private final int status;
 	private final Object entity;
@@ -40,6 +43,13 @@ public class ResponseImpl extends Response {
 		this.entity = entity;
 		this.annotations = annotations;
 		this.headers = headers;
+	}
+
+	/**
+	 * @return the annotations
+	 */
+	public Annotation[] getAnnotations() {
+		return annotations;
 	}
 
 	@Override
@@ -183,19 +193,20 @@ public class ResponseImpl extends Response {
 
 	@Override
 	public MultivaluedMap<String, Object> getMetadata() {
-		return getHeaders();
+		return headers;
 	}
 
 	@Override
-	public MultivaluedMap<String, String> getStringHeaders() { // TODO replace with an internal class
+	public MultivaluedMap<String, Object> getHeaders() {
+		return headers;
+	}
+
+	@Override
+	public MultivaluedMap<String, String> getStringHeaders() {
+		// TODO replace with an internal class as the change should be shown in the returned map
 		MultivaluedMap<String, String> h = new MultivaluedHashMap<>();
-		for (Entry<String, List<Object>> e : headers.entrySet()) {
-			String key = e.getKey();
-			for (Object v : e.getValue()) {
-				JaxrsRuntime.header(v);
-			}
+		for (Entry<String, List<Object>> e : headers.entrySet())
 			h.put(e.getKey(), e.getValue().stream().map(JaxrsRuntime::header).collect(Collectors.toList()));
-		}
 		return h;
 	}
 
