@@ -80,6 +80,8 @@ import unknow.server.maven.model.jvm.JvmClass;
  * @author unknow
  */
 public class JaxwsServletBuilder {
+	private static final Logger logger = LoggerFactory.getLogger(JaxwsServletBuilder.class);
+
 	private static final NameExpr CONTEXT = new NameExpr("context");
 	private static final NameExpr QNAME = new NameExpr("qname");
 
@@ -249,7 +251,7 @@ public class JaxwsServletBuilder {
 		body = new JaxSaxHandlerBuilder(types, t -> generateHandler(t, types), Envelope.class.getName());
 
 		for (Service.Op o : service.operations) {
-			System.out.println("building " + o);
+			logger.info("building {}", o);
 
 			List<XmlField<?>> childs = new ArrayList<>();
 
@@ -295,6 +297,7 @@ public class JaxwsServletBuilder {
 	 * @param types
 	 */
 	private NameExpr generateHandler(XmlType<?> type, TypeCache types) {
+		logger.info("Building {}", type);
 		if (type instanceof XmlEnum) {
 			XmlEnum e = (XmlEnum) type;
 			NodeList<Expression> values = Utils.list();

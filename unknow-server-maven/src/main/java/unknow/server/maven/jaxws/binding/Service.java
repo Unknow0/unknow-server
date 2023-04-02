@@ -199,7 +199,7 @@ public class Service {
 
 		@Override
 		public String toString() {
-			return qname() + " " + type() + " " + header;
+			return qname() + " " + type().name() + " " + header;
 		}
 	}
 }

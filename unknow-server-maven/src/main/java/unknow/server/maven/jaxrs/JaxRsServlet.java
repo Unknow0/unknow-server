@@ -288,10 +288,6 @@ public class JaxRsServlet extends AbstractMojo {
 					.addStatement(new MethodCallExpr(new NameExpr("res"), "setHeader", Utils.list(new StringLiteralExpr("Allow"), new StringLiteralExpr(sb.toString()))));
 		}
 
-		if (!model.methods(path).contains("HEAD") && model.methods(path).contains("GET")) {
-			// TODO doHead
-		}
-
 		for (String method : model.methods(path))
 			buildMethod(method, model.mapping(path, method), services);
 

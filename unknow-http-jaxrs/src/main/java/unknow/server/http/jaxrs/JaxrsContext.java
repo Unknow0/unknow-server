@@ -45,6 +45,13 @@ public class JaxrsContext {
 
 	static {
 		exceptions.put(WebApplicationException.class, new WebAppExceptionMapping());
+		
+		// TODO default reader/writer: byte[], String, InputStream, Reader, File, jakarta.activation.DataSource
+		// javax.xml.transform.Source (text/xml, application/xml and media types of the form application/*+xml),
+		// MultivaluedMap<String,String> (application/x-www-form-urlencoded)
+		// java.util.List<EntityPart> (multipart/form-data)
+		// StreamingOutput writer only
+		// Boolean, Character, Number (plain/text) => NoContentException for empty body owith primitive
 	}
 
 	public static <T extends Throwable> void register(Class<T> clazz, ExceptionMapper<T> e) {

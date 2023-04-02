@@ -239,6 +239,8 @@ public class JaxrsModel {
 				writers.put(clazz.name(), list);
 			}
 			// TODO other
+			// ContainerRequestFilter, ContainerResponseFilter, ReaderInterceptor, WriterInterceptor
+			// ContextResolver<?>
 		});
 
 		Iterator<ClassModel> it = new AncestrorIterator(clazz);

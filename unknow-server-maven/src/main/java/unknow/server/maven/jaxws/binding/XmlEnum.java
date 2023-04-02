@@ -40,6 +40,11 @@ public class XmlEnum extends XmlType<EnumModel> {
 		return new MethodCallExpr(null, convertMethod, Utils.list(v));
 	}
 
+	@Override
+	public String toString() {
+		return "Enum " + entries;
+	}
+
 	public static final class XmlEnumEntry {
 		public final String name;
 		public final String value;
@@ -47,6 +52,11 @@ public class XmlEnum extends XmlType<EnumModel> {
 		public XmlEnumEntry(String name, String value) {
 			this.name = name;
 			this.value = value;
+		}
+
+		@Override
+		public String toString() {
+			return name + ": " + value;
 		}
 	}
 }

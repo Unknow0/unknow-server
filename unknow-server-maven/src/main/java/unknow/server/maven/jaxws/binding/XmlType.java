@@ -40,6 +40,11 @@ public class XmlType<T extends TypeModel> {
 		return javaType;
 	}
 
+	@Override
+	public String toString() {
+		return qname();
+	}
+
 	/**
 	 * generate an expression to convert from value (string for simple type, Object for complex)
 	 * 

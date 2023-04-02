@@ -35,4 +35,9 @@ public class XmlElem<T extends XmlType<?>> {
 	public String qname() {
 		return ns.isEmpty() ? name : "{" + ns + "}" + name;
 	}
+
+	@Override
+	public String toString() {
+		return qname() + " type " + xmlType.qname();
+	}
 }

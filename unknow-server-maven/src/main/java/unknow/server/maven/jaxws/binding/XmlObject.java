@@ -91,7 +91,7 @@ public class XmlObject extends XmlType<ClassModel> {
 		Map<String, FieldModel> fields = new HashMap<>();
 
 		for (FieldModel f : c.fields()) {
-			if (f.isStatic() || f.isTransient() || f.annotation(XmlTransient.class) != null)
+			if (f.isStatic() || f.isTransient() || f.annotation(XmlTransient.class).isPresent())
 				continue;
 
 			boolean annoted = f.annotation(XmlElement.class).or(() -> f.annotation(XmlAttribute.class)).or(() -> f.annotation(XmlValue.class)).isPresent();
@@ -178,6 +178,18 @@ public class XmlObject extends XmlType<ClassModel> {
 				return 1;
 			});
 		}
+	}
+
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder("XmlObject ").append(qname());
+		if (!attrs.isEmpty())
+			sb.append("\n\tattrs: ").append(attrs);
+		if (!elems.isEmpty())
+			sb.append("\n\telems:").append(elems);
+		if (value != null)
+			sb.append("\n\tvalue: ").append(value);
+		return sb.toString();
 	}
 
 	public static class Factory {
