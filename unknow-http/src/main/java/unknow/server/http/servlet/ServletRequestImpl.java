@@ -65,6 +65,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 	private final DispatcherType type;
 	private final ServletResponseImpl res;
 
+	private String requestUri;
 	private final List<String> path;
 	private int pathInfoIndex;
 
@@ -118,8 +119,8 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 		this.headers = new HashMap<>();
 
-		this.remote = null;// req != null ? req.getRemote() : null;
-		this.local = null;// req != null ? req.getLocal() : null;
+		this.remote = req != null ? req.getRemote() : null;
+		this.local = req != null ? req.getLocal() : null;
 	}
 
 	public void setMethod(String method) {
@@ -140,6 +141,10 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	public void setHeaders(Map<String, List<String>> headers) {
 		this.headers = headers;
+	}
+
+	public void setRequestUri(String path) {
+		this.requestUri = path;
 	}
 
 	public List<String> getPaths() {
@@ -538,16 +543,12 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public String getRequestURI() {
-		String s = getServletPath();
-		return getPathInfo() == null ? s : s + getPathInfo();
+		return requestUri;
 	}
 
 	@Override
 	public StringBuffer getRequestURL() {
-		StringBuffer append = new StringBuffer(getScheme()).append("://").append(getServerName()).append(':').append(getServerPort()).append(getServletPath());
-		if (getPathInfo() != null)
-			append.append(getPathInfo());
-		return append;
+		return new StringBuffer(getScheme()).append("://").append(getServerName()).append(':').append(getServerPort()).append(getRequestURI());
 	}
 
 	@Override

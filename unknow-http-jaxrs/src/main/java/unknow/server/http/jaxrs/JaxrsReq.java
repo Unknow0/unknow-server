@@ -17,13 +17,13 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.MultivaluedHashMap;
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.ext.ParamConverter;
+import unknow.server.http.jaxrs.header.MediaTypeDelegate;
 
 /**
  * @author unknow
  */
 public class JaxrsReq {
 	private final HttpServletRequest r;
-	private final JaxrsPath[] path;
 
 	private Map<String, String> paths;
 	private MultivaluedMap<String, String> queries;
@@ -36,11 +36,9 @@ public class JaxrsReq {
 	 * create new JaxrsReq
 	 * 
 	 * @param r
-	 * @param path
 	 */
-	public JaxrsReq(HttpServletRequest r, JaxrsPath[] path) {
+	public JaxrsReq(HttpServletRequest r) {
 		this.r = r;
-		this.path = path;
 	}
 
 	public HttpServletRequest getRequest() {
@@ -51,11 +49,10 @@ public class JaxrsReq {
 		String contentType = r.getHeader("Accept");
 		if (contentType == null)
 			contentType = "*/*";
-		return MediaType.valueOf(contentType);
+		return MediaTypeDelegate.INSTANCE.fromString(contentType);
 	}
 
 	public <T> T getPath(String path, String def, ParamConverter<T> c) {
-		initPaths();
 		String s = paths.getOrDefault(path, def);
 		if (s == null)
 			return null;
@@ -130,14 +127,12 @@ public class JaxrsReq {
 		}
 	}
 
-	private void initPaths() {
-		if (paths != null)
-			return;
+	public void initPaths(JaxrsPath[] path) {
 		paths = new HashMap<>();
 		if (path.length == 0)
 			return;
 
-		String s = r.getServletPath();
+		String s = r.getRequestURI();
 		int n = 0;
 		for (int i = 0; i < path.length; i++) {
 			JaxrsPath p = path[i];
@@ -188,7 +183,7 @@ public class JaxrsReq {
 		if (matrix != null)
 			return;
 		matrix = new MultivaluedHashMap<>();
-		String p = r.getServletPath();
+		String p = r.getRequestURI();
 		int e = p.lastIndexOf('/');
 		e = p.indexOf(';', e < 0 ? 0 : e);
 		if (e < 0)

@@ -23,8 +23,9 @@ public class JaxrsReqTest {
 	@MethodSource
 	public void path(String expected, String path) {
 		HttpServletRequest r = Mockito.mock(HttpServletRequest.class);
-		Mockito.when(r.getServletPath()).thenReturn(path);
-		JaxrsReq req = new JaxrsReq(r, new JaxrsPath[] { new JaxrsPath(1, "p") });
+		Mockito.when(r.getRequestURI()).thenReturn(path);
+		JaxrsReq req = new JaxrsReq(r);
+		req.initPaths(new JaxrsPath[] { new JaxrsPath(1, "p") });
 		assertEquals(expected, req.getPath("p", null, JaxrsContext.STRING));
 	}
 
@@ -38,7 +39,7 @@ public class JaxrsReqTest {
 	@MethodSource
 	public void query(String expected, String query, String def) {
 		HttpServletRequest r = Mockito.mock(HttpServletRequest.class);
-		JaxrsReq req = new JaxrsReq(r, new JaxrsPath[0]);
+		JaxrsReq req = new JaxrsReq(r);
 		Mockito.when(r.getQueryString()).thenReturn(query);
 		assertEquals(expected, req.getQuery("n", def, JaxrsContext.STRING));
 	}
@@ -58,8 +59,8 @@ public class JaxrsReqTest {
 	@MethodSource
 	public void matrix(String expected, String path, String def) {
 		HttpServletRequest r = Mockito.mock(HttpServletRequest.class);
-		JaxrsReq req = new JaxrsReq(r, new JaxrsPath[0]);
-		Mockito.when(r.getServletPath()).thenReturn(path);
+		JaxrsReq req = new JaxrsReq(r);
+		Mockito.when(r.getRequestURI()).thenReturn(path);
 		assertEquals(expected, req.getMatrix("n", def, JaxrsContext.STRING));
 	}
 

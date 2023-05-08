@@ -97,7 +97,7 @@ public class NIOServerCli implements Callable<Integer> {
 			nioServer = new NIOServer(workers, listener);
 			nioServer.bind(getInetAddress(), handler);
 			if (shutdownPort > 0)
-				nioServer.bind(new InetSocketAddress(InetAddress.getLocalHost(), shutdownPort), new ShutdownHandler(nioServer));
+				nioServer.bind(new InetSocketAddress(InetAddress.getLoopbackAddress(), shutdownPort), new ShutdownHandler(nioServer));
 			nioServer.start();
 			nioServer.await();
 		} finally {

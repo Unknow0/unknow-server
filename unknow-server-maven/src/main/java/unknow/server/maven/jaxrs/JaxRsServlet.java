@@ -13,6 +13,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -53,6 +55,8 @@ import com.github.javaparser.ast.stmt.CatchClause;
 import com.github.javaparser.ast.stmt.ExpressionStmt;
 import com.github.javaparser.ast.stmt.IfStmt;
 import com.github.javaparser.ast.stmt.ReturnStmt;
+import com.github.javaparser.ast.stmt.Statement;
+import com.github.javaparser.ast.stmt.ThrowStmt;
 import com.github.javaparser.ast.stmt.TryStmt;
 import com.github.javaparser.ast.type.ArrayType;
 
@@ -63,6 +67,8 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.ws.rs.NotAcceptableException;
+import jakarta.ws.rs.NotSupportedException;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.ParamConverter;
 import jakarta.ws.rs.ext.RuntimeDelegate;
@@ -92,6 +98,27 @@ public class JaxRsServlet extends AbstractMojo {
 	private static final Modifier.Keyword[] PUBLIC = { Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL };
 	private static final Modifier.Keyword[] PROTECT = { Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL };
 	private static final Modifier.Keyword[] PSF = { Modifier.Keyword.PRIVATE, Modifier.Keyword.STATIC, Modifier.Keyword.FINAL };
+
+	static final Comparator<String> MIME = (a, b) -> {
+		String[] am = a.split("/");
+		String[] bm = b.split("/");
+		int c = am[0].compareTo(bm[0]);
+		if (c != 0) {
+			if ("*".equals(am[0]))
+				return -1;
+			if ("*".equals(bm[0]))
+				return 1;
+			return c;
+		}
+		c = am[1].compareTo(bm[1]);
+		if (c == 0)
+			return 0;
+		if ("*".equals(am[1]))
+			return -1;
+		if ("*".equals(bm[1]))
+			return 1;
+		return c;
+	};
 
 	private TypeModel response;
 
@@ -185,15 +212,17 @@ public class JaxRsServlet extends AbstractMojo {
 		Map<ClassModel, NameExpr> services = new HashMap<>();
 		Set<MethodModel> methods = new HashSet<>();
 		for (String method : model.methods(path)) {
-			JaxrsMapping mapping = model.mapping(path, method);
-			ClassModel c = mapping.clazz;
-			methods.add(mapping.m);
+			for (JaxrsMapping mapping : model.mapping(path, method)) {
 
-			String n = "s$" + services.size();
-			if (services.containsKey(c))
-				continue;
-			services.put(c, new NameExpr(n));
-			cl.addFieldWithInitializer(types.get(c.name()), n, new ObjectCreationExpr(null, types.get(c.name()), Utils.list()), PSF);
+				ClassModel c = mapping.clazz;
+				methods.add(mapping.m);
+
+				String n = "s$" + services.size();
+				if (services.containsKey(c))
+					continue;
+				services.put(c, new NameExpr(n));
+				cl.addFieldWithInitializer(types.get(c.name()), n, new ObjectCreationExpr(null, types.get(c.name()), Utils.list()), PSF);
+			}
 		}
 
 		BlockStmt b = new BlockStmt()
@@ -289,7 +318,10 @@ public class JaxRsServlet extends AbstractMojo {
 		}
 
 		for (String method : model.methods(path))
-			buildMethod(method, model.mapping(path, method), services);
+			buildMethod(method, model.mapping(path, method));
+
+		for (JaxrsMapping mapping : model.mappings())
+			buildCall(mapping, services);
 
 		for (Entry<String, JaxrsBeanParam> e : beans.entrySet())
 			buildBeanMethod(e.getKey(), e.getValue());
@@ -372,19 +404,15 @@ public class JaxRsServlet extends AbstractMojo {
 	/**
 	 * @param method
 	 * @param mapping
-	 * @param services
 	 */
-	private void buildMethod(String method, JaxrsMapping mapping, Map<ClassModel, NameExpr> services) {
-		NodeList<Expression> paths = mapping.parts.stream().map(p -> new ObjectCreationExpr(null, types.get(JaxrsPath.class), Utils.list(new IntegerLiteralExpr("" + p.i), new StringLiteralExpr(p.name)))).collect(Collectors.toCollection(NodeList::new));
-		cl.addFieldWithInitializer(types.array(JaxrsPath.class), mapping.var + "$paths", Utils.array(types.get(JaxrsPath.class), paths), PSF);
-
+	private void buildMethod(String method, List<JaxrsMapping> list) {
 		BlockStmt b = new BlockStmt();
 		cl.addMethod("do" + method.charAt(0) + method.substring(1).toLowerCase(), PROTECT).addMarkerAnnotation(Override.class)
 				.addParameter(types.get(HttpServletRequest.class), "req")
 				.addParameter(types.get(HttpServletResponse.class), "res")
 				.addThrownException(IOException.class).addThrownException(ServletException.class)
 				.getBody().get()
-				.addStatement(Utils.create(types.get(JaxrsReq.class), "r", Utils.list(new NameExpr("req"), new NameExpr(mapping.var + "$paths"))))
+				.addStatement(Utils.create(types.get(JaxrsReq.class), "r", Utils.list(new NameExpr("req"))))
 				.addStatement(new TryStmt(b, Utils.list(
 						new CatchClause(
 								new com.github.javaparser.ast.body.Parameter(types.get(Throwable.class), "e"),
@@ -393,9 +421,83 @@ public class JaxRsServlet extends AbstractMojo {
 										.addStatement(new MethodCallExpr(new TypeExpr(types.get(JaxrsContext.class)), "sendError", Utils.list(new NameExpr("r"), new NameExpr("e"), new NameExpr("res")))))),
 						null));
 
+		Map<String, Map<String, JaxrsMapping>> consume = new HashMap<>();
+		for (JaxrsMapping mapping : list) {
+			for (int i = 0; i < mapping.consume.length; i++) {
+				String c = mapping.consume[i];
+				Map<String, JaxrsMapping> map = consume.get(c);
+				if (map == null)
+					consume.put(c, map = new HashMap<>());
+
+				for (int j = 0; j < mapping.produce.length; j++)
+					map.put(mapping.produce[j], mapping);
+			}
+		}
+
+		Map<String, JaxrsMapping> def = consume.remove("*/*");
+		if (consume.isEmpty())
+			buildProduces(b, def);
+		else {
+			b.addStatement(Utils.assign(types.get(String.class), "contentType", new MethodCallExpr(new NameExpr("r"), "getHeader", Utils.list(new StringLiteralExpr("content-type"), new StringLiteralExpr("*/*"), new FieldAccessExpr(new TypeExpr(types.get(JaxrsContext.class)), "STRING")))));
+			List<String> k = new ArrayList<>(consume.keySet());
+			k.sort(MIME);
+
+			Statement stmt = def == null ? new ThrowStmt(new ObjectCreationExpr(null, types.get(NotSupportedException.class), Utils.list())) : buildProduces(new BlockStmt(), def);
+			for (String s : k) {
+				Map<String, JaxrsMapping> map = consume.get(s);
+				String m = "equals";
+				if (s.endsWith("/*")) {
+					s = s.substring(0, s.length() - 1);
+					m = "startsWith";
+				} else if (s.startsWith("*/")) {
+					s = s.substring(1);
+					m = "endsWith";
+				}
+
+				stmt = new IfStmt(
+						new MethodCallExpr(new NameExpr("contentType"), m, Utils.list(new StringLiteralExpr(s))),
+						buildProduces(new BlockStmt(), map),
+						stmt);
+			}
+			b.addStatement(stmt);
+		}
+	}
+
+	private Statement buildProduces(BlockStmt b, Map<String, JaxrsMapping> produce) {
+		JaxrsMapping def = produce.remove("*/*");
+		Statement stmt = new ThrowStmt(new ObjectCreationExpr(null, types.get(NotAcceptableException.class), Utils.list()));
+		if (def != null)
+			stmt = new ExpressionStmt(new MethodCallExpr(def.var + "$call", new NameExpr("r"), new NameExpr("res")));
+		if (produce.size() == 0)
+			return b.addStatement(stmt);
+
+		// TODO quality check of header
+		b.addStatement(Utils.assign(types.get(String.class), "accept", new MethodCallExpr(new NameExpr("r"), "getHeader", Utils.list(new StringLiteralExpr("accept"), new StringLiteralExpr("*/*"), new FieldAccessExpr(new TypeExpr(types.get(JaxrsContext.class)), "STRING")))));
+
+		List<String> k = new ArrayList<>(produce.keySet());
+		k.sort(MIME);
+		for (String s : k) {
+			stmt = new IfStmt(
+					new MethodCallExpr(new NameExpr("accept"), "equals", Utils.list(new StringLiteralExpr(s))),
+					new ExpressionStmt(new MethodCallExpr(produce.get(s).var + "$call", new NameExpr("r"), new NameExpr("res"))),
+					stmt);
+		}
+		b.addStatement(stmt);
+		return b;
+	}
+
+	private void buildCall(JaxrsMapping mapping, Map<ClassModel, NameExpr> services) {
+		NodeList<Expression> paths = mapping.parts.stream().map(p -> new ObjectCreationExpr(null, types.get(JaxrsPath.class), Utils.list(new IntegerLiteralExpr("" + p.i), new StringLiteralExpr(p.name)))).collect(Collectors.toCollection(NodeList::new));
+		cl.addFieldWithInitializer(types.array(JaxrsPath.class), mapping.var + "$paths", Utils.array(types.get(JaxrsPath.class), paths), PSF);
+
+		BlockStmt b = cl.addMethod(mapping.var + "$call", PSF)
+				.addParameter(types.get(JaxrsReq.class), "r").addParameter(types.get(HttpServletResponse.class), "res")
+				.addThrownException(types.get(IOException.class))
+				.getBody().get();
+		if (!mapping.parts.isEmpty())
+			b.addStatement(new MethodCallExpr(new NameExpr("r"), "initPaths", Utils.list(new NameExpr(mapping.var + "$paths"))));
 		for (JaxrsParam p : mapping.params)
 			b.addStatement(Utils.assign(types.get(p.type), p.var, getParam(p)));
-
 		MethodModel m = mapping.m;
 		NodeList<Expression> arg = mapping.params.stream().map(p -> new NameExpr(p.var)).collect(Collectors.toCollection(() -> new NodeList<>()));
 

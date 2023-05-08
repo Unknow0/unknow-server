@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.MultivaluedMap;
+import unknow.server.http.jaxrs.header.MediaTypeDelegate;
 
 /**
  * read body content into class
@@ -49,7 +50,7 @@ public class JaxrsEntityReader<T> {
 		String contentType = req.getContentType();
 		if (contentType == null)
 			contentType = "*/*";
-		MediaType mediaType = MediaType.valueOf(contentType);
+		MediaType mediaType = MediaTypeDelegate.INSTANCE.fromString(contentType);
 
 		MultivaluedMap<String, String> httpHeaders = r.getHeaders();
 		return JaxrsContext.reader(clazz, genericType, annotations, mediaType).readFrom(clazz, genericType, annotations, mediaType, httpHeaders, req.getInputStream());

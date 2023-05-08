@@ -100,8 +100,8 @@ public class JaxrsModel {
 			MatrixParam.class.getName()));
 
 	private final List<JaxrsMapping> mappings = new ArrayList<>();
-	// path, method,
-	private final Map<String, Map<String, JaxrsMapping>> paths = new HashMap<>();
+	// path, method
+	private final Map<String, Map<String, List<JaxrsMapping>>> paths = new HashMap<>();
 	private final ModelLoader loader;
 	private final TypeModel paramProvider;
 	private final TypeModel exceptionMapper;
@@ -216,7 +216,7 @@ public class JaxrsModel {
 		return paths.getOrDefault(path, Collections.emptyMap()).keySet();
 	}
 
-	public JaxrsMapping mapping(String path, String method) {
+	public List<JaxrsMapping> mapping(String path, String method) {
 		return paths.getOrDefault(path, Collections.emptyMap()).getOrDefault(method, null);
 	}
 
@@ -270,9 +270,13 @@ public class JaxrsModel {
 			basePath = "";
 		if (basePath.endsWith("/"))
 			basePath = basePath.substring(0, basePath.length() - 1);
+		if (baseConsume == null)
+			baseConsume = ALL;
+		if (baseProduce == null)
+			baseProduce = ALL;
 
 		for (MethodModel m : methods.values())
-			process(method, basePath, baseConsume, baseConsume, clazz, m);
+			process(method, basePath, baseConsume, baseProduce, clazz, m);
 	}
 
 	private void process(String defaultMethod, String path, String[] consume, String[] produce, ClassModel clazz, MethodModel m) {
@@ -291,7 +295,7 @@ public class JaxrsModel {
 		path = sb.toString();
 		sb.setLength(0);
 
-		Map<String, JaxrsMapping> map = paths.get(path);
+		Map<String, List<JaxrsMapping>> map = paths.get(path);
 		if (map == null)
 			paths.put(path, map = new HashMap<>());
 
@@ -310,9 +314,6 @@ public class JaxrsModel {
 			params.add(param);
 		}
 
-		JaxrsMapping list = map.get(method);
-		if (list != null)
-			throw new RuntimeException("duplicate mapping on " + method + " " + path + " " + list.m + " and " + m);
 		List<PathPart> pp = Collections.emptyList();
 		if (!parts.isEmpty()) {
 			Set<String> set = new HashSet<>();
@@ -323,32 +324,22 @@ public class JaxrsModel {
 				pp.add(p);
 			}
 		}
-		JaxrsMapping jaxrsMapping = new JaxrsMapping("m$" + mappings.size(), clazz, m, params, pp);
-		map.put(method, jaxrsMapping);
+
+		consume = m.annotation(Consumes.class).flatMap(v -> v.values()).orElse(consume);
+		produce = m.annotation(Produces.class).flatMap(v -> v.values()).orElse(produce);
+
+		List<JaxrsMapping> list = map.get(method);
+		if (list == null)
+			map.put(method, list = new ArrayList<>());
+
+		for (JaxrsMapping j : list) {
+			if (hasEq(j.consume, consume) && hasEq(j.produce, produce))
+				throw new RuntimeException("Duplicate mapping for '" + j.m + "' and '" + m + "'");
+		}
+
+		JaxrsMapping jaxrsMapping = new JaxrsMapping("m$" + mappings.size(), clazz, m, params, pp, consume, produce);
+		list.add(jaxrsMapping);
 		mappings.add(jaxrsMapping);
-//
-//		a = m.annotation(Consumes.class);
-//		if (a != null)
-//			consume = a.values().orElse(consume);
-//		if (consume == null)
-//			consume = new String[] { "*/*" };
-//
-//		a = m.annotation(Produces.class);
-//		if (a != null)
-//			produce = a.values().orElse(produce);
-//		if (produce == null)
-//			produce = new String[] { "*/*" };
-//
-//		for (String s : consume) {
-//			Map<String, JaxrsMapping> consumeList = list.get(s);
-//			if (consumeList == null)
-//				list.put(s, consumeList = new HashMap<>());
-//			for (String p : produce) {
-//				if (consumeList.containsKey(p))
-//					throw new RuntimeException("duplicate consume/produce mapping on " + path + " " + method + " " + s + " " + p);
-//				consumeList.put(p, mapping);
-//			}
-//		}
 	}
 
 	private <T extends WithName & WithAnnotation & WithType> JaxrsParam buildParam(T p, AnnotationModel a) {
@@ -440,6 +431,15 @@ public class JaxrsModel {
 		}
 		m.appendTail(sb);
 		return parts;
+	}
+
+	private static boolean hasEq(String[] a, String[] b) {
+		for (int i = 0; i < a.length; i++) {
+			for (int j = 0; j < b.length; j++)
+				if (a[i].equals(b[i]))
+					return true;
+		}
+		return false;
 	}
 
 	public static class PathPart {
