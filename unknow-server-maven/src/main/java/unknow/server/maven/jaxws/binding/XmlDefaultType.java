@@ -43,7 +43,7 @@ public class XmlDefaultType extends XmlType<DummyModel> {
 		if (Character.class.getName().equals(cl))
 			return new MethodCallExpr(v, "charAt", Utils.list(new IntegerLiteralExpr("0")));
 		if (BigDecimal.class.getName().equals(cl) || BigInteger.class.getName().equals(cl))
-			return new ObjectCreationExpr(null, types.get(cl), new NodeList<>(v));
+			return new ObjectCreationExpr(null, types.getClass(cl), new NodeList<>(v));
 		return new MethodCallExpr(new TypeExpr(types.get(cl)), "valueOf", Utils.list(v));
 	}
 

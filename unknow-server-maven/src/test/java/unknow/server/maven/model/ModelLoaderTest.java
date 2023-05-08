@@ -26,7 +26,8 @@ public class ModelLoaderTest {
 				Arguments.of("Collection<List<String>>", Arrays.asList("Collection", "List<String>")),
 				Arguments.of("Map<List<String>,String>", Arrays.asList("Map", "List<String>", "String")),
 				Arguments.of("Map<String,List<String>>", Arrays.asList("Map", "String", "List<String>")),
-				Arguments.of("A<B,C,D<E>>", Arrays.asList("A", "B", "C", "D<E>")));
+				Arguments.of("A<B,C,D<E>>", Arrays.asList("A", "B", "C", "D<E>")),
+				Arguments.of("L<>", Arrays.asList("L", "")));
 	}
 
 	@ParameterizedTest(name = "{0}")

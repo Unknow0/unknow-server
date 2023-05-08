@@ -3,6 +3,8 @@
  */
 package unknow.server.http.test;
 
+import java.util.Arrays;
+
 import jakarta.ws.rs.BeanParam;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.CookieParam;
@@ -23,8 +25,8 @@ import jakarta.ws.rs.QueryParam;
 public class Rest {
 
 	@GET
-	public void oneWay(@PathParam("q") String q, @BeanParam Bean bean) {
-		System.out.println("oneWay>> q: '" + q + "' bean: " + bean);
+	public void oneWay(@PathParam("q") String q, @BeanParam Bean bean, @QueryParam("p") String[] p) {
+		System.out.println("oneWay>> q: '" + q + "' bean: " + bean + " p: " + Arrays.toString(p));
 	}
 
 	@GET

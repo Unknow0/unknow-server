@@ -33,7 +33,7 @@ public class CreateFilters extends Builder {
 	public void add(BuilderContext ctx) {
 		Descriptor descriptor = ctx.descriptor();
 		TypeCache types = ctx.type();
-		ClassOrInterfaceType t = types.get(FilterConfigImpl.class);
+		ClassOrInterfaceType t = types.getClass(FilterConfigImpl.class);
 		BlockStmt b = ctx.self().addMethod("createFilters", Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL).setType(types.array(FilterConfigImpl.class))
 				.addMarkerAnnotation(Override.class)
 				.getBody().get();
@@ -44,14 +44,14 @@ public class CreateFilters extends Builder {
 			filters.add(new NameExpr(n));
 
 			NodeList<Expression> list = new NodeList<>();
-			TypeExpr type = new TypeExpr(types.get(DispatcherType.class));
+			TypeExpr type = new TypeExpr(types.getClass(DispatcherType.class));
 			for (DispatcherType d : f.dispatcher)
 				list.add(new FieldAccessExpr(type, d.name()));
-			Expression dispatcher = new ObjectCreationExpr(null, types.get(ArraySet.class, TypeCache.EMPTY), Utils.list(Utils.array(types.get(DispatcherType.class), list)));
+			Expression dispatcher = new ObjectCreationExpr(null, types.getClass(ArraySet.class, TypeCache.EMPTY), Utils.list(Utils.array(types.getClass(DispatcherType.class), list)));
 
 			b.addStatement(Utils.assign(t, n, new ObjectCreationExpr(null, t, Utils.list(
 					new StringLiteralExpr(f.name),
-					new ObjectCreationExpr(null, types.get(f.clazz), Utils.list()),
+					new ObjectCreationExpr(null, types.getClass(f.clazz), Utils.list()),
 					Names.CTX,
 					Utils.mapString(f.param, types),
 					Utils.arraySet(f.servletNames, types), Utils.arraySet(f.pattern, types), dispatcher))));

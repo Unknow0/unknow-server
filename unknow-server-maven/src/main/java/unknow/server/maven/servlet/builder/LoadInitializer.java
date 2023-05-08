@@ -44,6 +44,6 @@ public class LoadInitializer extends Builder {
 		}
 		BlockStmt b = ctx.self().addMethod("loadInitializer", Keyword.PROTECTED, Keyword.FINAL).addMarkerAnnotation(Override.class).getBody().get();
 		for (String s : clazz)
-			b.addStatement(new MethodCallExpr(new ObjectCreationExpr(null, ctx.type().get(s), Utils.list()), "onStartup", Utils.list(new NullLiteralExpr(), new NameExpr("ctx"))));
+			b.addStatement(new MethodCallExpr(new ObjectCreationExpr(null, ctx.type().getClass(s), Utils.list()), "onStartup", Utils.list(new NullLiteralExpr(), new NameExpr("ctx"))));
 	}
 }

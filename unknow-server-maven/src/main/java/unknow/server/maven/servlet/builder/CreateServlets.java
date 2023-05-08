@@ -34,7 +34,7 @@ public class CreateServlets extends Builder {
 	public void add(BuilderContext ctx) {
 		Descriptor descriptor = ctx.descriptor();
 		TypeCache types = ctx.type();
-		ClassOrInterfaceType t = types.get(ServletConfigImpl.class);
+		ClassOrInterfaceType t = types.getClass(ServletConfigImpl.class);
 		BlockStmt b = ctx.self().addMethod("createServlets", Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL).setType(types.array(ServletConfigImpl.class))
 				.addMarkerAnnotation(Override.class)
 				.getBody().get();
@@ -51,7 +51,7 @@ public class CreateServlets extends Builder {
 				Resource r = descriptor.resources.get(s.pattern.get(0));
 				params = Utils.list(new StringLiteralExpr(s.pattern.get(0)), new LongLiteralExpr(r.getLastModified() + "L"), new LongLiteralExpr(r.getSize() + "L"));
 			}
-			b.addStatement(Utils.assign(t, n, new ObjectCreationExpr(null, t, Utils.list(new StringLiteralExpr(s.name), new ObjectCreationExpr(null, types.get(s.clazz), params), Names.CTX, Utils.mapString(s.param, types), Utils.arraySet(s.pattern, types)))));
+			b.addStatement(Utils.assign(t, n, new ObjectCreationExpr(null, t, Utils.list(new StringLiteralExpr(s.name), new ObjectCreationExpr(null, types.getClass(s.clazz), params), Names.CTX, Utils.mapString(s.param, types), Utils.arraySet(s.pattern, types)))));
 			for (String p : s.pattern) {
 				if (saw.contains(p))
 					System.err.println("duplicate servlet pattern '" + p + "'");

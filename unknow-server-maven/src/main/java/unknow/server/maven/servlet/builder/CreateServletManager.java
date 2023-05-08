@@ -38,10 +38,10 @@ public class CreateServletManager extends Builder {
 	public void add(BuilderContext ctx) {
 		Descriptor descriptor = ctx.descriptor();
 		TypeCache types = ctx.type();
-		ctx.self().addMethod("createServletManager", Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL).setType(types.get(ServletManager.class))
+		ctx.self().addMethod("createServletManager", Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL).setType(types.getClass(ServletManager.class))
 				.addMarkerAnnotation(Override.class)
 				.getBody().get()
-				.addStatement(new ReturnStmt(new ObjectCreationExpr(null, types.get(ServletManager.class),
+				.addStatement(new ReturnStmt(new ObjectCreationExpr(null, types.getClass(ServletManager.class),
 						Utils.list(errorCode(descriptor, types), errorClass(descriptor, types)))));
 	}
 
@@ -58,8 +58,8 @@ public class CreateServletManager extends Builder {
 			k.add(new IntegerLiteralExpr(e.toString()));
 			v.add(new StringLiteralExpr(path));
 		}
-		return new ObjectCreationExpr(null, t.get(IntArrayMap.class, TypeCache.EMPTY),
-				Utils.list(Utils.array(PrimitiveType.intType(), k), Utils.array(t.get(String.class), v)));
+		return new ObjectCreationExpr(null, t.getClass(IntArrayMap.class, TypeCache.EMPTY),
+				Utils.list(Utils.array(PrimitiveType.intType(), k), Utils.array(t.getClass(String.class), v)));
 	}
 
 	private static ObjectCreationExpr errorClass(Descriptor descriptor, TypeCache t) {
@@ -77,7 +77,7 @@ public class CreateServletManager extends Builder {
 		}
 		LambdaExpr cmp = new LambdaExpr(Utils.list(new Parameter(TypeCache.EMPTY, "a"), new Parameter(TypeCache.EMPTY, "b")),
 				new MethodCallExpr(new MethodCallExpr(Names.a, "getName"), "compareTo", Utils.list(new MethodCallExpr(Names.b, "getName"))));
-		return new ObjectCreationExpr(null, t.get(ObjectArrayMap.class, TypeCache.EMPTY),
-				Utils.list(Utils.array(t.get(Class.class), k), Utils.array(t.get(String.class), v), cmp));
+		return new ObjectCreationExpr(null, t.getClass(ObjectArrayMap.class, TypeCache.EMPTY),
+				Utils.list(Utils.array(t.getClass(Class.class), k), Utils.array(t.getClass(String.class), v), cmp));
 	}
 }

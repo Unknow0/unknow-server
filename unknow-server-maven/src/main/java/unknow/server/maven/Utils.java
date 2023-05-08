@@ -125,14 +125,14 @@ public class Utils {
 			k.add(new StringLiteralExpr(key));
 			v.add(new StringLiteralExpr(map.get(key)));
 		}
-		return new ObjectCreationExpr(null, types.get(ArrayMap.class, TypeCache.EMPTY), list(array(types.get(String.class), k), array(types.get(String.class), v)));
+		return new ObjectCreationExpr(null, types.getClass(ArrayMap.class, TypeCache.EMPTY), list(array(types.getClass(String.class), k), array(types.getClass(String.class), v)));
 	}
 
 	public static ObjectCreationExpr arraySet(Collection<String> list, TypeCache types) {
 		NodeList<Expression> n = new NodeList<>();
 		for (String p : list)
 			n.add(new StringLiteralExpr(p));
-		return new ObjectCreationExpr(null, types.get(ArraySet.class, TypeCache.EMPTY), Utils.list(Utils.array(types.get(String.class), n)));
+		return new ObjectCreationExpr(null, types.getClass(ArraySet.class, TypeCache.EMPTY), Utils.list(Utils.array(types.getClass(String.class), n)));
 	}
 
 	/**

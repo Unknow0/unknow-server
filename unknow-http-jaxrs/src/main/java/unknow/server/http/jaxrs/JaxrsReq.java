@@ -7,8 +7,10 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import jakarta.servlet.http.Cookie;
@@ -23,6 +25,8 @@ import unknow.server.http.jaxrs.header.MediaTypeDelegate;
  * @author unknow
  */
 public class JaxrsReq {
+	private static final Object[] EMPTY = {};
+
 	private final HttpServletRequest r;
 
 	private Map<String, String> paths;
@@ -53,10 +57,15 @@ public class JaxrsReq {
 	}
 
 	public <T> T getPath(String path, String def, ParamConverter<T> c) {
+		return toValue(paths.get(path), def, c);
+	}
+
+	@SuppressWarnings("unchecked")
+	public <T> T[] getPathArray(String path, String def, ParamConverter<T> c) {
 		String s = paths.getOrDefault(path, def);
 		if (s == null)
-			return null;
-		return c.fromString(s);
+			return (T[]) EMPTY;
+		return (T[]) new Object[] { c.fromString(s) };
 	}
 
 	public MultivaluedMap<String, String> getHeaders() {
@@ -66,52 +75,52 @@ public class JaxrsReq {
 
 	public <T> T getHeader(String name, String def, ParamConverter<T> c) {
 		initHeaders();
-		String value = headers.getFirst(name);
-		if (value == null)
-			value = def;
-		if (value == null)
-			return null;
-		return c.fromString(value);
+		return toValue(headers.getFirst(name), def, c);
+	}
+
+	public <T> T[] getHeaderArray(String name, String def, ParamConverter<T> c) {
+		initHeaders();
+		return toArray(headers.get(name), def, c);
 	}
 
 	public <T> T getQuery(String name, String def, ParamConverter<T> c) {
 		initQueries();
-		String value = queries.getFirst(name);
-		if (value == null)
-			value = def;
-		if (value == null)
-			return null;
-		return c.fromString(value);
+		return toValue(queries.getFirst(name), def, c);
+	}
+
+	public <T> T[] getQueryArray(String name, String def, ParamConverter<T> c) {
+		initQueries();
+		return toArray(queries.get(name), def, c);
 	}
 
 	public <T> T getForm(String name, String def, ParamConverter<T> c) throws IOException {
 		initForms();
-		String value = forms.getFirst(name);
-		if (value == null)
-			value = def;
-		if (value == null)
-			return null;
-		return c.fromString(value);
+		return toValue(forms.getFirst(name), def, c);
+	}
+
+	public <T> T[] getFormArray(String name, String def, ParamConverter<T> c) throws IOException {
+		initForms();
+		return toArray(forms.get(name), def, c);
 	}
 
 	public <T> T getCookie(String name, String def, ParamConverter<T> c) {
 		initCookies();
-		String value = cookies.getFirst(name);
-		if (value == null)
-			value = def;
-		if (value == null)
-			return null;
-		return c.fromString(value);
+		return toValue(cookies.getFirst(name), def, c);
+	}
+
+	public <T> T[] getCookieArray(String name, String def, ParamConverter<T> c) {
+		initCookies();
+		return toArray(cookies.get(name), def, c);
 	}
 
 	public <T> T getMatrix(String name, String def, ParamConverter<T> c) {
 		initMatrix();
-		String value = matrix.getFirst(name);
-		if (value == null)
-			value = def;
-		if (value == null)
-			return null;
-		return c.fromString(value);
+		return toValue(matrix.getFirst(name), def, c);
+	}
+
+	public <T> T[] getMatrixArray(String name, String def, ParamConverter<T> c) {
+		initMatrix();
+		return toArray(matrix.get(name), def, c);
 	}
 
 	private void initHeaders() {
@@ -230,5 +239,25 @@ public class JaxrsReq {
 				matrix.add(path.substring(start, equals), path.substring(equals + 1, end));
 			start = end + 1;
 		} while (start < l);
+	}
+
+	private static <T> T toValue(String value, String def, ParamConverter<T> c) {
+		if (value == null)
+			value = def;
+		if (value == null)
+			return null;
+		return c.fromString(value);
+	}
+
+	@SuppressWarnings("unchecked")
+	private static <T> T[] toArray(List<String> list, String def, ParamConverter<T> c) {
+		if (list == null && def != null)
+			list = Arrays.asList(def);
+		if (list == null || list.isEmpty())
+			return (T[]) EMPTY;
+		T[] t = (T[]) new Object[list.size()];
+		for (int i = 0; i < list.size(); i++)
+			t[i] = c.fromString(list.get(i));
+		return t;
 	}
 }

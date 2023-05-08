@@ -64,38 +64,38 @@ public class JaxMarshallerBuilder {
 		this.types = types;
 		this.clazz = cu.addClass("Marshallers", Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL);
 		this.processed = new HashSet<>();
-		clazz.addFieldWithInitializer(types.get(MarshalerRegistry.class), "R", new ObjectCreationExpr(null, types.get(MarshalerRegistry.class), Utils.list()),
+		clazz.addFieldWithInitializer(types.getClass(MarshalerRegistry.class), "R", new ObjectCreationExpr(null, types.getClass(MarshalerRegistry.class), Utils.list()),
 				Modifier.Keyword.PRIVATE, Modifier.Keyword.STATIC, Modifier.Keyword.FINAL);
 		init = clazz.addStaticInitializer();
 
-		clazz.addMethod("marshall", Keyword.PUBLIC, Keyword.STATIC, Keyword.FINAL).addParameter(types.get(Envelope.class), "e").addParameter(types.get(Writer.class), "w")
-				.addThrownException(types.get(IOException.class)).getBody().get().addStatement(Utils.create(types.get(XMLNsCollector.class), "c", Utils.list()))
+		clazz.addMethod("marshall", Keyword.PUBLIC, Keyword.STATIC, Keyword.FINAL).addParameter(types.getClass(Envelope.class), "e").addParameter(types.getClass(Writer.class), "w")
+				.addThrownException(types.getClass(IOException.class)).getBody().get().addStatement(Utils.create(types.getClass(XMLNsCollector.class), "c", Utils.list()))
 				.addStatement(
-						new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(MarshalerRegistry.class)), "ENVELOPE"), "marshall", Utils.list(R, E, C)))
+						new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.getClass(MarshalerRegistry.class)), "ENVELOPE"), "marshall", Utils.list(R, E, C)))
 				.addStatement(
 						new TryStmt(
 								Utils.list(
-										new AssignExpr(new VariableDeclarationExpr(types.get(XMLWriter.class), "out"),
-												new ObjectCreationExpr(null, types.get(XMLOutput.class),
+										new AssignExpr(new VariableDeclarationExpr(types.getClass(XMLWriter.class), "out"),
+												new ObjectCreationExpr(null, types.getClass(XMLOutput.class),
 														Utils.list(new NameExpr("w"), new MethodCallExpr(C, "buildNsMapping"))),
 												AssignExpr.Operator.ASSIGN)),
-								new BlockStmt().addStatement(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(MarshalerRegistry.class)), "ENVELOPE"), "marshall",
+								new BlockStmt().addStatement(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.getClass(MarshalerRegistry.class)), "ENVELOPE"), "marshall",
 										Utils.list(R, E, new NameExpr("out")))),
 								Utils.list(), null));
-		clazz.addMethod("marshall", Keyword.PUBLIC, Keyword.STATIC, Keyword.FINAL).addParameter(types.get(Object.class), "e").addParameter(types.get(Writer.class), "w")
-				.addThrownException(types.get(IOException.class)).addSingleMemberAnnotation(SuppressWarnings.class, new StringLiteralExpr("unchecked")).getBody().get()
-				.addStatement(new AssignExpr(new VariableDeclarationExpr(types.get(Marshaler.class, types.get(Object.class)), "m"),
-						new MethodCallExpr(R, "get", Utils.list(new CastExpr(types.get(Class.class, types.get(Object.class)), new MethodCallExpr(E, "getClass")))),
+		clazz.addMethod("marshall", Keyword.PUBLIC, Keyword.STATIC, Keyword.FINAL).addParameter(types.getClass(Object.class), "e").addParameter(types.getClass(Writer.class), "w")
+				.addThrownException(types.getClass(IOException.class)).addSingleMemberAnnotation(SuppressWarnings.class, new StringLiteralExpr("unchecked")).getBody().get()
+				.addStatement(new AssignExpr(new VariableDeclarationExpr(types.getClass(Marshaler.class, types.getClass(Object.class)), "m"),
+						new MethodCallExpr(R, "get", Utils.list(new CastExpr(types.getClass(Class.class, types.getClass(Object.class)), new MethodCallExpr(E, "getClass")))),
 						AssignExpr.Operator.ASSIGN))
-				.addStatement(new AssignExpr(new VariableDeclarationExpr(types.get(XMLNsCollector.class), "c"),
-						new ObjectCreationExpr(null, types.get(XMLNsCollector.class), Utils.list()), AssignExpr.Operator.ASSIGN))
+				.addStatement(new AssignExpr(new VariableDeclarationExpr(types.getClass(XMLNsCollector.class), "c"),
+						new ObjectCreationExpr(null, types.getClass(XMLNsCollector.class), Utils.list()), AssignExpr.Operator.ASSIGN))
 				.addStatement(
 						new MethodCallExpr(new NameExpr("m"), "marshall", Utils.list(R, E, C)))
 				.addStatement(
 						new TryStmt(
 								Utils.list(
-										new AssignExpr(new VariableDeclarationExpr(types.get(XMLWriter.class), "out"),
-												new ObjectCreationExpr(null, types.get(XMLOutput.class),
+										new AssignExpr(new VariableDeclarationExpr(types.getClass(XMLWriter.class), "out"),
+												new ObjectCreationExpr(null, types.getClass(XMLOutput.class),
 														Utils.list(new NameExpr("w"), new MethodCallExpr(C, "buildNsMapping"))),
 												AssignExpr.Operator.ASSIGN)),
 								new BlockStmt().addStatement(new MethodCallExpr(new NameExpr("m"), "marshall", Utils.list(R, E, new NameExpr("out")))), Utils.list(), null));
@@ -110,7 +110,7 @@ public class JaxMarshallerBuilder {
 		for (XmlEnumEntry e : type.entries)
 			list.add(new SwitchEntry(Utils.list(new NameExpr(e.name)), SwitchEntry.Type.STATEMENT_GROUP, Utils.list(new ReturnStmt(new StringLiteralExpr(e.value)))));
 		list.add(new SwitchEntry(Utils.list(), SwitchEntry.Type.STATEMENT_GROUP, Utils.list(new ReturnStmt(new StringLiteralExpr("")))));
-		clazz.addMethod(type.convertMethod, Keyword.PRIVATE, Keyword.STATIC, Keyword.FINAL).addParameter(types.get(type.javaType().name()), "e").setType(types.get(String.class)).getBody()
+		clazz.addMethod(type.convertMethod, Keyword.PRIVATE, Keyword.STATIC, Keyword.FINAL).addParameter(types.get(type.javaType().name()), "e").setType(types.getClass(String.class)).getBody()
 				.get().addStatement(new SwitchStmt(new NameExpr("e"), list));
 	}
 

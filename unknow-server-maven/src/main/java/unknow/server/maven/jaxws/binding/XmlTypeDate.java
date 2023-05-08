@@ -51,11 +51,11 @@ public class XmlTypeDate extends XmlType<DummyModel> {
 	@Override
 	public Expression fromString(TypeCache types, Expression v) {
 		return new MethodCallExpr(new TypeExpr(types.get(javaType().name())), "parse",
-				Utils.list(v, new FieldAccessExpr(new TypeExpr(types.get(DateTimeFormat.class)), type.name())));
+				Utils.list(v, new FieldAccessExpr(new TypeExpr(types.getClass(DateTimeFormat.class)), type.name())));
 	}
 
 	@Override
 	public Expression toString(TypeCache types, Expression v) {
-		return new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(DateTimeFormat.class)), type.name()), "format", Utils.list(v));
+		return new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.getClass(DateTimeFormat.class)), type.name()), "format", Utils.list(v));
 	}
 }

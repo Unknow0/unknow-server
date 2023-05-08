@@ -5,6 +5,7 @@ package unknow.server.maven.model;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @author unknow
@@ -26,6 +27,16 @@ public class ParameterizedClassModel implements ClassModel {
 		this.loader = loader;
 		this.cl = cl;
 		this.base = loader.get(cl.get(0)).asClass();
+	}
+
+	public List<TypeModel> parameters() {
+		if (params == null)
+			params = cl.stream().map(c -> loader.get(c)).collect(Collectors.toList());
+		return params;
+	}
+
+	public TypeModel parameter(int i) {
+		return parameters().get(i);
 	}
 
 	@Override

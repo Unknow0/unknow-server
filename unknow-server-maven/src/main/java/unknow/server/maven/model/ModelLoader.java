@@ -71,12 +71,20 @@ public class ModelLoader {
 	protected static final Pattern CLAZZ = Pattern.compile("(.+?)(?:<(.*?)>)?");
 	protected static final Pattern CLAZZ_LIST = Pattern.compile("(.+?(?:<.*?>)?)(?:,|$)");
 
+	/**
+	 * split class into the class name and it's param
+	 * 
+	 * @param cl the class
+	 * @return a list with the class and it's param (String => [String], List<String> => [List, String], Map<String,List<String>> => [Map, String, List<String>])
+	 */
 	public static List<String> parse(String cl) {
 		Matcher m = CLAZZ.matcher(cl);
 		if (!m.matches())
 			throw new RuntimeException("malformed class " + cl);
 		if (m.group(2) == null)
 			return Arrays.asList(m.group(1));
+		if (m.group(2).trim().isEmpty())
+			return Arrays.asList(m.group(1), "");
 
 		List<String> list = new ArrayList<>();
 		list.add(m.group(1));
