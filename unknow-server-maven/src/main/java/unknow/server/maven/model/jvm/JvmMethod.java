@@ -93,7 +93,7 @@ public class JvmMethod implements MethodModel {
 
 	@Override
 	public TypeModel type() {
-		return loader.get(m.getGenericReturnType().getTypeName());
+		return loader.get(m.getGenericReturnType().getTypeName(), parent.parameters());
 	}
 
 	@Override

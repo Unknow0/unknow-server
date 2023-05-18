@@ -78,19 +78,6 @@ public interface TypeModel extends WithAnnotation, WithName {
 	}
 
 	/**
-	 * @return true if it's a parameterized class type
-	 */
-	default boolean isParamClass() {
-		return this instanceof ParameterizedClassModel;
-	}
-
-	default ParameterizedClassModel asParamClass() {
-		if (this instanceof ParameterizedClassModel)
-			return (ParameterizedClassModel) this;
-		throw new RuntimeException();
-	}
-
-	/**
 	 * @return true if it's an array
 	 */
 	default boolean isArray() {

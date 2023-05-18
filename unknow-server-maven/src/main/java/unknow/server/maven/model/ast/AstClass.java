@@ -5,6 +5,7 @@ package unknow.server.maven.model.ast;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -18,6 +19,8 @@ import unknow.server.maven.model.ClassModel;
 import unknow.server.maven.model.FieldModel;
 import unknow.server.maven.model.MethodModel;
 import unknow.server.maven.model.ModelLoader;
+import unknow.server.maven.model.TypeModel;
+import unknow.server.maven.model.TypeParamModel;
 
 /**
  * @author unknow
@@ -26,25 +29,29 @@ public class AstClass implements ClassModel, AstMod {
 	private final ModelLoader loader;
 	private final ClassOrInterfaceDeclaration cl;
 	private final String name;
+	private final TypeModel[] paramsClass;
 	private ClassModel superType;
 	private List<ClassModel> interfaces;
 	private Collection<AnnotationModel> annotations;
 	private Collection<FieldModel> fields;
 	private Collection<MethodModel> methods;
+	private List<TypeParamModel> parameters;
 
-	public AstClass(ModelLoader loader, ClassOrInterfaceDeclaration cl) {
+	/**
+	 * create new AstClass
+	 * 
+	 * @param loader the loader
+	 * @param cl     the class declaration
+	 */
+	public AstClass(ModelLoader loader, ClassOrInterfaceDeclaration cl, TypeModel[] paramsClass) {
 		this.loader = loader;
 		this.cl = cl;
 		this.name = cl.resolve().getQualifiedName();
+		this.paramsClass = paramsClass;
 	}
 
 	@Override
 	public String name() {
-		return name;
-	}
-
-	@Override
-	public String toString() {
 		return name;
 	}
 
@@ -62,13 +69,17 @@ public class AstClass implements ClassModel, AstMod {
 	}
 
 	@Override
+	public String superName() {
+		return cl.resolve().asClass().getSuperClass().map(c -> c.describe()).orElse(null);
+	}
+
+	@Override
 	public ClassModel superType() {
+		if (cl.isInterface())
+			return null;
 		if (superType == null) {
 			ResolvedReferenceTypeDeclaration r = cl.resolve();
-			if (r.isInterface())
-				superType = loader.get("java.lang.Object").asClass();
-			else
-				superType = loader.get(r.asClass().getSuperClass().map(c -> c.describe()).orElse("java.lang.Object")).asClass();
+			superType = loader.get(r.asClass().getSuperClass().map(c -> c.describe()).get(), parameters()).asClass();
 		}
 		return superType;
 	}
@@ -76,7 +87,7 @@ public class AstClass implements ClassModel, AstMod {
 	@Override
 	public List<ClassModel> interfaces() {
 		if (interfaces == null) {
-			interfaces = (cl.isInterface() ? cl.getExtendedTypes() : cl.getImplementedTypes()).stream().map(c -> loader.get(c.resolve().describe()).asClass()).filter(c -> !"java.lang.Object".equals(c.name())).collect(Collectors.toList());
+			interfaces = (cl.isInterface() ? cl.getExtendedTypes() : cl.getImplementedTypes()).stream().map(c -> loader.get(c.resolve().describe(), parameters()).asClass()).filter(c -> !"java.lang.Object".equals(c.name())).collect(Collectors.toList());
 		}
 		return interfaces;
 	}
@@ -96,5 +107,31 @@ public class AstClass implements ClassModel, AstMod {
 		if (methods == null)
 			methods = cl.getMethods().stream().map(m -> new AstMethod(this, loader, m)).collect(Collectors.toList());
 		return methods;
+	}
+
+	@Override
+	public List<TypeParamModel> parameters() {
+		if (parameters == null) {
+			int l = cl.getTypeParameters().size();
+			if (paramsClass.length == l) {
+				parameters = new ArrayList<>(l);
+				for (int i = 0; i < l; i++)
+					parameters.add(new AstTypeParam(loader, this, cl.getTypeParameter(i), paramsClass[i]));
+			} else
+				parameters = Collections.emptyList();
+		}
+		return parameters;
+	}
+
+	@Override
+	public String toString() {
+		if (parameters().isEmpty())
+			return name;
+		StringBuilder sb = new StringBuilder(name).append('<');
+		for (TypeParamModel p : parameters())
+			sb.append(p.type()).append(',');
+		sb.setCharAt(sb.length() - 1, '>');
+		return sb.toString();
+
 	}
 }

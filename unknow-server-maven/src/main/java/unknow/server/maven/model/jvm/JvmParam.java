@@ -40,14 +40,14 @@ public class JvmParam implements ParamModel {
 	}
 
 	@Override
-	public MethodModel method() {
+	public MethodModel parent() {
 		return m;
 	}
 
 	@Override
 	public TypeModel type() {
 		if (type == null)
-			type = loader.get(p.getParameterizedType().getTypeName());
+			type = loader.get(p.getParameterizedType().getTypeName(), m.parent().parameters());
 		return type;
 	}
 

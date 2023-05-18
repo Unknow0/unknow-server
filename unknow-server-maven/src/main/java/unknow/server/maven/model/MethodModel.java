@@ -21,19 +21,29 @@ public interface MethodModel extends WithAnnotation, WithMod, WithName, WithType
 	ClassModel parent();
 
 	/**
-	 * @return method parameters
+	 * @return generic param
 	 */
 	List<ParamModel> parameters();
+
+	/**
+	 * @param i index of the parameter to get
+	 * @return get the i'th parameter
+	 */
+	default ParamModel parameter(int i) {
+		return parameters().get(i);
+	}
 
 	/**
 	 * @return method signature name(parameters type)return type
 	 */
 	default String signature() {
 		StringBuilder sb = new StringBuilder(name()).append('(');
-		for (ParamModel t : parameters())
-			sb.append(t.type().internalName()).append(',');
-		sb.setCharAt(sb.length() - 1, ')');
-		sb.append(type().internalName());
+		if (!parameters().isEmpty()) {
+			for (ParamModel t : parameters())
+				sb.append(t.type().internalName()).append(',');
+			sb.setLength(sb.length() - 1);
+		}
+		sb.append(')').append(type().internalName());
 		return sb.toString();
 	}
 }

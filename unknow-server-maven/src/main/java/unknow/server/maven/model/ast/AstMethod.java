@@ -71,7 +71,7 @@ public class AstMethod implements MethodModel, AstMod {
 	@Override
 	public TypeModel type() {
 		if (type == null)
-			type = loader.get(m.getType().resolve().describe());
+			type = loader.get(m.getType().resolve().describe(), parent.parameters());
 		return type;
 	}
 

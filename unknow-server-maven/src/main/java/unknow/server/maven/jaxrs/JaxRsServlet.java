@@ -171,7 +171,7 @@ public class JaxRsServlet extends AbstractMojo {
 		Path path = Paths.get(resources, "META-INF", "services", ServletContainerInitializer.class.getName());
 		Files.createDirectories(path.getParent());
 		try (Writer w = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
-			w.write(packageName + ".JaxrsInit\n");
+			w.append(packageName).write(".JaxrsInit\n");
 		}
 
 		CompilationUnit cu = new CompilationUnit(packageName);
@@ -362,7 +362,7 @@ public class JaxRsServlet extends AbstractMojo {
 			if (m.isArray())
 				m = m.asArray().type();
 			if (m.isAssignableFrom(collection))
-				m = m.asParamClass().parameter(0);
+				m = m.asClass().parameter(0).type();
 			cl.addField(types.getClass(ParamConverter.class, types.get(m)), n, PSF);
 			b.addStatement(new AssignExpr(new NameExpr(n), new MethodCallExpr(new TypeExpr(types.getClass(JaxrsContext.class)), "converter", Utils.list(
 					new ClassExpr(types.get(m)),

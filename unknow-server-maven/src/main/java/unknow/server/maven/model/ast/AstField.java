@@ -72,7 +72,7 @@ public class AstField implements FieldModel, AstMod {
 	@Override
 	public TypeModel type() {
 		if (type == null)
-			type = loader.get(v.getType().resolve().describe());
+			type = loader.get(v.getType().resolve().describe(), cl.parameters());
 		return type;
 	}
 

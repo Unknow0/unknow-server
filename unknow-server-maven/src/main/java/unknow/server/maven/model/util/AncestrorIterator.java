@@ -3,9 +3,10 @@
  */
 package unknow.server.maven.model.util;
 
+import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import unknow.server.maven.model.ClassModel;
@@ -20,10 +21,13 @@ import unknow.server.maven.model.ClassModel;
  */
 public class AncestrorIterator implements Iterator<ClassModel> {
 	private final Queue<ClassModel> queue;
+	private final Set<String> saw;
 
 	public AncestrorIterator(ClassModel clazz) {
 		this.queue = new LinkedBlockingQueue<>();
 		this.queue.add(clazz);
+		this.saw = new HashSet<>();
+		this.saw.add(clazz.toString());
 	}
 
 	@Override
@@ -35,11 +39,14 @@ public class AncestrorIterator implements Iterator<ClassModel> {
 	public ClassModel next() {
 		ClassModel poll = queue.poll();
 		ClassModel s = poll.superType();
-		if (s != null)
-			queue.add(s);
-		List<ClassModel> interfaces = poll.interfaces();
-		for (int i = interfaces.size() - 1; i >= 0; --i)
-			queue.add(interfaces.get(i));
+		if (s != null && !"java.lang.Object".equals(s.name())) {
+			if (saw.add(s.toString()))
+				queue.add(s);
+		}
+		for (ClassModel i : poll.interfaces()) {
+			if (saw.add(i.toString()))
+				queue.add(i);
+		}
 		return poll;
 	}
 }

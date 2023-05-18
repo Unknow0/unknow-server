@@ -5,7 +5,7 @@ package unknow.server.maven.model;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,46 +23,62 @@ import unknow.server.maven.model.jvm.JvmEnum;
  * @author unknow
  */
 public class ModelLoader {
-	private static final Collection<TypeModel> BUILTIN = Arrays.asList(VoidModel.SELF, PrimitiveModel.BOOLEAN, PrimitiveModel.BYTE, PrimitiveModel.CHAR, PrimitiveModel.SHORT, PrimitiveModel.INT, PrimitiveModel.LONG, PrimitiveModel.FLOAT, PrimitiveModel.DOUBLE);
+	private static final Map<String, TypeModel> BUILTIN = new HashMap<>();
+	private static final TypeModel[] EMPTY = {};
+
+	static {
+		for (TypeModel t : Arrays.asList(VoidModel.SELF, PrimitiveModel.BOOLEAN, PrimitiveModel.BYTE, PrimitiveModel.CHAR, PrimitiveModel.SHORT, PrimitiveModel.INT, PrimitiveModel.LONG, PrimitiveModel.FLOAT, PrimitiveModel.DOUBLE))
+			BUILTIN.put(t.name(), t);
+	}
 
 	private final Map<String, TypeDeclaration<?>> classes;
-	private final Map<String, TypeModel> models;
 
 	public ModelLoader(Map<String, TypeDeclaration<?>> classes) {
 		this.classes = classes;
-		this.models = new HashMap<>();
-		for (TypeModel t : BUILTIN)
-			this.models.put(t.name(), t);
 	}
 
 	public TypeModel get(String cl) {
-		TypeModel m = models.get(cl);
-		if (m == null)
-			models.put(cl, m = createModel(cl));
-		return m;
+		return get(cl, Collections.emptyList());
 	}
 
 	@SuppressWarnings("unchecked")
-	private TypeModel createModel(String cl) {
+	public TypeModel get(String cl, List<TypeParamModel> parameters) {
+		TypeModel type = BUILTIN.get(cl);
+		if (type != null)
+			return type;
 		if (cl.endsWith("[]"))
-			return new ArrayModel(this, cl);
+			return new ArrayModel(cl, get(cl.substring(0, cl.length() - 2), parameters));
+
 		List<String> parse = parse(cl);
-		if (parse.size() > 1)
-			return new ParameterizedClassModel(this, parse);
+		Map<String, TypeModel> map = new HashMap<>();
+		for (TypeParamModel t : parameters)
+			map.put(t.name(), t.type());
+
+		TypeModel[] params = EMPTY;
+		if (parse.size() > 1) {
+			cl = parse.get(0);
+			params = new TypeModel[parse.size() - 1];
+			for (int i = 1; i < parse.size(); i++)
+				params[i - 1] = map.computeIfAbsent(parse.get(i), k -> get(k,parameters));
+		}
+
+		type = map.get(cl);
+		if (type != null)
+			cl = type.name();
 
 		TypeDeclaration<?> t = classes.get(cl);
 		if (t != null) {
 			if (t.isEnumDeclaration())
 				return new AstEnum(t.asEnumDeclaration());
 			else if (t.isClassOrInterfaceDeclaration())
-				return new AstClass(this, t.asClassOrInterfaceDeclaration());
+				return new AstClass(this, t.asClassOrInterfaceDeclaration(), params);
 			throw new RuntimeException("unsuported type " + t);
 		}
 		try {
 			Class<?> c = Class.forName(cl);
 			if (c.isEnum())
 				return new JvmEnum((Class<? extends Enum<?>>) c);
-			return new JvmClass(this, c);
+			return new JvmClass(this, c, params);
 		} catch (ClassNotFoundException e) {
 			throw new RuntimeException(e);
 		}

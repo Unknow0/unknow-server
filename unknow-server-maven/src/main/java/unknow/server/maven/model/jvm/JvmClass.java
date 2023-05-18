@@ -4,9 +4,11 @@
 package unknow.server.maven.model.jvm;
 
 import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -15,6 +17,8 @@ import unknow.server.maven.model.ClassModel;
 import unknow.server.maven.model.FieldModel;
 import unknow.server.maven.model.MethodModel;
 import unknow.server.maven.model.ModelLoader;
+import unknow.server.maven.model.TypeModel;
+import unknow.server.maven.model.TypeParamModel;
 
 /**
  * @author unknow
@@ -22,25 +26,23 @@ import unknow.server.maven.model.ModelLoader;
 public class JvmClass implements ClassModel, JvmMod {
 	private final ModelLoader loader;
 	private final Class<?> cl;
+	private final TypeModel[] paramsClass;
 	private ClassModel superType;
 	private List<ClassModel> interfaces;
 	private Collection<AnnotationModel> annotations;
 	private Collection<FieldModel> fields;
 	private Collection<MethodModel> methods;
+	private List<TypeParamModel> parameters;
 
-	public JvmClass(ModelLoader loader, Class<?> cl) {
+	public JvmClass(ModelLoader loader, Class<?> cl, TypeModel[] paramsClass) {
 		this.loader = loader;
 		this.cl = cl;
+		this.paramsClass = paramsClass;
 	}
 
 	@Override
 	public String name() {
-		return cl.getName();
-	}
-
-	@Override
-	public String toString() {
-		return cl.toString();
+		return cl.getTypeName();
 	}
 
 	@Override
@@ -51,11 +53,17 @@ public class JvmClass implements ClassModel, JvmMod {
 	}
 
 	@Override
+	public String superName() {
+		Type s = cl.getGenericSuperclass();
+		return s == null ? null : s.getTypeName();
+	}
+
+	@Override
 	public ClassModel superType() {
-		if (Object.class == cl || cl.isInterface())
+		if (cl.getGenericSuperclass() == null)
 			return null;
 		if (superType == null)
-			superType = loader.get(cl.getGenericSuperclass().getTypeName()).asClass();
+			superType = loader.get(cl.getGenericSuperclass().getTypeName(), parameters()).asClass();
 		return superType;
 	}
 
@@ -65,7 +73,7 @@ public class JvmClass implements ClassModel, JvmMod {
 			Type[] t = cl.getGenericInterfaces();
 			interfaces = new ArrayList<>(t.length);
 			for (int i = 0; i < t.length; i++)
-				interfaces.add(loader.get(t[i].getTypeName()).asClass());
+				interfaces.add(loader.get(t[i].getTypeName(), parameters()).asClass());
 		}
 		return interfaces;
 	}
@@ -85,7 +93,32 @@ public class JvmClass implements ClassModel, JvmMod {
 	}
 
 	@Override
+	public List<TypeParamModel> parameters() {
+		if (parameters == null) {
+			TypeVariable<?>[] typeParameters = cl.getTypeParameters();
+			if (paramsClass.length == typeParameters.length) {
+				parameters = new ArrayList<>(typeParameters.length);
+				for (int i = 0; i < typeParameters.length; i++)
+					parameters.add(new JvmTypeParam(loader, this, typeParameters[i], paramsClass[i]));
+			} else
+				parameters = Collections.emptyList();
+		}
+		return parameters;
+	}
+
+	@Override
 	public int mod() {
 		return cl.getModifiers();
+	}
+
+	@Override
+	public String toString() {
+		if (parameters().isEmpty())
+			return cl.getTypeName();
+		StringBuilder sb = new StringBuilder(cl.getTypeName()).append('<');
+		for (TypeParamModel p : parameters())
+			sb.append(p.type()).append(',');
+		sb.setCharAt(sb.length() - 1, '>');
+		return sb.toString();
 	}
 }

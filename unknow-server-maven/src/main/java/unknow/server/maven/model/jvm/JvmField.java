@@ -31,7 +31,7 @@ public class JvmField implements FieldModel, JvmMod {
 	 */
 	public JvmField(ModelLoader loader, ClassModel cl, Field f) {
 		this.loader = loader;
-		this.cl=cl;
+		this.cl = cl;
 		this.f = f;
 	}
 
@@ -56,7 +56,7 @@ public class JvmField implements FieldModel, JvmMod {
 	public String toString() {
 		return f.toString();
 	}
-	
+
 	@Override
 	public ClassModel parent() {
 		return cl;
@@ -64,6 +64,6 @@ public class JvmField implements FieldModel, JvmMod {
 
 	@Override
 	public TypeModel type() {
-		return loader.get(f.getGenericType().getTypeName());
+		return loader.get(f.getGenericType().getTypeName(), cl.parameters());
 	}
 }

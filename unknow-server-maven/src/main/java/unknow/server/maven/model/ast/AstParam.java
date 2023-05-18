@@ -27,8 +27,9 @@ public class AstParam implements ParamModel {
 	/**
 	 * create new AstParam
 	 * 
-	 * @param loader
-	 * @param p
+	 * @param loader the loader
+	 * @param m      the owner
+	 * @param p      the parameter
 	 */
 	public AstParam(ModelLoader loader, MethodModel m, Parameter p) {
 		this.loader = loader;
@@ -50,14 +51,14 @@ public class AstParam implements ParamModel {
 	}
 
 	@Override
-	public MethodModel method() {
+	public MethodModel parent() {
 		return m;
 	}
 
 	@Override
 	public TypeModel type() {
 		if (type == null)
-			type = loader.get(p.getType().resolve().describe());
+			type = loader.get(p.getType().resolve().describe(), m.parent().parameters());
 		return type;
 	}
 

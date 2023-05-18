@@ -74,6 +74,7 @@ import unknow.server.maven.jaxws.binding.XmlObject.XmlField;
 import unknow.server.maven.jaxws.binding.XmlType;
 import unknow.server.maven.jaxws.binding.XmlTypeLoader;
 import unknow.server.maven.model.ModelLoader;
+import unknow.server.maven.model.TypeModel;
 import unknow.server.maven.model.jvm.JvmClass;
 
 /**
@@ -335,7 +336,7 @@ public class JaxwsServletBuilder {
 	private static class XmlOperation extends XmlObject {
 
 		public XmlOperation(String ns, String name, List<XmlField<?>> elems) {
-			super(new JvmClass(null, OperationWrapper.class), ns, name, new Factory(".qname", null), null);
+			super(new JvmClass(null, OperationWrapper.class, new TypeModel[0]), ns, name, new Factory(".qname", null), null);
 			this.elems = elems;
 			this.attrs = Collections.emptyList();
 		}

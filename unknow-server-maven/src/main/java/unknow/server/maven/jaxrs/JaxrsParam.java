@@ -31,7 +31,7 @@ public abstract class JaxrsParam {
 
 	private <T extends WithName & WithAnnotation & WithType> JaxrsParam(T p, String prefix, String value) {
 		if (p instanceof ParamModel)
-			this.parent = ((ParamModel) p).method().parent();
+			this.parent = ((ParamModel) p).parent().parent();
 		else if (p instanceof FieldModel)
 			this.parent = ((FieldModel) p).parent();
 		else
