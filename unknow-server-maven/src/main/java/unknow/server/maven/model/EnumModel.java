@@ -10,7 +10,7 @@ import unknow.server.maven.model.util.WithAnnotation;
 /**
  * @author unknow
  */
-public interface EnumModel extends TypeModel {
+public interface EnumModel extends ClassModel {
 
 	@Override
 	default boolean isEnum() {

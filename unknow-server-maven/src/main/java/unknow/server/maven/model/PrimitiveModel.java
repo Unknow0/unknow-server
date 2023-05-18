@@ -55,4 +55,9 @@ public class PrimitiveModel implements TypeModel {
 	public String boxed() {
 		return boxed;
 	}
+
+	@Override
+	public String toString() {
+		return name();
+	}
 }

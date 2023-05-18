@@ -8,12 +8,12 @@ import java.lang.reflect.TypeVariable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import unknow.server.maven.model.AnnotationModel;
 import unknow.server.maven.model.ClassModel;
+import unknow.server.maven.model.ConstructorModel;
 import unknow.server.maven.model.FieldModel;
 import unknow.server.maven.model.MethodModel;
 import unknow.server.maven.model.ModelLoader;
@@ -25,10 +25,11 @@ import unknow.server.maven.model.TypeParamModel;
  */
 public class JvmClass implements ClassModel, JvmMod {
 	private final ModelLoader loader;
-	private final Class<?> cl;
+	protected final Class<?> cl;
 	private final TypeModel[] paramsClass;
 	private ClassModel superType;
 	private List<ClassModel> interfaces;
+	private Collection<ConstructorModel> constructors;
 	private Collection<AnnotationModel> annotations;
 	private Collection<FieldModel> fields;
 	private Collection<MethodModel> methods;
@@ -53,12 +54,6 @@ public class JvmClass implements ClassModel, JvmMod {
 	}
 
 	@Override
-	public String superName() {
-		Type s = cl.getGenericSuperclass();
-		return s == null ? null : s.getTypeName();
-	}
-
-	@Override
 	public ClassModel superType() {
 		if (cl.getGenericSuperclass() == null)
 			return null;
@@ -79,6 +74,13 @@ public class JvmClass implements ClassModel, JvmMod {
 	}
 
 	@Override
+	public Collection<ConstructorModel> constructors() {
+		if (constructors == null)
+			constructors = Arrays.stream(cl.getDeclaredConstructors()).map(c -> new JvmConstructor(this, loader, c)).collect(Collectors.toList());
+		return constructors;
+	}
+
+	@Override
 	public Collection<FieldModel> fields() {
 		if (fields == null)
 			fields = Arrays.stream(cl.getDeclaredFields()).map(f -> new JvmField(loader, this, f)).collect(Collectors.toList());
@@ -96,12 +98,9 @@ public class JvmClass implements ClassModel, JvmMod {
 	public List<TypeParamModel> parameters() {
 		if (parameters == null) {
 			TypeVariable<?>[] typeParameters = cl.getTypeParameters();
-			if (paramsClass.length == typeParameters.length) {
-				parameters = new ArrayList<>(typeParameters.length);
-				for (int i = 0; i < typeParameters.length; i++)
-					parameters.add(new JvmTypeParam(loader, this, typeParameters[i], paramsClass[i]));
-			} else
-				parameters = Collections.emptyList();
+			parameters = new ArrayList<>(typeParameters.length);
+			for (int i = 0; i < typeParameters.length; i++)
+				parameters.add(new JvmTypeParam(loader, this, typeParameters[i], paramsClass.length == typeParameters.length ? paramsClass[i] : null));
 		}
 		return parameters;
 	}

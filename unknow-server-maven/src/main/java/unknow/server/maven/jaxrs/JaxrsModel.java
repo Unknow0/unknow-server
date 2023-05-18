@@ -107,11 +107,16 @@ public class JaxrsModel {
 	private final TypeModel exceptionMapper;
 	private final TypeModel bodyReader;
 	private final TypeModel bodyWriter;
+	private final TypeModel string;
 
 	public final List<String> converter = new ArrayList<>();
 	public final Map<String, List<String>> readers = new HashMap<>();
 	public final Map<String, List<String>> writers = new HashMap<>();
 	public final List<String> exceptions = new ArrayList<>();
+
+	public final Set<String> implicitConstructor = new HashSet<>();
+	public final Set<String> implicitFromString = new HashSet<>();
+	public final Set<String> implicitValueOf = new HashSet<>();
 
 	/**
 	 * create new JaxrsModel
@@ -124,6 +129,7 @@ public class JaxrsModel {
 		this.exceptionMapper = loader.get(ExceptionMapper.class.getName());
 		this.bodyReader = loader.get(MessageBodyReader.class.getName());
 		this.bodyWriter = loader.get(MessageBodyWriter.class.getName());
+		this.string = loader.get(String.class.getName());
 
 		ClassLoader cl = Thread.currentThread().getContextClassLoader();
 		loadService(cl, MessageBodyReader.class, c -> {
@@ -306,7 +312,7 @@ public class JaxrsModel {
 		if (method == null)
 			throw new RuntimeException("no method mapped on " + errorName);
 		List<JaxrsParam> params = new ArrayList<>();
-		for (ParamModel p : m.parameters()) {
+		for (ParamModel<MethodModel> p : m.parameters()) {
 			List<AnnotationModel> l = p.annotations().stream().filter(v -> JARXS_PARAM.contains(v.name())).collect(Collectors.toList());
 			if (l.size() > 1)
 				throw new RuntimeException("Duplicate parameter annotation on " + errorName + " " + p.name());
@@ -342,7 +348,49 @@ public class JaxrsModel {
 		mappings.add(jaxrsMapping);
 	}
 
+	private static MethodModel getSetter(ClassModel cl, String name, TypeModel type) {
+		String set = "set" + Character.toUpperCase(name.charAt(0)) + name.substring(1);
+		return cl.method(set, type).orElseThrow(() -> new RuntimeException("Can't find setter " + set + "(" + type + ") in " + cl));
+	}
+
+	public static TypeModel getParamType(TypeModel type) {
+		if (type.isArray())
+			return type.asArray().type();
+		if (!type.isClass())
+			return type;
+
+		Iterator<ClassModel> it = type.asClass().ancestor().iterator();
+		while (it.hasNext()) {
+			ClassModel next = it.next();
+			if ("java.util.Collection".equals(next.name()))
+				return next.parameter(0).type();
+		}
+		return type;
+	}
+
 	private <T extends WithName & WithAnnotation & WithType> JaxrsParam buildParam(T p, AnnotationModel a) {
+		JaxrsParam param = _buildParam(p, a);
+		if (!BeanParam.class.getName().equals(a.name())) {
+			TypeModel type = getParamType(p.type());
+			if (!type.isClass())
+				return param;
+
+			ClassModel cl = type.asClass();
+			if (cl.constructors(string).filter(c -> c.isPublic()).isPresent())
+				implicitConstructor.add(type.name());
+			else {
+				if (cl.method("valueOf", string).filter(c -> c.isPublic() && c.isStatic()).isPresent())
+					implicitValueOf.add(type.name());
+				else if (cl.method("fromString", string).filter(c -> c.isPublic() && c.isStatic()).isPresent())
+					implicitFromString.add(type.name());
+				else if (cl.isEnum())
+					implicitValueOf.add(type.name());
+			}
+		}
+		return param;
+	}
+
+	private <T extends WithName & WithAnnotation & WithType> JaxrsParam _buildParam(T p, AnnotationModel a) {
 		if (BeanParam.class.getName().equals(a.name())) {
 			ClassModel cl = p.type().asClass();
 			Map<FieldModel, JaxrsParam> fields = new HashMap<>();
@@ -357,11 +405,8 @@ public class JaxrsModel {
 					fields.put(f, buildParam(f, l.get(0)));
 					continue;
 				}
-				String set = "set" + Character.toUpperCase(f.name().charAt(0)) + f.name().substring(1) + "(" + f.type().internalName() + ")V";
-				MethodModel m = cl.methods().stream().filter(v -> v.signature().equals(set)).findAny().orElse(null);
-				if (m == null)
-					throw new RuntimeException("no setter for field " + f);
-				setter.put(m, buildParam(f, l.get(0)));
+
+				setter.put(getSetter(cl, f.name(), f.type()), buildParam(f, l.get(0)));
 			}
 			for (MethodModel m : cl.methods()) {
 				if (setter.containsKey(m))
@@ -371,8 +416,13 @@ public class JaxrsModel {
 					continue;
 				if (l.size() > 1)
 					throw new RuntimeException("Duplicate parameter annotation on " + m.parent() + "." + m.name());
-				// TODO if not a setter look for it
-				setter.put(m, buildParam(m, l.get(0)));
+				String n = m.name();
+				if (n.startsWith("get"))
+					m = getSetter(cl, n.substring(3), m.type());
+				else if (!n.startsWith("set"))
+					m = getSetter(cl, n, m.type());
+
+				setter.put(m, buildParam(m.parameter(0), l.get(0)));
 			}
 
 			return new JaxrsBeanParam(p, cl, fields, setter);

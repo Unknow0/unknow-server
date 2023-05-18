@@ -5,6 +5,7 @@ package unknow.server.maven.model;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 import unknow.server.maven.model.util.AncestrorIterable;
 import unknow.server.maven.model.util.WithMod;
@@ -13,10 +14,6 @@ import unknow.server.maven.model.util.WithMod;
  * @author unknow
  */
 public interface ClassModel extends TypeModel, WithMod {
-	/**
-	 * @return super class name
-	 */
-	String superName();
 
 	/**
 	 * @return super type
@@ -27,6 +24,28 @@ public interface ClassModel extends TypeModel, WithMod {
 	 * @return implemented interface
 	 */
 	List<ClassModel> interfaces();
+
+	/**
+	 * @return the declared constructors
+	 */
+	Collection<ConstructorModel> constructors();
+
+	/**
+	 * @param params the constructor params
+	 * @return a constructors
+	 */
+	default Optional<ConstructorModel> constructors(TypeModel... params) {
+		return constructors().stream().filter(m -> {
+			if (m.parameters().size() != params.length)
+				return false;
+			int i = 0;
+			for (ParamModel<ConstructorModel> p : m.parameters()) {
+				if (!p.type().equals(params[i++]))
+					return false;
+			}
+			return true;
+		}).findFirst();
+	}
 
 	/**
 	 * @return all the declared field
@@ -49,6 +68,53 @@ public interface ClassModel extends TypeModel, WithMod {
 	 * @return declared methods
 	 */
 	Collection<MethodModel> methods();
+
+	/**
+	 * @param name   the method name
+	 * @param params the method params
+	 * @return the declared method
+	 */
+	default Optional<MethodModel> method(String name, TypeModel... params) {
+		return methods().stream().filter(m -> {
+			if (!name.equals(m.name()))
+				return false;
+			if (m.parameters().size() != params.length)
+				return false;
+			int i = 0;
+			for (ParamModel<MethodModel> p : m.parameters()) {
+				if (!p.type().equals(params[i++]))
+					return false;
+			}
+			return true;
+		}).findFirst();
+	}
+
+	/**
+	 * @param name   the method name
+	 * @param params the method params
+	 * @return the method
+	 */
+	default Optional<MethodModel> findMethod(String name, TypeModel... params) {
+		ClassModel c = this;
+		do {
+			Optional<MethodModel> o = methods().stream().filter(m -> {
+				if (!name.equals(m.name()))
+					return false;
+				if (m.parameters().size() != params.length)
+					return false;
+				int i = 0;
+				for (ParamModel<MethodModel> p : m.parameters()) {
+					if (!p.type().equals(params[i++]))
+						return false;
+				}
+				return true;
+			}).findFirst();
+			if (o.isPresent())
+				return o;
+			c = c.superType();
+		} while (c != null);
+		return Optional.empty();
+	}
 
 	/**
 	 * @return generic param

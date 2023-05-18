@@ -57,7 +57,7 @@ public class ModelLoaderTest {
 		ClassModel ilist = loader.get(IntList.class.getName()).asClass();
 		assertTrue(col.isAssignableFrom(ilist));
 		assertEquals("java.lang.Integer", ilist.superType().parameter(0).type().name());
-		MethodModel m = ilist.superType().methods().iterator().next();
+		MethodModel m = ilist.superType().method("m", loader.get("java.lang.Integer")).orElse(null);
 		assertEquals("java.lang.Integer", m.type().name());
 		assertEquals("java.lang.Integer", m.parameter(0).type().name());
 	}

@@ -39,5 +39,9 @@ public class VoidModel implements TypeModel {
 	public boolean isAssignableFrom(TypeModel t) {
 		return t.isVoid();
 	}
-
+	
+	@Override
+	public String toString() {
+		return name();
+	}
 }

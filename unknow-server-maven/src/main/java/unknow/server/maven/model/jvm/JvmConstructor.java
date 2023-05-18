@@ -3,7 +3,7 @@
  */
 package unknow.server.maven.model.jvm;
 
-import java.lang.reflect.Method;
+import java.lang.reflect.Constructor;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -11,31 +11,31 @@ import java.util.stream.Collectors;
 
 import unknow.server.maven.model.AnnotationModel;
 import unknow.server.maven.model.ClassModel;
-import unknow.server.maven.model.MethodModel;
+import unknow.server.maven.model.ConstructorModel;
 import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.model.ParamModel;
-import unknow.server.maven.model.TypeModel;
 
 /**
  * @author unknow
  */
-public class JvmMethod implements MethodModel, JvmMod {
+public class JvmConstructor implements ConstructorModel, JvmMod {
 	private final ClassModel parent;
 	private final ModelLoader loader;
-	private final Method m;
+	private final Constructor<?> c;
 	private Collection<AnnotationModel> annotations;
-	private List<ParamModel<MethodModel>> params;
+	private List<ParamModel<ConstructorModel>> params;
 
 	/**
 	 * create new JvmField
 	 * 
+	 * @param parent the owner
 	 * @param loader the loader
-	 * @param m      the method
+	 * @param c      the constructor
 	 */
-	public JvmMethod(ClassModel parent, ModelLoader loader, Method m) {
+	public JvmConstructor(ClassModel parent, ModelLoader loader, Constructor<?> c) {
 		this.parent = parent;
 		this.loader = loader;
-		this.m = m;
+		this.c = c;
 	}
 
 	@Override
@@ -46,35 +46,25 @@ public class JvmMethod implements MethodModel, JvmMod {
 	@Override
 	public Collection<AnnotationModel> annotations() {
 		if (annotations == null)
-			annotations = Arrays.stream(m.getAnnotations()).map(a -> new JvmAnnotation(a)).collect(Collectors.toList());
+			annotations = Arrays.stream(c.getAnnotations()).map(a -> new JvmAnnotation(a)).collect(Collectors.toList());
 		return annotations;
 	}
 
 	@Override
 	public int mod() {
-		return m.getModifiers();
-	}
-
-	@Override
-	public String name() {
-		return m.getName();
-	}
-
-	@Override
-	public TypeModel type() {
-		return loader.get(m.getGenericReturnType().getTypeName(), parent.parameters());
+		return c.getModifiers();
 	}
 
 	@SuppressWarnings("unused")
 	@Override
-	public List<ParamModel<MethodModel>> parameters() {
+	public List<ParamModel<ConstructorModel>> parameters() {
 		if (params == null)
-			params = Arrays.stream(m.getParameters()).map(p -> new JvmParam<MethodModel>(loader, this, p)).collect(Collectors.toList());
+			params = Arrays.stream(c.getParameters()).map(p -> new JvmParam<ConstructorModel>(loader, this, p)).collect(Collectors.toList());
 		return params;
 	}
 
 	@Override
 	public String toString() {
-		return m.toString();
+		return c.toString();
 	}
 }

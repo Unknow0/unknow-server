@@ -47,4 +47,9 @@ public class ArrayModel implements TypeModel, WithType {
 	public boolean isAssignableFrom(TypeModel t) {
 		return t.isArray() && type.isAssignableFrom(t.asArray().type);
 	}
+
+	@Override
+	public String toString() {
+		return name();
+	}
 }

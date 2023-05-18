@@ -3,7 +3,9 @@
  */
 package unknow.server.http.test;
 
+import java.time.LocalDate;
 import java.util.Arrays;
+import java.util.List;
 
 import jakarta.ws.rs.BeanParam;
 import jakarta.ws.rs.Consumes;
@@ -25,8 +27,8 @@ import jakarta.ws.rs.QueryParam;
 public class Rest {
 
 	@GET
-	public void oneWay(@PathParam("q") String q, @BeanParam Bean bean, @QueryParam("p") String[] p) {
-		System.out.println("oneWay>> q: '" + q + "' bean: " + bean + " p: " + Arrays.toString(p));
+	public void oneWay(@PathParam("q") String q, @BeanParam Bean bean) {
+		System.out.println("oneWay>> q: '" + q + "' bean: " + bean);
 	}
 
 	@GET
@@ -50,30 +52,56 @@ public class Rest {
 		}
 	}
 
+	public static enum E {
+		a, b, c, d, e;
+	}
+
 	public static class Bean {
 		@BeanParam
-		public Login login;
-		@CookieParam("sid")
-		public String sid;
+		private Login login;
+		private String sid;
 		@MatrixParam("key")
-		public String p;
+		public String key;
+
+		@QueryParam("p")
+		public String[] p;
+
+		@QueryParam("d")
+		public List<E> d;
 
 		public Truc truc;
 
+		public Login getLogin() {
+			return login;
+		}
+
+		public void setLogin(Login login) {
+			this.login = login;
+		}
+
+		@CookieParam("sid")
+		public String getSid() {
+			return sid;
+		}
+
+		public void setSid(String sid) {
+			this.sid = sid;
+		}
+
 		@Override
 		public String toString() {
-			return "Bean [login=" + login + ", sid=" + sid + ", p=" + p + ", truc=" + truc + "]";
+			return "Bean [login=" + login + ", sid=" + sid + ", key=" + key + ", p=" + Arrays.toString(p) + ", d=" + d + ", truc=" + truc + "]";
 		}
 	}
 
 	public static class Login {
-		@HeaderParam("x-apikey")
 		private String apikey;
 
 		public String getApikey() {
 			return apikey;
 		}
 
+		@HeaderParam("x-apikey")
 		public void setApikey(String apikey) {
 			this.apikey = apikey;
 		}

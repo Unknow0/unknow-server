@@ -10,12 +10,13 @@ import java.util.stream.Collectors;
 
 import unknow.server.maven.model.AnnotationModel;
 import unknow.server.maven.model.EnumModel;
+import unknow.server.maven.model.ModelLoader;
+import unknow.server.maven.model.TypeModel;
 
 /**
  * @author unknow
  */
-public class JvmEnum implements EnumModel {
-	private final Class<? extends Enum<?>> cl;
+public class JvmEnum extends JvmClass implements EnumModel {
 	private List<AnnotationModel> annotations;
 	private List<EnumConstant> entries;
 
@@ -23,9 +24,10 @@ public class JvmEnum implements EnumModel {
 	 * create new AstEnum
 	 * 
 	 * @param cl
+	 * @param loader
 	 */
-	public JvmEnum(Class<? extends Enum<?>> cl) {
-		this.cl = cl;
+	public JvmEnum(ModelLoader loader, Class<?> cl, TypeModel params[]) {
+		super(loader, cl, params);
 	}
 
 	@Override
@@ -48,7 +50,7 @@ public class JvmEnum implements EnumModel {
 	@Override
 	public List<EnumConstant> entries() {
 		if (entries == null)
-			entries = Arrays.stream(cl.getEnumConstants()).map(c -> new JvmEnumConstant(c)).collect(Collectors.toList());
+			entries = Arrays.stream(cl.getEnumConstants()).map(c -> new JvmEnumConstant((Enum<?>) c)).collect(Collectors.toList());
 		return entries;
 	}
 

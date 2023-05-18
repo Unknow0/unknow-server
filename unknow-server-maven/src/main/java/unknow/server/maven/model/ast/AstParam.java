@@ -9,17 +9,19 @@ import java.util.stream.Collectors;
 import com.github.javaparser.ast.body.Parameter;
 
 import unknow.server.maven.model.AnnotationModel;
-import unknow.server.maven.model.MethodModel;
+import unknow.server.maven.model.ClassModel;
 import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.model.ParamModel;
 import unknow.server.maven.model.TypeModel;
+import unknow.server.maven.model.util.WithParent;
 
 /**
  * @author unknow
+ * @param <T> parent
  */
-public class AstParam implements ParamModel {
+public class AstParam<T extends WithParent<ClassModel>> implements ParamModel<T> {
 	private final ModelLoader loader;
-	private final MethodModel m;
+	private final T m;
 	private final Parameter p;
 	private Collection<AnnotationModel> annotations;
 	private TypeModel type;
@@ -31,7 +33,7 @@ public class AstParam implements ParamModel {
 	 * @param m      the owner
 	 * @param p      the parameter
 	 */
-	public AstParam(ModelLoader loader, MethodModel m, Parameter p) {
+	public AstParam(ModelLoader loader, T m, Parameter p) {
 		this.loader = loader;
 		this.m = m;
 		this.p = p;
@@ -39,9 +41,8 @@ public class AstParam implements ParamModel {
 
 	@Override
 	public Collection<AnnotationModel> annotations() {
-		if (annotations == null) {
+		if (annotations == null)
 			annotations = p.getAnnotations().stream().map(a -> new AstAnnotation(a)).collect(Collectors.toList());
-		}
 		return annotations;
 	}
 
@@ -51,7 +52,7 @@ public class AstParam implements ParamModel {
 	}
 
 	@Override
-	public MethodModel parent() {
+	public T parent() {
 		return m;
 	}
 

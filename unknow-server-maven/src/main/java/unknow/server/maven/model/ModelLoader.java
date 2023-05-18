@@ -41,7 +41,6 @@ public class ModelLoader {
 		return get(cl, Collections.emptyList());
 	}
 
-	@SuppressWarnings("unchecked")
 	public TypeModel get(String cl, List<TypeParamModel> parameters) {
 		TypeModel type = BUILTIN.get(cl);
 		if (type != null)
@@ -58,8 +57,10 @@ public class ModelLoader {
 		if (parse.size() > 1) {
 			cl = parse.get(0);
 			params = new TypeModel[parse.size() - 1];
-			for (int i = 1; i < parse.size(); i++)
-				params[i - 1] = map.computeIfAbsent(parse.get(i), k -> get(k,parameters));
+			for (int i = 1; i < parse.size(); i++) {
+				String s = parse.get(i);
+				params[i - 1] = map.containsKey(s) ? map.get(s) : get(s, parameters);
+			}
 		}
 
 		type = map.get(cl);
@@ -69,7 +70,7 @@ public class ModelLoader {
 		TypeDeclaration<?> t = classes.get(cl);
 		if (t != null) {
 			if (t.isEnumDeclaration())
-				return new AstEnum(t.asEnumDeclaration());
+				return new AstEnum(this, t.asEnumDeclaration());
 			else if (t.isClassOrInterfaceDeclaration())
 				return new AstClass(this, t.asClassOrInterfaceDeclaration(), params);
 			throw new RuntimeException("unsuported type " + t);
@@ -77,7 +78,7 @@ public class ModelLoader {
 		try {
 			Class<?> c = Class.forName(cl);
 			if (c.isEnum())
-				return new JvmEnum((Class<? extends Enum<?>>) c);
+				return new JvmEnum(this, c, params);
 			return new JvmClass(this, c, params);
 		} catch (ClassNotFoundException e) {
 			throw new RuntimeException(e);

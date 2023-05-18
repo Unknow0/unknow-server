@@ -115,4 +115,11 @@ public interface TypeModel extends WithAnnotation, WithName {
 	default boolean isVoid() {
 		return false;
 	}
+
+	/**
+	 * @return true if type are equals
+	 */
+	default boolean equals(TypeModel t) {
+		return t.toString().equals(toString());
+	}
 }

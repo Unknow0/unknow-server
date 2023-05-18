@@ -26,7 +26,7 @@ public class AstMethod implements MethodModel, AstMod {
 	private final MethodDeclaration m;
 	private Collection<AnnotationModel> annotations;
 	private TypeModel type;
-	private List<ParamModel> params;
+	private List<ParamModel<MethodModel>> params;
 
 	/**
 	 * create new AstMethod
@@ -75,10 +75,11 @@ public class AstMethod implements MethodModel, AstMod {
 		return type;
 	}
 
+	@SuppressWarnings("unused")
 	@Override
-	public List<ParamModel> parameters() {
+	public List<ParamModel<MethodModel>> parameters() {
 		if (params == null)
-			params = m.getParameters().stream().map(p -> new AstParam(loader, this, p)).collect(Collectors.toList());
+			params = m.getParameters().stream().map(p -> new AstParam<MethodModel>(loader, this, p)).collect(Collectors.toList());
 		return params;
 	}
 

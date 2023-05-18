@@ -9,19 +9,20 @@ import java.util.Collection;
 import java.util.stream.Collectors;
 
 import unknow.server.maven.model.AnnotationModel;
-import unknow.server.maven.model.MethodModel;
+import unknow.server.maven.model.ClassModel;
 import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.model.ParamModel;
 import unknow.server.maven.model.TypeModel;
+import unknow.server.maven.model.util.WithParent;
 
-public class JvmParam implements ParamModel {
+public class JvmParam<T extends WithParent<ClassModel>> implements ParamModel<T> {
 	private final ModelLoader loader;
-	private final MethodModel m;
+	private final T m;
 	private final Parameter p;
 	private TypeModel type;
 	private Collection<AnnotationModel> annotations;
 
-	public JvmParam(ModelLoader loader, MethodModel m, Parameter p) {
+	public JvmParam(ModelLoader loader, T m, Parameter p) {
 		this.loader = loader;
 		this.m = m;
 		this.p = p;
@@ -40,7 +41,7 @@ public class JvmParam implements ParamModel {
 	}
 
 	@Override
-	public MethodModel parent() {
+	public T parent() {
 		return m;
 	}
 

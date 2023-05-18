@@ -101,14 +101,13 @@ public class XmlObject extends XmlType<ClassModel> {
 			String setter = "set" + Character.toUpperCase(f.name().charAt(0)) + f.name().substring(1);
 			String getter = "get" + Character.toUpperCase(f.name().charAt(0)) + f.name().substring(1);
 
-			Optional<MethodModel> s = c.methods().stream().filter(m -> m.name().equals(setter))
-					.filter(m -> m.parameters().size() == 1 && m.parameters().get(0).type().name().equals(f.type().name())).findFirst();
-			Optional<MethodModel> g = c.methods().stream().filter(m -> m.name().equals(getter)).filter(m -> m.parameters().size() == 0).findFirst();
+			Optional<MethodModel> s = c.method(setter, f.type());
+			Optional<MethodModel> g = c.method(getter);
 			if (!s.isPresent())
 				throw new RuntimeException("missing setter for '" + f.name() + "' field in '" + c.name() + "' class");
 			if (!g.isPresent() && (f.type() == PrimitiveModel.BOOLEAN || f.type().name().equals("java.lang.Boolean"))) {
 				String is = "is" + Character.toUpperCase(f.name().charAt(0)) + f.name().substring(1);
-				g = c.methods().stream().filter(m -> m.name().equals(is)).filter(m -> m.parameters().size() == 0).findFirst();
+				g = c.method(is);
 			}
 			if (!g.isPresent())
 				throw new RuntimeException("missing setter for '" + f.name() + "' field in '" + c.name() + "' class");
@@ -138,8 +137,7 @@ public class XmlObject extends XmlType<ClassModel> {
 			if (elem.isPresent() || attr.isPresent() || v.isPresent() || type == XmlAccessType.FIELD && f != null || type == XmlAccessType.PUBLIC_MEMBER && m.isPublic()) {
 				String setter = "set" + m.name().substring(3);
 
-				Optional<MethodModel> s = c.methods().stream().filter(e -> e.name().equals(setter))
-						.filter(e -> e.parameters().size() == 1 && e.parameters().get(0).type().name().equals(m.type().name())).findFirst();
+				Optional<MethodModel> s = c.method(setter, m.type());
 				if (!s.isPresent())
 					throw new RuntimeException("missing setter for '" + n + "' field in '" + c.name() + "' class");
 				XmlType<?> t = loader.get(m.type());

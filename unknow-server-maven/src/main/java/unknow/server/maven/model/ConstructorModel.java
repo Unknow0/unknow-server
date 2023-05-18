@@ -7,25 +7,23 @@ import java.util.List;
 
 import unknow.server.maven.model.util.WithAnnotation;
 import unknow.server.maven.model.util.WithMod;
-import unknow.server.maven.model.util.WithName;
 import unknow.server.maven.model.util.WithParent;
-import unknow.server.maven.model.util.WithType;
 
 /**
  * @author unknow
  */
-public interface MethodModel extends WithAnnotation, WithMod, WithName, WithType,WithParent<ClassModel> {
+public interface ConstructorModel extends WithAnnotation, WithMod, WithParent<ClassModel> {
 
 	/**
 	 * @return generic param
 	 */
-	List<ParamModel<MethodModel>> parameters();
+	List<ParamModel<ConstructorModel>> parameters();
 
 	/**
 	 * @param i index of the parameter to get
 	 * @return get the i'th parameter
 	 */
-	default ParamModel<MethodModel> parameter(int i) {
+	default ParamModel<ConstructorModel> parameter(int i) {
 		return parameters().get(i);
 	}
 
@@ -33,13 +31,12 @@ public interface MethodModel extends WithAnnotation, WithMod, WithName, WithType
 	 * @return method signature name(parameters type)return type
 	 */
 	default String signature() {
-		StringBuilder sb = new StringBuilder(name()).append('(');
+		StringBuilder sb = new StringBuilder("<init>").append('(');
 		if (!parameters().isEmpty()) {
-			for (ParamModel<MethodModel> t : parameters())
+			for (ParamModel<ConstructorModel> t : parameters())
 				sb.append(t.type().internalName()).append(',');
 			sb.setLength(sb.length() - 1);
 		}
-		sb.append(')').append(type().internalName());
-		return sb.toString();
+		return sb.append(')').toString();
 	}
 }

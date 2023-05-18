@@ -66,7 +66,7 @@ public class TypeCache {
 	}
 
 	public Type get(TypeModel c) {
-		return get(c.name());
+		return get(c.toString());
 	}
 
 	public Type get(Class<?> c) {
