@@ -111,7 +111,7 @@ public class AccessLogFilter implements Filter {
 				return (sb, start, end, req, res) -> {
 					sb.append(req.getMethod()).append(' ').append(req.getRequestURI());
 					if (req.getQueryString() != null)
-						sb.append(req.getQueryString());
+						sb.append('?').append(req.getQueryString());
 					sb.append(' ').append(req.getProtocol());
 				};
 			if ("method".equals(t))

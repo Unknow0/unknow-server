@@ -173,9 +173,12 @@ public class HttpHandler implements Handler, Runnable {
 			sb.setLength(0);
 		}
 
-		BuffersUtils.toString(sb, meta, q + 1, i - q - 1);
-		req.setQuery(sb.toString());
-		sb.setLength(0);
+		if (q < i) {
+			BuffersUtils.toString(sb, meta, q + 1, i - q - 1);
+			req.setQuery(sb.toString());
+			sb.setLength(0);
+		} else
+			req.setQuery("");
 
 		Map<String, List<String>> map = new HashMap<>();
 		parseParam(map, meta, q + 1, i);
@@ -321,7 +324,7 @@ public class HttpHandler implements Handler, Runnable {
 				onRead();
 				return false;
 			}
-		} catch (InterruptedException e) {
+		} catch (InterruptedException e) { // OK
 		}
 
 		// TODO check request timeout
