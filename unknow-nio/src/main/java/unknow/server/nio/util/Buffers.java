@@ -533,7 +533,7 @@ public class Buffers {
 		StringBuilder sb = new StringBuilder();
 		try {
 			BuffersUtils.toString(sb, this, 0, len);
-		} catch (InterruptedException e) {
+		} catch (@SuppressWarnings("unused") InterruptedException e) { // ignore
 		}
 		return sb.toString();
 	}

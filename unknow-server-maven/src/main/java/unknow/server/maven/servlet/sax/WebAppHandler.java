@@ -9,11 +9,9 @@ import java.util.Set;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 
-import com.github.javaparser.resolution.declarations.ResolvedReferenceTypeDeclaration;
-import com.github.javaparser.resolution.types.ResolvedReferenceType;
-
 import jakarta.servlet.DispatcherType;
 import unknow.sax.SaxHandler;
+import unknow.server.maven.model.ClassModel;
 import unknow.server.maven.servlet.descriptor.Descriptor;
 import unknow.server.maven.servlet.descriptor.LD;
 import unknow.server.maven.servlet.descriptor.SD;
@@ -150,15 +148,12 @@ public class WebAppHandler implements SaxHandler<Context> {
 		@Override
 		public void endElement(String uri, String name, Context context) throws SAXException {
 			if ("listener-class".equals(name)) {
-				ResolvedReferenceTypeDeclaration descl = context.resolver.tryToSolveType(context.textContent()).getCorrespondingDeclaration();
+				ClassModel type = context.loader.get(context.textContent()).asClass();
 				Set<Class<?>> impl = new HashSet<>();
-				for (ResolvedReferenceType a : descl.getAllAncestors()) {
-					String n = a.getQualifiedName();
-					for (Class<?> c : Descriptor.LISTENERS) {
-						if (n.equals(c.getName())) {
-							impl.add(c);
-							break;
-						}
+				for (Class<?> c : Descriptor.LISTENERS) {
+					if (context.loader.get(c.getName()).isAssignableFrom(type)) {
+						impl.add(c);
+						break;
 					}
 				}
 				if (!impl.isEmpty())

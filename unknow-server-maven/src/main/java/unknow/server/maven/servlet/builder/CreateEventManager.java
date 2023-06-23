@@ -34,8 +34,7 @@ public class CreateEventManager extends Builder {
 	public void add(BuilderContext ctx) {
 		TypeCache t = ctx.type();
 		BlockStmt init = ctx.self().addMethod("createEventManager", Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL).setType(t.getClass(EventManager.class))
-				.addMarkerAnnotation(Override.class)
-				.getBody().get();
+				.addMarkerAnnotation(Override.class).getBody().get();
 		Map<Class<?>, NodeList<Expression>> map = new HashMap<>();
 
 		int i = 0;

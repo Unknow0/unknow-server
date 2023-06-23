@@ -34,10 +34,10 @@ public abstract class ServletJsp extends HttpServlet {
 	/**
 	 * @throws ServletException
 	 */
-	protected void jspInit() throws ServletException {
+	protected void jspInit() throws ServletException { // OK
 	}
 
-	protected void jspDestroy() {
+	protected void jspDestroy() { // OK
 	}
 
 	/**

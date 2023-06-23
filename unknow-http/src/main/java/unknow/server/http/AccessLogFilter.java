@@ -11,6 +11,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.FilterConfig;
@@ -51,6 +54,7 @@ import jakarta.servlet.http.HttpServletResponse;
  * </dl>
  */
 public class AccessLogFilter implements Filter {
+	private static final Logger logger = LoggerFactory.getLogger("access-log");
 	private static final String DEFAULT_FMT = "%{start} %{remote:host} - %{user} \"%{request}\" %{response:status} %{duration}.%{duration:msec_frac}";
 
 	private static final Part[] EMPTY = {};
@@ -176,7 +180,7 @@ public class AccessLogFilter implements Filter {
 
 	@Override
 	public final void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
-		if (!(request instanceof HttpServletRequest)) {
+		if (!(request instanceof HttpServletRequest) || !logger.isInfoEnabled()) {
 			chain.doFilter(request, response);
 			return;
 		}
@@ -189,12 +193,12 @@ public class AccessLogFilter implements Filter {
 			StringBuilder sb = new StringBuilder();
 			for (int i = 0; i < parts.length; i++)
 				parts[i].append(sb, start, end, (HttpServletRequest) request, (HttpServletResponse) response);
-			System.out.println(sb.toString());
+			logger.info(sb.toString());
 		}
 	}
 
 	@Override
-	public void destroy() {
+	public void destroy() { // OK
 	}
 
 	public static Part[] parse(String template) {

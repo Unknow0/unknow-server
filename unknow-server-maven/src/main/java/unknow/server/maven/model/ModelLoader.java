@@ -27,13 +27,16 @@ public class ModelLoader {
 	private static final TypeModel[] EMPTY = {};
 
 	static {
-		for (TypeModel t : Arrays.asList(VoidModel.SELF, PrimitiveModel.BOOLEAN, PrimitiveModel.BYTE, PrimitiveModel.CHAR, PrimitiveModel.SHORT, PrimitiveModel.INT, PrimitiveModel.LONG, PrimitiveModel.FLOAT, PrimitiveModel.DOUBLE))
+		for (TypeModel t : Arrays.asList(VoidModel.SELF, PrimitiveModel.BOOLEAN, PrimitiveModel.BYTE, PrimitiveModel.CHAR, PrimitiveModel.SHORT, PrimitiveModel.INT,
+				PrimitiveModel.LONG, PrimitiveModel.FLOAT, PrimitiveModel.DOUBLE))
 			BUILTIN.put(t.name(), t);
 	}
 
+	private final ClassLoader cl;
 	private final Map<String, TypeDeclaration<?>> classes;
 
-	public ModelLoader(Map<String, TypeDeclaration<?>> classes) {
+	public ModelLoader(ClassLoader cl, Map<String, TypeDeclaration<?>> classes) {
+		this.cl = cl;
 		this.classes = classes;
 	}
 
@@ -76,7 +79,7 @@ public class ModelLoader {
 			throw new RuntimeException("unsuported type " + t);
 		}
 		try {
-			Class<?> c = Class.forName(cl);
+			Class<?> c = this.cl.loadClass(cl);
 			if (c.isEnum())
 				return new JvmEnum(this, c, params);
 			return new JvmClass(this, c, params);

@@ -40,6 +40,7 @@ import unknow.server.http.servlet.ServletResourceStatic;
 import unknow.server.http.utils.Resource;
 import unknow.server.maven.AbstractMojo;
 import unknow.server.maven.TypeCache;
+import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.servlet.Builder.BuilderContext;
 import unknow.server.maven.servlet.builder.CreateContext;
 import unknow.server.maven.servlet.builder.CreateEventManager;
@@ -55,11 +56,12 @@ import unknow.server.maven.servlet.sax.Context;
 /**
  * @author unknow
  */
-@Mojo(defaultPhase = LifecyclePhase.GENERATE_SOURCES, name = "servlet-generator", requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
+@Mojo(defaultPhase = LifecyclePhase.GENERATE_SOURCES, name = "servlet-generator", requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME, requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
 public class ServletGenMojo extends AbstractMojo implements BuilderContext {
 	private static final Logger logger = LoggerFactory.getLogger(ServletGenMojo.class);
 
-	private static final List<Builder> BUILDER = Arrays.asList(new CreateEventManager(), new CreateServletManager(), new CreateContext(), new CreateServlets(), new CreateFilters(), new LoadInitializer(), new Main());
+	private static final List<Builder> BUILDER = Arrays.asList(new CreateEventManager(), new CreateServletManager(), new CreateContext(), new CreateServlets(),
+			new CreateFilters(), new LoadInitializer(), new Main());
 
 	private static final Path WEBXML = Paths.get("WEB-INF", "web.xml");
 	private static final Path INITIALIZER = Paths.get("META-INF", "services", ServletContainerInitializer.class.getName());
@@ -82,9 +84,6 @@ public class ServletGenMojo extends AbstractMojo implements BuilderContext {
 
 	@Parameter(defaultValue = "Server")
 	private String className;
-
-	@Parameter(defaultValue = "${project.basedir}/src/main/resources/WEB-INF/web.xml")
-	private String webXml;
 
 	@Parameter(defaultValue = "4096")
 	private int staticResourceSize;
@@ -109,19 +108,11 @@ public class ServletGenMojo extends AbstractMojo implements BuilderContext {
 		if (addAccessLog)
 			descriptor.filters.add(ACCESSLOG);
 
-//		if (webXml != null) {
-//			Path path = Paths.get(webXml);
-//			if (Files.exists(path)) {
-//				
-//			} else
-//				getLog().warn("missing '" + webXml + "'");
-//		}
-
 		processSrc(descriptor);
 		processResources((full, file) -> {
 			if (file.equals(WEBXML)) {
 				try (InputStream r = Files.newInputStream(full)) {
-					SaxParser.parse(new Context(descriptor, resolver), new InputSource(r));
+					SaxParser.parse(new Context(descriptor, loader), new InputSource(r));
 				} catch (ParserConfigurationException | SAXException | IOException e) {
 					logger.warn("Failed to parse web.xml {}", full, e);
 				}
@@ -203,6 +194,11 @@ public class ServletGenMojo extends AbstractMojo implements BuilderContext {
 	@Override
 	public TypeCache type() {
 		return types;
+	}
+
+	@Override
+	public ModelLoader loader() {
+		return loader;
 	}
 
 	@Override

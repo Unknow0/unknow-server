@@ -51,7 +51,7 @@ public interface TypeModel extends WithAnnotation, WithName {
 	default PrimitiveModel asPrimitive() {
 		if (this instanceof PrimitiveModel)
 			return (PrimitiveModel) this;
-		throw new RuntimeException();
+		throw new RuntimeException(name() + " isn't a primitive");
 	}
 
 	/**
@@ -64,7 +64,7 @@ public interface TypeModel extends WithAnnotation, WithName {
 	default ClassModel asClass() {
 		if (this instanceof ClassModel)
 			return (ClassModel) this;
-		throw new RuntimeException();
+		throw new RuntimeException(name() + " isn't a class");
 	}
 
 	/**

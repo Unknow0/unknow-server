@@ -9,6 +9,7 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.ResolutionScope;
 
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Node;
@@ -23,7 +24,7 @@ import unknow.server.maven.jaxws.binding.XmlTypeLoader;
 /**
  * @author unknow
  */
-@Mojo(defaultPhase = LifecyclePhase.GENERATE_SOURCES, name = "jaxws-generator")
+@Mojo(defaultPhase = LifecyclePhase.GENERATE_SOURCES, name = "jaxws-generator", requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME, requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
 public class JaxwsGeneratorMojo extends AbstractMojo {
 
 	@org.apache.maven.plugins.annotations.Parameter(name = "publishUrl", defaultValue = "http://127.0.0.1:8080")
