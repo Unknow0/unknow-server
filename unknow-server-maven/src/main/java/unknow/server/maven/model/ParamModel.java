@@ -12,5 +12,5 @@ import unknow.server.maven.model.util.WithType;
  * @author unknow
  * @param <T> owner model
  */
-public interface ParamModel<T extends WithParent<ClassModel>> extends WithAnnotation, WithType, WithName, WithParent<T> {
+public interface ParamModel<T extends WithParent<ClassModel>> extends WithAnnotation, WithType, WithName, WithParent<T> { //ok
 }

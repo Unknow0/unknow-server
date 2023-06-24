@@ -143,7 +143,8 @@ public class ArrayMap<T> implements Map<String, T> {
 
 	@Override
 	public void putAll(Map<? extends String, ? extends T> m) {
-
+		for (Entry<? extends String, ? extends T> e : m.entrySet())
+			put(e.getKey(), e.getValue());
 	}
 
 	@Override
@@ -158,12 +159,11 @@ public class ArrayMap<T> implements Map<String, T> {
 
 	@Override
 	public Collection<T> values() {
-		return null;
+		return Arrays.asList(value);
 	}
 
 	@Override
 	public Set<Entry<String, T>> entrySet() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 

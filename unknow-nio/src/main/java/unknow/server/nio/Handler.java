@@ -9,7 +9,7 @@ import java.io.IOException;
  * @author unknow
  */
 public interface Handler {
-	default void init() {
+	default void init() { // OK
 	}
 
 	void onRead() throws InterruptedException, IOException;
@@ -18,6 +18,6 @@ public interface Handler {
 
 	boolean closed(long now, boolean close);
 
-	default void free() {
+	default void free() { // OK
 	}
 }

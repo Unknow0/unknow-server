@@ -3,19 +3,14 @@
  */
 package unknow.server.maven;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParseResult;
 import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.symbolsolver.JavaSymbolSolver;
-import com.github.javaparser.symbolsolver.model.resolution.TypeSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver;
@@ -24,14 +19,13 @@ import unknow.server.maven.model.ClassModel;
 import unknow.server.maven.model.MethodModel;
 import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.model.TypeModel;
-import unknow.server.maven.model.ModelLoaderTest.G;
 
 /**
  * @author unknow
  */
 public class Test {
 	public static void main(String[] arg) {
-		ModelLoader loader = new ModelLoader(Collections.emptyMap());
+		ModelLoader loader = new ModelLoader(Test.class.getClassLoader(), Collections.emptyMap());
 
 		CombinedTypeSolver resolver = new CombinedTypeSolver(new ReflectionTypeSolver(false), new JavaParserTypeSolver("src/test/java"));
 		JavaSymbolSolver javaSymbolSolver = new JavaSymbolSolver(resolver);

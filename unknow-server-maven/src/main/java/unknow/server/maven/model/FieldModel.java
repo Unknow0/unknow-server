@@ -12,5 +12,5 @@ import unknow.server.maven.model.util.WithType;
 /**
  * @author unknow
  */
-public interface FieldModel extends WithAnnotation, WithType, WithMod, WithName,WithParent<ClassModel> {
+public interface FieldModel extends WithAnnotation, WithType, WithMod, WithName, WithParent<ClassModel> { //ok
 }

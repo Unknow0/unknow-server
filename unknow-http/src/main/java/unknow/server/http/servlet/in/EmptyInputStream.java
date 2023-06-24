@@ -32,7 +32,7 @@ public class EmptyInputStream extends ServletInputStream {
 	public void setReadListener(ReadListener readListener) {
 		try {
 			readListener.onAllDataRead();
-		} catch (IOException e) {
+		} catch (@SuppressWarnings("unused") IOException e) { //ignore
 		}
 	}
 

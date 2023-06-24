@@ -3,9 +3,8 @@
  */
 package unknow.server.maven.servlet.sax;
 
-import com.github.javaparser.symbolsolver.model.resolution.TypeSolver;
-
 import unknow.sax.SaxContext;
+import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.servlet.descriptor.Descriptor;
 
 /**
@@ -13,11 +12,11 @@ import unknow.server.maven.servlet.descriptor.Descriptor;
  */
 public class Context extends SaxContext {
 	public final Descriptor descriptor;
-	public final TypeSolver resolver;
+	public final ModelLoader loader;
 
-	public Context(Descriptor descriptor, TypeSolver resolver) {
+	public Context(Descriptor descriptor, ModelLoader loader) {
 		super(WebAppHandler.INSTANCE);
 		this.descriptor = descriptor;
-		this.resolver = resolver;
+		this.loader = loader;
 	}
 }

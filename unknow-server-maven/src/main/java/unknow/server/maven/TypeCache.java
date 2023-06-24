@@ -98,12 +98,12 @@ public class TypeCache {
 		}
 
 		cl = parse.get(0);
-		ClassOrInterfaceType t = null;
 		String[] split = cl.split("[.$]");
 		String last = split[split.length - 1];
 		String string = existingClass.get(last);
 		if (string != null && !cl.equals(string)) {
-			for (int i = 0; i < split.length; i++)
+			ClassOrInterfaceType t = new ClassOrInterfaceType(null, split[0]);
+			for (int i = 1; i < split.length; i++)
 				t = new ClassOrInterfaceType(t, split[i]);
 			return t.setTypeArguments(params);
 		}

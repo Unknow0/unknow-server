@@ -64,7 +64,8 @@ public class Service {
 		String[] url = clazz.annotation(UrlMapping.class).flatMap(a -> a.values()).orElse(new String[] { "/" + name });
 
 		Style style = clazz.annotation(SOAPBinding.class).flatMap(a -> a.value("style")).map(s -> Style.valueOf(s)).orElse(Style.DOCUMENT);
-		ParameterStyle paramStyle = clazz.annotation(SOAPBinding.class).flatMap(a -> a.value("parameterStyle")).map(s -> ParameterStyle.valueOf(s)).orElse(ParameterStyle.WRAPPED);
+		ParameterStyle paramStyle = clazz.annotation(SOAPBinding.class).flatMap(a -> a.value("parameterStyle")).map(s -> ParameterStyle.valueOf(s))
+				.orElse(ParameterStyle.WRAPPED);
 
 		Service service = new Service(name, ns, url, style, paramStyle);
 
@@ -127,7 +128,7 @@ public class Service {
 				r = new Param(rns, rname, typeLoader.get(m.type()), type.name(), header);
 			}
 			Op op = new Op(m.name(), name, ns, r, action, style, paramStyle);
-			for (ParamModel p : m.parameters()) {
+			for (ParamModel<?> p : m.parameters()) {
 				XmlType<?> t = typeLoader.get(p.type());
 				boolean header = p.annotation(WebParam.class).flatMap(a -> a.value("header")).map(Boolean::parseBoolean).orElse(false);
 				name = p.annotation(WebParam.class).flatMap(a -> a.value("name")).orElse("##default");

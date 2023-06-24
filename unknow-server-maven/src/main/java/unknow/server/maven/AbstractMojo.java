@@ -5,6 +5,8 @@ package unknow.server.maven;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -23,16 +25,18 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.util.DirectoryWalkListener;
 import org.codehaus.plexus.util.DirectoryWalker;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.TypeDeclaration;
+import com.github.javaparser.resolution.TypeSolver;
 import com.github.javaparser.symbolsolver.JavaSymbolSolver;
-import com.github.javaparser.symbolsolver.model.resolution.TypeSolver;
+import com.github.javaparser.symbolsolver.resolution.typesolvers.ClassLoaderTypeSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver;
-import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver;
 
 import unknow.server.maven.model.ModelLoader;
 
@@ -40,6 +44,7 @@ import unknow.server.maven.model.ModelLoader;
  * @author unknow
  */
 public abstract class AbstractMojo extends org.apache.maven.plugin.AbstractMojo {
+	private static final Logger log = LoggerFactory.getLogger(AbstractMojo.class);
 
 	@Parameter(defaultValue = "${project}", required = true, readonly = true)
 	protected MavenProject project;
@@ -72,15 +77,19 @@ public abstract class AbstractMojo extends org.apache.maven.plugin.AbstractMojo 
 	protected final Map<String, TypeDeclaration<?>> classes = new HashMap<>();
 	private final Consumer<CompilationUnit> c = cu -> cu.walk(TypeDeclaration.class, c -> classes.put(c.resolve().getQualifiedName(), c));
 
-	protected final ModelLoader loader = new ModelLoader(classes);
+	protected ModelLoader loader;
 
 	abstract protected String id();
 
 	protected void init() throws MojoFailureException {
+		ClassLoader cl = getClassLoader();
+		loader = new ModelLoader(cl, classes);
+
 		List<String> compileSourceRoots = project.getCompileSourceRoots();
+
 		TypeSolver[] solver = new TypeSolver[compileSourceRoots.size() + 1];
 		int i = 0;
-		solver[i++] = new ReflectionTypeSolver(false);
+		solver[i++] = new ClassLoaderTypeSolver(cl);
 		for (String s : compileSourceRoots)
 			solver[i++] = new JavaParserTypeSolver(s);
 		resolver = new CombinedTypeSolver(solver);
@@ -99,6 +108,22 @@ public abstract class AbstractMojo extends org.apache.maven.plugin.AbstractMojo 
 			out = new Output(output, packageName);
 		} catch (IOException e) {
 			throw new MojoFailureException("failed to create output folders", e);
+		}
+	}
+
+	private ClassLoader getClassLoader() {
+		try {
+			List<String> classpathElements = project.getRuntimeClasspathElements();
+			log.error("{}", classpathElements);
+			URL urls[] = new URL[classpathElements.size()];
+
+			for (int i = 0; i < urls.length; i++)
+				urls[i] = new File(classpathElements.get(i)).toURI().toURL();
+
+			return new URLClassLoader(urls, getClass().getClassLoader());
+		} catch (Exception e) {
+			log.error("Failed to get project classpath", e);
+			return getClass().getClassLoader();
 		}
 	}
 
@@ -145,6 +170,8 @@ public abstract class AbstractMojo extends org.apache.maven.plugin.AbstractMojo 
 		scanner.addDirectoryWalkListener(l);
 		for (Resource r : project.getResources()) {
 			l.root = Paths.get(r.getDirectory());
+			if (!Files.exists(l.root))
+				continue;
 			scanner.setBaseDir(l.root.toFile());
 			scanner.setIncludes(r.getIncludes());
 			scanner.setExcludes(r.getExcludes());
@@ -182,15 +209,15 @@ public abstract class AbstractMojo extends org.apache.maven.plugin.AbstractMojo 
 		}
 
 		@Override
-		public void directoryWalkStarting(File basedir) {
+		public void directoryWalkStarting(File basedir) { //ok
 		}
 
 		@Override
-		public void directoryWalkFinished() {
+		public void directoryWalkFinished() { //ok
 		}
 
 		@Override
-		public void debug(String message) {
+		public void debug(String message) { //ok
 		}
 	}
 }

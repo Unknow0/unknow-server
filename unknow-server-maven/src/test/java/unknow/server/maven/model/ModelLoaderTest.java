@@ -22,14 +22,11 @@ import org.junit.jupiter.params.provider.MethodSource;
 public class ModelLoaderTest {
 
 	public static final Stream<Arguments> input() {
-		return Stream.of(
-				Arguments.of("String", Arrays.asList("String")),
-				Arguments.of("Collection<String>", Arrays.asList("Collection", "String")),
+		return Stream.of(Arguments.of("String", Arrays.asList("String")), Arguments.of("Collection<String>", Arrays.asList("Collection", "String")),
 				Arguments.of("Map<String,String>", Arrays.asList("Map", "String", "String")),
 				Arguments.of("Collection<List<String>>", Arrays.asList("Collection", "List<String>")),
 				Arguments.of("Map<List<String>,String>", Arrays.asList("Map", "List<String>", "String")),
-				Arguments.of("Map<String,List<String>>", Arrays.asList("Map", "String", "List<String>")),
-				Arguments.of("A<B,C,D<E>>", Arrays.asList("A", "B", "C", "D<E>")),
+				Arguments.of("Map<String,List<String>>", Arrays.asList("Map", "String", "List<String>")), Arguments.of("A<B,C,D<E>>", Arrays.asList("A", "B", "C", "D<E>")),
 				Arguments.of("L<>", Arrays.asList("L", "")));
 	}
 
@@ -41,7 +38,7 @@ public class ModelLoaderTest {
 
 	@Test
 	public void testCollection() {
-		ModelLoader loader = new ModelLoader(Collections.emptyMap());
+		ModelLoader loader = new ModelLoader(getClass().getClassLoader(), Collections.emptyMap());
 
 		TypeModel col = loader.get(G.class.getName());
 		ClassModel slist = loader.get(StringList.class.getName()).asClass();
@@ -65,9 +62,9 @@ public class ModelLoaderTest {
 		}
 	}
 
-	public static class StringList extends G<String> {
+	public static class StringList extends G<String> { //ok
 	}
 
-	public static class IntList extends G<Integer> {
+	public static class IntList extends G<Integer> { //ok
 	}
 }

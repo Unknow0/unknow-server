@@ -26,7 +26,7 @@ public class JvmAnnotation implements AnnotationModel {
 			try {
 				m.setAccessible(true);
 				return toString(m.invoke(a));
-			} catch (Exception e) {
+			} catch (Exception e) { //ignore
 			}
 			return null;
 		};
@@ -43,7 +43,7 @@ public class JvmAnnotation implements AnnotationModel {
 				for (int i = 0; i < t.length; i++)
 					s[i] = toString(t[i]);
 				return s;
-			} catch (Exception e) {
+			} catch (Exception e) { //ignore
 			}
 			return null;
 		};
