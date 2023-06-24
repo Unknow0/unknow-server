@@ -44,11 +44,11 @@ import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.HttpUpgradeHandler;
 import jakarta.servlet.http.Part;
 import unknow.server.http.HttpHandler;
-import unknow.server.http.data.ArrayMap;
 import unknow.server.http.servlet.in.ChunckedInputStream;
 import unknow.server.http.servlet.in.EmptyInputStream;
 import unknow.server.http.servlet.in.LengthInputStream;
 import unknow.server.http.servlet.session.SessionFactory;
+import unknow.server.util.data.ArrayMap;
 
 /**
  * @author unknow
@@ -528,7 +528,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 				sb.append('/').append(path.get(i));
 			pathInfo = sb.toString();
 		}
-		return pathInfo == "" ? null : pathInfo;
+		return pathInfo.isEmpty() ? null : pathInfo;
 	}
 
 	@Override

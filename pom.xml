@@ -28,6 +28,7 @@
 		</repository>
 	</repositories>
 	<modules>
+		<module>unknow-server-util</module>
 		<module>unknow-nio</module>
 		<module>unknow-http</module>
 		<module>unknow-protobuf</module>

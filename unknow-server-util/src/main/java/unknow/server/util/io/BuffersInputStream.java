@@ -1,7 +1,7 @@
 /**
  * 
  */
-package unknow.server.nio.util;
+package unknow.server.util.io;
 
 import java.io.IOException;
 import java.io.InputStream;

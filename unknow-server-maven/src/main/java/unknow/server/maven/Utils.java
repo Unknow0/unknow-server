@@ -26,8 +26,8 @@ import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.PrimitiveType;
 import com.github.javaparser.ast.type.Type;
 
-import unknow.server.http.data.ArrayMap;
-import unknow.server.http.data.ArraySet;
+import unknow.server.util.data.ArrayMap;
+import unknow.server.util.data.ArraySet;
 
 /**
  * @author unknow

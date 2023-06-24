@@ -1,7 +1,7 @@
 /**
  * 
  */
-package unknow.server.http.data;
+package unknow.server.util.data;
 
 import java.util.Arrays;
 import java.util.Collection;

@@ -27,7 +27,6 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
-import org.apache.maven.model.Resource;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
@@ -72,6 +71,16 @@ import com.github.javaparser.ast.type.ArrayType;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.TypeParameter;
 
+import io.swagger.v3.oas.models.Components;
+import io.swagger.v3.oas.models.ExternalDocumentation;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.Operation;
+import io.swagger.v3.oas.models.PathItem;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.media.Schema;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.servers.Server;
+import io.swagger.v3.oas.models.tags.Tag;
 import jakarta.servlet.ServletContainerInitializer;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
@@ -81,7 +90,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.ws.rs.NotAcceptableException;
 import jakarta.ws.rs.NotSupportedException;
-import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.ParamConverter;
 import jakarta.ws.rs.ext.ParamConverterProvider;
 import jakarta.ws.rs.ext.RuntimeDelegate;
@@ -91,6 +99,7 @@ import unknow.server.http.jaxrs.JaxrsEntityWriter;
 import unknow.server.http.jaxrs.JaxrsPath;
 import unknow.server.http.jaxrs.JaxrsReq;
 import unknow.server.http.jaxrs.JaxrsRuntime;
+import unknow.server.http.jaxrs.impl.DefaultConvert;
 import unknow.server.maven.AbstractMojo;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
@@ -132,7 +141,6 @@ public class JaxRsServlet extends AbstractMojo {
 		return c;
 	};
 
-	private TypeModel response;
 	private TypeModel collection;
 	private TypeModel set;
 	private TypeModel sortedSet;
@@ -142,8 +150,8 @@ public class JaxRsServlet extends AbstractMojo {
 	private TypeCache types;
 	private ClassOrInterfaceDeclaration cl;
 
-	@Parameter(name = "resources", defaultValue = "${project.build.directory}/jaxrs-generator")
-	private String resources;
+	@Parameter(name = "openapi")
+	private OpenApi openapi;
 
 	private final Map<JaxrsParam, String> converterVar = new HashMap<>();
 
@@ -151,9 +159,13 @@ public class JaxRsServlet extends AbstractMojo {
 	private final Map<String, String> beansVar = new HashMap<>();
 
 	@Override
+	protected String id() {
+		return "jaxrs-generator";
+	}
+
+	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
 		init();
-		response = loader.get(Response.class.getCanonicalName());
 		collection = loader.get(Collection.class.getCanonicalName());
 		set = loader.get(Set.class.getCanonicalName());
 		sortedSet = loader.get(SortedSet.class.getCanonicalName());
@@ -169,13 +181,57 @@ public class JaxRsServlet extends AbstractMojo {
 		for (String path : model.paths())
 			generateClass(path);
 
+		buildOpenApi();
+
+		// TODO create openapi Path
+
 		// TODO build openapi.json
 	}
 
+	/**
+	 * 
+	 */
+	private OpenAPI buildOpenApi() {
+		OpenAPI spec = new OpenAPI();
+		if (openapi == null)
+			openapi = new OpenApi();
+		Info info = openapi.info;
+		if (info == null)
+			spec.setInfo(info = new Info());
+		if (info.getTitle() == null)
+			info.setTitle(project.getArtifactId());
+		if (info.getVersion() == null)
+			info.setVersion(project.getVersion());
+
+		if (openapi.servers != null)
+			spec.setServers(openapi.servers);
+		if (openapi.security != null)
+			spec.setSecurity(openapi.security);
+		if (openapi.tags != null)
+			spec.setTags(openapi.tags);
+		if (openapi.externalDocs != null)
+			spec.setExternalDocs(openapi.externalDocs);
+
+		Map<String, Schema> schemas = new HashMap<>();
+		io.swagger.v3.oas.models.Paths paths = new io.swagger.v3.oas.models.Paths();
+
+		for (String p : model.paths()) {
+			PathItem pathItem = new PathItem();
+			for (String m : model.methods(p)) {
+				model.mapping(p, m)
+				Operation operation = new Operation();
+				
+				pathItem.setDelete(null);
+			}
+			paths.put(p, pathItem);
+		}
+		// TODO add path
+		// TODO add component/schema
+
+		return spec.components(new Components().schemas(schemas)).paths(paths);
+	}
+
 	private void generateInitalizer() throws IOException, MojoExecutionException {
-		Resource resource = new Resource();
-		resource.setDirectory(resources);
-		project.addResource(resource);
 
 		Path path = Paths.get(resources, "META-INF", "services", ServletContainerInitializer.class.getName());
 		Files.createDirectories(path.getParent());
@@ -534,7 +590,7 @@ public class JaxRsServlet extends AbstractMojo {
 		if (consume.isEmpty())
 			buildProduces(b, def);
 		else {
-			b.addStatement(Utils.assign(types.getClass(String.class), "contentType", new MethodCallExpr(new NameExpr("r"), "getHeader", Utils.list(new StringLiteralExpr("content-type"), new StringLiteralExpr("*/*"), new FieldAccessExpr(new TypeExpr(types.getClass(JaxrsContext.class)), "STRING")))));
+			b.addStatement(Utils.assign(types.getClass(String.class), "contentType", new MethodCallExpr(new NameExpr("r"), "getHeader", Utils.list(new StringLiteralExpr("content-type"), new StringLiteralExpr("*/*"), new FieldAccessExpr(new TypeExpr(types.getClass(DefaultConvert.class)), "STRING")))));
 			List<String> k = new ArrayList<>(consume.keySet());
 			k.sort(MIME);
 
@@ -568,7 +624,7 @@ public class JaxRsServlet extends AbstractMojo {
 			return b.addStatement(stmt);
 
 		// TODO quality check of header
-		b.addStatement(Utils.assign(types.getClass(String.class), "accept", new MethodCallExpr(new NameExpr("r"), "getHeader", Utils.list(new StringLiteralExpr("accept"), new StringLiteralExpr("*/*"), new FieldAccessExpr(new TypeExpr(types.getClass(JaxrsContext.class)), "STRING")))));
+		b.addStatement(Utils.assign(types.getClass(String.class), "accept", new MethodCallExpr(new NameExpr("r"), "getHeader", Utils.list(new StringLiteralExpr("accept"), new StringLiteralExpr("*/*"), new FieldAccessExpr(new TypeExpr(types.getClass(DefaultConvert.class)), "STRING")))));
 
 		List<String> k = new ArrayList<>(produce.keySet());
 		k.sort(MIME);
@@ -601,10 +657,6 @@ public class JaxRsServlet extends AbstractMojo {
 		if (m.type().isVoid()) {
 			b.addStatement(call)
 					.addStatement(new MethodCallExpr(new NameExpr("res"), "sendError", Utils.list(new IntegerLiteralExpr("204"))));
-		} else if (m.type().isAssignableFrom(response)) {
-			b.addStatement(Utils.assign(types.get(m.type()), "result", call))
-					// TODO set response
-					.addStatement(new MethodCallExpr(new NameExpr(mapping.var + "$r"), "write", Utils.list(new NameExpr("r"), new MethodCallExpr(new NameExpr("result"), "getEntity"), new NameExpr("res"))));
 		} else
 			b.addStatement(Utils.assign(types.get(m.type()), "result", call))
 					.addStatement(new MethodCallExpr(new NameExpr(mapping.var + "$r"), "write", Utils.list(new NameExpr("r"), new NameExpr("result"), new NameExpr("res"))));
@@ -643,5 +695,13 @@ public class JaxRsServlet extends AbstractMojo {
 		else if (set.isAssignableFrom(p.type))
 			e = new ObjectCreationExpr(null, types.getClass(HashSet.class), Utils.list(e));
 		return e;
+	}
+
+	public static class OpenApi {
+		public Info info;
+		public List<Server> servers;
+		public List<SecurityRequirement> security;
+		public List<Tag> tags;
+		public ExternalDocumentation externalDocs;
 	}
 }

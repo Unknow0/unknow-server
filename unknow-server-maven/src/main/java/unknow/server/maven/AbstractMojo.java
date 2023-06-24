@@ -50,6 +50,9 @@ public abstract class AbstractMojo extends org.apache.maven.plugin.AbstractMojo 
 	@Parameter(name = "output")
 	private String output;
 
+	@Parameter(name = "resources")
+	protected String resources;
+
 	protected Output out;
 
 	/** created with init() */
@@ -71,6 +74,8 @@ public abstract class AbstractMojo extends org.apache.maven.plugin.AbstractMojo 
 
 	protected final ModelLoader loader = new ModelLoader(classes);
 
+	abstract protected String id();
+
 	protected void init() throws MojoFailureException {
 		List<String> compileSourceRoots = project.getCompileSourceRoots();
 		TypeSolver[] solver = new TypeSolver[compileSourceRoots.size() + 1];
@@ -83,7 +88,12 @@ public abstract class AbstractMojo extends org.apache.maven.plugin.AbstractMojo 
 		parser = new JavaParser(new ParserConfiguration().setStoreTokens(true).setSymbolResolver(javaSymbolSolver));
 
 		if (output == null)
-			output = compileSourceRoots.get(0);
+			output = project.getBuild().getDirectory() + "/" + id() + "/src";
+		project.addCompileSourceRoot(output);
+
+		if (resources == null)
+			resources = project.getBuild().getDirectory() + "/" + id() + "/resources";
+		addResource(resources);
 
 		try {
 			out = new Output(output, packageName);
@@ -139,6 +149,21 @@ public abstract class AbstractMojo extends org.apache.maven.plugin.AbstractMojo 
 			scanner.setIncludes(r.getIncludes());
 			scanner.setExcludes(r.getExcludes());
 			scanner.scan();
+		}
+	}
+
+	private void addResource(String resources) {
+		for (Resource e : project.getResources()) {
+			if (resources.equals(e.getDirectory()))
+				return;
+		}
+		Resource resource = new Resource();
+		resource.setDirectory(resources);
+		project.addResource(resource);
+
+		try {
+			Files.createDirectories(Paths.get(resources));
+		} catch (IOException e) {
 		}
 	}
 

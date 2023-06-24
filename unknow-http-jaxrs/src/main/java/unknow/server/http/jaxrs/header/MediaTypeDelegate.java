@@ -22,25 +22,7 @@ public class MediaTypeDelegate implements HeaderDelegate<MediaType> {
 
 	@Override
 	public MediaType fromString(String value) {
-		int semiColonIndex = value.indexOf(';');
-		int slashIndex = value.indexOf('/', semiColonIndex);
-		if (slashIndex < 0)
-			throw new IllegalArgumentException("invalid mediatype '" + value + "'");
-
-		String type = value.substring(0, slashIndex);
-		String subtype = value.substring(slashIndex + 1, semiColonIndex < 0 ? value.length() : semiColonIndex).trim();
-
-		Map<String, String> parameters = new HashMap<>();
-		while (semiColonIndex != -1) {
-			semiColonIndex++;
-			int equalSignIndex = value.indexOf('=', semiColonIndex);
-
-			String name = value.substring(semiColonIndex, equalSignIndex).trim();
-			semiColonIndex = value.indexOf(';', semiColonIndex);
-			parameters.put(name, value.substring(equalSignIndex + 1, semiColonIndex < 0 ? value.length() : semiColonIndex).trim());
-		}
-
-		return new MediaType(type, subtype, parameters);
+		return fromString(value, 0, value.length());
 	}
 
 	@Override
@@ -51,4 +33,27 @@ public class MediaTypeDelegate implements HeaderDelegate<MediaType> {
 		return sb.toString();
 	}
 
+	public static MediaType fromString(String value, int off, int end) {
+		int semiColonIndex = value.indexOf(';', off);
+		int slashIndex = value.indexOf('/', off);
+		if (slashIndex < 0 || slashIndex >= end)
+			throw new IllegalArgumentException("invalid mediatype '" + value.substring(off, end) + "'");
+
+		String type = value.substring(off, slashIndex).trim();
+		String subtype = value.substring(slashIndex + 1, semiColonIndex > 0 && semiColonIndex < end ? semiColonIndex : end).trim();
+
+		Map<String, String> parameters = new HashMap<>();
+		while (semiColonIndex != -1 && semiColonIndex < end) {
+			semiColonIndex++;
+			int equalSignIndex = value.indexOf('=', semiColonIndex);
+			if (equalSignIndex < 0 || equalSignIndex >= end)
+				equalSignIndex = end;
+
+			String name = value.substring(semiColonIndex, equalSignIndex).trim();
+			semiColonIndex = value.indexOf(';', semiColonIndex);
+			parameters.put(name, value.substring(equalSignIndex + 1, semiColonIndex >= 0 && semiColonIndex < end ? semiColonIndex : end).trim());
+		}
+
+		return new MediaType(type, subtype, parameters);
+	}
 }

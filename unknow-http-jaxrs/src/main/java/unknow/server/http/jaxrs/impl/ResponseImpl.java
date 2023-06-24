@@ -3,6 +3,8 @@
  */
 package unknow.server.http.jaxrs.impl;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.net.URI;
 import java.util.Date;
@@ -37,6 +39,11 @@ public class ResponseImpl extends Response {
 
 	/**
 	 * create new ResponseBuilderImpl.ResponseImpl
+	 * 
+	 * @param status      the response status
+	 * @param entity      the entity
+	 * @param annotations the default response annotations
+	 * @param headers     the headers
 	 */
 	public ResponseImpl(int status, Object entity, Annotation[] annotations, MultivaluedMap<String, Object> headers) {
 		this.status = status;
@@ -98,14 +105,23 @@ public class ResponseImpl extends Response {
 
 	@Override
 	public boolean bufferEntity() {
-		// TODO Auto-generated method stub
+		if (!(entity instanceof InputStream))
+			return false;
+		InputStream is = (InputStream) entity;
+
+//		new Buffers()
+		// TODO
 		return false;
 	}
 
 	@Override
 	public void close() {
-		// TODO Auto-generated method stub
-
+		if (!(entity instanceof InputStream))
+			try {
+				((InputStream) entity).close();
+			} catch (IOException e) {
+			}
+		// TODO remove buffer
 	}
 
 	@Override

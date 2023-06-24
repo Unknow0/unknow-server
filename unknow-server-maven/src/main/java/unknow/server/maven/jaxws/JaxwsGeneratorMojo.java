@@ -32,6 +32,11 @@ public class JaxwsGeneratorMojo extends AbstractMojo {
 	private final XmlTypeLoader xmlLoader = new XmlTypeLoader();
 
 	@Override
+	protected String id() {
+		return "jaxws-generator";
+	}
+
+	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
 		init();
 		processSrc();

@@ -34,9 +34,9 @@ import unknow.server.http.utils.ServletManager;
 import unknow.server.nio.Connection;
 import unknow.server.nio.Connection.Out;
 import unknow.server.nio.Handler;
-import unknow.server.nio.util.Buffers;
-import unknow.server.nio.util.Buffers.Walker;
-import unknow.server.nio.util.BuffersUtils;
+import unknow.server.util.io.Buffers;
+import unknow.server.util.io.Buffers.Walker;
+import unknow.server.util.io.BuffersUtils;
 
 public class HttpHandler implements Handler, Runnable {
 	private static final Logger log = LoggerFactory.getLogger(HttpHandler.class);

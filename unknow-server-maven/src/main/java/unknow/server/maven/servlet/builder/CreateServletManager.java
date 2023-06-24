@@ -20,8 +20,6 @@ import com.github.javaparser.ast.expr.StringLiteralExpr;
 import com.github.javaparser.ast.stmt.ReturnStmt;
 import com.github.javaparser.ast.type.PrimitiveType;
 
-import unknow.server.http.data.IntArrayMap;
-import unknow.server.http.data.ObjectArrayMap;
 import unknow.server.http.utils.ServletManager;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
@@ -29,6 +27,8 @@ import unknow.server.maven.servlet.Builder;
 import unknow.server.maven.servlet.Names;
 import unknow.server.maven.servlet.descriptor.Descriptor;
 import unknow.server.maven.servlet.descriptor.SD;
+import unknow.server.util.data.IntArrayMap;
+import unknow.server.util.data.ObjectArrayMap;
 
 /**
  * @author unknow

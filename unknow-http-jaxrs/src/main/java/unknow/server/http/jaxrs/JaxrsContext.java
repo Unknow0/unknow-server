@@ -27,6 +27,7 @@ import jakarta.ws.rs.ext.MessageBodyReader;
 import jakarta.ws.rs.ext.MessageBodyWriter;
 import jakarta.ws.rs.ext.ParamConverter;
 import jakarta.ws.rs.ext.ParamConverterProvider;
+import unknow.server.http.jaxrs.impl.DefaultConvert;
 
 /**
  * @author unknow
@@ -40,8 +41,6 @@ public class JaxrsContext {
 
 	private static final Map<String, List<MessageBodyWriter<Object>>> writers = new HashMap<>();
 	private static final Map<String, List<MessageBodyReader<Object>>> readers = new HashMap<>();
-
-	private static final JaxrsEntityWriter<Response> RESPONSE = JaxrsEntityWriter.create(Response.class, Response.class, new Annotation[0]);
 
 	static {
 		exceptions.put(WebApplicationException.class, new WebAppExceptionMapping());
@@ -105,7 +104,7 @@ public class JaxrsContext {
 		do {
 			ExceptionMapper<Throwable> m = exceptions.get(c);
 			if (m != null) {
-				RESPONSE.write(r, m.toResponse(t), res);
+				JaxrsEntityWriter.RESPONSE.write(r, m.toResponse(t), res);
 				return;
 			}
 		} while ((c = c.getSuperclass()) != Throwable.class);
@@ -156,119 +155,6 @@ public class JaxrsContext {
 			return m;
 		}
 		throw new InternalServerErrorException("No writer for " + clazz + " " + t);
-	}
-
-	public static final ParamConverter<String> STRING = new ParamConverter<>() {
-		@Override
-		public String fromString(String value) {
-			return value;
-		}
-
-		@Override
-		public String toString(String value) {
-			return value;
-		}
-	};
-	public static final ParamConverter<Boolean> BOOLEAN = new ParamConverter<>() {
-		@Override
-		public Boolean fromString(String value) {
-			return Boolean.parseBoolean(value);
-		}
-
-		@Override
-		public String toString(Boolean value) {
-			return value.toString();
-		}
-	};
-	public static final ParamConverter<Byte> BYTE = new ParamConverter<>() {
-		@Override
-		public Byte fromString(String value) {
-			return Byte.parseByte(value);
-		}
-
-		@Override
-		public String toString(Byte value) {
-			return value.toString();
-		}
-	};
-	public static final ParamConverter<Short> SHORT = new ParamConverter<>() {
-		@Override
-		public Short fromString(String value) {
-			return Short.parseShort(value);
-		}
-
-		@Override
-		public String toString(Short value) {
-			return value.toString();
-		}
-	};
-	public static final ParamConverter<Integer> INTEGER = new ParamConverter<>() {
-		@Override
-		public Integer fromString(String value) {
-			return Integer.parseInt(value);
-		}
-
-		@Override
-		public String toString(Integer value) {
-			return value.toString();
-		}
-	};
-	public static final ParamConverter<Long> LONG = new ParamConverter<>() {
-		@Override
-		public Long fromString(String value) {
-			return Long.parseLong(value);
-		}
-
-		@Override
-		public String toString(Long value) {
-			return value.toString();
-		}
-	};
-	public static final ParamConverter<Float> FLOAT = new ParamConverter<>() {
-		@Override
-		public Float fromString(String value) {
-			return Float.parseFloat(value);
-		}
-
-		@Override
-		public String toString(Float value) {
-			return value.toString();
-		}
-	};
-	public static final ParamConverter<Double> DOUBLE = new ParamConverter<>() {
-		@Override
-		public Double fromString(String value) {
-			return Double.parseDouble(value);
-		}
-
-		@Override
-		public String toString(Double value) {
-			return value.toString();
-		}
-	};
-
-	private static final class DefaultConvert implements ParamConverterProvider {
-		@SuppressWarnings("unchecked")
-		@Override
-		public <T> ParamConverter<T> getConverter(Class<T> rawType, Type genericType, Annotation[] annotations) {
-			if (rawType == String.class)
-				return (ParamConverter<T>) STRING;
-			if (rawType == Boolean.class || rawType == boolean.class)
-				return (ParamConverter<T>) BOOLEAN;
-			if (rawType == Byte.class || rawType == byte.class)
-				return (ParamConverter<T>) BYTE;
-			if (rawType == Short.class || rawType == short.class)
-				return (ParamConverter<T>) SHORT;
-			if (rawType == Integer.class || rawType == int.class)
-				return (ParamConverter<T>) INTEGER;
-			if (rawType == Long.class || rawType == long.class)
-				return (ParamConverter<T>) LONG;
-			if (rawType == Float.class || rawType == float.class)
-				return (ParamConverter<T>) FLOAT;
-			if (rawType == Double.class || rawType == double.class)
-				return (ParamConverter<T>) DOUBLE;
-			return null;
-		}
 	}
 
 	private static class WebAppExceptionMapping implements ExceptionMapper<WebApplicationException> {

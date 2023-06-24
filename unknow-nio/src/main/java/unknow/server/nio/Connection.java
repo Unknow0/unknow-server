@@ -11,8 +11,8 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 
-import unknow.server.nio.util.Buffers;
-import unknow.server.nio.util.BuffersInputStream;
+import unknow.server.util.io.Buffers;
+import unknow.server.util.io.BuffersInputStream;
 
 /**
  * used to handle raw data

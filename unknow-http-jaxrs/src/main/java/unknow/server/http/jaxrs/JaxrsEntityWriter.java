@@ -22,11 +22,12 @@ import unknow.server.http.jaxrs.impl.ResponseImpl;
  * @param <T> the object type
  */
 public interface JaxrsEntityWriter<T> {
+	public static JaxrsEntityWriter<Response> RESPONSE = new ResponseWriter(new Annotation[0]);
 
 	@SuppressWarnings("unchecked")
 	public static <T> JaxrsEntityWriter<T> create(Class<T> clazz, Type genericType, Annotation[] annotations) {
 		if (Response.class == clazz)
-			return (JaxrsEntityWriter<T>) new ResponseWriter(annotations);
+			return (JaxrsEntityWriter<T>) (annotations.length == 0 ? RESPONSE : new ResponseWriter(annotations));
 		if (GenericEntity.class.isAssignableFrom(clazz))
 			return (JaxrsEntityWriter<T>) new GenericWriter(annotations);
 		return new ObjectWriter<>(clazz, genericType, annotations);
@@ -43,6 +44,12 @@ public interface JaxrsEntityWriter<T> {
 	 */
 	void write(JaxrsReq r, T e, HttpServletResponse res) throws WebApplicationException, IOException;
 
+	/**
+	 * writer for Object
+	 * 
+	 * @param <T> object class
+	 * @author unknow
+	 */
 	static class ObjectWriter<T> implements JaxrsEntityWriter<T> {
 		private final Class<T> clazz;
 		private final Type genericType;
@@ -62,6 +69,11 @@ public interface JaxrsEntityWriter<T> {
 		}
 	}
 
+	/**
+	 * writer for Response
+	 * 
+	 * @author unknow
+	 */
 	static class ResponseWriter implements JaxrsEntityWriter<Response> {
 		private final Annotation[] annotations;
 
@@ -92,6 +104,11 @@ public interface JaxrsEntityWriter<T> {
 		}
 	}
 
+	/**
+	 * writer for GenericEntity
+	 * 
+	 * @author unknow
+	 */
 	static class GenericWriter implements JaxrsEntityWriter<GenericEntity<?>> {
 		private final Annotation[] annotations;
 

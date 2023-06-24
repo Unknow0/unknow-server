@@ -3,7 +3,6 @@
  */
 package unknow.server.http.test;
 
-import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 
@@ -18,6 +17,7 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.Response;
 
 /**
  * @author unknow
@@ -33,8 +33,9 @@ public class Rest {
 
 	@GET
 	@Consumes("text/*")
-	public void onWay2(@PathParam("q") String q, @BeanParam Bean bean) {
-		System.out.println("oneWay2>> q: '" + q + "' bean: " + bean);
+	public Response response(@PathParam("q") String q, @BeanParam Bean bean) {
+		System.out.println("response>> q: '" + q + "' bean: " + bean);
+		return Response.status(200).entity("echo").build();
 	}
 
 	@POST

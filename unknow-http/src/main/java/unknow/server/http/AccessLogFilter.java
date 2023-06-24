@@ -197,6 +197,11 @@ public class AccessLogFilter implements Filter {
 	public void destroy() {
 	}
 
+	@Override
+	public String toString() {
+		return "AccessLog";
+	}
+
 	public static Part[] parse(String template) {
 		List<Part> parts = new ArrayList<>();
 		List<String> param = new ArrayList<>();

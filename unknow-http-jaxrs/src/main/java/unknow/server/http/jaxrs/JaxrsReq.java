@@ -12,6 +12,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,6 +29,8 @@ public class JaxrsReq {
 	private static final Object[] EMPTY = {};
 
 	private final HttpServletRequest r;
+
+	private MediaType accept;
 
 	private Map<String, String> paths;
 	private MultivaluedMap<String, String> queries;
@@ -50,10 +53,31 @@ public class JaxrsReq {
 	}
 
 	public MediaType getAccept() {
-		String contentType = r.getHeader("Accept");
-		if (contentType == null)
-			contentType = "*/*";
-		return MediaTypeDelegate.INSTANCE.fromString(contentType);
+		return accept;
+	}
+
+	public MediaType getAccepted(Predicate<MediaType> allowed) {
+		String a = r.getHeader("accept");
+		if (a == null) {
+			if (allowed.test(MediaType.WILDCARD_TYPE))
+				return accept = MediaType.WILDCARD_TYPE;
+			return null;
+		}
+		int i, l = 0;
+		double lq = -1;
+		do {
+			i = a.indexOf(',', l);
+			MediaType m = MediaTypeDelegate.fromString(a, l, i < 0 ? a.length() : i);
+			if (allowed.test(m)) {
+				double q = Double.parseDouble(m.getParameters().getOrDefault("q", "1"));
+				if (q > lq) {
+					lq = q;
+					this.accept = m;
+				}
+			}
+			l = i + 1;
+		} while (i > 0);
+		return accept;
 	}
 
 	public <T> T getPath(String path, String def, ParamConverter<T> c) {

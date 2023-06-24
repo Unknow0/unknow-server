@@ -102,6 +102,11 @@ public class ServletGenMojo extends AbstractMojo implements BuilderContext {
 	private boolean addAccessLog;
 
 	@Override
+	protected String id() {
+		return "servlet-generator";
+	}
+
+	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
 		init();
 

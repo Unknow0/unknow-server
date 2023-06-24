@@ -6,11 +6,14 @@ package unknow.server.http.jaxrs;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.MultivaluedMap;
+import jakarta.ws.rs.ext.MessageBodyReader;
 import unknow.server.http.jaxrs.header.MediaTypeDelegate;
 
 /**
@@ -23,6 +26,7 @@ public class JaxrsEntityReader<T> {
 	private final Class<T> clazz;
 	private final Type genericType;
 	private final Annotation[] annotations;
+	private final Map<MediaType, MessageBodyReader<T>> readers;
 
 	/**
 	 * create new JaxrsBodyReader
@@ -35,6 +39,7 @@ public class JaxrsEntityReader<T> {
 		this.clazz = clazz;
 		this.genericType = genericType;
 		this.annotations = annotations;
+		this.readers = new ConcurrentHashMap<>();
 	}
 
 	/**
@@ -51,8 +56,11 @@ public class JaxrsEntityReader<T> {
 		if (contentType == null)
 			contentType = "*/*";
 		MediaType mediaType = MediaTypeDelegate.INSTANCE.fromString(contentType);
+		MessageBodyReader<T> reader = readers.get(mediaType);
+		if (reader == null)
+			readers.put(mediaType, reader = JaxrsContext.reader(clazz, genericType, annotations, mediaType));
 
 		MultivaluedMap<String, String> httpHeaders = r.getHeaders();
-		return JaxrsContext.reader(clazz, genericType, annotations, mediaType).readFrom(clazz, genericType, annotations, mediaType, httpHeaders, req.getInputStream());
+		return reader.readFrom(clazz, genericType, annotations, mediaType, httpHeaders, req.getInputStream());
 	}
 }
