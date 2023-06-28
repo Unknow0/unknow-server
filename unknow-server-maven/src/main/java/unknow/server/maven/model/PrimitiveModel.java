@@ -3,13 +3,21 @@
  */
 package unknow.server.maven.model;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 
 /**
  * @author unknow
  */
 public class PrimitiveModel implements TypeModel {
+	public static final PrimitiveModel VOID = new PrimitiveModel("void", "Z", Void.class.getName()) {
+		@Override
+		public boolean isVoid() {
+			return true;
+		}
+	};
 	public static final PrimitiveModel BOOLEAN = new PrimitiveModel("boolean", "Z", Boolean.class.getName());
 	public static final PrimitiveModel BYTE = new PrimitiveModel("byte", "B", Byte.class.getName());
 	public static final PrimitiveModel CHAR = new PrimitiveModel("char", "C", Character.class.getName());
@@ -18,6 +26,8 @@ public class PrimitiveModel implements TypeModel {
 	public static final PrimitiveModel LONG = new PrimitiveModel("long", "L", Long.class.getName());
 	public static final PrimitiveModel FLOAT = new PrimitiveModel("float", "F", Float.class.getName());
 	public static final PrimitiveModel DOUBLE = new PrimitiveModel("double", "D", Double.class.getName());
+
+	public static final List<PrimitiveModel> PRIMITIVES = Arrays.asList(VOID, BOOLEAN, BYTE, CHAR, SHORT, INT, LONG, FLOAT, DOUBLE);
 
 	private final String name;
 	private final String internal;

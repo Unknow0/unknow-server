@@ -25,12 +25,12 @@ public interface JaxrsEntityWriter<T> {
 	public static JaxrsEntityWriter<Response> RESPONSE = new ResponseWriter(new Annotation[0]);
 
 	@SuppressWarnings("unchecked")
-	public static <T> JaxrsEntityWriter<T> create(Class<T> clazz, Type genericType, Annotation[] annotations) {
+	public static <T> JaxrsEntityWriter<T> create(Class<?> clazz, Type genericType, Annotation[] annotations) {
 		if (Response.class == clazz)
 			return (JaxrsEntityWriter<T>) (annotations.length == 0 ? RESPONSE : new ResponseWriter(annotations));
 		if (GenericEntity.class.isAssignableFrom(clazz))
 			return (JaxrsEntityWriter<T>) new GenericWriter(annotations);
-		return new ObjectWriter<>(clazz, genericType, annotations);
+		return new ObjectWriter<T>(clazz, genericType, annotations);
 	}
 
 	/**
@@ -51,11 +51,11 @@ public interface JaxrsEntityWriter<T> {
 	 * @author unknow
 	 */
 	static class ObjectWriter<T> implements JaxrsEntityWriter<T> {
-		private final Class<T> clazz;
+		private final Class<?> clazz;
 		private final Type genericType;
 		private final Annotation[] annotations;
 
-		public ObjectWriter(Class<T> clazz, Type genericType, Annotation[] annotations) {
+		public ObjectWriter(Class<?> clazz, Type genericType, Annotation[] annotations) {
 			this.clazz = clazz;
 			this.genericType = genericType;
 			this.annotations = annotations;

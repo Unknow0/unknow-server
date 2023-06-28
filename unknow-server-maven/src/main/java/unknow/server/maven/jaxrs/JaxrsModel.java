@@ -80,24 +80,11 @@ public class JaxrsModel {
 	private static final String[] ALL = { "*/*" };
 	private static final Pattern p = Pattern.compile("(?<=/)\\{\\s*(\\w[\\w\\.\\-]*)\\s*(?::\\s*((?:[^\\{\\}]|\\{[^\\{\\}]*\\})*)\\s*)?\\}(?=/|$)");
 
-	private static final Set<String> JAXRS_ANNOTATIONS = new HashSet<>(Arrays.asList(
-			GET.class.getName(),
-			POST.class.getName(),
-			PUT.class.getName(),
-			DELETE.class.getName(),
-			PATCH.class.getName(),
-			HEAD.class.getName(),
-			OPTIONS.class.getName(),
-			HttpMethod.class.getName()));
+	private static final Set<String> JAXRS_ANNOTATIONS = new HashSet<>(Arrays.asList(GET.class.getName(), POST.class.getName(), PUT.class.getName(), DELETE.class.getName(),
+			PATCH.class.getName(), HEAD.class.getName(), OPTIONS.class.getName(), HttpMethod.class.getName()));
 
-	private static final Set<String> JARXS_PARAM = new HashSet<>(Arrays.asList(
-			BeanParam.class.getName(),
-			PathParam.class.getName(),
-			QueryParam.class.getName(),
-			CookieParam.class.getName(),
-			HeaderParam.class.getName(),
-			FormParam.class.getName(),
-			MatrixParam.class.getName()));
+	private static final Set<String> JARXS_PARAM = new HashSet<>(Arrays.asList(BeanParam.class.getName(), PathParam.class.getName(), QueryParam.class.getName(),
+			CookieParam.class.getName(), HeaderParam.class.getName(), FormParam.class.getName(), MatrixParam.class.getName()));
 
 	private final List<JaxrsMapping> mappings = new ArrayList<>();
 	// path, method
@@ -159,8 +146,7 @@ public class JaxrsModel {
 				try {
 					URLConnection uc = u.openConnection();
 					uc.setUseCaches(false);
-					try (InputStream in = uc.getInputStream();
-							BufferedReader r = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
+					try (InputStream in = uc.getInputStream(); BufferedReader r = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
 						String l;
 						while ((l = r.readLine()) != null) {
 							String c = parseLine(u, l);
@@ -376,6 +362,8 @@ public class JaxrsModel {
 				return param;
 
 			ClassModel cl = type.asClass();
+			if (cl.isBoxedPrimitive())
+				return param;
 			if (cl.constructors(string).filter(c -> c.isPublic()).isPresent())
 				implicitConstructor.add(type.name());
 			else {

@@ -39,10 +39,8 @@ public class CreateServletManager extends Builder {
 		Descriptor descriptor = ctx.descriptor();
 		TypeCache types = ctx.type();
 		ctx.self().addMethod("createServletManager", Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL).setType(types.getClass(ServletManager.class))
-				.addMarkerAnnotation(Override.class)
-				.getBody().get()
-				.addStatement(new ReturnStmt(new ObjectCreationExpr(null, types.getClass(ServletManager.class),
-						Utils.list(errorCode(descriptor, types), errorClass(descriptor, types)))));
+				.addMarkerAnnotation(Override.class).getBody().get().addStatement(new ReturnStmt(
+						new ObjectCreationExpr(null, types.getClass(ServletManager.class), Utils.list(errorCode(descriptor, types), errorClass(descriptor, types)))));
 	}
 
 	private static ObjectCreationExpr errorCode(Descriptor descriptor, TypeCache t) {
