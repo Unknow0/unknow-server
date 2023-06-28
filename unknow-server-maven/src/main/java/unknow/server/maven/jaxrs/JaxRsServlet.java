@@ -3,6 +3,7 @@
  */
 package unknow.server.maven.jaxrs;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.Writer;
 import java.lang.annotation.Annotation;
@@ -33,7 +34,12 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.Node;
@@ -72,16 +78,7 @@ import com.github.javaparser.ast.type.ArrayType;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.TypeParameter;
 
-import io.swagger.v3.oas.models.Components;
-import io.swagger.v3.oas.models.ExternalDocumentation;
 import io.swagger.v3.oas.models.OpenAPI;
-import io.swagger.v3.oas.models.Operation;
-import io.swagger.v3.oas.models.PathItem;
-import io.swagger.v3.oas.models.info.Info;
-import io.swagger.v3.oas.models.media.Schema;
-import io.swagger.v3.oas.models.security.SecurityRequirement;
-import io.swagger.v3.oas.models.servers.Server;
-import io.swagger.v3.oas.models.tags.Tag;
 import jakarta.servlet.ServletContainerInitializer;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
@@ -117,6 +114,8 @@ import unknow.server.maven.model.TypeModel;
  */
 @Mojo(defaultPhase = LifecyclePhase.GENERATE_SOURCES, name = "jaxrs-generator", requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME, requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
 public class JaxRsServlet extends AbstractMojo {
+	private static final Logger logger = LoggerFactory.getLogger(JaxRsServlet.class);
+
 	private static final Modifier.Keyword[] PUBLIC = { Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL };
 	private static final Modifier.Keyword[] PROTECT = { Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL };
 	private static final Modifier.Keyword[] PSF = { Modifier.Keyword.PRIVATE, Modifier.Keyword.STATIC, Modifier.Keyword.FINAL };
@@ -152,7 +151,7 @@ public class JaxRsServlet extends AbstractMojo {
 	private ClassOrInterfaceDeclaration cl;
 
 	@Parameter(name = "openapi")
-	private OpenApi openapi;
+	private OpenApiBuilder openapi = new OpenApiBuilder();
 
 	private final Map<JaxrsParam, String> converterVar = new HashMap<>();
 
@@ -182,7 +181,28 @@ public class JaxRsServlet extends AbstractMojo {
 		for (String path : model.paths())
 			generateClass(path);
 
-		buildOpenApi();
+		OpenAPI api = openapi.build(project, model);
+
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
+		ObjectMapper m = new ObjectMapper().enable(SerializationFeature.WRITE_ENUMS_USING_TO_STRING).disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS).setDefaultPropertyInclusion(Include.NON_EMPTY);
+		try {
+			m.writeValue(bos, api);
+		} catch (IOException e) {
+			throw new MojoExecutionException(e);
+		}
+
+		CompilationUnit cu = new CompilationUnit(packageName);
+		TypeCache types = new TypeCache(cu, existingClass);
+		ClassOrInterfaceDeclaration cl = cu.addClass("OpenApi", PUBLIC).addSingleMemberAnnotation(WebServlet.class, new StringLiteralExpr("/openapi.json")).addExtendedType(types.getClass(HttpServlet.class));
+		cl.addFieldWithInitializer(types.get(long.class), "serialVersionUID", new LongLiteralExpr("1"), PSF);
+		cl.addFieldWithInitializer(types.get(byte[].class), "DATA", Utils.byteArray(bos.toByteArray()), PSF);
+
+		cl.addMethod("doGet", PUBLIC).addMarkerAnnotation(Override.class).addThrownException(types.getClass(IOException.class))
+				.addParameter(types.getClass(HttpServletRequest.class), "req").addParameter(types.getClass(HttpServletResponse.class), "res").getBody().get()
+				.addStatement(new MethodCallExpr(new NameExpr("res"), "setContentType", Utils.list(new StringLiteralExpr("application/json"))))
+				.addStatement(new MethodCallExpr(new NameExpr("res"), "setContentLength", Utils.list(new IntegerLiteralExpr(Integer.toString(bos.size())))))
+				.addStatement(new MethodCallExpr(new MethodCallExpr(new NameExpr("res"), "getOutputStream"), "write", Utils.list(new NameExpr("DATA"))));
+		out.save(cu);
 
 		// TODO create openapi Path
 
@@ -192,45 +212,6 @@ public class JaxRsServlet extends AbstractMojo {
 	/**
 	 * 
 	 */
-	private OpenAPI buildOpenApi() {
-		OpenAPI spec = new OpenAPI();
-		if (openapi == null)
-			openapi = new OpenApi();
-		Info info = openapi.info;
-		if (info == null)
-			spec.setInfo(info = new Info());
-		if (info.getTitle() == null)
-			info.setTitle(project.getArtifactId());
-		if (info.getVersion() == null)
-			info.setVersion(project.getVersion());
-
-		if (openapi.servers != null)
-			spec.setServers(openapi.servers);
-		if (openapi.security != null)
-			spec.setSecurity(openapi.security);
-		if (openapi.tags != null)
-			spec.setTags(openapi.tags);
-		if (openapi.externalDocs != null)
-			spec.setExternalDocs(openapi.externalDocs);
-
-		Map<String, Schema> schemas = new HashMap<>();
-		io.swagger.v3.oas.models.Paths paths = new io.swagger.v3.oas.models.Paths();
-
-		for (String p : model.paths()) {
-			PathItem pathItem = new PathItem();
-			for (String m : model.methods(p)) {
-//				model.mapping(p, m)
-				Operation operation = new Operation();
-
-				pathItem.setDelete(null);
-			}
-			paths.put(p, pathItem);
-		}
-		// TODO add path
-		// TODO add component/schema
-
-		return spec.components(new Components().schemas(schemas)).paths(paths);
-	}
 
 	private void generateInitalizer() throws IOException, MojoExecutionException {
 
@@ -655,13 +636,5 @@ public class JaxRsServlet extends AbstractMojo {
 		else if (set.isAssignableFrom(p.type))
 			e = new ObjectCreationExpr(null, types.getClass(HashSet.class), Utils.list(e));
 		return e;
-	}
-
-	public static class OpenApi {
-		public Info info;
-		public List<Server> servers;
-		public List<SecurityRequirement> security;
-		public List<Tag> tags;
-		public ExternalDocumentation externalDocs;
 	}
 }

@@ -1,0 +1,130 @@
+/**
+ * 
+ */
+package unknow.server.maven.jaxrs;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.maven.project.MavenProject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import io.swagger.v3.oas.models.Components;
+import io.swagger.v3.oas.models.ExternalDocumentation;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.Operation;
+import io.swagger.v3.oas.models.PathItem;
+import io.swagger.v3.oas.models.annotations.OpenAPI30;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.media.Schema;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.servers.Server;
+import io.swagger.v3.oas.models.tags.Tag;
+
+public class OpenApiBuilder {
+	private static final Logger logger = LoggerFactory.getLogger(OpenApiBuilder.class);
+	public Info info;
+	public List<Server> servers;
+	public List<SecurityRequirement> security;
+	public List<Tag> tags;
+	public ExternalDocumentation externalDocs;
+
+	public OpenAPI build(MavenProject project, JaxrsModel model) {
+		OpenAPI spec = new OpenAPI();
+		if (info == null)
+			spec.setInfo(info = new Info());
+		if (info.getTitle() == null)
+			info.setTitle(project.getArtifactId());
+		if (info.getVersion() == null)
+			info.setVersion(project.getVersion());
+
+		if (servers != null)
+			spec.setServers(servers);
+		if (security != null)
+			spec.setSecurity(security);
+		if (tags != null)
+			spec.setTags(tags);
+		if (externalDocs != null)
+			spec.setExternalDocs(externalDocs);
+
+		@SuppressWarnings("rawtypes") Map<String, Schema> schemas = new HashMap<>();
+		io.swagger.v3.oas.models.Paths paths = new io.swagger.v3.oas.models.Paths();
+
+		for (JaxrsMapping m : model.mappings()) {
+			PathItem p = paths.computeIfAbsent(m.path, k -> new PathItem());
+
+			Operation o = createOp(p, m.httpMethod);
+			if (o == null) {
+				logger.warn("can't map operation " + m.httpMethod + " " + m.path + " duplicate or unupported");
+				continue;
+			}
+
+			// TODO get @Operation
+//			o.set
+//			PathItem pathItem = new PathItem();
+//				model.mapping(p, m)
+//			Operation operation = new Operation();
+
+//			pathItem.setDelete(null);
+		}
+		// TODO add path
+		// TODO add component/schema
+
+		return spec.components(new Components().schemas(schemas)).paths(paths);
+	}
+
+	/**
+	 * @param p
+	 * @param httpMethod
+	 * @return
+	 */
+	private static Operation createOp(PathItem p, String httpMethod) {
+		Operation o = new Operation();
+		switch (httpMethod) {
+			case "GET":
+				if (p.getGet() != null)
+					return null;
+				p.setGet(o);
+				return o;
+			case "PUT":
+				if (p.getPut() != null)
+					return null;
+				p.setPut(o);
+				return o;
+			case "POST":
+				if (p.getPost() != null)
+					return null;
+				p.setPost(o);
+				return o;
+			case "DELETE":
+				if (p.getDelete() != null)
+					return null;
+				p.setDelete(o);
+				return o;
+			case "OPTIONS":
+				if (p.getOptions() != null)
+					return null;
+				p.setOptions(o);
+				return o;
+			case "HEAD":
+				if (p.getHead() != null)
+					return null;
+				p.setHead(o);
+				return o;
+			case "PATCH":
+				if (p.getPatch() != null)
+					return null;
+				p.setPatch(o);
+				return o;
+			case "TRACE":
+				if (p.getTrace() != null)
+					return null;
+				p.setTrace(o);
+				return o;
+			default:
+				return null;
+		}
+	}
+}

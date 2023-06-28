@@ -13,16 +13,20 @@ public class JaxrsMapping {
 	public final String var;
 	public final ClassModel clazz;
 	public final MethodModel m;
+	public final String httpMethod;
+	public final String path;
 	public final List<JaxrsParam> params;
 	public final List<PathPart> parts;
 	public final String[] consume;
 	public final String[] produce;
 
-	public JaxrsMapping(String var, ClassModel clazz, MethodModel m, List<JaxrsParam> params, List<PathPart> parts, String[] consume, String[] produce) {
+	public JaxrsMapping(String var, ClassModel clazz, MethodModel m, String httpMethod, List<JaxrsParam> params, String path, List<PathPart> parts, String[] consume, String[] produce) {
 		this.var = var;
 		this.clazz = clazz;
 		this.m = m;
+		this.httpMethod = httpMethod;
 		this.params = params;
+		this.path = path;
 		this.parts = parts;
 		this.consume = consume;
 		this.produce = produce;

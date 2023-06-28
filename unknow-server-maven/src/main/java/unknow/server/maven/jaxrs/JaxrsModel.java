@@ -298,12 +298,12 @@ public class JaxrsModel {
 		}
 		StringBuilder sb = new StringBuilder();
 		List<PathPart> parts = parsePath(sb, path);
-		path = sb.toString();
+		String normalizedPath = sb.toString();
 		sb.setLength(0);
 
-		Map<String, List<JaxrsMapping>> map = paths.get(path);
+		Map<String, List<JaxrsMapping>> map = paths.get(normalizedPath);
 		if (map == null)
-			paths.put(path, map = new HashMap<>());
+			paths.put(normalizedPath, map = new HashMap<>());
 
 		String errorName = clazz.name() + "." + m.signature();
 		String method = getMethod(m, errorName);
@@ -343,7 +343,7 @@ public class JaxrsModel {
 				throw new RuntimeException("Duplicate mapping for '" + j.m + "' and '" + m + "'");
 		}
 
-		JaxrsMapping jaxrsMapping = new JaxrsMapping("m$" + mappings.size(), clazz, m, params, pp, consume, produce);
+		JaxrsMapping jaxrsMapping = new JaxrsMapping("m$" + mappings.size(), clazz, m, method, params, path, pp, consume, produce);
 		list.add(jaxrsMapping);
 		mappings.add(jaxrsMapping);
 	}
