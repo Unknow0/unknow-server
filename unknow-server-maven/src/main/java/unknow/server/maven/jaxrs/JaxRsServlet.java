@@ -3,11 +3,9 @@
  */
 package unknow.server.maven.jaxrs;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.Writer;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
@@ -37,9 +35,6 @@ import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.Node;
@@ -78,7 +73,6 @@ import com.github.javaparser.ast.type.ArrayType;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.TypeParameter;
 
-import io.swagger.v3.oas.models.OpenAPI;
 import jakarta.servlet.ServletContainerInitializer;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
@@ -104,7 +98,6 @@ import unknow.server.maven.Utils;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBodyParam;
 import unknow.server.maven.model.ClassModel;
-import unknow.server.maven.model.FieldModel;
 import unknow.server.maven.model.MethodModel;
 import unknow.server.maven.model.ParamModel;
 import unknow.server.maven.model.TypeModel;
@@ -115,10 +108,6 @@ import unknow.server.maven.model.TypeModel;
 @Mojo(defaultPhase = LifecyclePhase.GENERATE_SOURCES, name = "jaxrs-generator", requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME, requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
 public class JaxRsServlet extends AbstractMojo {
 	private static final Logger logger = LoggerFactory.getLogger(JaxRsServlet.class);
-
-	private static final Modifier.Keyword[] PUBLIC = { Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL };
-	private static final Modifier.Keyword[] PROTECT = { Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL };
-	private static final Modifier.Keyword[] PSF = { Modifier.Keyword.PRIVATE, Modifier.Keyword.STATIC, Modifier.Keyword.FINAL };
 
 	static final Comparator<String> MIME = (a, b) -> {
 		String[] am = a.split("/");
@@ -155,8 +144,7 @@ public class JaxRsServlet extends AbstractMojo {
 
 	private final Map<JaxrsParam, String> converterVar = new HashMap<>();
 
-	private final Map<String, JaxrsBeanParam> beans = new HashMap<>();
-	private final Map<String, String> beansVar = new HashMap<>();
+	private BeanParamBuilder beans;
 
 	@Override
 	protected String id() {
@@ -173,6 +161,8 @@ public class JaxRsServlet extends AbstractMojo {
 		processSrc(cu -> cu.walk(ClassOrInterfaceDeclaration.class, t -> model.process(loader.get(t.getFullyQualifiedName().get()).asClass())));
 		model.implicitConstructor.remove("java.lang.String");
 
+		beans = new BeanParamBuilder(loader, packageName, existingClass);
+
 		try {
 			generateInitalizer();
 		} catch (IOException e) {
@@ -181,32 +171,8 @@ public class JaxRsServlet extends AbstractMojo {
 		for (String path : model.paths())
 			generateClass(path);
 
-		OpenAPI api = openapi.build(project, model);
-
-		ByteArrayOutputStream bos = new ByteArrayOutputStream();
-		ObjectMapper m = new ObjectMapper().enable(SerializationFeature.WRITE_ENUMS_USING_TO_STRING).disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS).setDefaultPropertyInclusion(Include.NON_EMPTY);
-		try {
-			m.writeValue(bos, api);
-		} catch (IOException e) {
-			throw new MojoExecutionException(e);
-		}
-
-		CompilationUnit cu = new CompilationUnit(packageName);
-		TypeCache types = new TypeCache(cu, existingClass);
-		ClassOrInterfaceDeclaration cl = cu.addClass("OpenApi", PUBLIC).addSingleMemberAnnotation(WebServlet.class, new StringLiteralExpr("/openapi.json")).addExtendedType(types.getClass(HttpServlet.class));
-		cl.addFieldWithInitializer(types.get(long.class), "serialVersionUID", new LongLiteralExpr("1"), PSF);
-		cl.addFieldWithInitializer(types.get(byte[].class), "DATA", Utils.byteArray(bos.toByteArray()), PSF);
-
-		cl.addMethod("doGet", PUBLIC).addMarkerAnnotation(Override.class).addThrownException(types.getClass(IOException.class))
-				.addParameter(types.getClass(HttpServletRequest.class), "req").addParameter(types.getClass(HttpServletResponse.class), "res").getBody().get()
-				.addStatement(new MethodCallExpr(new NameExpr("res"), "setContentType", Utils.list(new StringLiteralExpr("application/json"))))
-				.addStatement(new MethodCallExpr(new NameExpr("res"), "setContentLength", Utils.list(new IntegerLiteralExpr(Integer.toString(bos.size())))))
-				.addStatement(new MethodCallExpr(new MethodCallExpr(new NameExpr("res"), "getOutputStream"), "write", Utils.list(new NameExpr("DATA"))));
-		out.save(cu);
-
-		// TODO create openapi Path
-
-		// TODO build openapi.json
+		out.save(openapi.build(project, model, packageName, existingClass));
+		beans.save(out);
 	}
 
 	/**
@@ -225,8 +191,8 @@ public class JaxRsServlet extends AbstractMojo {
 		cu.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolSolver);
 		types = new TypeCache(cu, existingClass);
 
-		cl = cu.addClass("JaxrsInit", PUBLIC).addImplementedType(ServletContainerInitializer.class);
-		BlockStmt b = cl.addMethod("onStartup", PUBLIC).addMarkerAnnotation(Override.class)
+		cl = cu.addClass("JaxrsInit", Utils.PUBLIC).addImplementedType(ServletContainerInitializer.class);
+		BlockStmt b = cl.addMethod("onStartup", Utils.PUBLIC).addMarkerAnnotation(Override.class)
 				.addParameter(types.getClass(Set.class, types.getClass(Class.class, TypeCache.ANY)), "c").addParameter(types.getClass(ServletContext.class), "ctx").getBody()
 				.get().addStatement(new MethodCallExpr(new TypeExpr(types.getClass(RuntimeDelegate.class)), "setInstance",
 						Utils.list(new ObjectCreationExpr(null, types.getClass(JaxrsRuntime.class), Utils.list()))));
@@ -284,7 +250,7 @@ public class JaxRsServlet extends AbstractMojo {
 					new ReturnStmt(new CastExpr(p, new NameExpr(n))), null));
 		}
 
-		clazz.addMethod("getConverter", PUBLIC).addMarkerAnnotation(Override.class).addSingleMemberAnnotation(SuppressWarnings.class, new StringLiteralExpr("unchecked"))
+		clazz.addMethod("getConverter", Utils.PUBLIC).addMarkerAnnotation(Override.class).addSingleMemberAnnotation(SuppressWarnings.class, new StringLiteralExpr("unchecked"))
 				.addTypeParameter(t).setType(p).addParameter(types.getClass(Class.class, t), "rawType").addParameter(types.getClass(Type.class), "genericType")
 				.addParameter(types.array(Annotation.class), "Annotation").setBody(b.addStatement(new ReturnStmt(new NullLiteralExpr())));
 	}
@@ -305,7 +271,7 @@ public class JaxRsServlet extends AbstractMojo {
 						Utils.list(), types.getClass(String.class), new SimpleName("toString"), Utils.list(new com.github.javaparser.ast.body.Parameter(type, "value")),
 						Utils.list(), new BlockStmt().addStatement(new ReturnStmt(new MethodCallExpr(new NameExpr("value"), "toString")))));
 		clazz.addFieldWithInitializer(types.getClass(ParamConverter.class, type), name,
-				new ObjectCreationExpr(null, types.getClass(ParamConverter.class, TypeCache.EMPTY), null, Utils.list(), methods), PSF);
+				new ObjectCreationExpr(null, types.getClass(ParamConverter.class, TypeCache.EMPTY), null, Utils.list(), methods), Utils.PSF);
 	}
 
 	/**
@@ -318,81 +284,72 @@ public class JaxRsServlet extends AbstractMojo {
 		cu.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolSolver);
 		types = new TypeCache(cu, existingClass);
 
-		cl = cu.addClass("Jaxrs" + path.replace('/', '_').replaceAll("\u0000", ""), PUBLIC)
+		cl = cu.addClass("Jaxrs" + path.replace('/', '_').replaceAll("\u0000", ""), Utils.PUBLIC)
 				.addSingleMemberAnnotation(WebServlet.class, new StringLiteralExpr(path.replace("\u0000", "\\u0000"))).addExtendedType(HttpServlet.class);
 
-		cl.addFieldWithInitializer(long.class, "serialVersionUID", new LongLiteralExpr("1"), PSF);
+		cl.addFieldWithInitializer(long.class, "serialVersionUID", new LongLiteralExpr("1"), Utils.PSF);
+
+		BlockStmt b = cl.addStaticInitializer().addStatement(new VariableDeclarationExpr(types.array(Type.class), "t"))
+				.addStatement(new VariableDeclarationExpr(new ArrayType(types.array(Annotation.class)), "a"))
+				.addStatement(new VariableDeclarationExpr(types.getClass(Type.class), "r")).addStatement(new VariableDeclarationExpr(types.array(Annotation.class), "ra"));
 
 		Map<String, NameExpr> services = new HashMap<>();
 		Set<MethodModel> methods = new HashSet<>();
 		for (String method : model.methods(path)) {
-			for (JaxrsMapping mapping : model.mapping(path, method)) {
+			for (JaxrsMapping m : model.mapping(path, method)) {
 
-				ClassModel c = mapping.clazz;
-				methods.add(mapping.m);
+				ClassModel c = m.clazz;
+				methods.add(m.m);
 
 				String n = "s$" + services.size();
-				if (services.containsKey(c.name()))
-					continue;
-				services.put(c.name(), new NameExpr(n));
-				cl.addFieldWithInitializer(types.get(c.name()), n, new ObjectCreationExpr(null, types.getClass(c), Utils.list()), PSF);
+				if (!services.containsKey(c.name())) {
+					services.put(c.name(), new NameExpr(n));
+					cl.addFieldWithInitializer(types.get(c.name()), n, new ObjectCreationExpr(null, types.getClass(c), Utils.list()), Utils.PSF);
+				}
+
+				List<ParamModel<MethodModel>> parameters = m.m.parameters();
+				NodeList<Expression> classes = new NodeList<>();
+				for (ParamModel<MethodModel> p : parameters)
+					classes.add(new ClassExpr(types.get(p.type().name())));
+				NodeList<Expression> getMethod = new NodeList<>();
+				getMethod.add(new StringLiteralExpr(m.m.name()));
+				getMethod.addAll(classes);
+
+				BlockStmt t = new BlockStmt()
+						.addStatement(Utils.assign(types.getClass(Method.class), "m", new MethodCallExpr(new ClassExpr(types.get(m.m.parent().name())), "getMethod", getMethod)))
+						.addStatement(new AssignExpr(new NameExpr("t"), new MethodCallExpr(new NameExpr("m"), "getGenericParameterTypes"), AssignExpr.Operator.ASSIGN))
+						.addStatement(new AssignExpr(new NameExpr("a"), new MethodCallExpr(new NameExpr("m"), "getParameterAnnotations"), AssignExpr.Operator.ASSIGN));
+				BlockStmt ca = new BlockStmt().addStatement(new AssignExpr(new NameExpr("t"), Utils.array(types.getClass(Type.class), classes), AssignExpr.Operator.ASSIGN))
+						.addStatement(new AssignExpr(new NameExpr("a"), Utils.array(types.getClass(Annotation.class), parameters.size(), 0), AssignExpr.Operator.ASSIGN));
+
+				if (!m.m.type().isVoid()) {
+					t.addStatement(new AssignExpr(new NameExpr("r"), new MethodCallExpr(new NameExpr("m"), "getGenericReturnType"), AssignExpr.Operator.ASSIGN))
+							.addStatement(new AssignExpr(new NameExpr("ra"), new MethodCallExpr(new NameExpr("m"), "getAnnotations"), AssignExpr.Operator.ASSIGN));
+					ca.addStatement(new AssignExpr(new NameExpr("r"), new ClassExpr(types.get(m.m.type().name())), AssignExpr.Operator.ASSIGN))
+							.addStatement(new AssignExpr(new NameExpr("ra"), Utils.array(types.getClass(Annotation.class), 0), AssignExpr.Operator.ASSIGN));
+				}
+
+				b.addStatement(new TryStmt(t, Utils.list(new CatchClause(new com.github.javaparser.ast.body.Parameter(types.getClass(Exception.class), "e"), ca)), null));
+
+				int i = 0;
+				for (JaxrsParam p : m.params)
+					processConverter(p, m.var + "$" + i, i++, b);
+
+				TypeModel type = m.m.type();
+				if (!type.isVoid()) {
+					if (type.isPrimitive())
+						type = loader.get(type.asPrimitive().boxed());
+
+					cl.addField(types.getClass(JaxrsEntityWriter.class, types.get(type)), m.var + "$r", Utils.PSF);
+					b.addStatement(new AssignExpr(new NameExpr(m.var + "$r"), new MethodCallExpr(new TypeExpr(types.getClass(JaxrsEntityWriter.class)), "create",
+							Utils.list(new ClassExpr(types.get(m.m.type().name())), new NameExpr("r"), new NameExpr("ra"))), AssignExpr.Operator.ASSIGN));
+				}
+				for (JaxrsParam p : m.params) {
+					if (p instanceof JaxrsBeanParam)
+						beans.add((JaxrsBeanParam) p);
+				}
 			}
 		}
-
-		BlockStmt b = new BlockStmt().addStatement(new VariableDeclarationExpr(types.array(Type.class), "t"))
-				.addStatement(new VariableDeclarationExpr(new ArrayType(types.array(Annotation.class)), "a"))
-				.addStatement(new VariableDeclarationExpr(types.getClass(Type.class), "r")).addStatement(new VariableDeclarationExpr(types.array(Annotation.class), "ra"));
-		BlockStmt bean = new BlockStmt().addStatement(new VariableDeclarationExpr(types.getClass(Type.class), "t"))
-				.addStatement(new VariableDeclarationExpr(types.array(Annotation.class), "a"));
-
-		for (JaxrsMapping m : model.mappings()) {
-			List<ParamModel<MethodModel>> parameters = m.m.parameters();
-			NodeList<Expression> classes = new NodeList<>();
-			for (ParamModel<MethodModel> p : parameters)
-				classes.add(new ClassExpr(types.get(p.type().name())));
-			NodeList<Expression> getMethod = new NodeList<>();
-			getMethod.add(new StringLiteralExpr(m.m.name()));
-			getMethod.addAll(classes);
-
-			BlockStmt t = new BlockStmt()
-					.addStatement(Utils.assign(types.getClass(Method.class), "m", new MethodCallExpr(new ClassExpr(types.get(m.m.parent().name())), "getMethod", getMethod)))
-					.addStatement(new AssignExpr(new NameExpr("t"), new MethodCallExpr(new NameExpr("m"), "getGenericParameterTypes"), AssignExpr.Operator.ASSIGN))
-					.addStatement(new AssignExpr(new NameExpr("a"), new MethodCallExpr(new NameExpr("m"), "getParameterAnnotations"), AssignExpr.Operator.ASSIGN));
-			BlockStmt c = new BlockStmt().addStatement(new AssignExpr(new NameExpr("t"), Utils.array(types.getClass(Type.class), classes), AssignExpr.Operator.ASSIGN))
-					.addStatement(new AssignExpr(new NameExpr("a"), Utils.array(types.getClass(Annotation.class), parameters.size(), 0), AssignExpr.Operator.ASSIGN));
-
-			if (!m.m.type().isVoid()) {
-				t.addStatement(new AssignExpr(new NameExpr("r"), new MethodCallExpr(new NameExpr("m"), "getGenericReturnType"), AssignExpr.Operator.ASSIGN))
-						.addStatement(new AssignExpr(new NameExpr("ra"), new MethodCallExpr(new NameExpr("m"), "getAnnotations"), AssignExpr.Operator.ASSIGN));
-				c.addStatement(new AssignExpr(new NameExpr("r"), new ClassExpr(types.get(m.m.type().name())), AssignExpr.Operator.ASSIGN))
-						.addStatement(new AssignExpr(new NameExpr("ra"), Utils.array(types.getClass(Annotation.class), 0), AssignExpr.Operator.ASSIGN));
-			}
-
-			b.addStatement(new TryStmt(t, Utils.list(new CatchClause(new com.github.javaparser.ast.body.Parameter(types.getClass(Exception.class), "e"), c)), null));
-
-			int i = 0;
-			for (JaxrsParam p : m.params)
-				processConverter(p, m.var + "$" + i, i++, b);
-
-			TypeModel type = m.m.type();
-			if (!type.isVoid()) {
-				if (type.isPrimitive())
-					type = loader.get(type.asPrimitive().boxed());
-
-				cl.addField(types.getClass(JaxrsEntityWriter.class, types.get(type)), m.var + "$r", PSF);
-				b.addStatement(new AssignExpr(new NameExpr(m.var + "$r"), new MethodCallExpr(new TypeExpr(types.getClass(JaxrsEntityWriter.class)), "create",
-						Utils.list(new ClassExpr(types.get(m.m.type().name())), new NameExpr("r"), new NameExpr("ra"))), AssignExpr.Operator.ASSIGN));
-			}
-			for (JaxrsParam p : m.params) {
-				if (!(p instanceof JaxrsBeanParam))
-					continue;
-				processBeanConverter((JaxrsBeanParam) p, bean);
-			}
-		}
-		if (b.getChildNodes().size() > 2)
-			cl.getMembers().add(new InitializerDeclaration(true, b));
-		if (bean.getChildNodes().size() > 2)
-			cl.getMembers().add(new InitializerDeclaration(true, bean));
 
 		NameExpr m = new NameExpr("m");
 		Expression[] p = { new NameExpr("req"), new NameExpr("res") };
@@ -406,7 +363,7 @@ public class JaxRsServlet extends AbstractMojo {
 			i = new IfStmt(new MethodCallExpr(new StringLiteralExpr(method), "equals", Utils.list(m)),
 					new ExpressionStmt(new MethodCallExpr("do" + method.charAt(0) + method.substring(1).toLowerCase(), p)), i);
 
-		cl.addMethod("service", PUBLIC).addMarkerAnnotation(Override.class).addParameter(types.getClass(HttpServletRequest.class), "req")
+		cl.addMethod("service", Utils.PUBLIC).addMarkerAnnotation(Override.class).addParameter(types.getClass(HttpServletRequest.class), "req")
 				.addParameter(types.getClass(HttpServletResponse.class), "res").addThrownException(IOException.class).addThrownException(ServletException.class).getBody()
 				.get().addStatement(Utils.assign(types.getClass(String.class), "m", new MethodCallExpr(new NameExpr("req"), "getMethod"))).addStatement(i);
 
@@ -417,7 +374,7 @@ public class JaxRsServlet extends AbstractMojo {
 			if (!model.methods(path).contains("HEAD") && model.methods(path).contains("GET"))
 				sb.append(",HEAD");
 
-			cl.addMethod("doOptions", PROTECT).addMarkerAnnotation(Override.class).addParameter(types.getClass(HttpServletRequest.class), "req")
+			cl.addMethod("doOptions", Utils.PROTECT).addMarkerAnnotation(Override.class).addParameter(types.getClass(HttpServletRequest.class), "req")
 					.addParameter(types.getClass(HttpServletResponse.class), "res").addThrownException(IOException.class).addThrownException(ServletException.class).getBody()
 					.get()
 					.addStatement(new MethodCallExpr(new NameExpr("res"), "setHeader", Utils.list(new StringLiteralExpr("Allow"), new StringLiteralExpr(sb.toString()))));
@@ -431,8 +388,6 @@ public class JaxRsServlet extends AbstractMojo {
 				buildCall(mapping, services);
 		}
 
-		for (Entry<String, JaxrsBeanParam> e : beans.entrySet())
-			buildBeanMethod(e.getKey(), e.getValue());
 		out.save(cu);
 	}
 
@@ -447,65 +402,18 @@ public class JaxRsServlet extends AbstractMojo {
 		converterVar.put(p, n);
 		TypeModel m = p.type.isPrimitive() ? loader.get(p.type.asPrimitive().boxed()) : p.type;
 		if (p instanceof JaxrsBodyParam) {
-			cl.addField(types.getClass(JaxrsEntityReader.class, types.get(m)), n, PSF);
+			cl.addField(types.getClass(JaxrsEntityReader.class, types.get(m)), n, Utils.PSF);
 			b.addStatement(new AssignExpr(new NameExpr(n),
 					new ObjectCreationExpr(null, types.getClass(JaxrsEntityReader.class, TypeCache.EMPTY), Utils.list(new ClassExpr(types.get(p.type.name())),
 							new ArrayAccessExpr(new NameExpr("t"), new IntegerLiteralExpr("" + i)), new ArrayAccessExpr(new NameExpr("a"), new IntegerLiteralExpr("" + i)))),
 					AssignExpr.Operator.ASSIGN));
 		} else {
 			m = JaxrsModel.getParamType(m);
-			cl.addField(types.getClass(ParamConverter.class, types.get(m.isPrimitive() ? m.asPrimitive().boxed() : m.name())), n, PSF);
+			cl.addField(types.getClass(ParamConverter.class, types.get(m.isPrimitive() ? m.asPrimitive().boxed() : m.name())), n, Utils.PSF);
 			b.addStatement(new AssignExpr(new NameExpr(n),
 					new MethodCallExpr(new TypeExpr(types.getClass(JaxrsContext.class)), "converter", Utils.list(new ClassExpr(types.get(m.name())),
 							new ArrayAccessExpr(new NameExpr("t"), new IntegerLiteralExpr("" + i)), new ArrayAccessExpr(new NameExpr("a"), new IntegerLiteralExpr("" + i)))),
 					AssignExpr.Operator.ASSIGN));
-		}
-	}
-
-	private void processBeanConverter(JaxrsBeanParam param, BlockStmt b) {
-		if (beans.containsKey(param.clazz.name()))
-			return;
-		String n = "bean$" + beansVar.size();
-		beans.put(param.clazz.name(), param);
-		beansVar.put(param.clazz.name(), "buildBean" + beansVar.size());
-		int i = 0;
-		for (JaxrsParam p : param.fields.values())
-			processBeanConverter(p, n + "$" + i++, b);
-		for (JaxrsParam p : param.setters.values())
-			processBeanConverter(p, n + "$" + i++, b);
-
-	}
-
-	private void processBeanConverter(JaxrsParam p, String n, BlockStmt b) {
-		if (p instanceof JaxrsBeanParam) {
-			processBeanConverter((JaxrsBeanParam) p, b);
-			return;
-		}
-		converterVar.put(p, n);
-		b.addStatement(
-				new TryStmt(
-						new BlockStmt()
-								.addStatement(Utils.assign(types.getClass(Field.class), "f",
-										new MethodCallExpr(new ClassExpr(types.get(p.parent.name())), "getDeclaredField", Utils.list(new StringLiteralExpr(p.name)))))
-								.addStatement(new AssignExpr(new NameExpr("t"), new MethodCallExpr(new NameExpr("f"), "getGenericType"), AssignExpr.Operator.ASSIGN))
-								.addStatement(new AssignExpr(new NameExpr("a"), new MethodCallExpr(new NameExpr("f"), "getAnnotations"), AssignExpr.Operator.ASSIGN)),
-						Utils.list(new CatchClause(new com.github.javaparser.ast.body.Parameter(types.getClass(Exception.class), "e"),
-								new BlockStmt().addStatement(new AssignExpr(new NameExpr("t"), new ClassExpr(types.get(p.type.name())), AssignExpr.Operator.ASSIGN))
-										.addStatement(new AssignExpr(new NameExpr("a"), Utils.array(types.getClass(Annotation.class), 0), AssignExpr.Operator.ASSIGN)))),
-						null));
-
-		if (p instanceof JaxrsBodyParam) {
-			cl.addField(types.getClass(JaxrsEntityReader.class, types.get(p.type)), n, PSF);
-			b.addStatement(
-					new AssignExpr(new NameExpr(n),
-							new MethodCallExpr(new TypeExpr(types.getClass(JaxrsContext.class)), "reader",
-									Utils.list(new ClassExpr(types.get(p.type.name())), new NameExpr("t"), new NameExpr("a"), new NullLiteralExpr())),
-							AssignExpr.Operator.ASSIGN));
-		} else {
-			TypeModel t = JaxrsModel.getParamType(p.type);
-			cl.addField(types.getClass(ParamConverter.class, types.get(t.isPrimitive() ? t.asPrimitive().boxed() : t.name())), n, PSF);
-			b.addStatement(new AssignExpr(new NameExpr(n), new MethodCallExpr(new TypeExpr(types.getClass(JaxrsContext.class)), "converter",
-					Utils.list(new ClassExpr(types.get(t.name())), new NameExpr("t"), new NameExpr("a"))), AssignExpr.Operator.ASSIGN));
 		}
 	}
 
@@ -515,7 +423,7 @@ public class JaxRsServlet extends AbstractMojo {
 	 */
 	private void buildMethod(String method, List<JaxrsMapping> list) {
 		BlockStmt b = new BlockStmt();
-		cl.addMethod("do" + method.charAt(0) + method.substring(1).toLowerCase(), PROTECT).addMarkerAnnotation(Override.class)
+		cl.addMethod("do" + method.charAt(0) + method.substring(1).toLowerCase(), Utils.PROTECT).addMarkerAnnotation(Override.class)
 				.addParameter(types.getClass(HttpServletRequest.class), "req").addParameter(types.getClass(HttpServletResponse.class), "res")
 				.addThrownException(IOException.class).addThrownException(ServletException.class).getBody().get()
 				.addStatement(Utils.create(types.getClass(JaxrsReq.class), "r", Utils.list(new NameExpr("req"))))
@@ -595,9 +503,9 @@ public class JaxRsServlet extends AbstractMojo {
 				.map(p -> new ObjectCreationExpr(null, types.getClass(JaxrsPath.class), Utils.list(new IntegerLiteralExpr("" + p.i), new StringLiteralExpr(p.name))))
 				.collect(Collectors.toCollection(NodeList::new));
 		if (!mapping.parts.isEmpty())
-			cl.addFieldWithInitializer(types.array(JaxrsPath.class), mapping.var + "$paths", Utils.array(types.getClass(JaxrsPath.class), paths), PSF);
+			cl.addFieldWithInitializer(types.array(JaxrsPath.class), mapping.var + "$paths", Utils.array(types.getClass(JaxrsPath.class), paths), Utils.PSF);
 
-		BlockStmt b = cl.addMethod(mapping.var + "$call", PSF).addParameter(types.getClass(JaxrsReq.class), "r").addParameter(types.getClass(HttpServletResponse.class), "res")
+		BlockStmt b = cl.addMethod(mapping.var + "$call", Utils.PSF).addParameter(types.getClass(JaxrsReq.class), "r").addParameter(types.getClass(HttpServletResponse.class), "res")
 				.addThrownException(types.getClass(IOException.class)).getBody().get();
 		if (!mapping.parts.isEmpty())
 			b.addStatement(new MethodCallExpr(new NameExpr("r"), "initPaths", Utils.list(new NameExpr(mapping.var + "$paths"))));
@@ -618,21 +526,12 @@ public class JaxRsServlet extends AbstractMojo {
 	 * @param key
 	 * @param value
 	 */
-	private void buildBeanMethod(String clazz, JaxrsBeanParam bean) {
-		BlockStmt b = cl.addMethod(beansVar.get(clazz), PSF).addParameter(types.getClass(JaxrsReq.class), "r").setType(types.get(clazz)).getBody().get()
-				.addStatement(Utils.create(types.getClass(clazz), "b", Utils.list()));
-		for (Entry<FieldModel, JaxrsParam> e : bean.fields.entrySet())
-			b.addStatement(new AssignExpr(new FieldAccessExpr(new NameExpr("b"), e.getKey().name()), getParam(e.getValue()), AssignExpr.Operator.ASSIGN));
-		for (Entry<MethodModel, JaxrsParam> e : bean.setters.entrySet())
-			b.addStatement(new MethodCallExpr(new NameExpr("b"), e.getKey().name(), Utils.list(getParam(e.getValue()))));
-		b.addStatement(new ReturnStmt(new NameExpr("b")));
-	}
 
 	private Expression getParam(JaxrsParam p) {
 		if (p instanceof JaxrsBodyParam)
 			return new MethodCallExpr(new NameExpr(converterVar.get(p)), "read", Utils.list(new NameExpr("r")));
 		if (p instanceof JaxrsBeanParam)
-			return new MethodCallExpr(beansVar.get(((JaxrsBeanParam) p).clazz.name()), new NameExpr("r"));
+			return new MethodCallExpr(new NameExpr("BeansReader"), beans.get((JaxrsBeanParam) p), Utils.list(new NameExpr("r")));
 
 		String m = "get" + p.getClass().getSimpleName().substring(5, p.getClass().getSimpleName().length() - 5);
 		if (p.type.isArray() || collection.isAssignableFrom(p.type))

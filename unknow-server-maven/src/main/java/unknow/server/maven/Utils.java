@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.github.javaparser.ast.ArrayCreationLevel;
+import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.expr.ArrayCreationExpr;
@@ -33,6 +34,10 @@ import unknow.server.util.data.ArraySet;
  * @author unknow
  */
 public class Utils {
+	public static final Modifier.Keyword[] PUBLIC = { Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL };
+	public static final Modifier.Keyword[] PUBLIC_STATIC = { Modifier.Keyword.PUBLIC, Modifier.Keyword.STATIC, Modifier.Keyword.FINAL };
+	public static final Modifier.Keyword[] PROTECT = { Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL };
+	public static final Modifier.Keyword[] PSF = { Modifier.Keyword.PRIVATE, Modifier.Keyword.STATIC, Modifier.Keyword.FINAL };
 
 	private Utils() {
 	}
