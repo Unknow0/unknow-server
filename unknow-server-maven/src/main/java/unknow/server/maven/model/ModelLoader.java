@@ -27,8 +27,7 @@ public class ModelLoader {
 	private static final TypeModel[] EMPTY = {};
 
 	static {
-		for (TypeModel t : Arrays.asList(VoidModel.SELF, PrimitiveModel.BOOLEAN, PrimitiveModel.BYTE, PrimitiveModel.CHAR, PrimitiveModel.SHORT, PrimitiveModel.INT,
-				PrimitiveModel.LONG, PrimitiveModel.FLOAT, PrimitiveModel.DOUBLE))
+		for (TypeModel t : PrimitiveModel.PRIMITIVES)
 			BUILTIN.put(t.name(), t);
 	}
 
