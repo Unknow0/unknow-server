@@ -108,7 +108,6 @@ public class JaxrsContext {
 				return;
 			}
 		} while ((c = c.getSuperclass()) != Throwable.class);
-		logger.warn("Unmanaged error", t);
 		res.sendError(500);
 	}
 

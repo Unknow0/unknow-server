@@ -114,7 +114,6 @@ public abstract class AbstractMojo extends org.apache.maven.plugin.AbstractMojo 
 	private ClassLoader getClassLoader() {
 		try {
 			List<String> classpathElements = project.getRuntimeClasspathElements();
-			log.error("{}", classpathElements);
 			URL urls[] = new URL[classpathElements.size()];
 
 			for (int i = 0; i < urls.length; i++)
@@ -190,7 +189,7 @@ public abstract class AbstractMojo extends org.apache.maven.plugin.AbstractMojo 
 
 		try {
 			Files.createDirectories(Paths.get(resources));
-		} catch (IOException e) {
+		} catch (IOException e) { // ignore
 		}
 	}
 

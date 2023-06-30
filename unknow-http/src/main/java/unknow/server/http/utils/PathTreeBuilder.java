@@ -75,7 +75,7 @@ public class PathTreeBuilder {
 	}
 
 	private PartNode buildTree(String part, Node n) {
-		Node d = n.nexts.remove("\u0000");
+		Node d = n.nexts.remove("{}");
 		PartNode pattern = d == null ? null : buildTree("{}", d);
 
 		PartNode[] nexts = new PartNode[n.nexts.size()];

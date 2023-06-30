@@ -23,7 +23,6 @@ import com.github.javaparser.ast.expr.IntegerLiteralExpr;
 import com.github.javaparser.ast.expr.LongLiteralExpr;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.NameExpr;
-import com.github.javaparser.ast.expr.StringLiteralExpr;
 
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.ExternalDocumentation;
@@ -53,7 +52,8 @@ public class OpenApiBuilder {
 	public CompilationUnit build(MavenProject project, JaxrsModel model, String packageName, Map<String, String> existingClass) throws MojoExecutionException {
 
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
-		ObjectMapper m = new ObjectMapper().enable(SerializationFeature.WRITE_ENUMS_USING_TO_STRING).disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS).setDefaultPropertyInclusion(Include.NON_EMPTY);
+		ObjectMapper m = new ObjectMapper().enable(SerializationFeature.WRITE_ENUMS_USING_TO_STRING).disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+				.setDefaultPropertyInclusion(Include.NON_EMPTY);
 		try {
 			m.writeValue(bos, build(project, model));
 		} catch (IOException e) {
@@ -62,13 +62,14 @@ public class OpenApiBuilder {
 
 		CompilationUnit cu = new CompilationUnit(packageName);
 		TypeCache types = new TypeCache(cu, existingClass);
-		ClassOrInterfaceDeclaration cl = cu.addClass("OpenApi", Utils.PUBLIC).addSingleMemberAnnotation(WebServlet.class, new StringLiteralExpr("/openapi.json")).addExtendedType(types.getClass(HttpServlet.class));
+		ClassOrInterfaceDeclaration cl = cu.addClass("OpenApi", Utils.PUBLIC).addSingleMemberAnnotation(WebServlet.class, Utils.text("/openapi.json"))
+				.addExtendedType(types.getClass(HttpServlet.class));
 		cl.addFieldWithInitializer(types.get(long.class), "serialVersionUID", new LongLiteralExpr("1"), Utils.PSF);
 		cl.addFieldWithInitializer(types.get(byte[].class), "DATA", Utils.byteArray(bos.toByteArray()), Utils.PSF);
 
 		cl.addMethod("doGet", Utils.PUBLIC).addMarkerAnnotation(Override.class).addThrownException(types.getClass(IOException.class))
 				.addParameter(types.getClass(HttpServletRequest.class), "req").addParameter(types.getClass(HttpServletResponse.class), "res").getBody().get()
-				.addStatement(new MethodCallExpr(new NameExpr("res"), "setContentType", Utils.list(new StringLiteralExpr("application/json"))))
+				.addStatement(new MethodCallExpr(new NameExpr("res"), "setContentType", Utils.list(Utils.text("application/json"))))
 				.addStatement(new MethodCallExpr(new NameExpr("res"), "setContentLength", Utils.list(new IntegerLiteralExpr(Integer.toString(bos.size())))))
 				.addStatement(new MethodCallExpr(new MethodCallExpr(new NameExpr("res"), "getOutputStream"), "write", Utils.list(new NameExpr("DATA"))));
 		return cu;
@@ -92,7 +93,8 @@ public class OpenApiBuilder {
 		if (externalDocs != null)
 			spec.setExternalDocs(externalDocs);
 
-		@SuppressWarnings("rawtypes") Map<String, Schema> schemas = new HashMap<>();
+		@SuppressWarnings("rawtypes")
+		Map<String, Schema> schemas = new HashMap<>();
 		io.swagger.v3.oas.models.Paths paths = new io.swagger.v3.oas.models.Paths();
 
 		for (JaxrsMapping m : model.mappings()) {

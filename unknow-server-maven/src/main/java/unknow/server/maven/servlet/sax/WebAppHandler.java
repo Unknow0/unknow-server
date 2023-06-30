@@ -4,6 +4,7 @@
 package unknow.server.maven.servlet.sax;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.xml.sax.Attributes;
@@ -139,8 +140,12 @@ public class WebAppHandler implements SaxHandler<Context> {
 				((SD) context.peek()).pattern.add(context.textContent());
 			else if ("dispatcher".equals(name))
 				((SD) context.peek()).dispatcher.add(DispatcherType.valueOf(context.textContent()));
-			else if ("filter-mapping".equals(name))
+			else if ("filter-mapping".equals(name)) {
+				List<DispatcherType> d = ((SD) context.peek()).dispatcher;
+				if (d.isEmpty())
+					d.add(DispatcherType.REQUEST);
 				context.previous();
+			}
 		}
 	};
 
@@ -233,7 +238,7 @@ public class WebAppHandler implements SaxHandler<Context> {
 	private static final SaxHandler<Context> SERVLET_MAPPING = new SaxHandler<>() {
 		@Override
 		public void endElement(String uri, String name, Context context) throws SAXException {
-			if ("servet-name".equals(name)) {
+			if ("servlet-name".equals(name)) {
 				String n = context.textContent();
 				for (SD f : context.descriptor.servlets) {
 					if (f.name.equals(n)) {

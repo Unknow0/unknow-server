@@ -465,7 +465,7 @@ public class JaxrsModel {
 		while (m.find()) {
 			parts.add(new PathPart(m.group(1), m.group(2), m.start() - i));
 			i = m.end();
-			m.appendReplacement(sb, "\u0000");
+			m.appendReplacement(sb, "{}");
 		}
 		m.appendTail(sb);
 		return parts;

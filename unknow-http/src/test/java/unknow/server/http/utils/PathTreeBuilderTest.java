@@ -80,7 +80,7 @@ public class PathTreeBuilderTest {
 
 	@Test
 	public void testServletPattern() {
-		Set<String> urls = new HashSet<>(Arrays.asList("/\u0000"));
+		Set<String> urls = new HashSet<>(Arrays.asList("/{}"));
 		ServletConfigImpl[] servlets = { new ServletConfigImpl("name", new S("s"), null, null, urls) };
 		PathTree build = new PathTreeBuilder(null, servlets, new FilterConfigImpl[0], DispatcherType.REQUEST).build();
 		System.out.println("pattern:\n" + build);

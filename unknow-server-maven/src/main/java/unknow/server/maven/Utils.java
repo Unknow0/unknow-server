@@ -42,6 +42,10 @@ public class Utils {
 	private Utils() {
 	}
 
+	public static StringLiteralExpr text(String s) {
+		return new StringLiteralExpr(s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\u0000", "\\u0000"));
+	}
+
 	/**
 	 * create a node list
 	 * 
@@ -75,7 +79,7 @@ public class Utils {
 	public static ArrayCreationExpr stringArray(String[] values) {
 		NodeList<Expression> nodeList = new NodeList<>();
 		for (int i = 0; i < values.length; i++)
-			nodeList.add(new StringLiteralExpr(values[i]));
+			nodeList.add(text(values[i]));
 
 		return array(new ClassOrInterfaceType(null, "String"), nodeList);
 	}
@@ -127,16 +131,17 @@ public class Utils {
 		NodeList<Expression> k = new NodeList<>();
 		NodeList<Expression> v = new NodeList<>();
 		for (String key : list) {
-			k.add(new StringLiteralExpr(key));
-			v.add(new StringLiteralExpr(map.get(key)));
+			k.add(text(key.replace("\\", "\\\\")));
+			v.add(text(map.get(key).replace("\\", "\\\\")));
 		}
-		return new ObjectCreationExpr(null, types.getClass(ArrayMap.class, TypeCache.EMPTY), list(array(types.getClass(String.class), k), array(types.getClass(String.class), v)));
+		return new ObjectCreationExpr(null, types.getClass(ArrayMap.class, TypeCache.EMPTY),
+				list(array(types.getClass(String.class), k), array(types.getClass(String.class), v)));
 	}
 
 	public static ObjectCreationExpr arraySet(Collection<String> list, TypeCache types) {
 		NodeList<Expression> n = new NodeList<>();
 		for (String p : list)
-			n.add(new StringLiteralExpr(p));
+			n.add(text(p));
 		return new ObjectCreationExpr(null, types.getClass(ArraySet.class, TypeCache.EMPTY), Utils.list(Utils.array(types.getClass(String.class), n)));
 	}
 

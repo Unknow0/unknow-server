@@ -16,7 +16,6 @@ import com.github.javaparser.ast.expr.IntegerLiteralExpr;
 import com.github.javaparser.ast.expr.LambdaExpr;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
-import com.github.javaparser.ast.expr.StringLiteralExpr;
 import com.github.javaparser.ast.stmt.ReturnStmt;
 import com.github.javaparser.ast.type.PrimitiveType;
 
@@ -54,7 +53,7 @@ public class CreateServletManager extends Builder {
 			if (s == null)
 				continue;
 			k.add(new IntegerLiteralExpr(e.toString()));
-			v.add(new StringLiteralExpr(path));
+			v.add(Utils.text(path));
 		}
 		return new ObjectCreationExpr(null, t.getClass(IntArrayMap.class, TypeCache.EMPTY),
 				Utils.list(Utils.array(PrimitiveType.intType(), k), Utils.array(t.getClass(String.class), v)));
@@ -71,7 +70,7 @@ public class CreateServletManager extends Builder {
 			if (s == null || e.isEmpty())
 				continue;
 			k.add(new ClassExpr(t.get(e.toString())));
-			k.add(new StringLiteralExpr(path));
+			k.add(Utils.text(path));
 		}
 		LambdaExpr cmp = new LambdaExpr(Utils.list(new Parameter(TypeCache.EMPTY, "a"), new Parameter(TypeCache.EMPTY, "b")),
 				new MethodCallExpr(new MethodCallExpr(Names.a, "getName"), "compareTo", Utils.list(new MethodCallExpr(Names.b, "getName"))));

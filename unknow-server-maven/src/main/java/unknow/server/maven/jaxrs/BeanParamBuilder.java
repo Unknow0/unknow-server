@@ -28,7 +28,6 @@ import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.NullLiteralExpr;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
-import com.github.javaparser.ast.expr.StringLiteralExpr;
 import com.github.javaparser.ast.expr.TypeExpr;
 import com.github.javaparser.ast.expr.VariableDeclarationExpr;
 import com.github.javaparser.ast.stmt.BlockStmt;
@@ -124,7 +123,7 @@ public class BeanParamBuilder {
 				new TryStmt(
 						new BlockStmt()
 								.addStatement(Utils.assign(types.getClass(Field.class), "f",
-										new MethodCallExpr(new ClassExpr(types.get(p.parent.name())), "getDeclaredField", Utils.list(new StringLiteralExpr(p.name)))))
+										new MethodCallExpr(new ClassExpr(types.get(p.parent.name())), "getDeclaredField", Utils.list(Utils.text(p.name)))))
 								.addStatement(new AssignExpr(new NameExpr("t"), new MethodCallExpr(new NameExpr("f"), "getGenericType"), AssignExpr.Operator.ASSIGN))
 								.addStatement(new AssignExpr(new NameExpr("a"), new MethodCallExpr(new NameExpr("f"), "getAnnotations"), AssignExpr.Operator.ASSIGN)),
 						Utils.list(new CatchClause(new com.github.javaparser.ast.body.Parameter(types.getClass(Exception.class), "e"),
@@ -157,7 +156,7 @@ public class BeanParamBuilder {
 		if (p.type.isArray() || collection.isAssignableFrom(p.type))
 			m += "Array";
 		Expression e = new MethodCallExpr(new NameExpr("r"), m,
-				Utils.list(new StringLiteralExpr(p.value), p.def == null ? new NullLiteralExpr() : new StringLiteralExpr(p.def), new NameExpr(converterVar.get(p))));
+				Utils.list(Utils.text(p.value), p.def == null ? new NullLiteralExpr() : Utils.text(p.def), new NameExpr(converterVar.get(p))));
 		if (collection.isAssignableFrom(p.type))
 			e = new MethodCallExpr(new TypeExpr(types.get(Arrays.class)), "asList", Utils.list(e));
 		if (sortedSet.isAssignableFrom(p.type))

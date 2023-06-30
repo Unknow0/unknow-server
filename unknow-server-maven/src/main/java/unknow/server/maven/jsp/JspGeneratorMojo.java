@@ -16,7 +16,6 @@ import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.NameExpr;
-import com.github.javaparser.ast.expr.StringLiteralExpr;
 import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.stmt.Statement;
 
@@ -59,11 +58,8 @@ public class JspGeneratorMojo {
 		ClassOrInterfaceDeclaration cl = cu.addClass("Impl", Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL).addExtendedType(ServletJsp.class);
 		types = new TypeCache(cu, Collections.emptyMap());
 
-		b = cl.addMethod("jspService", Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL)
-				.addParameter(types.getClass(HttpServletRequest.class), "request")
-				.addParameter(types.getClass(HttpServletResponse.class), "response")
-				.addMarkerAnnotation(Override.class)
-				.getBody().get();
+		b = cl.addMethod("jspService", Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL).addParameter(types.getClass(HttpServletRequest.class), "request")
+				.addParameter(types.getClass(HttpServletResponse.class), "response").addMarkerAnnotation(Override.class).getBody().get();
 		try (Reader r = Files.newBufferedReader(file)) {
 			parse(r);
 		}
@@ -88,7 +84,7 @@ public class JspGeneratorMojo {
 	private void print() {
 		if (print.length() == 0)
 			return;
-		b.addStatement(new MethodCallExpr(OUT, "print", Utils.list(new StringLiteralExpr(print.toString()))));
+		b.addStatement(new MethodCallExpr(OUT, "print", Utils.list(Utils.text(print.toString()))));
 		print.setLength(0);
 	}
 

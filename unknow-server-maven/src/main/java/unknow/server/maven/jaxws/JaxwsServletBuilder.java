@@ -38,7 +38,6 @@ import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.NullLiteralExpr;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
-import com.github.javaparser.ast.expr.StringLiteralExpr;
 import com.github.javaparser.ast.expr.ThisExpr;
 import com.github.javaparser.ast.expr.TypeExpr;
 import com.github.javaparser.ast.expr.VariableDeclarationExpr;
@@ -112,10 +111,10 @@ public class JaxwsServletBuilder {
 		String name = service.name;
 		NodeList<Expression> list = Utils.list();
 		for (String s : service.urls)
-			list.add(new StringLiteralExpr(s));
+			list.add(Utils.text(s));
 
 		servlet = cu.addClass(Character.toUpperCase(name.charAt(0)) + name.substring(1) + "Servlet", PF).addExtendedType(types.getClass(HttpServlet.class));
-		servlet.addAndGetAnnotation(WebServlet.class).addPair("urlPatterns", new ArrayInitializerExpr(list)).addPair("name", new StringLiteralExpr(name));
+		servlet.addAndGetAnnotation(WebServlet.class).addPair("urlPatterns", new ArrayInitializerExpr(list)).addPair("name", Utils.text(name));
 
 		servlet.addFieldWithInitializer(types.getClass(long.class), "serialVersionUID", new LongLiteralExpr("1"), PSF);
 
@@ -130,13 +129,14 @@ public class JaxwsServletBuilder {
 		BlockStmt init = servlet.addStaticInitializer();
 		int oi = 0;
 		for (Service.Op o : service.operations) {
-			init.addStatement(new AssignExpr(new ArrayAccessExpr(new NameExpr("OP_SIG"), new IntegerLiteralExpr("" + oi)), new StringLiteralExpr(o.sig()), Operator.ASSIGN));
+			init.addStatement(new AssignExpr(new ArrayAccessExpr(new NameExpr("OP_SIG"), new IntegerLiteralExpr("" + oi)), Utils.text(o.sig()), Operator.ASSIGN));
 
 			BlockStmt b = new BlockStmt().addStatement(new AssignExpr(new VariableDeclarationExpr(types.getClass(Envelope.class), "r"),
 					new ObjectCreationExpr(null, types.getClass(Envelope.class), Utils.list()), Operator.ASSIGN));
 			if (o.paramStyle == ParameterStyle.WRAPPED)
 				b.addStatement(new AssignExpr(new VariableDeclarationExpr(types.getClass(OperationWrapper.class), "o"),
-						new CastExpr(types.getClass(OperationWrapper.class), new MethodCallExpr(new NameExpr("e"), "getBody", Utils.list(new IntegerLiteralExpr("0")))), Operator.ASSIGN));
+						new CastExpr(types.getClass(OperationWrapper.class), new MethodCallExpr(new NameExpr("e"), "getBody", Utils.list(new IntegerLiteralExpr("0")))),
+						Operator.ASSIGN));
 
 			NodeList<Expression> param = Utils.list();
 
@@ -160,11 +160,10 @@ public class JaxwsServletBuilder {
 			else {
 				b.addStatement(
 						new AssignExpr(new VariableDeclarationExpr(types.getClass(Object.class), "ro"), new MethodCallExpr(new NameExpr("WS"), o.m, param), Operator.ASSIGN));
-				e = new ObjectCreationExpr(null, types.getClass(Element.class),
-						Utils.list(new StringLiteralExpr(o.result.ns()), new StringLiteralExpr(o.result.name()), new NameExpr("ro")));
+				e = new ObjectCreationExpr(null, types.getClass(Element.class), Utils.list(Utils.text(o.result.ns()), Utils.text(o.result.name()), new NameExpr("ro")));
 			}
 			if (o.paramStyle == ParameterStyle.WRAPPED) {
-				NodeList<Expression> p = Utils.list(new StringLiteralExpr(o.ns), new StringLiteralExpr(o.name + "Response"));
+				NodeList<Expression> p = Utils.list(Utils.text(o.ns), Utils.text(o.name + "Response"));
 				if (e != null)
 					p.add(e);
 				// TODO out param
@@ -192,15 +191,17 @@ public class JaxwsServletBuilder {
 		servlet.addFieldWithInitializer(types.get(byte[].class), "WSDL", Utils.byteArray(wsdl), PSF);
 		servlet.addMethod("doGet", PF).addMarkerAnnotation(Override.class).addThrownException(types.getClass(IOException.class))
 				.addParameter(types.getClass(HttpServletRequest.class), "req").addParameter(types.getClass(HttpServletResponse.class), "res").getBody().get()
-				.addStatement(new IfStmt(new BinaryExpr(new MethodCallExpr(new NameExpr("req"), "getParameter", Utils.list(new StringLiteralExpr("wsdl"))),
-						new NullLiteralExpr(), BinaryExpr.Operator.EQUALS), new ReturnStmt(), null))
-				.addStatement(new MethodCallExpr(new NameExpr("res"), "setContentType", Utils.list(new StringLiteralExpr("text/xml"))))
+				.addStatement(new IfStmt(new BinaryExpr(new MethodCallExpr(new NameExpr("req"), "getParameter", Utils.list(Utils.text("wsdl"))), new NullLiteralExpr(),
+						BinaryExpr.Operator.EQUALS), new ReturnStmt(), null))
+				.addStatement(new MethodCallExpr(new NameExpr("res"), "setContentType", Utils.list(Utils.text("text/xml"))))
 				.addStatement(new MethodCallExpr(new NameExpr("res"), "setContentLength", Utils.list(new IntegerLiteralExpr(Integer.toString(wsdl.length)))))
 				.addStatement(new MethodCallExpr(new MethodCallExpr(new NameExpr("res"), "getOutputStream"), "write", Utils.list(new NameExpr("WSDL"))));
 
-		servlet.addMethod("doPost",
-				PF).addMarkerAnnotation(Override.class).addParameter(types.getClass(HttpServletRequest.class), "req").addParameter(types.getClass(HttpServletResponse.class), "res")
-				.getBody().get().addStatement(new TryStmt(
+		servlet.addMethod("doPost", PF).addMarkerAnnotation(
+				Override.class).addParameter(types.getClass(HttpServletRequest.class),
+						"req")
+				.addParameter(types.getClass(HttpServletResponse.class), "res").getBody().get()
+				.addStatement(new TryStmt(
 						new BlockStmt()
 								.addStatement(new AssignExpr(new VariableDeclarationExpr(types.getClass(Envelope.class), "e"),
 										new MethodCallExpr(new TypeExpr(types.getClass(SaxParser.class)), "parse",
@@ -208,15 +209,16 @@ public class JaxwsServletBuilder {
 														new ObjectCreationExpr(null, types.getClass(InputSource.class),
 																Utils.list(new MethodCallExpr(new NameExpr("req"), "getInputStream"))))),
 										Operator.ASSIGN))
-								.addStatement(new AssignExpr(new VariableDeclarationExpr(types.getClass(int.class), "i"),
-										new MethodCallExpr(new TypeExpr(types.getClass(Arrays.class)), "binarySearch",
-												Utils.list(new NameExpr("OP_SIG"), new MethodCallExpr(new NameExpr("e"), "sig"))),
-										Operator.ASSIGN))
-								.addStatement(new IfStmt(new BinaryExpr(new NameExpr("i"), new IntegerLiteralExpr("0"), BinaryExpr.Operator.LESS),
-										new BlockStmt()
-												.addStatement(new MethodCallExpr(null, "fault", Utils.list(new NameExpr("res"), new StringLiteralExpr("unknown request"))))
-												.addStatement(new ReturnStmt()),
-										null))
+								.addStatement(
+										new AssignExpr(new VariableDeclarationExpr(types.getClass(int.class), "i"),
+												new MethodCallExpr(new TypeExpr(types.getClass(Arrays.class)), "binarySearch",
+														Utils.list(new NameExpr("OP_SIG"), new MethodCallExpr(new NameExpr("e"), "sig"))),
+												Operator.ASSIGN))
+								.addStatement(
+										new IfStmt(new BinaryExpr(new NameExpr("i"), new IntegerLiteralExpr("0"), BinaryExpr.Operator.LESS),
+												new BlockStmt().addStatement(new MethodCallExpr(null, "fault", Utils.list(new NameExpr("res"), Utils.text("unknown request"))))
+														.addStatement(new ReturnStmt()),
+												null))
 								.addStatement(
 										new MethodCallExpr(new NameExpr("Marshallers"), "marshall",
 												Utils.list(
@@ -225,8 +227,7 @@ public class JaxwsServletBuilder {
 														new MethodCallExpr(new NameExpr("res"), "getWriter")))),
 						Utils.list(new CatchClause(new Parameter(types.getClass(Exception.class), "e"), new BlockStmt()
 								.addStatement(new MethodCallExpr(null, "fault", Utils.list(new NameExpr("res"), new MethodCallExpr(new NameExpr("e"), "getMessage"))))
-								.addStatement(
-										new MethodCallExpr(new NameExpr("log"), "warn", Utils.list(new StringLiteralExpr("failed to service request"), new NameExpr("e")))))),
+								.addStatement(new MethodCallExpr(new NameExpr("log"), "warn", Utils.list(Utils.text("failed to service request"), new NameExpr("e")))))),
 						null));
 		generateFault(types);
 
@@ -239,11 +240,11 @@ public class JaxwsServletBuilder {
 		ok.addOrphanComment(lineComment);
 
 		servlet.addMethod("fault", PSF).addParameter(types.getClass(HttpServletResponse.class), "res").addParameter(types.getClass(String.class), "err").getBody().get()
-				.addStatement(new TryStmt(new BlockStmt().addStatement(new MethodCallExpr(new NameExpr("res"), "setStatus", Utils.list(new IntegerLiteralExpr("500"))))
-						.addStatement(new MethodCallExpr(new MethodCallExpr(
-								new MethodCallExpr(new MethodCallExpr(new NameExpr("res"), "getWriter"), "append", Utils.list(new StringLiteralExpr(
+				.addStatement(new TryStmt(
+						new BlockStmt().addStatement(new MethodCallExpr(new NameExpr("res"), "setStatus", Utils.list(new IntegerLiteralExpr("500")))).addStatement(
+								new MethodCallExpr(new MethodCallExpr(new MethodCallExpr(new MethodCallExpr(new NameExpr("res"), "getWriter"), "append", Utils.list(Utils.text(
 										"<e:Envelope xmlns:e=\\\"http://schemas.xmlsoap.org/soap/envelope/\\\"><e:Body><e:Fault><faultcode>Server</faultcode><faultstring>"))),
-								"append", Utils.list(new NameExpr("err"))), "write", Utils.list(new StringLiteralExpr("</faultstring></e:Fault></e:Body></e:Envelope>")))),
+										"append", Utils.list(new NameExpr("err"))), "write", Utils.list(Utils.text("</faultstring></e:Fault></e:Body></e:Envelope>")))),
 						Utils.list(new CatchClause(new Parameter(types.getClass(Exception.class), "ignore"), ok)), null));
 	}
 
@@ -280,15 +281,15 @@ public class JaxwsServletBuilder {
 		servlet.addMethod("startElement", PF).addParameter(types.getClass(String.class), "qname").addParameter(types.getClass(String.class), "name")
 				.addParameter(types.getClass(SaxContext.class), "context").addMarkerAnnotation(Override.class).addThrownException(types.getClass(SAXException.class))
 				.setBody(new BlockStmt().addStatement(new IfStmt(
-						new MethodCallExpr(new StringLiteralExpr("{http://schemas.xmlsoap.org/soap/envelope/}Header"), "equals", Utils.list(QNAME)),
+						new MethodCallExpr(Utils.text("{http://schemas.xmlsoap.org/soap/envelope/}Header"), "equals", Utils.list(QNAME)),
 						new ExpressionStmt(new MethodCallExpr(CONTEXT, "next", Utils.list(new NameExpr("HEADER")))),
-						new IfStmt(new MethodCallExpr(new StringLiteralExpr("{http://schemas.xmlsoap.org/soap/envelope/}Body"), "equals", Utils.list(QNAME)),
+						new IfStmt(new MethodCallExpr(Utils.text("{http://schemas.xmlsoap.org/soap/envelope/}Body"), "equals", Utils.list(QNAME)),
 								new ExpressionStmt(new MethodCallExpr(CONTEXT, "next", Utils.list(new NameExpr("BODY")))),
-								new IfStmt(new MethodCallExpr(new StringLiteralExpr("{http://schemas.xmlsoap.org/soap/envelope/}Envelope"), "equals", Utils.list(QNAME)),
+								new IfStmt(new MethodCallExpr(Utils.text("{http://schemas.xmlsoap.org/soap/envelope/}Envelope"), "equals", Utils.list(QNAME)),
 										new ExpressionStmt(
 												new MethodCallExpr(CONTEXT, "push", Utils.list(new ObjectCreationExpr(null, types.getClass(Envelope.class), Utils.list())))),
 										new ThrowStmt(new ObjectCreationExpr(null, types.getClass(SAXException.class),
-												Utils.list(new BinaryExpr(new StringLiteralExpr("Invalid tag "), QNAME, BinaryExpr.Operator.PLUS)))))))));
+												Utils.list(new BinaryExpr(Utils.text("Invalid tag "), QNAME, BinaryExpr.Operator.PLUS)))))))));
 		servlet.addFieldWithInitializer(t, "HEADER", new ObjectCreationExpr(null, t, null, Utils.list(), header.build()), PSF);
 		servlet.addFieldWithInitializer(t, "BODY", new ObjectCreationExpr(null, t, null, Utils.list(), body.build()), PSF);
 	}
@@ -304,16 +305,15 @@ public class JaxwsServletBuilder {
 			NodeList<Expression> values = Utils.list();
 //			Statement s = 
 			for (XmlEnumEntry c : e.entries)
-				values.add(new StringLiteralExpr(c.value));
+				values.add(Utils.text(c.value));
 			servlet.addFieldWithInitializer(types.array(String.class), e.convertMethod, Utils.array(types.getClass(String.class), values), PSF);
 			servlet.addMethod(e.convertMethod, PSF).addParameter(types.getClass(String.class), "s").setType(types.get(e.javaType().name()))
-					.addThrownException(types.getClass(SAXException.class))
-					.getBody().get()
-					.addStatement(Utils.assign(types.getClass(int.class), "i", new MethodCallExpr(
-							new TypeExpr(types.getClass(Arrays.class)), "binarySearch", Utils.list(new NameExpr(e.convertMethod), new NameExpr("s")))))
-					.addStatement(new IfStmt(
-							new BinaryExpr(new NameExpr("i"), new IntegerLiteralExpr("0"), BinaryExpr.Operator.LESS),
-							new ThrowStmt(new ObjectCreationExpr(null, types.getClass(SAXException.class), Utils.list(new BinaryExpr(new StringLiteralExpr("Invalid enum constant: "), new NameExpr("s"), BinaryExpr.Operator.PLUS)))),
+					.addThrownException(types.getClass(SAXException.class)).getBody().get()
+					.addStatement(Utils.assign(types.getClass(int.class), "i",
+							new MethodCallExpr(new TypeExpr(types.getClass(Arrays.class)), "binarySearch", Utils.list(new NameExpr(e.convertMethod), new NameExpr("s")))))
+					.addStatement(new IfStmt(new BinaryExpr(new NameExpr("i"), new IntegerLiteralExpr("0"), BinaryExpr.Operator.LESS),
+							new ThrowStmt(new ObjectCreationExpr(null, types.getClass(SAXException.class),
+									Utils.list(new BinaryExpr(Utils.text("Invalid enum constant: "), new NameExpr("s"), BinaryExpr.Operator.PLUS)))),
 							null))
 					.addStatement(new ReturnStmt(new ArrayAccessExpr(new MethodCallExpr(new TypeExpr(types.get(e.javaType().name())), "values"), new NameExpr("i"))));
 		}

@@ -24,7 +24,6 @@ import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.NullLiteralExpr;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
-import com.github.javaparser.ast.expr.StringLiteralExpr;
 import com.github.javaparser.ast.expr.TypeExpr;
 import com.github.javaparser.ast.expr.VariableDeclarationExpr;
 import com.github.javaparser.ast.stmt.BlockStmt;
@@ -80,8 +79,8 @@ public class JaxSaxHandlerBuilder {
 
 		this.firstAttr = true;
 		this.attrs = new BlockStmt();
-		this.start = new ThrowStmt(new ObjectCreationExpr(null, types.getClass(SAXException.class), Utils.list(
-				new BinaryExpr(new StringLiteralExpr("Invalid tag "), QNAME, BinaryExpr.Operator.PLUS))));
+		this.start = new ThrowStmt(
+				new ObjectCreationExpr(null, types.getClass(SAXException.class), Utils.list(new BinaryExpr(Utils.text("Invalid tag "), QNAME, BinaryExpr.Operator.PLUS))));
 		this.last = new ExpressionStmt(new MethodCallExpr(CONTEXT, "previous"));
 	}
 
@@ -105,40 +104,23 @@ public class JaxSaxHandlerBuilder {
 			firstAttr = false;
 			var = new VariableDeclarationExpr(types.getClass(String.class), "a");
 		}
-		attrs
-				.addStatement(new AssignExpr(
-						var,
-						new MethodCallExpr(ATTRS, "getValue", Utils.list(new StringLiteralExpr(a.ns()), new StringLiteralExpr(a.name()))),
-						AssignExpr.Operator.ASSIGN))
-				.addStatement(new IfStmt(
-						new BinaryExpr(new NameExpr("a"), new NullLiteralExpr(), Operator.NOT_EQUALS),
-						new ExpressionStmt(
-								new MethodCallExpr(new NameExpr("o"), a.setter, Utils.list(a.type().fromString(types, new NameExpr("a"))))),
-						null));
+		attrs.addStatement(new AssignExpr(var, new MethodCallExpr(ATTRS, "getValue", Utils.list(Utils.text(a.ns()), Utils.text(a.name()))), AssignExpr.Operator.ASSIGN))
+				.addStatement(new IfStmt(new BinaryExpr(new NameExpr("a"), new NullLiteralExpr(), Operator.NOT_EQUALS),
+						new ExpressionStmt(new MethodCallExpr(new NameExpr("o"), a.setter, Utils.list(a.type().fromString(types, new NameExpr("a"))))), null));
 	}
 
 	public void setValue(XmlField<?> value) {
-		last = new BlockStmt()
-				.addStatement(new MethodCallExpr(
-						new EnclosedExpr(new CastExpr(types.getClass(clazz), new MethodCallExpr(CONTEXT, "peek"))),
-						value.setter,
-						Utils.list(value.type().fromString(types, new MethodCallExpr(CONTEXT, "textContent")))))
-				.addStatement(new MethodCallExpr(CONTEXT, "previous"));
+		last = new BlockStmt().addStatement(new MethodCallExpr(new EnclosedExpr(new CastExpr(types.getClass(clazz), new MethodCallExpr(CONTEXT, "peek"))), value.setter,
+				Utils.list(value.type().fromString(types, new MethodCallExpr(CONTEXT, "textContent"))))).addStatement(new MethodCallExpr(CONTEXT, "previous"));
 	}
 
 	public void addElem(XmlField<?> a) {
-		start = new IfStmt(
-				new MethodCallExpr(new StringLiteralExpr(a.qname()), "equals", Utils.list(QNAME)),
-				new ExpressionStmt(new MethodCallExpr(CONTEXT, "next", Utils.list(handlers.apply(a.type())))),
-				start);
+		start = new IfStmt(new MethodCallExpr(Utils.text(a.qname()), "equals", Utils.list(QNAME)),
+				new ExpressionStmt(new MethodCallExpr(CONTEXT, "next", Utils.list(handlers.apply(a.type())))), start);
 
-		end = new IfStmt(
-				new MethodCallExpr(new StringLiteralExpr(a.qname()), "equals", Utils.list(QNAME)),
-				new BlockStmt()
-						.addStatement(Utils.assign(types.getClass(a.type().javaType().name()), "v", a.type().fromString(types, new MethodCallExpr(CONTEXT, "pop"))))
-						.addStatement(new MethodCallExpr(
-								new EnclosedExpr(new CastExpr(types.getClass(clazz), new MethodCallExpr(CONTEXT, "peek"))),
-								a.setter,
+		end = new IfStmt(new MethodCallExpr(Utils.text(a.qname()), "equals", Utils.list(QNAME)),
+				new BlockStmt().addStatement(Utils.assign(types.getClass(a.type().javaType().name()), "v", a.type().fromString(types, new MethodCallExpr(CONTEXT, "pop"))))
+						.addStatement(new MethodCallExpr(new EnclosedExpr(new CastExpr(types.getClass(clazz), new MethodCallExpr(CONTEXT, "peek"))), a.setter,
 								Utils.list(new NameExpr("v")))),
 				end);
 	}
@@ -154,41 +136,28 @@ public class JaxSaxHandlerBuilder {
 
 		NodeList<BodyDeclaration<?>> list = Utils.list();
 		if (!attrs.getStatements().isEmpty())
-			list.add(new MethodDeclaration(
-					Modifier.createModifierList(Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL),
-					"attributes",
-					new VoidType(),
-					Utils.list(new Parameter(types.getClass(String.class), "qname"), new Parameter(types.getClass(String.class), "name"), new Parameter(types.getClass(Attributes.class), "attrs"), new Parameter(types.getClass(SaxContext.class), "context")))
-							.addMarkerAnnotation(Override.class).addThrownException(types.getClass(SAXException.class))
-							.setBody(attrs));
-		list.add(new MethodDeclaration(
-				Modifier.createModifierList(Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL),
-				"startElement",
-				new VoidType(),
-				Utils.list(new Parameter(types.getClass(String.class), "qname"), new Parameter(types.getClass(String.class), "name"), new Parameter(types.getClass(SaxContext.class), "context")))
-						.addMarkerAnnotation(Override.class).addThrownException(types.getClass(SAXException.class))
-						.setBody(new BlockStmt(Utils.list(start))));
-		list.add(new MethodDeclaration(
-				Modifier.createModifierList(Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL),
-				"endElement",
-				new VoidType(),
-				Utils.list(new Parameter(types.getClass(String.class), "qname"), new Parameter(types.getClass(String.class), "name"), new Parameter(types.getClass(SaxContext.class), "context")))
-						.addMarkerAnnotation(Override.class).addThrownException(types.getClass(SAXException.class))
-						.setBody(new BlockStmt(Utils.list(last))));
+			list.add(new MethodDeclaration(Modifier.createModifierList(Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL), "attributes", new VoidType(),
+					Utils.list(new Parameter(types.getClass(String.class), "qname"), new Parameter(types.getClass(String.class), "name"),
+							new Parameter(types.getClass(Attributes.class), "attrs"), new Parameter(types.getClass(SaxContext.class), "context")))
+									.addMarkerAnnotation(Override.class).addThrownException(types.getClass(SAXException.class)).setBody(attrs));
+		list.add(new MethodDeclaration(Modifier.createModifierList(Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL), "startElement", new VoidType(),
+				Utils.list(new Parameter(types.getClass(String.class), "qname"), new Parameter(types.getClass(String.class), "name"),
+						new Parameter(types.getClass(SaxContext.class), "context"))).addMarkerAnnotation(Override.class).addThrownException(types.getClass(SAXException.class))
+								.setBody(new BlockStmt(Utils.list(start))));
+		list.add(new MethodDeclaration(Modifier.createModifierList(Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL), "endElement", new VoidType(),
+				Utils.list(new Parameter(types.getClass(String.class), "qname"), new Parameter(types.getClass(String.class), "name"),
+						new Parameter(types.getClass(SaxContext.class), "context"))).addMarkerAnnotation(Override.class).addThrownException(types.getClass(SAXException.class))
+								.setBody(new BlockStmt(Utils.list(last))));
 		return list;
 	}
 
 	public static NodeList<BodyDeclaration<?>> build(TypeCache types, XmlType<?> xml, Function<XmlType<?>, NameExpr> handlers) {
 		if (xml.isSimple()) {
-			return Utils.list(
-					new MethodDeclaration(
-							Modifier.createModifierList(Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL),
-							"endElement",
-							new VoidType(),
-							Utils.list(new Parameter(types.getClass(String.class), "qname"), new Parameter(types.getClass(String.class), "name"), new Parameter(types.getClass(SaxContext.class), "context")))
-									.addMarkerAnnotation(Override.class).addThrownException(types.getClass(SAXException.class))
-									.setBody(new BlockStmt()
-											.addStatement(new MethodCallExpr(CONTEXT, "push", Utils.list(new MethodCallExpr(CONTEXT, "textContent"))))
+			return Utils.list(new MethodDeclaration(Modifier.createModifierList(Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL), "endElement", new VoidType(),
+					Utils.list(new Parameter(types.getClass(String.class), "qname"), new Parameter(types.getClass(String.class), "name"),
+							new Parameter(types.getClass(SaxContext.class), "context"))).addMarkerAnnotation(Override.class)
+									.addThrownException(types.getClass(SAXException.class))
+									.setBody(new BlockStmt().addStatement(new MethodCallExpr(CONTEXT, "push", Utils.list(new MethodCallExpr(CONTEXT, "textContent"))))
 											.addStatement(new MethodCallExpr(CONTEXT, "previous"))));
 		}
 		XmlObject o = (XmlObject) xml;
