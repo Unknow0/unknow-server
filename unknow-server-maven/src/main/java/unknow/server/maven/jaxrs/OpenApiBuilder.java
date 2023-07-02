@@ -5,6 +5,15 @@ package unknow.server.maven.jaxrs;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.Period;
+import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,7 +39,11 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.PathItem;
 import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.media.Content;
+import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.media.Schema;
+import io.swagger.v3.oas.models.parameters.Parameter;
+import io.swagger.v3.oas.models.parameters.RequestBody;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.servers.Server;
 import io.swagger.v3.oas.models.tags.Tag;
@@ -40,14 +53,83 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
+import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBodyParam;
+import unknow.server.maven.model.TypeModel;
 
 public class OpenApiBuilder {
 	private static final Logger logger = LoggerFactory.getLogger(OpenApiBuilder.class);
+
+	private static Schema<?> getDefault(String n) {
+		switch (n) {
+			case "boolean":
+				return new Schema<>().type("boolean").nullable(false);
+			case "java.lang.Boolean":
+				return new Schema<>().type("boolean");
+
+			case "byte":
+				return new Schema<>().type("integer").minimum(BigDecimal.valueOf(Byte.MIN_VALUE)).maximum(BigDecimal.valueOf(Byte.MAX_VALUE)).nullable(false);
+			case "java.lang.Byte":
+				return new Schema<>().type("integer").minimum(BigDecimal.valueOf(Byte.MIN_VALUE)).maximum(BigDecimal.valueOf(Byte.MAX_VALUE));
+			case "char":
+				return new Schema<>().type("integer").minimum(BigDecimal.valueOf(Character.MIN_VALUE)).maximum(BigDecimal.valueOf(Character.MAX_VALUE)).nullable(false);
+			case "java.lang.Character":
+				return new Schema<>().type("integer").minimum(BigDecimal.valueOf(Character.MIN_VALUE)).maximum(BigDecimal.valueOf(Character.MAX_VALUE));
+			case "short":
+				return new Schema<>().type("integer").minimum(BigDecimal.valueOf(Short.MIN_VALUE)).maximum(BigDecimal.valueOf(Short.MAX_VALUE)).nullable(false);
+			case "java.lang.Short":
+				return new Schema<>().type("integer").minimum(BigDecimal.valueOf(Short.MIN_VALUE)).maximum(BigDecimal.valueOf(Short.MAX_VALUE));
+			case "int":
+				return new Schema<>().type("integer").format("int32").nullable(false);
+			case "java.lang.Integer":
+				return new Schema<>().type("integer").format("int32");
+			case "long":
+				return new Schema<>().type("integer").format("int64").nullable(false);
+			case "java.lang.Long":
+				return new Schema<>().type("integer").format("int64");
+			case "java.math.BigInteger":
+				return new Schema<>().type("integer");
+
+			case "float":
+				return new Schema<>().type("number").format("float");
+			case "java.lang.Float":
+				return new Schema<>().type("number").format("float").nullable(false);
+			case "double":
+				return new Schema<>().type("number").format("double").nullable(false);
+			case "java.lang.Double":
+				return new Schema<>().type("number").format("double");
+			case "java.math.BigDecimal":
+				return new Schema<>().type("number");
+
+			case "java.lang.String":
+				return new Schema<>().type("string");
+
+			case "java.time.LocalDate":
+				return new Schema<>().type("string").format("date");
+			case "java.time.LocalTime":
+				return new Schema<>().type("string").format("time");
+			case "java.time.LocalDateTime":
+				return new Schema<>().type("string").format("date-time");
+			case "java.time.ZonedDateTime":
+				return new Schema<>().type("string").format("date-time");
+			case "java.time.OffsetDateTime":
+				return new Schema<>().type("string").format("date-time");
+			case "java.time.Duration":
+				return new Schema<>().type("string").format("duration");
+			case "java.time.Period":
+				return new Schema<>().type("string").format("period");
+			default:
+				return null;
+		}
+	}
+
 	public Info info;
 	public List<Server> servers;
 	public List<SecurityRequirement> security;
 	public List<Tag> tags;
 	public ExternalDocumentation externalDocs;
+
+	@SuppressWarnings("rawtypes")
+	private final Map<String, Schema> schemas = new HashMap<>();
 
 	public CompilationUnit build(MavenProject project, JaxrsModel model, String packageName, Map<String, String> existingClass) throws MojoExecutionException {
 
@@ -93,8 +175,6 @@ public class OpenApiBuilder {
 		if (externalDocs != null)
 			spec.setExternalDocs(externalDocs);
 
-		@SuppressWarnings("rawtypes")
-		Map<String, Schema> schemas = new HashMap<>();
 		io.swagger.v3.oas.models.Paths paths = new io.swagger.v3.oas.models.Paths();
 
 		for (JaxrsMapping m : model.mappings()) {
@@ -107,17 +187,58 @@ public class OpenApiBuilder {
 			}
 
 			// TODO get @Operation
-//			o.set
-//			PathItem pathItem = new PathItem();
-//				model.mapping(p, m)
-//			Operation operation = new Operation();
+//			o.setOperationId(null);
+//			o.setDescription(null);
 
-//			pathItem.setDelete(null);
+			for (JaxrsParam param : m.params) {
+				MediaType mdi = new MediaType();
+				mdi.examples(null);
+				mdi.schema(schema(param.type));
+				Content content = new Content();
+				content.addMediaType("*/*", mdi);
+//				RequestBody r = new RequestBody();
+//				r.description(null).setContent();
+				if (param instanceof JaxrsBodyParam) {
+					o.setRequestBody(new RequestBody().content(content));
+				} else {
+					String in = "";
+					// header, query, path, cookie,
+					o.addParametersItem(new Parameter().in(in).name(param.name).schema(schema(param.type)));
+
+				}
+			}
+
 		}
 		// TODO add path
 		// TODO add component/schema
 
 		return spec.components(new Components().schemas(schemas)).paths(paths);
+	}
+
+	/**
+	 * @param type
+	 * @return
+	 */
+	private Schema<?> schema(TypeModel type) {
+		String n = type.name();
+
+		// TODO array & collection & map
+		// "array"
+		if (schemas.containsKey(n))
+			return new Schema<>().$ref("#/components/schemas/" + n);
+
+		Schema<?> s = getDefault(n);
+		if (s != null)
+			return s;
+
+		if (type.isEnum())
+			s = new Schema<>()._enum(null);
+		else {
+			s = new Schema<>().type("object");
+			// required => list of mendatory value
+		}
+		schemas.put(n, s);
+		return new Schema<>().$ref("#/components/schemas/" + n);
 	}
 
 	/**
