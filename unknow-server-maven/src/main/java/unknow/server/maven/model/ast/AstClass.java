@@ -19,7 +19,6 @@ import unknow.server.maven.model.TypeParamModel;
  * @author unknow
  */
 public class AstClass extends AstBaseClass<ClassOrInterfaceDeclaration> {
-	private final String name;
 	private final TypeModel[] paramsClass;
 	private ClassModel superType;
 	private List<ClassModel> interfaces;
@@ -33,14 +32,9 @@ public class AstClass extends AstBaseClass<ClassOrInterfaceDeclaration> {
 	 */
 	public AstClass(ModelLoader loader, ClassOrInterfaceDeclaration cl, TypeModel[] paramsClass) {
 		super(loader, cl);
-		this.name = cl.resolve().getQualifiedName();
 		this.paramsClass = paramsClass;
 	}
 
-	@Override
-	public String name() {
-		return name;
-	}
 
 	@Override
 	public ClassModel superType() {
@@ -70,16 +64,5 @@ public class AstClass extends AstBaseClass<ClassOrInterfaceDeclaration> {
 				parameters.add(new AstTypeParam(loader, this, c.getTypeParameter(i), paramsClass.length == l ? paramsClass[i] : null));
 		}
 		return parameters;
-	}
-
-	@Override
-	public String toString() {
-		if (parameters().isEmpty())
-			return name;
-		StringBuilder sb = new StringBuilder(name).append('<');
-		for (TypeParamModel p : parameters())
-			sb.append(p.type()).append(',');
-		sb.setCharAt(sb.length() - 1, '>');
-		return sb.toString();
 	}
 }

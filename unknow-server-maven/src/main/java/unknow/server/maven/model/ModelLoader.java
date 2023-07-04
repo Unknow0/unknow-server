@@ -77,13 +77,25 @@ public class ModelLoader {
 				return new AstClass(this, t.asClassOrInterfaceDeclaration(), params);
 			throw new RuntimeException("unsuported type " + t);
 		}
-		try {
-			Class<?> c = this.cl.loadClass(cl);
-			if (c.isEnum())
-				return new JvmEnum(this, c, params);
-			return new JvmClass(this, c, params);
-		} catch (ClassNotFoundException e) {
-			throw new RuntimeException(e);
+		Class<?> c = tryLoad(cl);
+		if (c == null)
+			throw new RuntimeException("class not found " + cl);
+
+		if (c.isEnum())
+			return new JvmEnum(this, c, params);
+		return new JvmClass(this, c, params);
+	}
+
+	private Class<?> tryLoad(String cl) {
+		while (true) {
+			try {
+				return this.cl.loadClass(cl);
+			} catch (ClassNotFoundException e) {
+				int i = cl.lastIndexOf('.');
+				if (i < 0)
+					return null;
+				cl = cl.substring(0, i) + "$" + cl.substring(i + 1);
+			}
 		}
 	}
 

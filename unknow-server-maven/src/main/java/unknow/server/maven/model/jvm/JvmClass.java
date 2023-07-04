@@ -47,6 +47,11 @@ public class JvmClass implements ClassModel, JvmMod {
 	}
 
 	@Override
+	public String genericName() {
+		return toString();
+	}
+
+	@Override
 	public Collection<AnnotationModel> annotations() {
 		if (annotations == null)
 			annotations = Arrays.stream(cl.getAnnotations()).map(a -> new JvmAnnotation(a)).collect(Collectors.toList());

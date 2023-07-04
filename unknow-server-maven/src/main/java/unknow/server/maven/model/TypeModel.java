@@ -11,10 +11,14 @@ import unknow.server.maven.model.util.WithName;
  */
 public interface TypeModel extends WithAnnotation, WithName {
 	/**
-	 * @return type fully qualified name
+	 * @return type fully qualified name with actual parameter
 	 */
 	@Override
 	String name();
+
+	default String genericName() {
+		return name();
+	}
 
 	/**
 	 * @return java internalName

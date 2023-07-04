@@ -31,16 +31,6 @@ public class JvmEnum extends JvmClass implements EnumModel {
 	}
 
 	@Override
-	public String name() {
-		return cl.getName();
-	}
-
-	@Override
-	public String toString() {
-		return cl.toString();
-	}
-
-	@Override
 	public Collection<AnnotationModel> annotations() {
 		if (annotations == null)
 			annotations = Arrays.stream(cl.getAnnotations()).map(a -> new JvmAnnotation(a)).collect(Collectors.toList());
