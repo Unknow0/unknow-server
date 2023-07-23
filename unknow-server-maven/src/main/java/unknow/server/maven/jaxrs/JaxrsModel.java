@@ -142,7 +142,7 @@ public class JaxrsModel {
 			Enumeration<URL> e = loader.getResources("META-INF/services/" + clazz.getName());
 			while (e.hasMoreElements()) {
 				URL u = e.nextElement();
-				log.error("	found {}", u);
+				log.debug("	found {}", u);
 				try {
 					URLConnection uc = u.openConnection();
 					uc.setUseCaches(false);

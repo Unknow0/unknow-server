@@ -45,11 +45,14 @@ import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.ArrayAccessExpr;
 import com.github.javaparser.ast.expr.AssignExpr;
 import com.github.javaparser.ast.expr.BinaryExpr;
+import com.github.javaparser.ast.expr.BinaryExpr.Operator;
+import com.github.javaparser.ast.expr.BooleanLiteralExpr;
 import com.github.javaparser.ast.expr.CastExpr;
 import com.github.javaparser.ast.expr.ClassExpr;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.FieldAccessExpr;
 import com.github.javaparser.ast.expr.IntegerLiteralExpr;
+import com.github.javaparser.ast.expr.LambdaExpr;
 import com.github.javaparser.ast.expr.LongLiteralExpr;
 import com.github.javaparser.ast.expr.MarkerAnnotationExpr;
 import com.github.javaparser.ast.expr.MethodCallExpr;
@@ -70,6 +73,7 @@ import com.github.javaparser.ast.stmt.TryStmt;
 import com.github.javaparser.ast.type.ArrayType;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.TypeParameter;
+import com.github.javaparser.ast.type.UnknownType;
 
 import jakarta.servlet.ServletContainerInitializer;
 import jakarta.servlet.ServletContext;
@@ -80,6 +84,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.ws.rs.NotAcceptableException;
 import jakarta.ws.rs.NotSupportedException;
+import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.ext.ParamConverter;
 import jakarta.ws.rs.ext.ParamConverterProvider;
 import jakarta.ws.rs.ext.RuntimeDelegate;
@@ -143,6 +148,7 @@ public class JaxRsServlet extends AbstractMojo {
 	private final Map<JaxrsParam, String> converterVar = new HashMap<>();
 
 	private BeanParamBuilder beans;
+	private MediaTypesBuilder mt;
 
 	@Override
 	protected String id() {
@@ -159,7 +165,8 @@ public class JaxRsServlet extends AbstractMojo {
 		processSrc(cu -> cu.walk(ClassOrInterfaceDeclaration.class, t -> model.process(loader.get(t.getFullyQualifiedName().get()).asClass())));
 		model.implicitConstructor.remove("java.lang.String");
 
-		beans = new BeanParamBuilder(loader, packageName, existingClass);
+		beans = new BeanParamBuilder(loader, newCu(), existingClass);
+		mt = new MediaTypesBuilder(newCu(), existingClass);
 
 		try {
 			generateInitalizer();
@@ -169,8 +176,9 @@ public class JaxRsServlet extends AbstractMojo {
 		for (String path : model.paths())
 			generateClass(path);
 
-		out.save(openapi.build(project, model, packageName, existingClass));
+		out.save(openapi.build(project, model, newCu(), existingClass));
 		beans.save(out);
+		mt.save(out);
 	}
 
 	/**
@@ -185,8 +193,7 @@ public class JaxRsServlet extends AbstractMojo {
 			w.append(packageName).write(".JaxrsInit\n");
 		}
 
-		CompilationUnit cu = new CompilationUnit(packageName);
-		cu.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolSolver);
+		CompilationUnit cu = newCu();
 		types = new TypeCache(cu, existingClass);
 
 		cl = cu.addClass("JaxrsInit", Utils.PUBLIC).addImplementedType(ServletContainerInitializer.class);
@@ -278,8 +285,7 @@ public class JaxRsServlet extends AbstractMojo {
 	 * @throws MojoExecutionException
 	 */
 	private void generateClass(String path) throws MojoExecutionException {
-		CompilationUnit cu = new CompilationUnit(packageName);
-		cu.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolSolver);
+		CompilationUnit cu = newCu();
 		types = new TypeCache(cu, existingClass);
 
 		cl = cu.addClass("Jaxrs" + path.replace('/', '_').replace("{}", ""), Utils.PUBLIC).addSingleMemberAnnotation(WebServlet.class, Utils.text(path))
@@ -474,21 +480,22 @@ public class JaxRsServlet extends AbstractMojo {
 	}
 
 	private Statement buildProduces(BlockStmt b, Map<String, JaxrsMapping> produce) {
+
+		MethodCallExpr accept = new MethodCallExpr(new NameExpr("r"), "getAccepted", Utils.list(mt.predicate(produce.keySet())));
+
 		JaxrsMapping def = produce.remove("*/*");
 		Statement stmt = new ThrowStmt(new ObjectCreationExpr(null, types.getClass(NotAcceptableException.class), Utils.list()));
 		if (def != null)
 			stmt = new ExpressionStmt(new MethodCallExpr(def.var + "$call", new NameExpr("r"), new NameExpr("res")));
-		if (produce.size() == 0)
-			return b.addStatement(stmt);
+		if (produce.isEmpty())
+			return b.addStatement(accept).addStatement(stmt);
 
-		// TODO quality check of header
-		b.addStatement(Utils.assign(types.getClass(String.class), "accept", new MethodCallExpr(new NameExpr("r"), "getHeader",
-				Utils.list(Utils.text("accept"), Utils.text("*/*"), new FieldAccessExpr(new TypeExpr(types.getClass(DefaultConvert.class)), "STRING")))));
+		b.addStatement(Utils.assign(types.getClass(MediaType.class), "accept", accept));
 
 		List<String> k = new ArrayList<>(produce.keySet());
 		k.sort(MIME);
 		for (String s : k) {
-			stmt = new IfStmt(new MethodCallExpr(new NameExpr("accept"), "equals", Utils.list(Utils.text(s))),
+			stmt = new IfStmt(new MethodCallExpr(new NameExpr("accept"), "isCompatible", Utils.list(mt.type(s))),
 					new ExpressionStmt(new MethodCallExpr(produce.get(s).var + "$call", new NameExpr("r"), new NameExpr("res"))), stmt);
 		}
 		b.addStatement(stmt);

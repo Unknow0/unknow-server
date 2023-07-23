@@ -42,8 +42,7 @@ public class JaxwsGeneratorMojo extends AbstractMojo {
 		init();
 		processSrc();
 
-		CompilationUnit marshallers = new CompilationUnit(packageName);
-		marshallers.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolSolver);
+		CompilationUnit marshallers = newCu();
 		TypeCache types = new TypeCache(marshallers, existingClass);
 		JaxMarshallerBuilder mbuilder = new JaxMarshallerBuilder(marshallers, types);
 		boolean find = false;

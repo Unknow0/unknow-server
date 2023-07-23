@@ -32,7 +32,7 @@ public class Rest {
 	}
 
 	@GET
-	@Consumes("text/*")
+	@Consumes({ "application/json", "application/x-ndjson" })
 	public Response response(@PathParam("q") String q, @BeanParam Bean bean) {
 		System.out.println("response>> q: '" + q + "' bean: " + bean);
 		return Response.status(200).entity("echo").build();

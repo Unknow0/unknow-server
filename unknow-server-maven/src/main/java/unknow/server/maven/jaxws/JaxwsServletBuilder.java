@@ -119,9 +119,9 @@ public class JaxwsServletBuilder {
 		servlet.addFieldWithInitializer(types.getClass(long.class), "serialVersionUID", new LongLiteralExpr("1"), PSF);
 
 		servlet.addFieldWithInitializer(types.getClass(Logger.class), "log",
-				new MethodCallExpr(new TypeExpr(types.getClass(LoggerFactory.class)), "getLogger", Utils.list(new ClassExpr(types.get(servlet)))), PSF);
+				new MethodCallExpr(new TypeExpr(types.getClass(LoggerFactory.class)), "getLogger", Utils.list(new ClassExpr(types.getClass(servlet)))), PSF);
 
-		servlet.addFieldWithInitializer(types.get(serviceClass), "WS", new ObjectCreationExpr(null, types.get(serviceClass), Utils.list()), PSF);
+		servlet.addFieldWithInitializer(types.getClass(serviceClass), "WS", new ObjectCreationExpr(null, types.getClass(serviceClass), Utils.list()), PSF);
 
 		Collections.sort(service.operations, (o1, o2) -> o1.sig().compareTo(o2.sig()));
 		servlet.addFieldWithInitializer(types.get(String[].class), "OP_SIG", Utils.array(types.getClass(String.class), service.operations.size()), PSF);
