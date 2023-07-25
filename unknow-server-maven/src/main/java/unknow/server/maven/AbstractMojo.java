@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.resolution.TypeSolver;
 import com.github.javaparser.symbolsolver.JavaSymbolSolver;
@@ -109,6 +110,12 @@ public abstract class AbstractMojo extends org.apache.maven.plugin.AbstractMojo 
 		} catch (IOException e) {
 			throw new MojoFailureException("failed to create output folders", e);
 		}
+	}
+
+	public CompilationUnit newCu() {
+		CompilationUnit cu = new CompilationUnit(packageName);
+		cu.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolSolver);
+		return cu;
 	}
 
 	private ClassLoader getClassLoader() {
@@ -208,15 +215,15 @@ public abstract class AbstractMojo extends org.apache.maven.plugin.AbstractMojo 
 		}
 
 		@Override
-		public void directoryWalkStarting(File basedir) { //ok
+		public void directoryWalkStarting(File basedir) { // ok
 		}
 
 		@Override
-		public void directoryWalkFinished() { //ok
+		public void directoryWalkFinished() { // ok
 		}
 
 		@Override
-		public void debug(String message) { //ok
+		public void debug(String message) { // ok
 		}
 	}
 }

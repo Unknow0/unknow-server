@@ -65,8 +65,8 @@ public class BeanParamBuilder {
 	private final Map<String, String> beansVar;
 	private final Map<JaxrsParam, String> converterVar;
 
-	public BeanParamBuilder(ModelLoader loader, String packageName, Map<String, String> existingClass) {
-		cu = new CompilationUnit(packageName);
+	public BeanParamBuilder(ModelLoader loader, CompilationUnit cu, Map<String, String> existingClass) {
+		this.cu = cu;
 		types = new TypeCache(cu, existingClass);
 		cl = cu.addClass("BeansReader", Utils.PUBLIC);
 

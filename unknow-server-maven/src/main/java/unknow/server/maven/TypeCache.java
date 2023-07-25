@@ -73,7 +73,7 @@ public class TypeCache {
 		return get(c.getCanonicalName());
 	}
 
-	public ClassOrInterfaceType get(ClassOrInterfaceDeclaration decl) {
+	public ClassOrInterfaceType getClass(ClassOrInterfaceDeclaration decl) {
 		return get(decl.resolve().getQualifiedName()).asClassOrInterfaceType();
 	}
 

@@ -6,14 +6,6 @@ package unknow.server.maven.jaxrs;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.time.Duration;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.OffsetDateTime;
-import java.time.Period;
-import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -131,7 +123,7 @@ public class OpenApiBuilder {
 	@SuppressWarnings("rawtypes")
 	private final Map<String, Schema> schemas = new HashMap<>();
 
-	public CompilationUnit build(MavenProject project, JaxrsModel model, String packageName, Map<String, String> existingClass) throws MojoExecutionException {
+	public CompilationUnit build(MavenProject project, JaxrsModel model, CompilationUnit cu, Map<String, String> existingClass) throws MojoExecutionException {
 
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		ObjectMapper m = new ObjectMapper().enable(SerializationFeature.WRITE_ENUMS_USING_TO_STRING).disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
@@ -142,7 +134,6 @@ public class OpenApiBuilder {
 			throw new MojoExecutionException(e);
 		}
 
-		CompilationUnit cu = new CompilationUnit(packageName);
 		TypeCache types = new TypeCache(cu, existingClass);
 		ClassOrInterfaceDeclaration cl = cu.addClass("OpenApi", Utils.PUBLIC).addSingleMemberAnnotation(WebServlet.class, Utils.text("/openapi.json"))
 				.addExtendedType(types.getClass(HttpServlet.class));
