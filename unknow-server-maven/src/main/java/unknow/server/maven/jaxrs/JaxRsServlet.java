@@ -189,32 +189,38 @@ public class JaxRsServlet extends AbstractMojo {
 		cu.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolSolver);
 		types = new TypeCache(cu, existingClass);
 
+		TypeExpr ctx = new TypeExpr(types.getClass(JaxrsContext.class));
+
 		cl = cu.addClass("JaxrsInit", Utils.PUBLIC).addImplementedType(ServletContainerInitializer.class);
 		BlockStmt b = cl.addMethod("onStartup", Utils.PUBLIC).addMarkerAnnotation(Override.class)
 				.addParameter(types.getClass(Set.class, types.getClass(Class.class, TypeCache.ANY)), "c").addParameter(types.getClass(ServletContext.class), "ctx").getBody()
 				.get().addStatement(new MethodCallExpr(new TypeExpr(types.getClass(RuntimeDelegate.class)), "setInstance",
 						Utils.list(new ObjectCreationExpr(null, types.getClass(JaxrsRuntime.class), Utils.list()))));
 		for (String s : model.converter)
-			b.addStatement(new MethodCallExpr(new TypeExpr(types.getClass(JaxrsContext.class)), "registerConverter",
-					Utils.list(new ObjectCreationExpr(null, types.getClass(s), Utils.list()))));
+			b.addStatement(new MethodCallExpr(ctx, "registerConverter", Utils.list(new ObjectCreationExpr(null, types.getClass(s), Utils.list()))));
 		if (!model.implicitConstructor.isEmpty() || !model.implicitFromString.isEmpty() || !model.implicitValueOf.isEmpty())
-			b.addStatement(new MethodCallExpr(new TypeExpr(types.getClass(JaxrsContext.class)), "registerConverter",
-					Utils.list(new ObjectCreationExpr(null, new ClassOrInterfaceType(null, "P"), Utils.list()))));
+			b.addStatement(new MethodCallExpr(ctx, "registerConverter", Utils.list(new ObjectCreationExpr(null, new ClassOrInterfaceType(null, "P"), Utils.list()))));
 
 		for (Entry<String, List<String>> e : model.readers.entrySet()) {
 			NodeList<Expression> l = new NodeList<>(new ObjectCreationExpr(null, types.getClass(e.getKey()), Utils.list()));
 			for (String s : e.getValue())
 				l.add(Utils.text(s));
-			b.addStatement(new MethodCallExpr(new TypeExpr(types.getClass(JaxrsContext.class)), "registerReader", l));
+			b.addStatement(new MethodCallExpr(ctx, "registerReader", l));
 		}
 		for (Entry<String, List<String>> e : model.writers.entrySet()) {
 			NodeList<Expression> l = new NodeList<>(new ObjectCreationExpr(null, types.getClass(e.getKey()), Utils.list()));
 			for (String s : e.getValue())
 				l.add(Utils.text(s));
-			b.addStatement(new MethodCallExpr(new TypeExpr(types.getClass(JaxrsContext.class)), "registerWriter", l));
+			b.addStatement(new MethodCallExpr(ctx, "registerWriter", l));
 		}
 
 		generateImplicitConverter(cu);
+
+		for (Entry<TypeModel, ClassModel> e : model.exceptions.entrySet()) {
+
+			b.addStatement(new MethodCallExpr(ctx, "registerException",
+					Utils.list(new TypeExpr(types.get(e.getKey())), new ObjectCreationExpr(null, types.getClass(e.getValue()), Utils.list()))));
+		}
 
 		out.save(cu);
 

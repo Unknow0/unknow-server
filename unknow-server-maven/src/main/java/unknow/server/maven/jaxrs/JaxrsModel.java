@@ -99,7 +99,7 @@ public class JaxrsModel {
 	public final List<String> converter = new ArrayList<>();
 	public final Map<String, List<String>> readers = new HashMap<>();
 	public final Map<String, List<String>> writers = new HashMap<>();
-	public final List<String> exceptions = new ArrayList<>();
+	public final Map<TypeModel, ClassModel> exceptions = new HashMap<>();
 
 	public final Set<String> implicitConstructor = new HashSet<>();
 	public final Set<String> implicitFromString = new HashSet<>();
@@ -216,18 +216,23 @@ public class JaxrsModel {
 		clazz.annotation(Provider.class).ifPresent(a -> {
 			if (paramProvider.isAssignableFrom(clazz))
 				converter.add(clazz.name());
-			if (exceptionMapper.isAssignableFrom(clazz))
-				exceptions.add(clazz.name());
+			ClassModel e = clazz.ancestror(exceptionMapper);
+			if (e != null) {
+				if (exceptions.containsKey(e))
+					log.error("Duplicate exception mapping for '" + e + "'");
+				else
+					exceptions.put(e.parameter(0).type(), clazz);
+			}
 			if (bodyReader.isAssignableFrom(clazz)) {
 				List<String> list = new ArrayList<>();
 				for (String s : clazz.annotation(Consumes.class).flatMap(v -> v.values()).orElse(ALL))
-					list.addAll(Arrays.asList(s.split(" *, *")));
+					list.addAll(Arrays.asList(s.trim().split(" *, *")));
 				readers.put(clazz.name(), list);
 			}
 			if (bodyWriter.isAssignableFrom(clazz)) {
 				List<String> list = new ArrayList<>();
 				for (String s : clazz.annotation(Produces.class).flatMap(v -> v.values()).orElse(ALL))
-					list.addAll(Arrays.asList(s.split(" *, *")));
+					list.addAll(Arrays.asList(s.trim().split(" *, *")));
 				writers.put(clazz.name(), list);
 			}
 			// TODO other

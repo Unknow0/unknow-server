@@ -55,7 +55,9 @@ public class JaxrsContext {
 		// TODO PathSegment for param
 	}
 
-	public static <T extends Throwable> void register(Class<T> clazz, ExceptionMapper<T> e) {
+	public static <T extends Throwable> void registerException(Class<T> clazz, ExceptionMapper<T> e) {
+		if (exceptions.containsKey(clazz))
+			logger.warn("Duplicate ExceptionMapper for exception '" + clazz + "'");
 		exceptions.put(clazz, e);
 	}
 

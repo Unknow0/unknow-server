@@ -137,6 +137,17 @@ public interface ClassModel extends TypeModel, WithMod {
 		return new AncestrorIterable(this);
 	}
 
+	default ClassModel ancestror(TypeModel t) {
+		if (!t.isClass())
+			return null;
+
+		for (ClassModel p : t.asClass().ancestor()) {
+			if (p.name().equals(name()))
+				return p;
+		}
+		return null;
+	}
+
 	@Override
 	default boolean isAssignableFrom(TypeModel t) {
 		if (!t.isClass())

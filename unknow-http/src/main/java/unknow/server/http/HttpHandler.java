@@ -280,7 +280,7 @@ public class HttpHandler implements Handler, Runnable {
 				} catch (UnavailableException e) {
 					// TODO add page with retry-after
 					res.sendError(503, e, null);
-				} catch (Exception e) {
+				} catch (Throwable e) {
 					log.error("failed to service '{}'", s, e);
 					if (!res.isCommited())
 						res.sendError(500, null);
