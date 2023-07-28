@@ -229,7 +229,7 @@ public class JaxrsModel {
 		clazz.annotation(Provider.class).ifPresent(a -> {
 			if (paramProvider.isAssignableFrom(clazz))
 				converter.add(clazz.name());
-			ClassModel e = clazz.ancestror(exceptionMapper);
+			ClassModel e = clazz.ancestor(exceptionMapper);
 			if (e != null) {
 				if (exceptions.containsKey(e))
 					log.error("Duplicate exception mapping for '" + e + "'");
