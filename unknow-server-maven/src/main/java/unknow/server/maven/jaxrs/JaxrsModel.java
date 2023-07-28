@@ -12,6 +12,7 @@ import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -21,6 +22,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -28,6 +31,14 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.github.javaparser.ast.NodeList;
+import com.github.javaparser.ast.expr.ClassExpr;
+import com.github.javaparser.ast.expr.Expression;
+import com.github.javaparser.ast.expr.MethodCallExpr;
+import com.github.javaparser.ast.expr.NameExpr;
+import com.github.javaparser.ast.expr.NullLiteralExpr;
+import com.github.javaparser.ast.expr.ObjectCreationExpr;
 
 import jakarta.ws.rs.BeanParam;
 import jakarta.ws.rs.Consumes;
@@ -52,6 +63,8 @@ import jakarta.ws.rs.ext.MessageBodyReader;
 import jakarta.ws.rs.ext.MessageBodyWriter;
 import jakarta.ws.rs.ext.ParamConverterProvider;
 import jakarta.ws.rs.ext.Provider;
+import unknow.server.maven.TypeCache;
+import unknow.server.maven.Utils;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBodyParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsCookieParam;
@@ -341,17 +354,40 @@ public class JaxrsModel {
 
 	public static TypeModel getParamType(TypeModel type) {
 		if (type.isArray())
-			return type.asArray().type();
+			type = type.asArray().type();
+		if (type.isPrimitive())
+			return type.asPrimitive().boxed();
+
 		if (!type.isClass())
 			return type;
 
-		Iterator<ClassModel> it = type.asClass().ancestor().iterator();
-		while (it.hasNext()) {
-			ClassModel next = it.next();
-			if ("java.util.Collection".equals(next.name()))
-				return next.parameter(0).type();
-		}
+		ClassModel ancestor = type.asClass().ancestor("java.util.Collection");
+		if (ancestor != null)
+			return ancestor.parameter(0).type();
 		return type;
+	}
+
+	public static Expression getParam(JaxrsParam p, TypeCache types, Map<JaxrsParam, String> converterVar) {
+		NodeList<Expression> list = Utils.list(Utils.text(p.value), p.def == null ? new NullLiteralExpr() : Utils.text(p.def));
+		String m = "get" + p.getClass().getSimpleName().substring(5, p.getClass().getSimpleName().length() - 5);
+
+		if (p.type.isArray()) {
+			m += "Array";
+			list.add(new ClassExpr(types.get(p.type.asArray().type())));
+		}
+		if (p.type.isClass()) {
+			ClassModel c = p.type.asClass().ancestor(Collection.class.getName());
+			if (c != null) {
+				m += "List";
+			}
+		}
+		list.add(new NameExpr(converterVar.get(p)));
+		Expression e = new MethodCallExpr(new NameExpr("r"), m, list);
+		if (p.type.isAssignableTo(SortedSet.class.getName()))
+			e = new ObjectCreationExpr(null, types.getClass(TreeSet.class), Utils.list(e));
+		else if (p.type.isAssignableTo(Set.class.getName()))
+			e = new ObjectCreationExpr(null, types.getClass(HashSet.class), Utils.list(e));
+		return e;
 	}
 
 	private <T extends WithName & WithAnnotation & WithType> JaxrsParam buildParam(T p, AnnotationModel a) {

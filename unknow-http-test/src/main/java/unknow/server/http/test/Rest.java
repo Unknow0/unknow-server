@@ -68,7 +68,7 @@ public class Rest {
 		public String[] p;
 
 		@QueryParam("d")
-		public List<E> d;
+		public List<? extends E> d;
 
 		public Truc truc;
 

@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
@@ -35,6 +36,7 @@ import io.swagger.v3.oas.models.media.Content;
 import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.parameters.Parameter;
+import io.swagger.v3.oas.models.parameters.Parameter.StyleEnum;
 import io.swagger.v3.oas.models.parameters.RequestBody;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.servers.Server;
@@ -45,7 +47,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
+import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBodyParam;
+import unknow.server.maven.jaxrs.JaxrsParam.JaxrsCookieParam;
+import unknow.server.maven.jaxrs.JaxrsParam.JaxrsHeaderParam;
+import unknow.server.maven.jaxrs.JaxrsParam.JaxrsMatrixParam;
+import unknow.server.maven.jaxrs.JaxrsParam.JaxrsPathParam;
+import unknow.server.maven.jaxrs.JaxrsParam.JaxrsQueryParam;
+import unknow.server.maven.model.EnumModel;
 import unknow.server.maven.model.TypeModel;
 
 public class OpenApiBuilder {
@@ -181,23 +190,8 @@ public class OpenApiBuilder {
 //			o.setOperationId(null);
 //			o.setDescription(null);
 
-			for (JaxrsParam param : m.params) {
-				MediaType mdi = new MediaType();
-				mdi.examples(null);
-				mdi.schema(schema(param.type));
-				Content content = new Content();
-				content.addMediaType("*/*", mdi);
-//				RequestBody r = new RequestBody();
-//				r.description(null).setContent();
-				if (param instanceof JaxrsBodyParam) {
-					o.setRequestBody(new RequestBody().content(content));
-				} else {
-					String in = "";
-					// header, query, path, cookie,
-					o.addParametersItem(new Parameter().in(in).name(param.name).schema(schema(param.type)));
-
-				}
-			}
+			for (JaxrsParam param : m.params)
+				addParameters(o, param);
 
 		}
 		// TODO add path
@@ -207,9 +201,50 @@ public class OpenApiBuilder {
 	}
 
 	/**
+	 * @param o
+	 * @param param
+	 */
+	private void addParameters(Operation o, JaxrsParam param) {
+		if (param instanceof JaxrsBeanParam) {
+			JaxrsBeanParam b = (JaxrsBeanParam) param;
+			for (JaxrsParam p : b.fields.values())
+				addParameters(o, p);
+			for (JaxrsParam p : b.setters.values())
+				addParameters(o, p);
+			return;
+		}
+
+		if (param instanceof JaxrsBodyParam) {
+			MediaType mdi = new MediaType();
+			mdi.examples(null);
+			mdi.schema(schema(param.type));
+			Content content = new Content();
+			content.addMediaType("*/*", mdi);
+			o.setRequestBody(new RequestBody().content(content));
+			return;
+		}
+
+		Parameter p = new Parameter().name(param.name).schema(schema(param.type));
+		if (param instanceof JaxrsHeaderParam)
+			p.setIn("header");
+		else if (param instanceof JaxrsQueryParam)
+			p.setIn("query");
+		else if (param instanceof JaxrsPathParam)
+			p.setIn("path");
+		else if (param instanceof JaxrsCookieParam)
+			p.setIn("cookie");
+		else if (param instanceof JaxrsMatrixParam)
+			p.in("path").style(StyleEnum.MATRIX);
+
+		o.addParametersItem(p);
+
+	}
+
+	/**
 	 * @param type
 	 * @return
 	 */
+	@SuppressWarnings("unchecked")
 	private Schema<?> schema(TypeModel type) {
 		String n = type.name();
 
@@ -222,9 +257,14 @@ public class OpenApiBuilder {
 		if (s != null)
 			return s;
 
-		if (type.isEnum())
-			s = new Schema<>()._enum(null);
-		else {
+		if (type.isEnum()) {
+			EnumModel e = type.asEnum();
+			// TODO get enum format/value from jackson
+			// @JsonFormat on enum
+			// @JsonValue on method
+			// @JsonProperty on entries
+			s = new Schema<>().type("string")._enum(e.entries().stream().map(v -> v.name()).collect(Collectors.toList()));
+		} else {
 			s = new Schema<>().type("object");
 			// required => list of mendatory value
 		}

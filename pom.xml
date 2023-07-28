@@ -13,6 +13,8 @@
 		<javaparser.version>3.25.3</javaparser.version>
 		<junit.version>5.8.2</junit.version>
 		<swagger.version>2.2.2</swagger.version>
+		<cxf.version>4.0.2</cxf.version>
+		<jackson.version>2.15.2</jackson.version>
 		<unknow-sax.version>0.0.3</unknow-sax.version>
 	</properties>
 	<distributionManagement>
@@ -128,7 +130,7 @@
 			<dependency>
 				<groupId>jakarta.xml.bind</groupId>
 				<artifactId>jakarta.xml.bind-api</artifactId>
-				<version>4.0.0</version>
+				<version>3.0.1</version>
 			</dependency>
 			<dependency>
 				<groupId>jakarta.jws</groupId>
@@ -198,7 +200,17 @@
 			<dependency>
 				<groupId>com.fasterxml.jackson.core</groupId>
 				<artifactId>jackson-databind</artifactId>
-				<version>2.15.2</version>
+				<version>${jackson.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.fasterxml.jackson.core</groupId>
+				<artifactId>jackson-core</artifactId>
+				<version>${jackson.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.fasterxml.jackson.jakarta.rs</groupId>
+				<artifactId>jackson-jakarta-rs-json-provider</artifactId>
+				<version>${jackson.version}</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>

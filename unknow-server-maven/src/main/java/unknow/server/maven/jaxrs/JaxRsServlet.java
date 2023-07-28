@@ -13,8 +13,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -22,8 +20,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import org.apache.maven.plugin.MojoExecutionException;
@@ -37,7 +33,6 @@ import org.slf4j.LoggerFactory;
 
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Modifier;
-import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.BodyDeclaration;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
@@ -45,14 +40,11 @@ import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.ArrayAccessExpr;
 import com.github.javaparser.ast.expr.AssignExpr;
 import com.github.javaparser.ast.expr.BinaryExpr;
-import com.github.javaparser.ast.expr.BinaryExpr.Operator;
-import com.github.javaparser.ast.expr.BooleanLiteralExpr;
 import com.github.javaparser.ast.expr.CastExpr;
 import com.github.javaparser.ast.expr.ClassExpr;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.FieldAccessExpr;
 import com.github.javaparser.ast.expr.IntegerLiteralExpr;
-import com.github.javaparser.ast.expr.LambdaExpr;
 import com.github.javaparser.ast.expr.LongLiteralExpr;
 import com.github.javaparser.ast.expr.MarkerAnnotationExpr;
 import com.github.javaparser.ast.expr.MethodCallExpr;
@@ -73,7 +65,6 @@ import com.github.javaparser.ast.stmt.TryStmt;
 import com.github.javaparser.ast.type.ArrayType;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.TypeParameter;
-import com.github.javaparser.ast.type.UnknownType;
 
 import jakarta.servlet.ServletContainerInitializer;
 import jakarta.servlet.ServletContext;
@@ -102,6 +93,7 @@ import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBodyParam;
 import unknow.server.maven.model.ClassModel;
 import unknow.server.maven.model.MethodModel;
+import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.model.ParamModel;
 import unknow.server.maven.model.TypeModel;
 
@@ -133,10 +125,6 @@ public class JaxRsServlet extends AbstractMojo {
 		return c;
 	};
 
-	private TypeModel collection;
-	private TypeModel set;
-	private TypeModel sortedSet;
-
 	private JaxrsModel model;
 
 	private TypeCache types;
@@ -158,14 +146,11 @@ public class JaxRsServlet extends AbstractMojo {
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
 		init();
-		collection = loader.get(Collection.class.getCanonicalName());
-		set = loader.get(Set.class.getCanonicalName());
-		sortedSet = loader.get(SortedSet.class.getCanonicalName());
 		model = new JaxrsModel(loader);
 		processSrc(cu -> cu.walk(ClassOrInterfaceDeclaration.class, t -> model.process(loader.get(t.getFullyQualifiedName().get()).asClass())));
 		model.implicitConstructor.remove("java.lang.String");
 
-		beans = new BeanParamBuilder(loader, newCu(), existingClass);
+		beans = new BeanParamBuilder(newCu(), existingClass);
 		mt = new MediaTypesBuilder(newCu(), existingClass);
 
 		try {
@@ -343,7 +328,7 @@ public class JaxRsServlet extends AbstractMojo {
 				TypeModel type = m.m.type();
 				if (!type.isVoid()) {
 					if (type.isPrimitive())
-						type = loader.get(type.asPrimitive().boxed());
+						type = type.asPrimitive().boxed();
 
 					cl.addField(types.getClass(JaxrsEntityWriter.class, types.get(type)), m.var + "$r", Utils.PSF);
 					b.addStatement(new AssignExpr(new NameExpr(m.var + "$r"), new MethodCallExpr(new TypeExpr(types.getClass(JaxrsEntityWriter.class)), "create",
@@ -404,18 +389,25 @@ public class JaxRsServlet extends AbstractMojo {
 		if (p instanceof JaxrsBeanParam)
 			return;
 		converterVar.put(p, n);
-		TypeModel m = p.type.isPrimitive() ? loader.get(p.type.asPrimitive().boxed()) : p.type;
+
+		TypeModel t = JaxrsModel.getParamType(p.type);
+		TypeModel t1 = t;
+		if (t.isWildCard()) {
+			t1 = t.asWildcard().bound();
+			if (t1 == null)
+				t1 = ModelLoader.OBJECT;
+		}
+
 		if (p instanceof JaxrsBodyParam) {
-			cl.addField(types.getClass(JaxrsEntityReader.class, types.get(m)), n, Utils.PSF);
+			cl.addField(types.getClass(JaxrsEntityReader.class, types.get(t)), n, Utils.PSF);
 			b.addStatement(new AssignExpr(new NameExpr(n),
 					new ObjectCreationExpr(null, types.getClass(JaxrsEntityReader.class, TypeCache.EMPTY), Utils.list(new ClassExpr(types.get(p.type.name())),
 							new ArrayAccessExpr(new NameExpr("t"), new IntegerLiteralExpr("" + i)), new ArrayAccessExpr(new NameExpr("a"), new IntegerLiteralExpr("" + i)))),
 					AssignExpr.Operator.ASSIGN));
 		} else {
-			m = JaxrsModel.getParamType(m);
-			cl.addField(types.getClass(ParamConverter.class, types.get(m.isPrimitive() ? m.asPrimitive().boxed() : m.name())), n, Utils.PSF);
+			cl.addField(types.getClass(ParamConverter.class, types.get(t)), n, Utils.PSF);
 			b.addStatement(new AssignExpr(new NameExpr(n),
-					new MethodCallExpr(new TypeExpr(types.getClass(JaxrsContext.class)), "converter", Utils.list(new ClassExpr(types.get(m.name())),
+					new MethodCallExpr(new TypeExpr(types.getClass(JaxrsContext.class)), "converter", Utils.list(new ClassExpr(types.get(t1.name())),
 							new ArrayAccessExpr(new NameExpr("t"), new IntegerLiteralExpr("" + i)), new ArrayAccessExpr(new NameExpr("a"), new IntegerLiteralExpr("" + i)))),
 					AssignExpr.Operator.ASSIGN));
 		}
@@ -536,18 +528,6 @@ public class JaxRsServlet extends AbstractMojo {
 			return new MethodCallExpr(new NameExpr(converterVar.get(p)), "read", Utils.list(new NameExpr("r")));
 		if (p instanceof JaxrsBeanParam)
 			return new MethodCallExpr(new NameExpr("BeansReader"), beans.get((JaxrsBeanParam) p), Utils.list(new NameExpr("r")));
-
-		String m = "get" + p.getClass().getSimpleName().substring(5, p.getClass().getSimpleName().length() - 5);
-		if (p.type.isArray() || collection.isAssignableFrom(p.type))
-			m += "Array";
-		Expression e = new MethodCallExpr(new NameExpr("r"), m,
-				Utils.list(Utils.text(p.value), p.def == null ? new NullLiteralExpr() : Utils.text(p.def), new NameExpr(converterVar.get(p))));
-		if (collection.isAssignableFrom(p.type))
-			e = new MethodCallExpr(new TypeExpr(types.get(Arrays.class)), "asList", Utils.list(e));
-		if (sortedSet.isAssignableFrom(p.type))
-			e = new ObjectCreationExpr(null, types.getClass(TreeSet.class), Utils.list(e));
-		else if (set.isAssignableFrom(p.type))
-			e = new ObjectCreationExpr(null, types.getClass(HashSet.class), Utils.list(e));
-		return e;
+		return JaxrsModel.getParam(p, types, converterVar);
 	}
 }

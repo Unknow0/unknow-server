@@ -26,9 +26,16 @@ public class ModelLoader {
 	private static final Map<String, TypeModel> BUILTIN = new HashMap<>();
 	private static final TypeModel[] EMPTY = {};
 
+	protected static final ModelLoader local = new ModelLoader(ModelLoader.class.getClassLoader(), Collections.emptyMap());
+	public static final ClassModel OBJECT = new JvmClass(local, Object.class, EMPTY);
+
+	protected static final Pattern CLAZZ = Pattern.compile("(.+?)(?:<(.*?)>)?");
+	protected static final Pattern CLAZZ_LIST = Pattern.compile("(.+?(?:<.*?>)?)(?:,|$)");
+
 	static {
 		for (TypeModel t : PrimitiveModel.PRIMITIVES)
 			BUILTIN.put(t.name(), t);
+		BUILTIN.put(OBJECT.name(), OBJECT);
 	}
 
 	private final ClassLoader cl;
@@ -49,6 +56,12 @@ public class ModelLoader {
 			return type;
 		if (cl.endsWith("[]"))
 			return new ArrayModel(cl, get(cl.substring(0, cl.length() - 2), parameters));
+		if (cl.equals("?"))
+			return WildcardModel.EMPTY;
+		if (cl.startsWith("? extends "))
+			return new WildcardModel(get(cl.substring(10)), true);
+		if (cl.startsWith("? super "))
+			return new WildcardModel(get(cl.substring(8)), false);
 
 		List<String> parse = parse(cl);
 		Map<String, TypeModel> map = new HashMap<>();
@@ -98,9 +111,6 @@ public class ModelLoader {
 			}
 		}
 	}
-
-	protected static final Pattern CLAZZ = Pattern.compile("(.+?)(?:<(.*?)>)?");
-	protected static final Pattern CLAZZ_LIST = Pattern.compile("(.+?(?:<.*?>)?)(?:,|$)");
 
 	/**
 	 * split class into the class name and it's param

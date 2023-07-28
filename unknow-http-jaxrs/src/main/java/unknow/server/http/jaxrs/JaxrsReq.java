@@ -5,9 +5,12 @@ package unknow.server.http.jaxrs;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
@@ -26,8 +29,6 @@ import unknow.server.http.jaxrs.header.MediaTypeDelegate;
  * @author unknow
  */
 public class JaxrsReq {
-	private static final Object[] EMPTY = {};
-
 	private final HttpServletRequest r;
 
 	private MediaType accept;
@@ -85,11 +86,20 @@ public class JaxrsReq {
 	}
 
 	@SuppressWarnings("unchecked")
-	public <T> T[] getPathArray(String path, String def, ParamConverter<T> c) {
+	public <T> T[] getPathArray(String path, String def, Class<T> cl, ParamConverter<T> c) {
 		String s = paths.getOrDefault(path, def);
 		if (s == null)
-			return (T[]) EMPTY;
-		return (T[]) new Object[] { c.fromString(s) };
+			return (T[]) Array.newInstance(cl, 0);
+		T[] t = (T[]) Array.newInstance(cl, 1);
+		t[0] = c.fromString(s);
+		return t;
+	}
+
+	public <T> List<T> getPathList(String path, String def, ParamConverter<T> c) {
+		String s = paths.getOrDefault(path, def);
+		if (s == null)
+			return Collections.emptyList();
+		return Arrays.asList(c.fromString(s));
 	}
 
 	public MultivaluedMap<String, String> getHeaders() {
@@ -102,9 +112,14 @@ public class JaxrsReq {
 		return toValue(headers.getFirst(name), def, c);
 	}
 
-	public <T> T[] getHeaderArray(String name, String def, ParamConverter<T> c) {
+	public <T> T[] getHeaderArray(String name, String def, Class<T> cl, ParamConverter<T> c) {
 		initHeaders();
-		return toArray(headers.get(name), def, c);
+		return toArray(headers.get(name), def, cl, c);
+	}
+
+	public <T> List<T> getHeaderList(String name, String def, ParamConverter<T> c) {
+		initHeaders();
+		return toList(headers.get(name), def, c);
 	}
 
 	public <T> T getQuery(String name, String def, ParamConverter<T> c) {
@@ -112,9 +127,14 @@ public class JaxrsReq {
 		return toValue(queries.getFirst(name), def, c);
 	}
 
-	public <T> T[] getQueryArray(String name, String def, ParamConverter<T> c) {
+	public <T> T[] getQueryArray(String name, String def, Class<T> cl, ParamConverter<T> c) {
 		initQueries();
-		return toArray(queries.get(name), def, c);
+		return toArray(queries.get(name), def, cl, c);
+	}
+
+	public <T> List<T> getQueryList(String name, String def, ParamConverter<T> c) {
+		initQueries();
+		return toList(queries.get(name), def, c);
 	}
 
 	public <T> T getForm(String name, String def, ParamConverter<T> c) throws IOException {
@@ -122,9 +142,14 @@ public class JaxrsReq {
 		return toValue(forms.getFirst(name), def, c);
 	}
 
-	public <T> T[] getFormArray(String name, String def, ParamConverter<T> c) throws IOException {
+	public <T> T[] getFormArray(String name, String def, Class<T> cl, ParamConverter<T> c) throws IOException {
 		initForms();
-		return toArray(forms.get(name), def, c);
+		return toArray(forms.get(name), def, cl, c);
+	}
+
+	public <T> List<T> getFormList(String name, String def, ParamConverter<T> c) throws IOException {
+		initForms();
+		return toList(forms.get(name), def, c);
 	}
 
 	public <T> T getCookie(String name, String def, ParamConverter<T> c) {
@@ -132,9 +157,14 @@ public class JaxrsReq {
 		return toValue(cookies.getFirst(name), def, c);
 	}
 
-	public <T> T[] getCookieArray(String name, String def, ParamConverter<T> c) {
+	public <T> T[] getCookieArray(String name, String def, Class<T> cl, ParamConverter<T> c) {
 		initCookies();
-		return toArray(cookies.get(name), def, c);
+		return toArray(cookies.get(name), def, cl, c);
+	}
+
+	public <T> List<T> getCookieList(String name, String def, ParamConverter<T> c) {
+		initCookies();
+		return toList(cookies.get(name), def, c);
 	}
 
 	public <T> T getMatrix(String name, String def, ParamConverter<T> c) {
@@ -142,9 +172,14 @@ public class JaxrsReq {
 		return toValue(matrix.getFirst(name), def, c);
 	}
 
-	public <T> T[] getMatrixArray(String name, String def, ParamConverter<T> c) {
+	public <T> T[] getMatrixArray(String name, String def, Class<T> cl, ParamConverter<T> c) {
 		initMatrix();
-		return toArray(matrix.get(name), def, c);
+		return toArray(matrix.get(name), def, cl, c);
+	}
+
+	public <T> List<T> getMatrixList(String name, String def, ParamConverter<T> c) {
+		initMatrix();
+		return toList(matrix.get(name), def, c);
 	}
 
 	private void initHeaders() {
@@ -274,14 +309,25 @@ public class JaxrsReq {
 	}
 
 	@SuppressWarnings("unchecked")
-	private static <T> T[] toArray(List<String> list, String def, ParamConverter<T> c) {
+	private static <T> T[] toArray(List<String> list, String def, Class<T> cl, ParamConverter<T> c) {
 		if (list == null && def != null)
 			list = Arrays.asList(def);
 		if (list == null || list.isEmpty())
-			return (T[]) EMPTY;
-		T[] t = (T[]) new Object[list.size()];
+			return (T[]) Array.newInstance(cl, 0);
+		T[] t = (T[]) Array.newInstance(cl, list.size());
 		for (int i = 0; i < list.size(); i++)
 			t[i] = c.fromString(list.get(i));
+		return t;
+	}
+
+	private static <T> List<T> toList(List<String> list, String def, ParamConverter<T> c) {
+		if (list == null && def != null)
+			list = Arrays.asList(def);
+		if (list == null || list.isEmpty())
+			return Collections.emptyList();
+		List<T> t = new ArrayList<>(list.size());
+		for (String s : list)
+			t.add(c.fromString(s));
 		return t;
 	}
 }
