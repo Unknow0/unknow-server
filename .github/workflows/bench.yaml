@@ -31,14 +31,14 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
-	strategy:
-	  matrix:
-	    t: ['tomcat', 'unknow', 'native']
+    strategy:
+      matrix:
+        t: ['tomcat', 'unknow', 'native']
 
     steps:
-	- uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v3
       with:
-	    name: server
+        name: server
     - uses: graalvm/setup-graalvm@v1
       with:
         version: latest
@@ -61,6 +61,6 @@ jobs:
   result:
     - name: result
       run: bash bench/result.sh out
-	- uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v3
       with:
-	    name: results
+        name: results
