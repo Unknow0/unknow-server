@@ -36,6 +36,7 @@ jobs:
         t: ['tomcat', 'unknow', 'native']
     needs: build
     steps:
+    - uses: actions/checkout@v3
     - uses: actions/download-artifact@v3
       with:
         name: server
@@ -62,6 +63,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     steps:
+    - uses: actions/checkout@v3
     - name: result
       run: bash bench/result.sh out
     - uses: actions/download-artifact@v3
