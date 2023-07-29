@@ -14,12 +14,14 @@ import org.apache.cxf.jaxrs.servlet.CXFNonSpringJaxrsServlet;
 
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebInitParam;
 import jakarta.servlet.annotation.WebServlet;
 
 /**
  * @author unknow
  */
 @WebServlet("/cxf-rs/*")
+@WebInitParam(name = "jaxrs.address", value = "/cxf-rs/")
 public class CxfRs extends CXFNonSpringJaxrsServlet {
 	private static final long serialVersionUID = 1L;
 

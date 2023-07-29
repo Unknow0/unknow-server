@@ -109,7 +109,7 @@ public class JaxrsContext {
 				JaxrsEntityWriter.RESPONSE.write(r, m.toResponse(t), res);
 				return;
 			}
-		} while ((c = c.getSuperclass()) != Throwable.class);
+		} while ((c = c.getSuperclass()) != Object.class);
 		res.sendError(500);
 	}
 
