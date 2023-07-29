@@ -59,6 +59,8 @@ jobs:
         path: out
 
   result:
+    runs-on: ubuntu-latest
+    steps:
     - name: result
       run: bash bench/result.sh out
     - uses: actions/download-artifact@v3
