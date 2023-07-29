@@ -20,33 +20,47 @@ jobs:
     - name: build native image 
       run: native-image --install-exit-handlers --static --no-fallback -jar unknow-http-test/target/server.jar server-native
 
+    - uses: actions/upload-artifact@v3
+      if: always()
+      with: 
+        name: server
+        path: |
+          unknow-http-test/target/server.jar 
+          server-native
+          unknow-http-test/target/*.war
+
+  test:
+    runs-on: ubuntu-latest
+	strategy:
+	  matrix:
+	    t: ['tomcat', 'unknow', 'native']
+
+    steps:
+	- uses: actions/download-artifact@v3
+      with:
+	    name: server
+    - uses: graalvm/setup-graalvm@v1
+      with:
+        version: latest
+        java-version: 11
+        components: native-image
+        github-token: ${{ secrets.GITHUB_TOKEN }}
     - name: prepare test
       run: bash bench/prepare.sh
     - name: run bench
-      run: bash bench/run.sh
+      run: bash bench/run.sh ${{matrix.t}}
       env:
         CATALINA_HOME: "${{github.workspace}}/tomcat/"
         JMETER: "${{github.workspace}}/jmeter/bin/jmeter"
+    - uses: actions/upload-artifact@v3
+      if: always()
+      with: 
+        name: results
+        path: out
+
+  result:
     - name: result
       run: bash bench/result.sh out
-
-    - uses: actions/upload-artifact@v3
-      if: always()
-      with: 
-        name: tomcat
-        path: ${{github.workspace}}/tomcat/logs
-    - uses: actions/upload-artifact@v3
-      if: always()
-      with: 
-        name: unknow
-        path: log
-    - uses: actions/upload-artifact@v3
-      if: always()
-      with: 
-        name: native
-        path: native
-    - uses: actions/upload-artifact@v3
-      if: always()
-      with: 
-        name: result
-        path: out
+	- uses: actions/download-artifact@v3
+      with:
+	    name: results

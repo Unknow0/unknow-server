@@ -13,5 +13,5 @@ VER=$(wget -q -O - https://archive.apache.org/dist/jmeter/binaries/ | grep -Po '
 mkdir -p jmeter
 wget -O -  https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-$VER.tgz | tar xz --strip-components=1 -C jmeter
 
-# avoid goiing out of ephemeral port
+# avoid going out of ephemeral port
 sudo sysctl net.ipv4.tcp_tw_reuse=1
