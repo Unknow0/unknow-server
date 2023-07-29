@@ -56,16 +56,25 @@ jobs:
     - uses: actions/upload-artifact@v3
       if: always()
       with: 
-        name: results
-        path: out
+        name: results-${{matrix.t}}
+        path: out/*
 
   result:
     runs-on: ubuntu-latest
     needs: test
     steps:
     - uses: actions/checkout@v3
-    - name: result
-      run: bash bench/result.sh out
     - uses: actions/download-artifact@v3
       with:
-        name: results
+        name: results-unknow
+        path: out/
+    - uses: actions/download-artifact@v3
+      with:
+        name: results-tomcat
+        path: out/
+    - uses: actions/download-artifact@v3
+      with:
+        name: results-native
+        path: out/
+    - name: result
+      run: bash bench/result.sh out
