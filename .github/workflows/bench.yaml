@@ -34,7 +34,7 @@ jobs:
     strategy:
       matrix:
         t: ['tomcat', 'unknow', 'native']
-
+    needs: build
     steps:
     - uses: actions/download-artifact@v3
       with:
@@ -60,6 +60,7 @@ jobs:
 
   result:
     runs-on: ubuntu-latest
+    needs: test
     steps:
     - name: result
       run: bash bench/result.sh out
