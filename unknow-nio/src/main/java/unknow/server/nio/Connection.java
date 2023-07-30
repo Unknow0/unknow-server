@@ -72,8 +72,10 @@ public final class Connection {
 	protected final void readFrom(SocketChannel channel, ByteBuffer buf) throws IOException, InterruptedException {
 		lastRead = System.currentTimeMillis();
 		buf.clear();
-		if (channel.read(buf) == -1)
+		if (channel.read(buf) == -1) {
+			channel.close();
 			return;
+		}
 		buf.flip();
 
 		if (logger.isTraceEnabled()) {
