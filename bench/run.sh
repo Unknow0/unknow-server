@@ -1,7 +1,7 @@
 #!/bin/bash
 
 unknow_start() {
-	java -jar unknow-http-test/target/server.jar >log 2>log &
+	java -jar unknow-http-test/target/server.jar > logs/unknow.log 2>&1 &
 	pid=$!
 }
 unknow_stop() {
@@ -9,7 +9,7 @@ unknow_stop() {
 	pid=
 }
 native_start() {
-	./server-native >native 2>native &
+	./server-native > logs/native.log 2>&1 &
 	pid=$!
 }
 native_stop() {
@@ -18,7 +18,7 @@ native_stop() {
 }
 tomcat_start() {
 	cp unknow-http-test/target/*.war $CATALINA_HOME/webapps/ROOT.war || exit 1
-	$CATALINA_HOME/bin/catalina.sh run >/dev/null 2>/dev/null || exit 1 &
+	$CATALINA_HOME/bin/catalina.sh run > logs/tomcat.log 2>&1 || exit 1 &
 	pid=$!
 }
 tomcat_stop() {

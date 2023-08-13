@@ -209,7 +209,6 @@ public class JaxrsContext {
 		TypeVariable[] t = c.getTypeParameters();
 		for (int i = 0; i < t.length; i++) {
 			Type b = a[i];
-			System.out.println(">> " + b + " " + b.getClass());
 			if (b instanceof TypeVariable)
 				b = params.getOrDefault(((TypeVariable) b).getName(), Object.class);
 			if (b instanceof WildcardType) {

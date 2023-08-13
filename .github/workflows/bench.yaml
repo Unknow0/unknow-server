@@ -56,6 +56,11 @@ jobs:
     - uses: actions/upload-artifact@v3
       if: always()
       with: 
+        name: logs-${{matrix.t}}
+        path: logs/*
+    - uses: actions/upload-artifact@v3
+      if: always()
+      with: 
         name: results-${{matrix.t}}
         path: out/*
 
