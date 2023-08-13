@@ -83,7 +83,7 @@ public abstract class AbstractHttpServer extends NIOServerCli {
 	@Override
 	protected final void init() throws Exception {
 		AtomicInteger i = new AtomicInteger();
-		ExecutorService executor = new ThreadPoolExecutor(execMin, execMax, execIdle, TimeUnit.SECONDS, new SynchronousQueue<Runnable>(), r -> {
+		ExecutorService executor = new ThreadPoolExecutor(execMin, execMax, execIdle, TimeUnit.SECONDS, new SynchronousQueue<>(), r -> {
 			Thread t = new Thread(r, "exec-" + i.getAndIncrement());
 			t.setDaemon(true);
 			return t;

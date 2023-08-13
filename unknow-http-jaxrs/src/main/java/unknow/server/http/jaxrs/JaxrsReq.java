@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
@@ -30,10 +29,12 @@ import unknow.server.http.jaxrs.header.MediaTypeDelegate;
  */
 public class JaxrsReq {
 	private final HttpServletRequest r;
+	private final List<String> pathValue;
 
 	private MediaType accept;
 
-	private Map<String, String> paths;
+	private Map<String, Integer> paths;
+
 	private MultivaluedMap<String, String> queries;
 	private MultivaluedMap<String, String> headers;
 	private MultivaluedMap<String, String> forms;
@@ -45,12 +46,21 @@ public class JaxrsReq {
 	 * 
 	 * @param r
 	 */
-	public JaxrsReq(HttpServletRequest r) {
+	public JaxrsReq(HttpServletRequest r, List<String> paths) {
 		this.r = r;
+		this.pathValue = paths;
+	}
+
+	public void initPaths(Map<String, Integer> paths) {
+		this.paths = paths;
 	}
 
 	public HttpServletRequest getRequest() {
 		return r;
+	}
+
+	public String getMethod() {
+		return r.getMethod();
 	}
 
 	public MediaType getAccept() {
@@ -82,24 +92,25 @@ public class JaxrsReq {
 	}
 
 	public <T> T getPath(String path, String def, ParamConverter<T> c) {
-		return toValue(paths.get(path), def, c);
+		Integer i = paths.get(path);
+		return toValue(i == null ? null : pathValue.get(i), def, c);
 	}
 
 	@SuppressWarnings("unchecked")
 	public <T> T[] getPathArray(String path, String def, Class<T> cl, ParamConverter<T> c) {
-		String s = paths.getOrDefault(path, def);
+		T s = getPath(path, def, c);
 		if (s == null)
 			return (T[]) Array.newInstance(cl, 0);
 		T[] t = (T[]) Array.newInstance(cl, 1);
-		t[0] = c.fromString(s);
+		t[0] = s;
 		return t;
 	}
 
 	public <T> List<T> getPathList(String path, String def, ParamConverter<T> c) {
-		String s = paths.getOrDefault(path, def);
+		T s = getPath(path, def, c);
 		if (s == null)
 			return Collections.emptyList();
-		return Arrays.asList(c.fromString(s));
+		return Arrays.asList(s);
 	}
 
 	public MultivaluedMap<String, String> getHeaders() {
@@ -192,24 +203,6 @@ public class JaxrsReq {
 			Enumeration<String> v = r.getHeaders(n);
 			while (v.hasMoreElements())
 				headers.addAll(n, v.nextElement());
-		}
-	}
-
-	public void initPaths(JaxrsPath[] path) {
-		paths = new HashMap<>();
-		if (path.length == 0)
-			return;
-
-		String s = r.getRequestURI();
-		int n = 0;
-		for (int i = 0; i < path.length; i++) {
-			JaxrsPath p = path[i];
-			n += p.i;
-			int l = s.indexOf('/', n);
-			if (l == -1)
-				l = s.length();
-			paths.put(URLDecoder.decode(p.n, StandardCharsets.UTF_8), s.substring(n, l));
-			n = l + 1;
 		}
 	}
 

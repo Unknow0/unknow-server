@@ -75,9 +75,6 @@ public class PathTreeBuilder {
 	}
 
 	private PartNode buildTree(String part, Node n) {
-		Node d = n.nexts.remove("{}");
-		PartNode pattern = d == null ? null : buildTree("{}", d);
-
 		PartNode[] nexts = new PartNode[n.nexts.size()];
 		int i = 0;
 		for (Entry<String, Node> e : n.nexts.entrySet())
@@ -101,7 +98,7 @@ public class PathTreeBuilder {
 		FilterChain exact = getChain(n.exact, n.exactsFilter, Collections.emptyList());
 		FilterChain def = getChain(n.def, n.defFilter, Collections.emptyList());
 
-		return new PartNode(part, nexts, pattern, ends, exact, def);
+		return new PartNode(part, nexts, ends, exact, def);
 	}
 
 	private FilterChain getChain(String name, Filter f, FilterChain next) {

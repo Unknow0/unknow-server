@@ -38,6 +38,7 @@ public class Utils {
 	public static final Modifier.Keyword[] PUBLIC_STATIC = { Modifier.Keyword.PUBLIC, Modifier.Keyword.STATIC, Modifier.Keyword.FINAL };
 	public static final Modifier.Keyword[] PROTECT = { Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL };
 	public static final Modifier.Keyword[] PSF = { Modifier.Keyword.PRIVATE, Modifier.Keyword.STATIC, Modifier.Keyword.FINAL };
+	public static final Modifier.Keyword[] PRIVATE = { Modifier.Keyword.PRIVATE, Modifier.Keyword.FINAL };
 
 	private Utils() {
 	}
@@ -125,14 +126,34 @@ public class Utils {
 	 * @param types the typeCahe
 	 * @return the array map creation
 	 */
+	public static ObjectCreationExpr mapInteger(Map<String, Integer> map, TypeCache types) {
+		List<String> list = new ArrayList<>(map.keySet());
+		Collections.sort(list);
+		NodeList<Expression> k = new NodeList<>();
+		NodeList<Expression> v = new NodeList<>();
+		for (String key : list) {
+			k.add(text(key));
+			v.add(new IntegerLiteralExpr(map.get(key).toString()));
+		}
+		return new ObjectCreationExpr(null, types.getClass(ArrayMap.class, TypeCache.EMPTY),
+				list(array(types.getClass(String.class), k), array(types.getClass(Integer.class), v)));
+	}
+
+	/**
+	 * create a new ArrayMap
+	 * 
+	 * @param map   the map content
+	 * @param types the typeCahe
+	 * @return the array map creation
+	 */
 	public static ObjectCreationExpr mapString(Map<String, String> map, TypeCache types) {
 		List<String> list = new ArrayList<>(map.keySet());
 		Collections.sort(list);
 		NodeList<Expression> k = new NodeList<>();
 		NodeList<Expression> v = new NodeList<>();
 		for (String key : list) {
-			k.add(text(key.replace("\\", "\\\\")));
-			v.add(text(map.get(key).replace("\\", "\\\\")));
+			k.add(text(key));
+			v.add(text(map.get(key)));
 		}
 		return new ObjectCreationExpr(null, types.getClass(ArrayMap.class, TypeCache.EMPTY),
 				list(array(types.getClass(String.class), k), array(types.getClass(String.class), v)));

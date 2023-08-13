@@ -20,8 +20,7 @@ import jakarta.servlet.annotation.WebServlet;
 /**
  * @author unknow
  */
-@WebServlet("/cxf-rs/*")
-@WebInitParam(name = "jaxrs.address", value = "/cxf-rs/")
+@WebServlet(value = "/cxf-rs/*", initParams = @WebInitParam(name = "jaxrs.address", value = "/cxf-rs"))
 public class CxfRs extends CXFNonSpringJaxrsServlet {
 	private static final long serialVersionUID = 1L;
 

@@ -118,7 +118,7 @@ public class BeanParamBuilder {
 						new BlockStmt()
 								.addStatement(Utils.assign(types.getClass(Field.class), "f",
 										new MethodCallExpr(new ClassExpr(types.get(p.parent.name())), "getDeclaredField", Utils.list(Utils.text(p.name)))))
-								.addStatement(new AssignExpr(new NameExpr("t"), new MethodCallExpr(new NameExpr("f"), "getGenericType"), AssignExpr.Operator.ASSIGN))
+								.addStatement(new AssignExpr(new NameExpr("t"), new MethodCallExpr(new TypeExpr(types.get(JaxrsContext.class)), "getParamType", Utils.list(new MethodCallExpr(new NameExpr("f"), "getGenericType"))), AssignExpr.Operator.ASSIGN))
 								.addStatement(new AssignExpr(new NameExpr("a"), new MethodCallExpr(new NameExpr("f"), "getAnnotations"), AssignExpr.Operator.ASSIGN)),
 						Utils.list(new CatchClause(new com.github.javaparser.ast.body.Parameter(types.getClass(Exception.class), "e"),
 								new BlockStmt().addStatement(new AssignExpr(new NameExpr("t"), new ClassExpr(types.get(t1.name())), AssignExpr.Operator.ASSIGN))
