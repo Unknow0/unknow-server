@@ -260,9 +260,11 @@ public class JaxrsModel {
 			}
 		}
 		if (basePath == null)
-			basePath = "";
-		if (basePath.endsWith("/"))
+			basePath = "/";
+		if (basePath.length() > 1 && basePath.endsWith("/"))
 			basePath = basePath.substring(0, basePath.length() - 1);
+		if (basePath.isEmpty() || basePath.charAt(0) != '/')
+			basePath = '/' + basePath;
 		if (baseConsume == null)
 			baseConsume = ALL;
 		if (baseProduce == null)
@@ -283,6 +285,7 @@ public class JaxrsModel {
 				path += "/";
 			path += s;
 		}
+
 		String errorName = clazz.name() + "." + m.signature();
 		String method = getMethod(m, errorName);
 		if (method == null)

@@ -12,7 +12,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -165,7 +164,7 @@ public class JaxrsMojo extends AbstractMojo {
 		for (Entry<TypeModel, ClassModel> e : model.exceptions.entrySet()) {
 
 			b.addStatement(new MethodCallExpr(ctx, "registerException",
-					Utils.list(new TypeExpr(types.get(e.getKey())), new ObjectCreationExpr(null, types.getClass(e.getValue()), Utils.list()))));
+					Utils.list(new ClassExpr(types.get(e.getKey())), new ObjectCreationExpr(null, types.getClass(e.getValue()), Utils.list()))));
 		}
 
 		out.save(cu);

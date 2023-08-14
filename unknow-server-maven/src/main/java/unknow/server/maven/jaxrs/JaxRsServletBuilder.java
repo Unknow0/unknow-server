@@ -8,7 +8,6 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -173,8 +172,7 @@ public class JaxRsServletBuilder {
 			getMethod.addAll(classes);
 
 			BlockStmt t = new BlockStmt()
-					.addStatement(
-							Utils.assign(types.getClass(Method.class), "m", new MethodCallExpr(new ClassExpr(types.get(m.m.parent().name())), "getMethod", getMethod)))
+					.addStatement(Utils.assign(types.getClass(Method.class), "m", new MethodCallExpr(new ClassExpr(types.get(m.m.parent().name())), "getMethod", getMethod)))
 					.addStatement(new AssignExpr(new NameExpr("t"), new MethodCallExpr(new NameExpr("m"), "getGenericParameterTypes"), AssignExpr.Operator.ASSIGN))
 					.addStatement(new AssignExpr(new NameExpr("a"), new MethodCallExpr(new NameExpr("m"), "getParameterAnnotations"), AssignExpr.Operator.ASSIGN));
 			BlockStmt ca = new BlockStmt().addStatement(new AssignExpr(new NameExpr("t"), Utils.array(types.getClass(Type.class), classes), AssignExpr.Operator.ASSIGN))
@@ -218,8 +216,8 @@ public class JaxRsServletBuilder {
 
 		MethodDeclaration m = cl.addMethod(name, Utils.PRIVATE);
 		m.addAndGetParameter(types.getClass(JaxrsReq.class), "req").addSingleMemberAnnotation(SuppressWarnings.class, new StringLiteralExpr("unused"));
-		m.addParameter(types.getClass(HttpServletResponse.class), "res").getBody()
-				.get().addStatement(new MethodCallExpr(new NameExpr("res"), "setHeader", Utils.list(Utils.text("Allow"), Utils.text(sb.toString()))));
+		m.addParameter(types.getClass(HttpServletResponse.class), "res").getBody().get()
+				.addStatement(new MethodCallExpr(new NameExpr("res"), "setHeader", Utils.list(Utils.text("Allow"), Utils.text(sb.toString()))));
 	}
 
 	/**
@@ -241,7 +239,7 @@ public class JaxRsServletBuilder {
 		}
 
 		if (p instanceof JaxrsBodyParam) {
-			cl.addField(types.getClass(JaxrsEntityReader.class, types.get(t)), n, Utils.PSF);
+			cl.addField(types.getClass(JaxrsEntityReader.class, types.get(p.type)), n, Utils.PSF);
 			b.addStatement(new AssignExpr(new NameExpr(n),
 					new ObjectCreationExpr(null, types.getClass(JaxrsEntityReader.class, TypeCache.EMPTY), Utils.list(new ClassExpr(types.get(p.type.name())),
 							new ArrayAccessExpr(new NameExpr("t"), new IntegerLiteralExpr("" + i)), new ArrayAccessExpr(new NameExpr("a"), new IntegerLiteralExpr("" + i)))),
@@ -249,10 +247,11 @@ public class JaxRsServletBuilder {
 		} else {
 			cl.addField(types.getClass(ParamConverter.class, types.get(t)), n, Utils.PSF);
 			b.addStatement(new AssignExpr(new NameExpr(n),
-					new MethodCallExpr(new TypeExpr(types.getClass(JaxrsContext.class)), "converter", Utils.list(new ClassExpr(types.get(t1.name())),
-							new MethodCallExpr(new TypeExpr(types.get(JaxrsContext.class)), "getParamType", Utils.list(
-									new ArrayAccessExpr(new NameExpr("t"), new IntegerLiteralExpr("" + i)))),
-							new ArrayAccessExpr(new NameExpr("a"), new IntegerLiteralExpr("" + i)))),
+					new MethodCallExpr(new TypeExpr(types.getClass(JaxrsContext.class)), "converter",
+							Utils.list(new ClassExpr(types.get(t1.name())),
+									new MethodCallExpr(new TypeExpr(types.get(JaxrsContext.class)), "getParamType",
+											Utils.list(new ArrayAccessExpr(new NameExpr("t"), new IntegerLiteralExpr("" + i)))),
+									new ArrayAccessExpr(new NameExpr("a"), new IntegerLiteralExpr("" + i)))),
 					AssignExpr.Operator.ASSIGN));
 		}
 	}
@@ -263,8 +262,7 @@ public class JaxRsServletBuilder {
 	 */
 	private void buildMethod(String name, List<JaxrsMapping> list) {
 		BlockStmt b = new BlockStmt();
-		cl.addMethod(name, Utils.PRIVATE)
-				.addParameter(types.getClass(JaxrsReq.class), "req").addParameter(types.getClass(HttpServletResponse.class), "res")
+		cl.addMethod(name, Utils.PRIVATE).addParameter(types.getClass(JaxrsReq.class), "req").addParameter(types.getClass(HttpServletResponse.class), "res")
 				.addThrownException(IOException.class).getBody().get()
 				.addStatement(new TryStmt(b,
 						Utils.list(new CatchClause(new com.github.javaparser.ast.body.Parameter(types.getClass(Throwable.class), "e"),
@@ -399,11 +397,9 @@ public class JaxRsServletBuilder {
 						new ExpressionStmt(new MethodCallExpr("do" + method.charAt(0) + method.substring(1).toLowerCase(), p)), i);
 
 			cl.addMethod("service", Utils.PUBLIC).addMarkerAnnotation(Override.class).addParameter(types.getClass(HttpServletRequest.class), "req")
-					.addParameter(types.getClass(HttpServletResponse.class), "res").addThrownException(IOException.class).addThrownException(ServletException.class)
-					.getBody().get()
-					.addStatement(Utils.create(types.getClass(JaxrsReq.class), "r", Utils.list(new NameExpr("req"), new MethodCallExpr(new TypeExpr(types.get(Collections.class)), "emptyMap"))))
-					.addStatement(Utils.assign(types.getClass(String.class), "m", new MethodCallExpr(new NameExpr("req"), "getMethod")))
-					.addStatement(i);
+					.addParameter(types.getClass(HttpServletResponse.class), "res").addThrownException(IOException.class).addThrownException(ServletException.class).getBody()
+					.get().addStatement(Utils.create(types.getClass(JaxrsReq.class), "r", Utils.list(new NameExpr("req"), new NullLiteralExpr())))
+					.addStatement(Utils.assign(types.getClass(String.class), "m", new MethodCallExpr(new NameExpr("req"), "getMethod"))).addStatement(i);
 
 			if (!methods.containsKey("OPTIONS"))
 				buildOptions("doOptions", methods.keySet());
@@ -450,7 +446,8 @@ public class JaxRsServletBuilder {
 			NameExpr n = params.get(map);
 			if (!map.isEmpty() && n == null) {
 				params.put(map, n = new NameExpr("path$" + params.size()));
-				cl.addFieldWithInitializer(types.getClass(Map.class, types.get(String.class), types.get(Integer.class)), n.getNameAsString(), Utils.mapInteger(map, types), Utils.PSF);
+				cl.addFieldWithInitializer(types.getClass(Map.class, types.get(String.class), types.get(Integer.class)), n.getNameAsString(), Utils.mapInteger(map, types),
+						Utils.PSF);
 			}
 			pathParams.put(mapping, n);
 		}
@@ -462,8 +459,7 @@ public class JaxRsServletBuilder {
 			list.sort((a, b) -> b.length - a.length);
 
 			Expression req = new ObjectCreationExpr(null, types.getClass(JaxrsReq.class), Utils.list(new NameExpr("req"), new NameExpr("l")));
-			BlockStmt b = new BlockStmt()
-					.addStatement(new VariableDeclarationExpr(types.getClass(List.class, types.get(String.class)), "l"))
+			BlockStmt b = new BlockStmt().addStatement(new VariableDeclarationExpr(types.getClass(List.class, types.get(String.class)), "l"))
 					.addStatement(Utils.assign(types.get(String.class), "p", new MethodCallExpr(new NameExpr("req"), "getPathInfo")));
 
 			int i = 0;
@@ -475,11 +471,8 @@ public class JaxRsServletBuilder {
 				cl.addFieldWithInitializer(types.get(PathPattern.class), n, e, Utils.PSF);
 
 				b.addStatement(new AssignExpr(new NameExpr("l"), new MethodCallExpr(new NameExpr(n), "process", Utils.list(new NameExpr("p"))), Operator.ASSIGN))
-						.addStatement(new IfStmt(
-								new BinaryExpr(new NameExpr("l"), new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS),
-								new BlockStmt()
-										.addStatement(new MethodCallExpr(null, "service$" + (i), Utils.list(req, new NameExpr("res"))))
-										.addStatement(new ReturnStmt()),
+						.addStatement(new IfStmt(new BinaryExpr(new NameExpr("l"), new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS),
+								new BlockStmt().addStatement(new MethodCallExpr(null, "service$" + (i), Utils.list(req, new NameExpr("res")))).addStatement(new ReturnStmt()),
 								null));
 				i++;
 			}
@@ -511,14 +504,12 @@ public class JaxRsServletBuilder {
 			if (!methods.containsKey("HEAD") && methods.containsKey("GET"))
 				i = new IfStmt(new MethodCallExpr(Utils.text("HEAD"), "equals", Utils.list(m)), new ExpressionStmt(new MethodCallExpr(name + "$get", p)), i);
 			for (String method : methods.keySet())
-				i = new IfStmt(new MethodCallExpr(Utils.text(method), "equals", Utils.list(m)),
-						new ExpressionStmt(new MethodCallExpr(name + "$" + method.toLowerCase(), p)), i);
+				i = new IfStmt(new MethodCallExpr(Utils.text(method), "equals", Utils.list(m)), new ExpressionStmt(new MethodCallExpr(name + "$" + method.toLowerCase(), p)),
+						i);
 
-			cl.addMethod(name, Utils.PRIVATE).addParameter(types.getClass(JaxrsReq.class), "r")
-					.addParameter(types.getClass(HttpServletResponse.class), "res").addThrownException(IOException.class)
-					.getBody().get()
-					.addStatement(Utils.assign(types.getClass(String.class), "m", new MethodCallExpr(new NameExpr("r"), "getMethod")))
-					.addStatement(i);
+			cl.addMethod(name, Utils.PRIVATE).addParameter(types.getClass(JaxrsReq.class), "r").addParameter(types.getClass(HttpServletResponse.class), "res")
+					.addThrownException(IOException.class).getBody().get()
+					.addStatement(Utils.assign(types.getClass(String.class), "m", new MethodCallExpr(new NameExpr("r"), "getMethod"))).addStatement(i);
 		}
 	}
 
