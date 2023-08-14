@@ -65,7 +65,7 @@ public class ObjectArrayMap<K, V> implements Map<K, V> {
 			System.arraycopy(key, i, key, i + 1, len - i);
 			System.arraycopy(value, i, value, i + 1, len - i);
 		}
-		ensure(len++);
+		ensure(++len);
 		i = -i - 1;
 		V old = value[i];
 		key[i] = name;
@@ -81,7 +81,7 @@ public class ObjectArrayMap<K, V> implements Map<K, V> {
 			System.arraycopy(key, i, key, i + 1, len - i);
 			System.arraycopy(value, i, value, i + 1, len - i);
 		}
-		ensure(len++);
+		ensure(++len);
 		i = -i - 1;
 		key[i] = name;
 		value[i] = o;

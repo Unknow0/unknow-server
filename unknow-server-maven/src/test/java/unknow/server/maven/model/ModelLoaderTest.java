@@ -50,7 +50,7 @@ public class ModelLoaderTest {
 
 	@Test
 	public void testCollection() {
-		ModelLoader loader = new ModelLoader(getClass().getClassLoader(), Collections.emptyMap());
+		ModelLoader loader = ModelLoader.local;
 
 		TypeModel col = loader.get(G.class.getName());
 		ClassModel slist = loader.get(StringList.class.getName()).asClass();

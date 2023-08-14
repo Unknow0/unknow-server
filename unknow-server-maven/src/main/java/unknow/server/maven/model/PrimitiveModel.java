@@ -56,14 +56,19 @@ public class PrimitiveModel implements TypeModel {
 
 	@Override
 	public boolean isAssignableFrom(TypeModel t) {
-		return this == t;
+		return this == t || boxed.equals(t.name());
+	}
+
+	@Override
+	public boolean isAssignableTo(String cl) {
+		return name().equals(cl) || boxed.equals(cl);
 	}
 
 	/**
 	 * @return the boxed type
 	 */
-	public String boxed() {
-		return boxed;
+	public TypeModel boxed() {
+		return ModelLoader.local.get(boxed);
 	}
 
 	@Override

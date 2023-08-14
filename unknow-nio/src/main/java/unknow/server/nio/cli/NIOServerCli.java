@@ -3,7 +3,6 @@
  */
 package unknow.server.nio.cli;
 
-import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Callable;
@@ -11,8 +10,6 @@ import java.util.concurrent.Callable;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
-import unknow.server.nio.Connection;
-import unknow.server.nio.Handler;
 import unknow.server.nio.HandlerFactory;
 import unknow.server.nio.NIOServer;
 import unknow.server.nio.NIOServerListener;
@@ -117,40 +114,5 @@ public class NIOServerCli implements Callable<Integer> {
 	 */
 	public static void main(String[] arg) {
 		System.exit(new CommandLine(new NIOServerCli()).execute(arg));
-	}
-
-	private static class ShutdownHandler implements Handler, HandlerFactory {
-		private final NIOServer server;
-
-		public ShutdownHandler(NIOServer server) {
-			this.server = server;
-		}
-
-		@Override
-		public Handler create(Connection c) {
-			return this;
-		}
-
-		@Override
-		public void init() {
-			server.stop();
-		}
-
-		@Override
-		public void onRead() throws InterruptedException, IOException { // OK
-		}
-
-		@Override
-		public void onWrite() throws InterruptedException, IOException { // OK
-		}
-
-		@Override
-		public boolean closed(long now, boolean close) {
-			return true;
-		}
-
-		@Override
-		public void free() { // OK
-		}
 	}
 }

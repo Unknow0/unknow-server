@@ -6,9 +6,6 @@
 		<version>0.0.1-SNAPSHOT</version>
 	</parent>
 	<artifactId>unknow-http-test</artifactId>
-	<properties>
-		<cxf.version>3.5.3</cxf.version>
-	</properties>
 	<build>
 		<plugins>
 			<plugin>
@@ -39,7 +36,7 @@
 						</goals>
 						<phase>generate-sources</phase>
 						<configuration>
-							<addAccessLog>true</addAccessLog>
+							<addAccessLog>false</addAccessLog>
 							<packageName>unknow.server.http.test.generated</packageName>
 							<!--sessionFactory>bla</sessionFactory-->
 						</configuration>
@@ -128,26 +125,36 @@
 			<artifactId>unknow-http-jaxrs</artifactId>
 			<version>${project.version}</version>
 		</dependency>
-		<!--dependency>
+		<dependency>
 			<groupId>org.apache.cxf</groupId>
 			<artifactId>cxf-rt-frontend-jaxws</artifactId>
 			<version>${cxf.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.cxf</groupId>
+			<artifactId>cxf-rt-frontend-jaxrs</artifactId>
+			<version>${cxf.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.cxf</groupId>
 			<artifactId>cxf-rt-transports-http</artifactId>
 			<version>${cxf.version}</version>
-		</dependency-->
+		</dependency>
 		<dependency>
+			<groupId>org.apache.cxf</groupId>
+			<artifactId>cxf-rt-rs-service-description-openapi-v3</artifactId>
+			<version>${cxf.version}</version>
+		</dependency>
+
+		<!--dependency>
 			<groupId>org.apache.xmlbeans</groupId>
 			<artifactId>xmlbeans</artifactId>
 			<version>5.1.0</version>
 			<scope>test</scope>
-		</dependency>
+		</dependency-->
 		<dependency>
 			<groupId>com.fasterxml.jackson.jakarta.rs</groupId>
 			<artifactId>jackson-jakarta-rs-json-provider</artifactId>
-			<version>2.14.2</version>
 		</dependency>
 		<dependency>
 			<groupId>jakarta.annotation</groupId>
@@ -160,6 +167,10 @@
 		<dependency>
 			<groupId>jakarta.ws.rs</groupId>
 			<artifactId>jakarta.ws.rs-api</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>jakarta.xml.bind</groupId>
+			<artifactId>jakarta.xml.bind-api</artifactId>
 		</dependency>
 	</dependencies>
 </project>

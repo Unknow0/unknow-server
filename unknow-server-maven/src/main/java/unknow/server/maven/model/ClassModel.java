@@ -137,12 +137,23 @@ public interface ClassModel extends TypeModel, WithMod {
 		return new AncestrorIterable(this);
 	}
 
-	default ClassModel ancestror(TypeModel t) {
+	/**
+	 * @param t ancestor to get
+	 * @return the ancestor
+	 */
+	default ClassModel ancestor(TypeModel t) {
 		if (!t.isClass())
 			return null;
+		return ancestor(t.name());
+	}
 
-		for (ClassModel p : t.asClass().ancestor()) {
-			if (p.name().equals(name()))
+	/**
+	 * @param cl ancestor to get
+	 * @return the ancestor
+	 */
+	default ClassModel ancestor(String cl) {
+		for (ClassModel p : ancestor()) {
+			if (cl.equals(p.name()))
 				return p;
 		}
 		return null;
@@ -160,12 +171,24 @@ public interface ClassModel extends TypeModel, WithMod {
 		return false;
 	}
 
+	@Override
+	default boolean isAssignableTo(String cl) {
+		for (ClassModel p : ancestor()) {
+			if (cl.equals(p.name()))
+				return true;
+		}
+		return false;
+	}
+
 	/**
 	 * @return the full name with the parameters
 	 */
 	@Override
 	String toString();
 
+	/**
+	 * @return true this class is a boxed type for a primitive (Integer, Character, Double, ect..)
+	 */
 	default boolean isBoxedPrimitive() {
 		String n = name();
 		for (PrimitiveModel t : PrimitiveModel.PRIMITIVES) {

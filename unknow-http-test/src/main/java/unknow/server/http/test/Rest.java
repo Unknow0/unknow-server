@@ -27,6 +27,16 @@ import jakarta.ws.rs.core.Response;
 public class Rest {
 
 	@GET
+	@Path("t")
+	public void t() {
+	}
+
+	@GET
+	@Path("q/{v}")
+	public void q() {
+	}
+
+	@GET
 	public void oneWay(@PathParam("q") String q, @BeanParam Bean bean) {
 		System.out.println("oneWay>> q: '" + q + "' bean: " + bean);
 	}
@@ -68,7 +78,7 @@ public class Rest {
 		public String[] p;
 
 		@QueryParam("d")
-		public List<E> d;
+		public List<? extends E> d;
 
 		public Truc truc;
 

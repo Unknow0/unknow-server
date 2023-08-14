@@ -6,15 +6,9 @@ package unknow.server.maven.jaxrs;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
 
 import org.apache.maven.plugin.MojoExecutionException;
 
@@ -27,7 +21,6 @@ import com.github.javaparser.ast.expr.FieldAccessExpr;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.NullLiteralExpr;
-import com.github.javaparser.ast.expr.ObjectCreationExpr;
 import com.github.javaparser.ast.expr.TypeExpr;
 import com.github.javaparser.ast.expr.VariableDeclarationExpr;
 import com.github.javaparser.ast.stmt.BlockStmt;
@@ -57,22 +50,14 @@ public class BeanParamBuilder {
 	private final ClassOrInterfaceDeclaration cl;
 	private final TypeCache types;
 
-	private final TypeModel collection;
-	private final TypeModel set;
-	private final TypeModel sortedSet;
-
 	private final Map<String, JaxrsBeanParam> beans;
 	private final Map<String, String> beansVar;
 	private final Map<JaxrsParam, String> converterVar;
 
-	public BeanParamBuilder(ModelLoader loader, CompilationUnit cu, Map<String, String> existingClass) {
+	public BeanParamBuilder(CompilationUnit cu, Map<String, String> existingClass) {
 		this.cu = cu;
 		types = new TypeCache(cu, existingClass);
 		cl = cu.addClass("BeansReader", Utils.PUBLIC);
-
-		collection = loader.get(Collection.class.getCanonicalName());
-		set = loader.get(Set.class.getCanonicalName());
-		sortedSet = loader.get(SortedSet.class.getCanonicalName());
 
 		beans = new HashMap<>();
 		beansVar = new HashMap<>();
@@ -119,15 +104,24 @@ public class BeanParamBuilder {
 			return;
 		}
 		converterVar.put(p, n);
+
+		TypeModel t = JaxrsModel.getParamType(p.type);
+		TypeModel t1 = t;
+		if (t.isWildCard()) {
+			t1 = t.asWildcard().bound();
+			if (t1 == null)
+				t1 = ModelLoader.OBJECT;
+		}
+
 		b.addStatement(
 				new TryStmt(
 						new BlockStmt()
 								.addStatement(Utils.assign(types.getClass(Field.class), "f",
 										new MethodCallExpr(new ClassExpr(types.get(p.parent.name())), "getDeclaredField", Utils.list(Utils.text(p.name)))))
-								.addStatement(new AssignExpr(new NameExpr("t"), new MethodCallExpr(new NameExpr("f"), "getGenericType"), AssignExpr.Operator.ASSIGN))
+								.addStatement(new AssignExpr(new NameExpr("t"), new MethodCallExpr(new TypeExpr(types.get(JaxrsContext.class)), "getParamType", Utils.list(new MethodCallExpr(new NameExpr("f"), "getGenericType"))), AssignExpr.Operator.ASSIGN))
 								.addStatement(new AssignExpr(new NameExpr("a"), new MethodCallExpr(new NameExpr("f"), "getAnnotations"), AssignExpr.Operator.ASSIGN)),
 						Utils.list(new CatchClause(new com.github.javaparser.ast.body.Parameter(types.getClass(Exception.class), "e"),
-								new BlockStmt().addStatement(new AssignExpr(new NameExpr("t"), new ClassExpr(types.get(p.type.name())), AssignExpr.Operator.ASSIGN))
+								new BlockStmt().addStatement(new AssignExpr(new NameExpr("t"), new ClassExpr(types.get(t1.name())), AssignExpr.Operator.ASSIGN))
 										.addStatement(new AssignExpr(new NameExpr("a"), Utils.array(types.getClass(Annotation.class), 0), AssignExpr.Operator.ASSIGN)))),
 						null));
 
@@ -139,10 +133,9 @@ public class BeanParamBuilder {
 									Utils.list(new ClassExpr(types.get(p.type.name())), new NameExpr("t"), new NameExpr("a"), new NullLiteralExpr())),
 							AssignExpr.Operator.ASSIGN));
 		} else {
-			TypeModel t = JaxrsModel.getParamType(p.type);
-			cl.addField(types.getClass(ParamConverter.class, types.get(t.isPrimitive() ? t.asPrimitive().boxed() : t.name())), n, Utils.PSF);
+			cl.addField(types.getClass(ParamConverter.class, types.get(t)), n, Utils.PSF);
 			b.addStatement(new AssignExpr(new NameExpr(n), new MethodCallExpr(new TypeExpr(types.getClass(JaxrsContext.class)), "converter",
-					Utils.list(new ClassExpr(types.get(t.name())), new NameExpr("t"), new NameExpr("a"))), AssignExpr.Operator.ASSIGN));
+					Utils.list(new ClassExpr(types.get(t1.name())), new NameExpr("t"), new NameExpr("a"))), AssignExpr.Operator.ASSIGN));
 		}
 	}
 
@@ -151,18 +144,6 @@ public class BeanParamBuilder {
 			return new MethodCallExpr(new NameExpr(converterVar.get(p)), "read", Utils.list(new NameExpr("r")));
 		if (p instanceof JaxrsBeanParam)
 			return new MethodCallExpr(beansVar.get(((JaxrsBeanParam) p).clazz.name()), new NameExpr("r"));
-
-		String m = "get" + p.getClass().getSimpleName().substring(5, p.getClass().getSimpleName().length() - 5);
-		if (p.type.isArray() || collection.isAssignableFrom(p.type))
-			m += "Array";
-		Expression e = new MethodCallExpr(new NameExpr("r"), m,
-				Utils.list(Utils.text(p.value), p.def == null ? new NullLiteralExpr() : Utils.text(p.def), new NameExpr(converterVar.get(p))));
-		if (collection.isAssignableFrom(p.type))
-			e = new MethodCallExpr(new TypeExpr(types.get(Arrays.class)), "asList", Utils.list(e));
-		if (sortedSet.isAssignableFrom(p.type))
-			e = new ObjectCreationExpr(null, types.getClass(TreeSet.class), Utils.list(e));
-		else if (set.isAssignableFrom(p.type))
-			e = new ObjectCreationExpr(null, types.getClass(HashSet.class), Utils.list(e));
-		return e;
+		return JaxrsModel.getParam(p, types, converterVar);
 	}
 }

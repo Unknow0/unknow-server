@@ -11,6 +11,9 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import unknow.server.util.io.Buffers;
 import unknow.server.util.io.BuffersInputStream;
 
@@ -20,6 +23,8 @@ import unknow.server.util.io.BuffersInputStream;
  * @author unknow
  */
 public final class Connection {
+	private static final Logger logger = LoggerFactory.getLogger(Connection.class);
+
 	private final Object mutex = new Object();
 
 	/** factory that created the handler */
@@ -72,6 +77,15 @@ public final class Connection {
 			return;
 		}
 		buf.flip();
+
+		if (logger.isTraceEnabled()) {
+			buf.mark();
+			byte[] bytes = new byte[buf.remaining()];
+			buf.get(bytes);
+			logger.trace("read " + new String(bytes));
+			buf.reset();
+		}
+
 		pendingRead.write(buf);
 		handler.onRead();
 	}
@@ -89,6 +103,15 @@ public final class Connection {
 		buf.clear();
 		while (pendingWrite.read(buf, false)) {
 			buf.flip();
+
+			if (logger.isTraceEnabled()) {
+				buf.mark();
+				byte[] bytes = new byte[buf.remaining()];
+				buf.get(bytes);
+				logger.trace("writ " + new String(bytes));
+				buf.reset();
+			}
+
 			channel.write(buf);
 			if (buf.hasRemaining())
 				break;
@@ -146,7 +169,6 @@ public final class Connection {
 		try {
 			return (InetSocketAddress) ((SocketChannel) key.channel()).getRemoteAddress();
 		} catch (IOException e) {
-			Thread.currentThread().interrupt();
 			return null;
 		}
 	}
@@ -256,10 +278,6 @@ public final class Connection {
 		public synchronized void close() {
 			flush();
 			h = null;
-//			Exception e = new Exception();
-//			StackTraceElement[] stackTrace = e.getStackTrace();
-//			if (stackTrace.length < 2 || !"unknow.server.nio.Connection".equals(stackTrace[1].getClassName()) || !"reset".equals(stackTrace[1].getMethodName()))
-//				e.printStackTrace();
 		}
 
 		public synchronized boolean isClosed() {

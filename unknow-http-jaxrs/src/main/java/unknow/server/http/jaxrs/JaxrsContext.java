@@ -5,9 +5,14 @@ package unknow.server.http.jaxrs;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.GenericArrayType;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
+import java.lang.reflect.WildcardType;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -109,7 +114,7 @@ public class JaxrsContext {
 				JaxrsEntityWriter.RESPONSE.write(r, m.toResponse(t), res);
 				return;
 			}
-		} while ((c = c.getSuperclass()) != Throwable.class);
+		} while ((c = c.getSuperclass()) != Object.class);
 		res.sendError(500);
 	}
 
@@ -156,6 +161,63 @@ public class JaxrsContext {
 			return m;
 		}
 		throw new InternalServerErrorException("No writer for " + clazz + " " + t);
+	}
+
+	public static Type getParamType(Type t) {
+		if (t instanceof GenericArrayType)
+			return ((GenericArrayType) t).getGenericComponentType();
+		if (t instanceof Class) {
+			Class<?> cl = (Class) t;
+			if (cl.isArray())
+				return cl.getComponentType();
+		}
+
+		Type r = getCollectionType(t, Collections.emptyMap());
+		return r != null ? r : t;
+	}
+
+	private static Type getCollectionType(Type p, Map<String, Type> params) {
+		if (p instanceof ParameterizedType)
+			return getCollectionType((ParameterizedType) p, params);
+		if (p instanceof Class)
+			return getCollectionType((Class) p, params);
+		return p;
+	}
+
+	private static Type getCollectionType(Class c, Map<String, Type> params) {
+		Type[] inter = c.getGenericInterfaces();
+		for (int i = 0; i < inter.length; i++) {
+			Type t = inter[i];
+			Type r = getCollectionType(t, params);
+			if (r != null)
+				return r;
+		}
+		return getParamType(c.getGenericSuperclass());
+	}
+
+	private static Type getCollectionType(ParameterizedType p, Map<String, Type> params) {
+		Class c = (Class) p.getRawType();
+		Type[] a = p.getActualTypeArguments();
+		if (c.equals(Collection.class)) {
+			Type b = a[0];
+			if (b instanceof TypeVariable)
+				b = params.getOrDefault(((TypeVariable) b).getName(), Object.class);
+			return b;
+		}
+
+		Map<String, Type> map = new HashMap<>();
+		TypeVariable[] t = c.getTypeParameters();
+		for (int i = 0; i < t.length; i++) {
+			Type b = a[i];
+			if (b instanceof TypeVariable)
+				b = params.getOrDefault(((TypeVariable) b).getName(), Object.class);
+			if (b instanceof WildcardType) {
+				Type[] w = ((WildcardType) b).getUpperBounds();
+				b = w.length == 1 ? w[0] : Object.class;
+			}
+			map.put(t[i].getName(), b);
+		}
+		return getCollectionType(c, map);
 	}
 
 	private static class WebAppExceptionMapping implements ExceptionMapper<WebApplicationException> {

@@ -446,7 +446,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 	@Override
 	public String getRemoteHost() {
 		if (remoteHost == null)
-			remoteHost = remote.getHostName();
+			remoteHost = remote.getHostString();
 		return remoteHost;
 	}
 

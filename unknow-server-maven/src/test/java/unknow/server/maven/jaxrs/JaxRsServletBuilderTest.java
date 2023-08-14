@@ -13,11 +13,11 @@ import org.junit.jupiter.api.Test;
 /**
  * @author unknow
  */
-public class JaxRsServletTest {
+public class JaxRsServletBuilderTest {
 	@Test
 	public void testMimeOrder() {
 		ArrayList<String> list = new ArrayList<>(Arrays.asList("a/b", "a/*", "*/b", "*/*"));
-		list.sort(JaxRsServlet.MIME);
+		list.sort(JaxRsServletBuilder.MIME);
 		assertEquals(Arrays.asList("*/*", "*/b", "a/*", "a/b"), list);
 	}
 }

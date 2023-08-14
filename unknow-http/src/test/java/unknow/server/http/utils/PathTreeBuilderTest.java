@@ -5,7 +5,6 @@ package unknow.server.http.utils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -30,7 +29,6 @@ public class PathTreeBuilderTest {
 		PartNode tree = build.root;
 		assertNode(tree, "ServletDefault", "ServletDefault");
 		assertEquals(0, tree.nexts.length);
-		assertNull(tree.pattern);
 		assertEquals(0, tree.ends.length);
 	}
 
@@ -45,7 +43,6 @@ public class PathTreeBuilderTest {
 		PartNode tree = build.root;
 		assertNode(tree, "ServletDefault", "ServletDefault");
 		assertEquals(0, tree.nexts.length);
-		assertNull(tree.pattern);
 		assertEquals(1, tree.ends.length);
 		assertEquals("f,ServletDefault", tree.ends[0].exact.toString());
 	}
@@ -60,7 +57,6 @@ public class PathTreeBuilderTest {
 		assertNode(tree, "s", "ServletDefault");
 		assertEquals(1, tree.nexts.length);
 		assertNode(tree.nexts[0], "s", "ServletDefault");
-		assertNull(tree.pattern);
 		assertEquals(0, tree.ends.length);
 	}
 
@@ -74,21 +70,6 @@ public class PathTreeBuilderTest {
 		assertNode(tree, "ServletDefault", "ServletDefault");
 		assertEquals(1, tree.nexts.length);
 		assertNode(tree.nexts[0], "s", "s");
-		assertNull(tree.pattern);
-		assertEquals(0, tree.ends.length);
-	}
-
-	@Test
-	public void testServletPattern() {
-		Set<String> urls = new HashSet<>(Arrays.asList("/{}"));
-		ServletConfigImpl[] servlets = { new ServletConfigImpl("name", new S("s"), null, null, urls) };
-		PathTree build = new PathTreeBuilder(null, servlets, new FilterConfigImpl[0], DispatcherType.REQUEST).build();
-		System.out.println("pattern:\n" + build);
-		PartNode tree = build.root;
-		assertNode(tree, "ServletDefault", "ServletDefault");
-		assertEquals(0, tree.nexts.length);
-		assertNotNull(tree.pattern);
-		assertNode(tree.pattern, "s", "ServletDefault");
 		assertEquals(0, tree.ends.length);
 	}
 

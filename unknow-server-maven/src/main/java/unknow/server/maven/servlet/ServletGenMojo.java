@@ -97,7 +97,7 @@ public class ServletGenMojo extends AbstractMojo implements BuilderContext {
 	@Parameter(defaultValue = "${project.build.outputDirectory}/META-INF/native-image/servletgen/resource-config.json")
 	private String graalvmResouceConfig;
 
-	@Parameter(defaultValue = "true")
+	@Parameter(defaultValue = "false")
 	private boolean addAccessLog;
 
 	@Override

@@ -67,7 +67,7 @@ public class IntArrayMap<T> {
 			System.arraycopy(keys, i, keys, i + 1, len - i);
 			System.arraycopy(values, i, values, i + 1, len - i);
 		}
-		ensure(len++);
+		ensure(++len);
 		i = -i - 1;
 		T old = values[i];
 		keys[i] = key;
@@ -90,7 +90,7 @@ public class IntArrayMap<T> {
 			System.arraycopy(keys, i, keys, i + 1, len - i);
 			System.arraycopy(values, i, values, i + 1, len - i);
 		}
-		ensure(len++);
+		ensure(++len);
 		i = -i - 1;
 		keys[i] = key;
 		values[i] = value;

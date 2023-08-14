@@ -39,7 +39,7 @@ public class PathTree {
 		return f == null ? root.def : f;
 	}
 
-	private FilterChain tryFind(ServletRequestImpl req, PartNode last, List<String> part, int i) throws InterruptedException {
+	private FilterChain tryFind(ServletRequestImpl req, PartNode last, List<String> part, int i) {
 		if (i == part.size()) {
 			req.setPathInfo(i);
 			return last.exact;
@@ -55,17 +55,6 @@ public class PathTree {
 			}
 			last = n;
 		}
-		if (last.pattern != null) {
-			if (++i == part.size()) {
-				req.setPathInfo(i);
-				return last.pattern.exact;
-			}
-
-			FilterChain f = tryFind(req, last.pattern, part, i);
-			if (f != null) // contextPath already set
-				return f;
-		}
-
 		if (last.ends != null) {
 			Node n = ends(last.ends, part.get(part.size() - 1));
 			if (n != null) {
@@ -218,24 +207,21 @@ public class PathTree {
 
 	public static class PartNode extends Node {
 		final PartNode[] nexts;
-		final PartNode pattern;
 		final Node[] ends;
 		final FilterChain def;
 
 		/**
 		 * create a new PartNode
 		 * 
-		 * @param part    the path part
-		 * @param nexts   the child part
-		 * @param pattern the pattern child (try if the child match)
-		 * @param ends    the end with pattern "*.jsp" pattern
-		 * @param exact   the "" pattern chains
-		 * @param def     the "/*" pattern
+		 * @param part  the path part
+		 * @param nexts the child part
+		 * @param ends  the end with pattern "*.jsp" pattern
+		 * @param exact the "" pattern chains
+		 * @param def   the "/*" pattern
 		 */
-		public PartNode(String part, PartNode[] nexts, PartNode pattern, Node[] ends, FilterChain exact, FilterChain def) {
+		public PartNode(String part, PartNode[] nexts, Node[] ends, FilterChain exact, FilterChain def) {
 			super(part, exact);
 			this.nexts = nexts;
-			this.pattern = pattern;
 			this.ends = ends;
 			this.def = def;
 		}
@@ -247,11 +233,6 @@ public class PathTree {
 				PartNode n = nexts[i];
 				name.append('/').append(n.part);
 				n.toString(sb, name);
-				name.setLength(l);
-			}
-			if (pattern != null) {
-				name.append("/{}");
-				pattern.toString(sb, name);
 				name.setLength(l);
 			}
 			name.append("/*");

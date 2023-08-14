@@ -87,6 +87,12 @@ public class TypeCache {
 	private Type create(String cl) {
 		if (cl.endsWith("[]"))
 			return new ArrayType(get(cl.substring(0, cl.length() - 2)));
+		if (cl.equals("?"))
+			return new WildcardType();
+		if (cl.startsWith("? extends "))
+			return new WildcardType(getClass(cl.substring(10)));
+		if (cl.startsWith("? super "))
+			return new WildcardType().setSuperType(getClass(cl.substring(8)));
 
 		List<String> parse = ModelLoader.parse(cl);
 

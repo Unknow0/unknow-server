@@ -39,7 +39,7 @@ import unknow.server.util.io.Buffers.Walker;
 import unknow.server.util.io.BuffersUtils;
 
 public class HttpHandler implements Handler, Runnable {
-	private static final Logger log = LoggerFactory.getLogger(HttpHandler.class);
+	private static final Logger logger = LoggerFactory.getLogger(HttpHandler.class);
 //	private static final Cookie[] COOKIE = new Cookie[0];
 
 	private static final byte[] CRLF = { '\r', '\n' };
@@ -121,7 +121,7 @@ public class HttpHandler implements Handler, Runnable {
 	}
 
 	private final void error(HttpError e) {
-		log.error("{}: {}", co.getRemote(), e);
+		logger.error("{}: {}", co.getRemote(), e);
 		try {
 			OutputStream out = co.getOut();
 			out.write(e.empty());
@@ -274,21 +274,21 @@ public class HttpHandler implements Handler, Runnable {
 				res.setHeader("connection", "keep-alive");
 			events.fireRequestInitialized(req);
 			FilterChain s = servlets.find(req);
-			if (s != null)
-				try {
-					s.doFilter(req, res);
-				} catch (UnavailableException e) {
-					// TODO add page with retry-after
-					res.sendError(503, e, null);
-				} catch (Throwable e) {
-					log.error("failed to service '{}'", s, e);
-					if (!res.isCommited())
-						res.sendError(500, null);
-				}
+			try {
+				s.doFilter(req, res);
+			} catch (UnavailableException e) {
+				// TODO add page with retry-after
+				res.sendError(503, e, null);
+			} catch (Throwable e) {
+				logger.error("failed to service '{}'", s, e);
+				if (!res.isCommited())
+					res.sendError(500);
+			}
+
 			events.fireRequestDestroyed(req);
 			res.close();
 		} catch (Exception e) {
-			log.error("processor error", e);
+			logger.error("processor error", e);
 			error(HttpError.SERVER_ERROR);
 		} finally {
 			cleanup();
@@ -318,13 +318,6 @@ public class HttpHandler implements Handler, Runnable {
 			long e = now - keepAliveIdle;
 			if (co.lastRead() <= e && co.lastWrite() <= e)
 				return true;
-		}
-		try {
-			if (!co.pendingRead.isEmpty()) {
-				onRead();
-				return false;
-			}
-		} catch (InterruptedException e) { // OK
 		}
 
 		// TODO check request timeout

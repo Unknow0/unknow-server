@@ -70,7 +70,7 @@ public class ArrayMap<T> implements Map<String, T> {
 			System.arraycopy(key, i, key, i + 1, len - i);
 			System.arraycopy(value, i, value, i + 1, len - i);
 		}
-		ensure(len++);
+		ensure(++len);
 		T old = value[i];
 		key[i] = name;
 		value[i] = o;
@@ -86,7 +86,7 @@ public class ArrayMap<T> implements Map<String, T> {
 			System.arraycopy(key, i, key, i + 1, len - i);
 			System.arraycopy(value, i, value, i + 1, len - i);
 		}
-		ensure(len++);
+		ensure(++len);
 		key[i] = name;
 		value[i] = o;
 		return true;
@@ -102,7 +102,7 @@ public class ArrayMap<T> implements Map<String, T> {
 	}
 
 	private void ensure(int l) {
-		if (l < key.length)
+		if (l <= key.length)
 			return;
 		key = Arrays.copyOf(key, l);
 		value = Arrays.copyOf(value, l);
@@ -164,7 +164,7 @@ public class ArrayMap<T> implements Map<String, T> {
 
 	@Override
 	public Set<Entry<String, T>> entrySet() {
-		return null;
+		return new Entries();
 	}
 
 	private class KeySet implements Set<String> {
@@ -243,6 +243,100 @@ public class ArrayMap<T> implements Map<String, T> {
 		@Override
 		public void clear() {
 			ArrayMap.this.clear();
+		}
+	}
+
+	private class Entries implements Set<Map.Entry<String, T>> {
+		@Override
+		public int size() {
+			return ArrayMap.this.size();
+		}
+
+		@Override
+		public boolean isEmpty() {
+			return ArrayMap.this.isEmpty();
+		}
+
+		@Override
+		public boolean contains(Object o) {
+			return ArrayMap.this.containsKey(o);
+		}
+
+		@Override
+		public Iterator<Map.Entry<String, T>> iterator() {
+			return new EntriesIt();
+		}
+
+		@Override
+		public Object[] toArray() {
+			return Arrays.copyOf(key, key.length);
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		public <R> R[] toArray(R[] a) {
+			R[] r = a.length >= key.length ? a : (R[]) java.lang.reflect.Array.newInstance(a.getClass().getComponentType(), key.length);
+			System.arraycopy(key, 0, r, 0, key.length);
+			if (a.length > key.length)
+				r[key.length] = null;
+			return r;
+		}
+
+		@Override
+		public boolean add(Map.Entry<String, T> e) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public boolean remove(Object o) {
+			return ArrayMap.this.remove(o) != null;
+		}
+
+		@Override
+		public boolean containsAll(Collection<?> c) {
+			for (Object o : c) {
+				if (!ArrayMap.this.containsKey(o))
+					return false;
+			}
+			return true;
+		}
+
+		@Override
+		public boolean addAll(Collection<? extends Map.Entry<String, T>> c) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public boolean retainAll(Collection<?> c) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public boolean removeAll(Collection<?> c) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public void clear() {
+			ArrayMap.this.clear();
+		}
+	}
+
+	public class EntriesIt implements Iterator<Map.Entry<String, T>> {
+		private int i;
+
+		public EntriesIt() {
+			this.i = 0;
+		}
+
+		@Override
+		public boolean hasNext() {
+			return i < len;
+		}
+
+		@Override
+		public Map.Entry<String, T> next() {
+			return new MapEntry<>(key[i], value[i++]);
 		}
 	}
 }

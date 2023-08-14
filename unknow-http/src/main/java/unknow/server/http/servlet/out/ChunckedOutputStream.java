@@ -74,6 +74,7 @@ public class ChunckedOutputStream extends ServletOutputStream implements Output 
 	public void close() throws IOException {
 		if (closed)
 			return;
+		res.commit();
 		flush();
 		out.write(END);
 		out.flush();

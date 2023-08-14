@@ -243,7 +243,7 @@ public class JaxwsServletBuilder {
 				.addStatement(new TryStmt(
 						new BlockStmt().addStatement(new MethodCallExpr(new NameExpr("res"), "setStatus", Utils.list(new IntegerLiteralExpr("500")))).addStatement(
 								new MethodCallExpr(new MethodCallExpr(new MethodCallExpr(new MethodCallExpr(new NameExpr("res"), "getWriter"), "append", Utils.list(Utils.text(
-										"<e:Envelope xmlns:e=\\\"http://schemas.xmlsoap.org/soap/envelope/\\\"><e:Body><e:Fault><faultcode>Server</faultcode><faultstring>"))),
+										"<e:Envelope xmlns:e=\"http://schemas.xmlsoap.org/soap/envelope/\"><e:Body><e:Fault><faultcode>Server</faultcode><faultstring>"))),
 										"append", Utils.list(new NameExpr("err"))), "write", Utils.list(Utils.text("</faultstring></e:Fault></e:Body></e:Envelope>")))),
 						Utils.list(new CatchClause(new Parameter(types.getClass(Exception.class), "ignore"), ok)), null));
 	}
