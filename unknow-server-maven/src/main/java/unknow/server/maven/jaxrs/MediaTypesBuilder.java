@@ -83,9 +83,11 @@ public class MediaTypesBuilder {
 		if (n != null)
 			return n;
 		String[] split = t.split("/");
-		String name = t.toUpperCase().replace('/', '_');
+		String name = t.toUpperCase().replaceAll("[^_a-zA-Z]", "_");
 
-		cl.addFieldWithInitializer(mt, name, new ObjectCreationExpr(null, types.getClass(MediaType.class), Utils.list(new StringLiteralExpr(split[0]), new StringLiteralExpr(split[1]))), Utils.PUBLIC_STATIC);
+		cl.addFieldWithInitializer(mt, name,
+				new ObjectCreationExpr(null, types.getClass(MediaType.class), Utils.list(new StringLiteralExpr(split[0]), new StringLiteralExpr(split[1]))),
+				Utils.PUBLIC_STATIC);
 		mts.put(t, n = new FieldAccessExpr(new TypeExpr(types.getClass(cl)), name));
 		return n;
 	}
@@ -119,7 +121,8 @@ public class MediaTypesBuilder {
 				}
 				e = new ObjectCreationExpr(null, types.getClass(MTPredicate.class), l);
 			} else
-				e = new LambdaExpr(new Parameter(new UnknownType(), "t"), new MethodCallExpr(new NameExpr("t"), "isCompatible", Utils.list(type(mediaTypes.iterator().next()))));
+				e = new LambdaExpr(new Parameter(new UnknownType(), "t"),
+						new MethodCallExpr(new NameExpr("t"), "isCompatible", Utils.list(type(mediaTypes.iterator().next()))));
 		} else
 			e = new LambdaExpr(new Parameter(new UnknownType(), "t"), new BooleanLiteralExpr(true));
 
