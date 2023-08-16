@@ -90,7 +90,10 @@ public interface JaxrsEntityWriter<T> {
 
 			Object o = e.getEntity();
 			if (o != null) {
-				MediaType mediaType = r.getAccept();
+				MediaType mediaType = e.getMediaType();
+				if (mediaType == null)
+					mediaType = r.getAccept();
+
 				Class<?> clazz = o.getClass();
 				Annotation[] a = e instanceof ResponseImpl ? ((ResponseImpl) e).getAnnotations() : null;
 				if (a == null)
@@ -99,7 +102,7 @@ public interface JaxrsEntityWriter<T> {
 				if (o instanceof GenericEntity)
 					GenericWriter.write((GenericEntity<?>) o, mediaType, a, res);
 				else
-					JaxrsContext.writer(clazz, clazz, a, mediaType).writeTo(e, clazz, clazz, a, mediaType, httpHeaders, res.getOutputStream());
+					JaxrsContext.writer(clazz, clazz, a, mediaType).writeTo(e.getEntity(), clazz, clazz, a, mediaType, httpHeaders, res.getOutputStream());
 			}
 		}
 	}

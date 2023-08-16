@@ -80,10 +80,12 @@ public abstract class AbstractMojo extends org.apache.maven.plugin.AbstractMojo 
 
 	protected ModelLoader loader;
 
+	protected ClassLoader cl;
+
 	abstract protected String id();
 
 	protected void init() throws MojoFailureException {
-		ClassLoader cl = getClassLoader();
+		cl = getClassLoader();
 		loader = new ModelLoader(cl, classes);
 
 		List<String> compileSourceRoots = project.getCompileSourceRoots();

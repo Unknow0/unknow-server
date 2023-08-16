@@ -118,7 +118,7 @@ public class JaxrsModel {
 	 * 
 	 * @param loader
 	 */
-	public JaxrsModel(ModelLoader loader) {
+	public JaxrsModel(ModelLoader loader, ClassLoader cl) {
 		this.loader = loader;
 		this.paramProvider = loader.get(ParamConverterProvider.class.getName());
 		this.exceptionMapper = loader.get(ExceptionMapper.class.getName());
@@ -126,26 +126,25 @@ public class JaxrsModel {
 		this.bodyWriter = loader.get(MessageBodyWriter.class.getName());
 		this.string = loader.get(String.class.getName());
 
-		ClassLoader cl = Thread.currentThread().getContextClassLoader();
-		loadService(cl, MessageBodyReader.class, c -> {
-			Consumes a = c.getAnnotation(Consumes.class);
-			String[] v = a == null ? ALL : a.value();
+		loadService(cl, MessageBodyReader.class, l -> {
+			TypeModel c = loader.get(l);
+			String[] v = c.annotation(Consumes.class).flatMap(a -> a.values()).orElse(ALL);
 			List<String> list = new ArrayList<>();
 			for (int i = 0; i < v.length; i++)
 				list.addAll(Arrays.asList(v[i].split(" *, *")));
-			readers.put(c.getName(), list);
+			readers.put(c.name(), list);
 		});
-		loadService(cl, MessageBodyWriter.class, c -> {
-			Produces a = c.getAnnotation(Produces.class);
-			String[] v = a == null ? ALL : a.value();
+		loadService(cl, MessageBodyWriter.class, l -> {
+			TypeModel c = loader.get(l);
+			String[] v = c.annotation(Produces.class).flatMap(a -> a.values()).orElse(ALL);
 			List<String> list = new ArrayList<>();
 			for (int i = 0; i < v.length; i++)
 				list.addAll(Arrays.asList(v[i].split(" *, *")));
-			writers.put(c.getName(), list);
+			writers.put(c.name(), list);
 		});
 	}
 
-	private static void loadService(ClassLoader loader, Class<?> clazz, Consumer<Class<?>> v) {
+	private static void loadService(ClassLoader loader, Class<?> clazz, Consumer<String> v) {
 		try {
 			Enumeration<URL> e = loader.getResources("META-INF/services/" + clazz.getName());
 			while (e.hasMoreElements()) {
@@ -161,7 +160,7 @@ public class JaxrsModel {
 							if (c == null)
 								continue;
 							try {
-								v.accept(Class.forName(c));
+								v.accept(c);
 							} catch (Exception e2) {
 								log.warn("Failed to process service {}", clazz.getName(), e2);
 							}
@@ -416,7 +415,7 @@ public class JaxrsModel {
 			return;
 
 		ClassModel cl = type.asClass();
-		if (cl.isBoxedPrimitive())
+		if (cl.isBoxedPrimitive() || converter.contains(cl.name()))
 			return;
 
 		if (cl.constructors(string).filter(c -> c.isPublic()).isPresent())

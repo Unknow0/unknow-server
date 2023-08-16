@@ -12,6 +12,7 @@ import unknow.server.maven.model.ClassModel;
 import unknow.server.maven.model.FieldModel;
 import unknow.server.maven.model.MethodModel;
 import unknow.server.maven.model.ParamModel;
+import unknow.server.maven.model.PrimitiveModel;
 import unknow.server.maven.model.TypeModel;
 import unknow.server.maven.model.util.WithAnnotation;
 import unknow.server.maven.model.util.WithName;
@@ -42,7 +43,13 @@ public abstract class JaxrsParam {
 		this.value = value;
 
 		this.var = prefix + "$" + p.name();
-		this.def = p.annotation(DefaultValue.class).flatMap(a -> a.value()).orElse(null);
+		this.def = p.annotation(DefaultValue.class).flatMap(a -> a.value()).orElseGet(() -> {
+			if (!type.isPrimitive())
+				return null;
+			if (type == PrimitiveModel.BOOLEAN)
+				return "false";
+			return "0";
+		});
 		this.encoded = p.annotation(Encoded.class).isPresent();
 	}
 
@@ -55,7 +62,8 @@ public abstract class JaxrsParam {
 		public final Map<FieldModel, JaxrsParam> fields;
 		public final Map<MethodModel, JaxrsParam> setters;
 
-		public <T extends WithName & WithAnnotation & WithType> JaxrsBeanParam(T p, ClassModel clazz, Map<FieldModel, JaxrsParam> fields, Map<MethodModel, JaxrsParam> setters) {
+		public <T extends WithName & WithAnnotation & WithType> JaxrsBeanParam(T p, ClassModel clazz, Map<FieldModel, JaxrsParam> fields,
+				Map<MethodModel, JaxrsParam> setters) {
 			super(p, "o", null);
 			this.clazz = clazz;
 			this.fields = fields;

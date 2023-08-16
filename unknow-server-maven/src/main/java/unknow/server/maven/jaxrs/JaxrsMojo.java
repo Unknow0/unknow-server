@@ -89,7 +89,7 @@ public class JaxrsMojo extends AbstractMojo {
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
 		init();
-		model = new JaxrsModel(loader);
+		model = new JaxrsModel(loader, super.cl);
 		processSrc(cu -> cu.walk(ClassOrInterfaceDeclaration.class, t -> model.process(loader.get(t.getFullyQualifiedName().get()).asClass())));
 		model.implicitConstructor.remove("java.lang.String");
 

@@ -33,6 +33,7 @@ import jakarta.ws.rs.ext.MessageBodyWriter;
 import jakarta.ws.rs.ext.ParamConverter;
 import jakarta.ws.rs.ext.ParamConverterProvider;
 import unknow.server.http.jaxrs.impl.DefaultConvert;
+import unknow.server.http.jaxrs.impl.StringBody;
 
 /**
  * @author unknow
@@ -44,18 +45,22 @@ public class JaxrsContext {
 	private static final List<ParamConverterProvider> params = new ArrayList<>(Arrays.asList(new DefaultConvert()));
 	private static final Map<Class, ExceptionMapper> exceptions = new HashMap<>();
 
-	private static final Map<String, List<MessageBodyWriter<Object>>> writers = new HashMap<>();
-	private static final Map<String, List<MessageBodyReader<Object>>> readers = new HashMap<>();
+	private static final Map<String, List<MessageBodyWriter>> writers = new HashMap<>();
+	private static final Map<String, List<MessageBodyReader>> readers = new HashMap<>();
 
 	static {
 		exceptions.put(WebApplicationException.class, new WebAppExceptionMapping());
+
+		StringBody b = new StringBody();
+		registerWriter(b, ALL);
+		registerReader(b, ALL);
 
 		// TODO default reader/writer: byte[], String, InputStream, Reader, File, jakarta.activation.DataSource
 		// javax.xml.transform.Source (text/xml, application/xml and media types of the form application/*+xml),
 		// MultivaluedMap<String,String> (application/x-www-form-urlencoded)
 		// java.util.List<EntityPart> (multipart/form-data)
 		// StreamingOutput writer only
-		// Boolean, Character, Number (plain/text) => NoContentException for empty body owith primitive
+		// Boolean, Character, Number (plain/text) => NoContentException for empty body with primitive
 
 		// TODO PathSegment for param
 	}
@@ -70,12 +75,12 @@ public class JaxrsContext {
 		params.add(param);
 	}
 
-	public static void registerReader(MessageBodyReader<Object> reader, String... mimes) {
+	public static void registerReader(MessageBodyReader reader, String... mimes) {
 		if (mimes.length == 0)
 			mimes = ALL;
 		for (String mime : mimes) {
 			synchronized (readers) {
-				List<MessageBodyReader<Object>> list = readers.get(mime);
+				List<MessageBodyReader> list = readers.get(mime);
 				if (list == null)
 					readers.put(mime, list = new ArrayList<>(1));
 				list.add(reader);
@@ -83,12 +88,12 @@ public class JaxrsContext {
 		}
 	}
 
-	public static void registerWriter(MessageBodyWriter<Object> writer, String... mimes) {
+	public static void registerWriter(MessageBodyWriter writer, String... mimes) {
 		if (mimes.length == 0)
 			mimes = ALL;
 		for (String mime : mimes) {
 			synchronized (writers) {
-				List<MessageBodyWriter<Object>> list = writers.get(mime);
+				List<MessageBodyWriter> list = writers.get(mime);
 				if (list == null)
 					writers.put(mime, list = new ArrayList<>(1));
 				list.add(writer);
@@ -141,20 +146,21 @@ public class JaxrsContext {
 		throw new NotSupportedException("No reader for " + clazz + " " + t);
 	}
 
+	@SuppressWarnings("unchecked")
 	public static MessageBodyWriter<Object> writer(Class clazz, Type genericType, Annotation[] annotations, MediaType t) {
-		for (MessageBodyWriter<Object> m : writers.getOrDefault(t.getType() + "/" + t.getSubtype(), Collections.emptyList())) {
+		for (MessageBodyWriter m : writers.getOrDefault(t.getType() + "/" + t.getSubtype(), Collections.emptyList())) {
 			if (!m.isWriteable(clazz, genericType, annotations, t))
 				continue;
 			// TODO priorities
 			return m;
 		}
-		for (MessageBodyWriter<Object> m : writers.getOrDefault(t.getType() + "/*", Collections.emptyList())) {
+		for (MessageBodyWriter m : writers.getOrDefault(t.getType() + "/*", Collections.emptyList())) {
 			if (!m.isWriteable(clazz, genericType, annotations, t))
 				continue;
 			// TODO priorities
 			return m;
 		}
-		for (MessageBodyWriter<Object> m : writers.getOrDefault("*/*", Collections.emptyList())) {
+		for (MessageBodyWriter m : writers.getOrDefault("*/*", Collections.emptyList())) {
 			if (!m.isWriteable(clazz, genericType, annotations, t))
 				continue;
 			// TODO priorities

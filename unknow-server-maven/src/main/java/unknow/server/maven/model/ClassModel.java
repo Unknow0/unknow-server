@@ -190,9 +190,8 @@ public interface ClassModel extends TypeModel, WithMod {
 	 * @return true this class is a boxed type for a primitive (Integer, Character, Double, ect..)
 	 */
 	default boolean isBoxedPrimitive() {
-		String n = name();
 		for (PrimitiveModel t : PrimitiveModel.PRIMITIVES) {
-			if (n.equals(t.boxed()))
+			if (this.equals(t.boxed()))
 				return true;
 		}
 		return false;
