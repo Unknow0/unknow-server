@@ -214,4 +214,35 @@ public final class BuffersUtils {
 			return true;
 		}
 	}
+
+	/**
+	 * convert a buffers to a byte array
+	 * 
+	 * @param buf
+	 * @param off
+	 * @param len
+	 * @return the bytes
+	 * @throws InterruptedException
+	 */
+	public static byte[] toArray(Buffers buf, int off, int len) throws InterruptedException {
+		ToArray w = new ToArray(buf.length());
+		buf.walk(w, off, len);
+		return w.b;
+	}
+
+	private static final class ToArray implements Walker {
+		private final byte[] b;
+		private int i;
+
+		public ToArray(int l) {
+			b = new byte[l];
+		}
+
+		@Override
+		public boolean apply(byte[] b, int o, int e) {
+			System.arraycopy(b, o, this.b, i, e);
+			i += e;
+			return true;
+		}
+	}
 }

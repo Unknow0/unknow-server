@@ -32,7 +32,6 @@ import com.github.javaparser.ast.expr.AssignExpr.Operator;
 import com.github.javaparser.ast.expr.BinaryExpr;
 import com.github.javaparser.ast.expr.ClassExpr;
 import com.github.javaparser.ast.expr.Expression;
-import com.github.javaparser.ast.expr.FieldAccessExpr;
 import com.github.javaparser.ast.expr.IntegerLiteralExpr;
 import com.github.javaparser.ast.expr.LongLiteralExpr;
 import com.github.javaparser.ast.expr.MethodCallExpr;
@@ -67,7 +66,6 @@ import unknow.server.http.jaxrs.JaxrsEntityWriter;
 import unknow.server.http.jaxrs.JaxrsReq;
 import unknow.server.http.jaxrs.PathPattern;
 import unknow.server.http.jaxrs.PathPattern.PathRegexp;
-import unknow.server.http.jaxrs.impl.DefaultConvert;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam;
@@ -293,26 +291,14 @@ public class JaxRsServletBuilder {
 		if (consume.isEmpty())
 			buildProduces(b, def);
 		else {
-			b.addStatement(Utils.assign(types.getClass(String.class), "contentType", new MethodCallExpr(new NameExpr("req"), "getHeader",
-					Utils.list(Utils.text("content-type"), Utils.text("*/*"), new FieldAccessExpr(new TypeExpr(types.getClass(DefaultConvert.class)), "STRING")))));
+			b.addStatement(Utils.assign(types.getClass(MediaType.class), "contentType", new MethodCallExpr(new NameExpr("req"), "getContentType")));
 			List<String> k = new ArrayList<>(consume.keySet());
 			k.sort(MIME);
 
 			Statement stmt = def == null ? new ThrowStmt(new ObjectCreationExpr(null, types.getClass(NotSupportedException.class), Utils.list()))
 					: buildProduces(new BlockStmt(), def);
-			for (String s : k) {
-				Map<String, JaxrsMapping> map = consume.get(s);
-				String m = "equals";
-				if (s.endsWith("/*")) {
-					s = s.substring(0, s.length() - 1);
-					m = "startsWith";
-				} else if (s.startsWith("*/")) {
-					s = s.substring(1);
-					m = "endsWith";
-				}
-
-				stmt = new IfStmt(new MethodCallExpr(new NameExpr("contentType"), m, Utils.list(Utils.text(s))), buildProduces(new BlockStmt(), map), stmt);
-			}
+			for (String s : k)
+				stmt = new IfStmt(new MethodCallExpr(new NameExpr("contentType"), "isCompatible", Utils.list(mt.type(s))), buildProduces(new BlockStmt(), consume.get(s)), stmt);
 			b.addStatement(stmt);
 		}
 	}

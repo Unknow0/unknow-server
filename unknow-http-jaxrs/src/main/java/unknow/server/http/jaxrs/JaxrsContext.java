@@ -33,7 +33,12 @@ import jakarta.ws.rs.ext.MessageBodyWriter;
 import jakarta.ws.rs.ext.ParamConverter;
 import jakarta.ws.rs.ext.ParamConverterProvider;
 import unknow.server.http.jaxrs.impl.DefaultConvert;
-import unknow.server.http.jaxrs.impl.StringBody;
+import unknow.server.http.jaxrs.impl.MessageByte;
+import unknow.server.http.jaxrs.impl.MessageRW;
+import unknow.server.http.jaxrs.impl.MessageReader;
+import unknow.server.http.jaxrs.impl.MessageStream;
+import unknow.server.http.jaxrs.impl.MessageStreamOutput;
+import unknow.server.http.jaxrs.impl.MessageString;
 
 /**
  * @author unknow
@@ -47,20 +52,25 @@ public class JaxrsContext {
 
 	private static final Map<String, List<MessageBodyWriter>> writers = new HashMap<>();
 	private static final Map<String, List<MessageBodyReader>> readers = new HashMap<>();
+	private static final Map<Object, Integer> priorities = new HashMap<>();
 
 	static {
 		exceptions.put(WebApplicationException.class, new WebAppExceptionMapping());
 
-		StringBody b = new StringBody();
-		registerWriter(b, ALL);
-		registerReader(b, ALL);
-
-		// TODO default reader/writer: byte[], String, InputStream, Reader, File, jakarta.activation.DataSource
-		// javax.xml.transform.Source (text/xml, application/xml and media types of the form application/*+xml),
+		// TODO default reader/writer:
 		// MultivaluedMap<String,String> (application/x-www-form-urlencoded)
 		// java.util.List<EntityPart> (multipart/form-data)
-		// StreamingOutput writer only
 		// Boolean, Character, Number (plain/text) => NoContentException for empty body with primitive
+		for (MessageRW m : Arrays.asList(new MessageString(), new MessageByte(), new MessageStream(), new MessageReader())) {
+			registerWriter(m, 99999, ALL);
+			registerReader(m, 99999, ALL);
+		}
+
+		registerWriter(new MessageStreamOutput(), 9999, ALL);
+
+		// Maybe add MessageBodyReader/Writer
+		// jakarta.activation.DataSource, java.util.File
+		// javax.xml.transform.Source (text/xml, application/xml and media types of the form application/*+xml),
 
 		// TODO PathSegment for param
 	}
@@ -75,29 +85,26 @@ public class JaxrsContext {
 		params.add(param);
 	}
 
-	public static void registerReader(MessageBodyReader reader, String... mimes) {
+	public static void registerReader(MessageBodyReader reader, int prio, String... mimes) {
 		if (mimes.length == 0)
 			mimes = ALL;
+		priorities.put(reader, prio);
 		for (String mime : mimes) {
-			synchronized (readers) {
-				List<MessageBodyReader> list = readers.get(mime);
-				if (list == null)
-					readers.put(mime, list = new ArrayList<>(1));
-				list.add(reader);
-			}
+			List<MessageBodyReader> list = readers.get(mime);
+			if (list == null)
+				readers.put(mime, list = new ArrayList<>(1));
+			list.add(reader);
 		}
 	}
 
-	public static void registerWriter(MessageBodyWriter writer, String... mimes) {
+	public static void registerWriter(MessageBodyWriter writer, int prio, String... mimes) {
 		if (mimes.length == 0)
 			mimes = ALL;
+		priorities.put(writer, prio);
 		for (String mime : mimes) {
-			synchronized (writers) {
-				List<MessageBodyWriter> list = writers.get(mime);
-				if (list == null)
-					writers.put(mime, list = new ArrayList<>(1));
-				list.add(writer);
-			}
+			List<MessageBodyWriter> list = writers.get(mime);
+			if (list == null)
+				writers.put(mime, list = new ArrayList<>(1));
 		}
 	}
 
@@ -125,48 +132,74 @@ public class JaxrsContext {
 
 	@SuppressWarnings("unchecked")
 	public static <T> MessageBodyReader<T> reader(Class<T> clazz, Type genericType, Annotation[] annotations, MediaType t) {
+		int prio = Integer.MAX_VALUE;
+		MessageBodyReader<T> r = null;
 		for (MessageBodyReader<?> m : readers.getOrDefault(t.getType() + "/" + t.getSubtype(), Collections.emptyList())) {
 			if (!m.isReadable(clazz, genericType, annotations, t))
 				continue;
-			// TODO priorities
-			return (MessageBodyReader<T>) m;
+			int p = priorities.get(m);
+			if (prio > p) {
+				prio = p;
+				r = (MessageBodyReader<T>) m;
+			}
 		}
 		for (MessageBodyReader<?> m : readers.getOrDefault(t.getType() + "/*", Collections.emptyList())) {
 			if (!m.isReadable(clazz, genericType, annotations, t))
 				continue;
-			// TODO priorities
-			return (MessageBodyReader<T>) m;
+			int p = priorities.get(m);
+			if (prio > p) {
+				prio = p;
+				r = (MessageBodyReader<T>) m;
+			}
 		}
 		for (MessageBodyReader<?> m : readers.getOrDefault("*/*", Collections.emptyList())) {
 			if (!m.isReadable(clazz, genericType, annotations, t))
 				continue;
-			// TODO priorities
-			return (MessageBodyReader<T>) m;
+			int p = priorities.get(m);
+			if (prio > p) {
+				prio = p;
+				r = (MessageBodyReader<T>) m;
+			}
 		}
-		throw new NotSupportedException("No reader for " + clazz + " " + t);
+		if (r == null)
+			throw new NotSupportedException("No reader for " + clazz + " " + t);
+		return r;
 	}
 
 	@SuppressWarnings("unchecked")
 	public static MessageBodyWriter<Object> writer(Class clazz, Type genericType, Annotation[] annotations, MediaType t) {
+		int prio = Integer.MAX_VALUE;
+		MessageBodyWriter<Object> r = null;
 		for (MessageBodyWriter m : writers.getOrDefault(t.getType() + "/" + t.getSubtype(), Collections.emptyList())) {
 			if (!m.isWriteable(clazz, genericType, annotations, t))
 				continue;
-			// TODO priorities
-			return m;
+			int p = priorities.get(m);
+			if (prio > p) {
+				prio = p;
+				r = m;
+			}
 		}
 		for (MessageBodyWriter m : writers.getOrDefault(t.getType() + "/*", Collections.emptyList())) {
 			if (!m.isWriteable(clazz, genericType, annotations, t))
 				continue;
-			// TODO priorities
-			return m;
+			int p = priorities.get(m);
+			if (prio > p) {
+				prio = p;
+				r = m;
+			}
 		}
 		for (MessageBodyWriter m : writers.getOrDefault("*/*", Collections.emptyList())) {
 			if (!m.isWriteable(clazz, genericType, annotations, t))
 				continue;
-			// TODO priorities
-			return m;
+			int p = priorities.get(m);
+			if (prio > p) {
+				prio = p;
+				r = m;
+			}
 		}
-		throw new InternalServerErrorException("No writer for " + clazz + " " + t);
+		if (r == null)
+			throw new InternalServerErrorException("No writer for " + clazz + " " + t);
+		return r;
 	}
 
 	public static Type getParamType(Type t) {

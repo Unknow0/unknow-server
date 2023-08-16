@@ -67,6 +67,11 @@ public class JaxrsReq {
 		return accept;
 	}
 
+	public MediaType getContentType() {
+		String h = r.getHeader("content-type");
+		return h == null ? MediaType.APPLICATION_OCTET_STREAM_TYPE : MediaTypeDelegate.INSTANCE.fromString(h);
+	}
+
 	public MediaType getAccepted(Predicate<MediaType> allowed) {
 		String a = r.getHeader("accept");
 		if (a == null) {

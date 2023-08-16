@@ -105,8 +105,8 @@ public class JaxrsModel {
 	private final TypeModel string;
 
 	public final List<String> converter = new ArrayList<>();
-	public final Map<String, List<String>> readers = new HashMap<>();
-	public final Map<String, List<String>> writers = new HashMap<>();
+	public final Map<ClassModel, List<String>> readers = new HashMap<>();
+	public final Map<ClassModel, List<String>> writers = new HashMap<>();
 	public final Map<TypeModel, ClassModel> exceptions = new HashMap<>();
 
 	public final Set<String> implicitConstructor = new HashSet<>();
@@ -127,20 +127,20 @@ public class JaxrsModel {
 		this.string = loader.get(String.class.getName());
 
 		loadService(cl, MessageBodyReader.class, l -> {
-			TypeModel c = loader.get(l);
+			ClassModel c = loader.get(l).asClass();
 			String[] v = c.annotation(Consumes.class).flatMap(a -> a.values()).orElse(ALL);
 			List<String> list = new ArrayList<>();
 			for (int i = 0; i < v.length; i++)
 				list.addAll(Arrays.asList(v[i].split(" *, *")));
-			readers.put(c.name(), list);
+			readers.put(c, list);
 		});
 		loadService(cl, MessageBodyWriter.class, l -> {
-			TypeModel c = loader.get(l);
+			ClassModel c = loader.get(l).asClass();
 			String[] v = c.annotation(Produces.class).flatMap(a -> a.values()).orElse(ALL);
 			List<String> list = new ArrayList<>();
 			for (int i = 0; i < v.length; i++)
 				list.addAll(Arrays.asList(v[i].split(" *, *")));
-			writers.put(c.name(), list);
+			writers.put(c, list);
 		});
 	}
 
@@ -222,13 +222,13 @@ public class JaxrsModel {
 				List<String> list = new ArrayList<>();
 				for (String s : clazz.annotation(Consumes.class).flatMap(v -> v.values()).orElse(ALL))
 					list.addAll(Arrays.asList(s.trim().split(" *, *")));
-				readers.put(clazz.name(), list);
+				readers.put(clazz, list);
 			}
 			if (bodyWriter.isAssignableFrom(clazz)) {
 				List<String> list = new ArrayList<>();
 				for (String s : clazz.annotation(Produces.class).flatMap(v -> v.values()).orElse(ALL))
 					list.addAll(Arrays.asList(s.trim().split(" *, *")));
-				writers.put(clazz.name(), list);
+				writers.put(clazz, list);
 			}
 			// TODO other
 			// ContainerRequestFilter, ContainerResponseFilter, ReaderInterceptor, WriterInterceptor

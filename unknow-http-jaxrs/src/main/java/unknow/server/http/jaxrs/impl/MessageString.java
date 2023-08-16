@@ -11,10 +11,8 @@ import java.lang.reflect.Type;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.MultivaluedMap;
-import jakarta.ws.rs.ext.MessageBodyReader;
-import jakarta.ws.rs.ext.MessageBodyWriter;
 
-public class StringBody implements MessageBodyWriter<String>, MessageBodyReader<String> {
+public class MessageString implements MessageRW<String> {
 
 	@Override
 	public boolean isWriteable(Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
