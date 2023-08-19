@@ -259,11 +259,11 @@ public class JaxrsModel {
 			}
 		}
 		if (basePath == null)
-			basePath = "/";
+			basePath = "";
 		if (basePath.length() > 1 && basePath.endsWith("/"))
 			basePath = basePath.substring(0, basePath.length() - 1);
-		if (basePath.isEmpty() || basePath.charAt(0) != '/')
-			basePath = '/' + basePath;
+		if (basePath.length() > 1 && basePath.charAt(0) == '/')
+			basePath = basePath.substring(1);
 		if (baseConsume == null)
 			baseConsume = ALL;
 		if (baseProduce == null)

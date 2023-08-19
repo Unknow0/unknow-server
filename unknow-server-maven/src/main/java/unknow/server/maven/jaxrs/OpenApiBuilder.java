@@ -6,9 +6,12 @@ package unknow.server.maven.jaxrs;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.apache.maven.plugin.MojoExecutionException;
@@ -54,6 +57,8 @@ import unknow.server.maven.jaxrs.JaxrsParam.JaxrsHeaderParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsMatrixParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsPathParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsQueryParam;
+import unknow.server.maven.model.AnnotationModel;
+import unknow.server.maven.model.ClassModel;
 import unknow.server.maven.model.EnumModel;
 import unknow.server.maven.model.TypeModel;
 
@@ -132,7 +137,7 @@ public class OpenApiBuilder {
 	@SuppressWarnings("rawtypes")
 	private final Map<String, Schema> schemas = new HashMap<>();
 
-	public CompilationUnit build(MavenProject project, JaxrsModel model, CompilationUnit cu, Map<String, String> existingClass) throws MojoExecutionException {
+	public CompilationUnit build(MavenProject project, JaxrsModel model, String basePath, CompilationUnit cu, Map<String, String> existingClass) throws MojoExecutionException {
 
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		ObjectMapper m = new ObjectMapper().enable(SerializationFeature.WRITE_ENUMS_USING_TO_STRING).disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
@@ -144,7 +149,7 @@ public class OpenApiBuilder {
 		}
 
 		TypeCache types = new TypeCache(cu, existingClass);
-		ClassOrInterfaceDeclaration cl = cu.addClass("OpenApi", Utils.PUBLIC).addSingleMemberAnnotation(WebServlet.class, Utils.text("/openapi.json"))
+		ClassOrInterfaceDeclaration cl = cu.addClass("OpenApi", Utils.PUBLIC).addSingleMemberAnnotation(WebServlet.class, Utils.text(basePath + "/openapi.json"))
 				.addExtendedType(types.getClass(HttpServlet.class));
 		cl.addFieldWithInitializer(types.get(long.class), "serialVersionUID", new LongLiteralExpr("1"), Utils.PSF);
 		cl.addFieldWithInitializer(types.get(byte[].class), "DATA", Utils.byteArray(bos.toByteArray()), Utils.PSF);
@@ -178,6 +183,10 @@ public class OpenApiBuilder {
 		io.swagger.v3.oas.models.Paths paths = new io.swagger.v3.oas.models.Paths();
 
 		for (JaxrsMapping m : model.mappings()) {
+			AnnotationModel a = m.m.annotation(io.swagger.v3.oas.annotations.Operation.class).orElse(null);
+			if (a != null && "true".equals(a.value("hidden").orElse("")))
+				continue;
+
 			PathItem p = paths.computeIfAbsent(m.path, k -> new PathItem());
 
 			Operation o = createOp(p, m.httpMethod);
@@ -185,18 +194,20 @@ public class OpenApiBuilder {
 				logger.warn("can't map operation " + m.httpMethod + " " + m.path + " duplicate or unupported");
 				continue;
 			}
+			if (a != null) {
+				a.values("tags").ifPresent(v -> o.setTags(Arrays.asList(v)));
+				a.value("summary").ifPresent(v -> o.setSummary(v));
+				a.value("description").ifPresent(v -> o.setDescription(v));
+				a.value("operationId").ifPresent(v -> o.setOperationId(v));
+				a.value("deprecated").ifPresent(v -> o.setDeprecated(Boolean.parseBoolean(v)));
 
-			// TODO get @Operation
-//			o.setOperationId(null);
-//			o.setDescription(null);
+				// TODO externalDocs, responses, security, servers, extensions
+			}
 
 			for (JaxrsParam param : m.params)
 				addParameters(o, param);
 
 		}
-		// TODO add path
-		// TODO add component/schema
-
 		return spec.components(new Components().schemas(schemas)).paths(paths);
 	}
 
@@ -246,16 +257,28 @@ public class OpenApiBuilder {
 	 */
 	@SuppressWarnings("unchecked")
 	private Schema<?> schema(TypeModel type) {
+		if (type.isWildCard())
+			type = type.asWildcard().bound();
+
 		String n = type.name();
 
-		// TODO array & collection & map
-		// "array"
 		if (schemas.containsKey(n))
 			return new Schema<>().$ref("#/components/schemas/" + n);
 
 		Schema<?> s = getDefault(n);
 		if (s != null)
 			return s;
+
+		if (type.isArray())
+			return new Schema<>().type("array").items(schema(type.asArray().type()));
+
+		if (type.isClass()) {
+			ClassModel c = type.asClass().ancestor(Collection.class.getName());
+			if (c != null)
+				return new Schema<>().type("array").items(schema(c.parameter(0).type()));
+		}
+
+		// TODO map
 
 		if (type.isEnum()) {
 			EnumModel e = type.asEnum();
@@ -266,7 +289,10 @@ public class OpenApiBuilder {
 			s = new Schema<>().type("string")._enum(e.entries().stream().map(v -> v.name()).collect(Collectors.toList()));
 		} else {
 			s = new Schema<>().type("object");
-			// required => list of mendatory value
+			ClassModel c = type.asClass();
+			s.properties(c.fields().stream().collect(Collectors.toMap(f -> f.name(), f -> schema(f.type()))));
+			// TODO required => list of mendatory value
+			// TODO exemple
 		}
 		schemas.put(n, s);
 		return new Schema<>().$ref("#/components/schemas/" + n);

@@ -82,6 +82,9 @@ public class JaxrsMojo extends AbstractMojo {
 	@Parameter(name = "openapi")
 	private OpenApiBuilder openapi = new OpenApiBuilder();
 
+	@Parameter(name = "basePath", defaultValue = "/")
+	private String basePath;
+
 	private BeanParamBuilder beans;
 	private MediaTypesBuilder mt;
 
@@ -106,9 +109,11 @@ public class JaxrsMojo extends AbstractMojo {
 			throw new MojoExecutionException(e);
 		}
 
+		if (basePath.endsWith("/"))
+			basePath = basePath.substring(0, basePath.length() - 1);
 		Map<String, List<JaxrsMapping>> map = new HashMap<>();
 		for (JaxrsMapping m : model.mappings()) {
-			String p = m.path;
+			String p = basePath + m.path;
 			int i = p.indexOf('{');
 			if (i > 0)
 				p = p.substring(0, p.lastIndexOf('/', i)) + "/*";
@@ -118,7 +123,7 @@ public class JaxrsMojo extends AbstractMojo {
 		for (Entry<String, List<JaxrsMapping>> e : map.entrySet())
 			out.save(new JaxRsServletBuilder(newCu(), existingClass, e.getKey(), e.getValue(), beans, mt).build());
 
-		out.save(openapi.build(project, model, newCu(), existingClass));
+		out.save(openapi.build(project, model, basePath, newCu(), existingClass));
 		beans.save(out);
 		mt.save(out);
 	}
