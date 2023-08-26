@@ -50,9 +50,10 @@ public class BeanParamBuilder {
 	private final ClassOrInterfaceDeclaration cl;
 	private final TypeCache types;
 
-	private final Map<String, JaxrsBeanParam> beans;
+	private final Map<String, JaxrsBeanParam<?>> beans;
 	private final Map<String, String> beansVar;
-	private final Map<JaxrsParam, String> converterVar;
+
+	private final Map<JaxrsParam<?>, String> converterVar;
 
 	public BeanParamBuilder(CompilationUnit cu, Map<String, String> existingClass) {
 		this.cu = cu;
@@ -64,11 +65,11 @@ public class BeanParamBuilder {
 		converterVar = new HashMap<>();
 	}
 
-	public String get(JaxrsBeanParam param) {
+	public String get(JaxrsBeanParam<?> param) {
 		return beansVar.get(param.clazz.name());
 	}
 
-	public void add(JaxrsBeanParam param) {
+	public void add(JaxrsBeanParam<?> param) {
 		String clazz = param.clazz.name();
 		if (beans.containsKey(clazz))
 			return;
@@ -79,16 +80,16 @@ public class BeanParamBuilder {
 		beans.put(clazz, param);
 		beansVar.put(clazz, "build" + param.clazz.simpleName() + n);
 		int i = 0;
-		for (JaxrsParam p : param.fields.values())
+		for (JaxrsParam<?> p : param.fields.values())
 			processBeanConverter(p, n + "$" + i++, init);
-		for (JaxrsParam p : param.setters.values())
+		for (JaxrsParam<?> p : param.setters.values())
 			processBeanConverter(p, n + "$" + i++, init);
 
 		BlockStmt b = cl.addMethod(beansVar.get(clazz), Utils.PUBLIC_STATIC).addParameter(types.getClass(JaxrsReq.class), "r").setType(types.get(clazz)).getBody().get()
 				.addStatement(Utils.create(types.getClass(clazz), "b", Utils.list()));
-		for (Entry<FieldModel, JaxrsParam> e : param.fields.entrySet())
+		for (Entry<FieldModel, JaxrsParam<?>> e : param.fields.entrySet())
 			b.addStatement(new AssignExpr(new FieldAccessExpr(new NameExpr("b"), e.getKey().name()), getParam(e.getValue()), AssignExpr.Operator.ASSIGN));
-		for (Entry<MethodModel, JaxrsParam> e : param.setters.entrySet())
+		for (Entry<MethodModel, JaxrsParam<?>> e : param.setters.entrySet())
 			b.addStatement(new MethodCallExpr(new NameExpr("b"), e.getKey().name(), Utils.list(getParam(e.getValue()))));
 		b.addStatement(new ReturnStmt(new NameExpr("b")));
 	}
@@ -98,9 +99,9 @@ public class BeanParamBuilder {
 			out.save(cu);
 	}
 
-	private void processBeanConverter(JaxrsParam p, String n, BlockStmt b) {
+	private void processBeanConverter(JaxrsParam<?> p, String n, BlockStmt b) {
 		if (p instanceof JaxrsBeanParam) {
-			add((JaxrsBeanParam) p);
+			add((JaxrsBeanParam<?>) p);
 			return;
 		}
 		converterVar.put(p, n);
@@ -139,11 +140,11 @@ public class BeanParamBuilder {
 		}
 	}
 
-	private Expression getParam(JaxrsParam p) {
+	private Expression getParam(JaxrsParam<?> p) {
 		if (p instanceof JaxrsBodyParam)
 			return new MethodCallExpr(new NameExpr(converterVar.get(p)), "read", Utils.list(new NameExpr("r")));
 		if (p instanceof JaxrsBeanParam)
-			return new MethodCallExpr(beansVar.get(((JaxrsBeanParam) p).clazz.name()), new NameExpr("r"));
+			return new MethodCallExpr(beansVar.get(((JaxrsBeanParam<?>) p).clazz.name()), new NameExpr("r"));
 		return JaxrsModel.getParam(p, types, converterVar);
 	}
 }

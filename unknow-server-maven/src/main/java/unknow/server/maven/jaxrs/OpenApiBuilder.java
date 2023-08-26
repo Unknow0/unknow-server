@@ -11,7 +11,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.apache.maven.plugin.MojoExecutionException;
@@ -204,7 +203,7 @@ public class OpenApiBuilder {
 				// TODO externalDocs, responses, security, servers, extensions
 			}
 
-			for (JaxrsParam param : m.params)
+			for (JaxrsParam<?> param : m.params)
 				addParameters(o, param);
 
 		}
@@ -215,12 +214,12 @@ public class OpenApiBuilder {
 	 * @param o
 	 * @param param
 	 */
-	private void addParameters(Operation o, JaxrsParam param) {
+	private void addParameters(Operation o, JaxrsParam<?> param) {
 		if (param instanceof JaxrsBeanParam) {
-			JaxrsBeanParam b = (JaxrsBeanParam) param;
-			for (JaxrsParam p : b.fields.values())
+			JaxrsBeanParam<?> b = (JaxrsBeanParam<?>) param;
+			for (JaxrsParam<?> p : b.fields.values())
 				addParameters(o, p);
-			for (JaxrsParam p : b.setters.values())
+			for (JaxrsParam<?> p : b.setters.values())
 				addParameters(o, p);
 			return;
 		}
@@ -246,6 +245,27 @@ public class OpenApiBuilder {
 			p.setIn("cookie");
 		else if (param instanceof JaxrsMatrixParam)
 			p.in("path").style(StyleEnum.MATRIX);
+
+		AnnotationModel a = param.p.annotation(io.swagger.v3.oas.annotations.Parameter.class).orElse(null);
+		if (a != null) {
+			if (a.value("hidden").orElse("false").equals("true"))
+				return;
+
+			a.value("name").ifPresent(v -> p.setName(v));
+			a.value("in").filter(v -> !v.isEmpty()).ifPresent(v -> p.setIn(v));
+			a.value("description").ifPresent(v -> p.setDescription(v));
+			a.value("required").ifPresent(v -> p.setRequired(Boolean.parseBoolean(v)));
+			a.value("deprecated").ifPresent(v -> p.setDeprecated(Boolean.parseBoolean(v)));
+			// allowEmptyValue
+			// style
+			// explode
+			// allowReserved
+			// schema, array
+			// content
+			// examples, example
+			// extensions
+			// ref
+		}
 
 		o.addParametersItem(p);
 

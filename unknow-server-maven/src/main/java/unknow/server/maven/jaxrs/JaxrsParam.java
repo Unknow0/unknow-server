@@ -21,7 +21,8 @@ import unknow.server.maven.model.util.WithType;
 /**
  * @author unknow
  */
-public abstract class JaxrsParam {
+public abstract class JaxrsParam<T extends WithName & WithAnnotation & WithType> {
+	public final T p;
 	public final TypeModel type;
 	public final TypeModel parent;
 	public final String name;
@@ -30,7 +31,8 @@ public abstract class JaxrsParam {
 	public final String def;
 	public final boolean encoded;
 
-	private <T extends WithName & WithAnnotation & WithType> JaxrsParam(T p, String prefix, String value) {
+	private JaxrsParam(T p, String prefix, String value) {
+		this.p = p;
 		if (p instanceof ParamModel)
 			this.parent = ((ParamModel<?>) p).parent().parent();
 		else if (p instanceof FieldModel)
@@ -53,17 +55,17 @@ public abstract class JaxrsParam {
 		this.encoded = p.annotation(Encoded.class).isPresent();
 	}
 
-	public void collect(Consumer<JaxrsParam> c) {
+	public void collect(Consumer<JaxrsParam<?>> c) {
 		c.accept(this);
 	}
 
-	public static class JaxrsBeanParam extends JaxrsParam {
+	public static class JaxrsBeanParam<T extends WithName & WithAnnotation & WithType> extends JaxrsParam<T> {
 		public final ClassModel clazz;
-		public final Map<FieldModel, JaxrsParam> fields;
-		public final Map<MethodModel, JaxrsParam> setters;
+		public final Map<FieldModel, JaxrsParam<?>> fields;
+		public final Map<MethodModel, JaxrsParam<?>> setters;
 
-		public <T extends WithName & WithAnnotation & WithType> JaxrsBeanParam(T p, ClassModel clazz, Map<FieldModel, JaxrsParam> fields,
-				Map<MethodModel, JaxrsParam> setters) {
+		public JaxrsBeanParam(T p, ClassModel clazz, Map<FieldModel, JaxrsParam<?>> fields,
+				Map<MethodModel, JaxrsParam<?>> setters) {
 			super(p, "o", null);
 			this.clazz = clazz;
 			this.fields = fields;
@@ -71,61 +73,61 @@ public abstract class JaxrsParam {
 		}
 
 		@Override
-		public void collect(Consumer<JaxrsParam> c) {
-			for (JaxrsParam p : fields.values())
+		public void collect(Consumer<JaxrsParam<?>> c) {
+			for (JaxrsParam<?> p : fields.values())
 				p.collect(c);
-			for (JaxrsParam p : setters.values())
+			for (JaxrsParam<?> p : setters.values())
 				p.collect(c);
 			c.accept(this);
 		}
 	}
 
-	public static class JaxrsPathParam extends JaxrsParam {
+	public static class JaxrsPathParam<T extends WithName & WithAnnotation & WithType> extends JaxrsParam<T> {
 
-		public <T extends WithName & WithAnnotation & WithType> JaxrsPathParam(T p, String part) {
+		public JaxrsPathParam(T p, String part) {
 			super(p, "p", part);
 		}
 	}
 
-	public static class JaxrsQueryParam extends JaxrsParam {
+	public static class JaxrsQueryParam<T extends WithName & WithAnnotation & WithType> extends JaxrsParam<T> {
 
-		public <T extends WithName & WithAnnotation & WithType> JaxrsQueryParam(T p, String query) {
+		public JaxrsQueryParam(T p, String query) {
 			super(p, "q", query);
 		}
 
 	}
 
-	public static class JaxrsFormParam extends JaxrsParam {
+	public static class JaxrsFormParam<T extends WithName & WithAnnotation & WithType> extends JaxrsParam<T> {
 
-		public <T extends WithName & WithAnnotation & WithType> JaxrsFormParam(T p, String param) {
+		public JaxrsFormParam(T p, String param) {
 			super(p, "f", param);
 		}
 	}
 
-	public static class JaxrsHeaderParam extends JaxrsParam {
+	public static class JaxrsHeaderParam<T extends WithName & WithAnnotation & WithType> extends JaxrsParam<T> {
 
-		public <T extends WithName & WithAnnotation & WithType> JaxrsHeaderParam(T p, String header) {
+		public JaxrsHeaderParam(T p, String header) {
 			super(p, "h", header);
 		}
 	}
 
-	public static class JaxrsCookieParam extends JaxrsParam {
+	public static class JaxrsCookieParam<T extends WithName & WithAnnotation & WithType> extends JaxrsParam<T> {
 
-		public <T extends WithName & WithAnnotation & WithType> JaxrsCookieParam(T p, String cookie) {
+		public JaxrsCookieParam(T p, String cookie) {
 			super(p, "c", cookie);
 		}
 	}
 
-	public static class JaxrsMatrixParam extends JaxrsParam {
+	public static class JaxrsMatrixParam<T extends WithName & WithAnnotation & WithType> extends JaxrsParam<T> {
 
-		public <T extends WithName & WithAnnotation & WithType> JaxrsMatrixParam(T p, String param) {
+		public JaxrsMatrixParam(T p, String param) {
 			super(p, "m", param);
 		}
 	}
 
-	public static class JaxrsBodyParam extends JaxrsParam {
+	public static class JaxrsBodyParam<T extends WithName & WithAnnotation & WithType> extends JaxrsParam<T> {
 
-		public <T extends WithName & WithAnnotation & WithType> JaxrsBodyParam(T p) {
+		public JaxrsBodyParam(T p) {
 			super(p, "b", null);
 		}
 	}

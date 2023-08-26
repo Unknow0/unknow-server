@@ -14,11 +14,11 @@ public class JaxrsMapping {
 	public final MethodModel m;
 	public final String httpMethod;
 	public final String path;
-	public final List<JaxrsParam> params;
+	public final List<JaxrsParam<?>> params;
 	public final String[] consume;
 	public final String[] produce;
 
-	public JaxrsMapping(String var, ClassModel clazz, MethodModel m, String httpMethod, List<JaxrsParam> params, String path, String[] consume, String[] produce) {
+	public JaxrsMapping(String var, ClassModel clazz, MethodModel m, String httpMethod, List<JaxrsParam<?>> params, String path, String[] consume, String[] produce) {
 		this.var = var;
 		this.clazz = clazz;
 		this.m = m;

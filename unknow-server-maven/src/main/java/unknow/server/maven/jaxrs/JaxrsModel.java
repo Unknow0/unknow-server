@@ -37,6 +37,7 @@ import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.NullLiteralExpr;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
 
+import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.ws.rs.BeanParam;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.CookieParam;
@@ -208,6 +209,8 @@ public class JaxrsModel {
 	}
 
 	public void process(ClassModel clazz) {
+		if (clazz.annotation(Hidden.class).isPresent())
+			return;
 		clazz.annotation(Provider.class).ifPresent(a -> {
 			if (paramProvider.isAssignableFrom(clazz))
 				converter.add(clazz.name());
@@ -269,8 +272,11 @@ public class JaxrsModel {
 		if (baseProduce == null)
 			baseProduce = ALL;
 
-		for (MethodModel m : methods.values())
+		for (MethodModel m : methods.values()) {
+			if (m.annotation(Hidden.class).isPresent())
+				return;
 			process(method, basePath, baseConsume, baseProduce, clazz, m);
+		}
 	}
 
 	private void process(String defaultMethod, String path, String[] consume, String[] produce, ClassModel clazz, MethodModel m) {
@@ -291,12 +297,12 @@ public class JaxrsModel {
 			method = defaultMethod;
 		if (method == null)
 			throw new RuntimeException("no method mapped on " + errorName);
-		List<JaxrsParam> params = new ArrayList<>();
+		List<JaxrsParam<?>> params = new ArrayList<>();
 		for (ParamModel<MethodModel> p : m.parameters()) {
 			List<AnnotationModel> l = p.annotations().stream().filter(v -> JARXS_PARAM.contains(v.name())).collect(Collectors.toList());
 			if (l.size() > 1)
 				throw new RuntimeException("Duplicate parameter annotation on " + errorName + " " + p.name());
-			JaxrsParam param = l.isEmpty() ? new JaxrsBodyParam(p) : buildParam(p, l.get(0));
+			JaxrsParam<?> param = l.isEmpty() ? new JaxrsBodyParam<>(p) : buildParam(p, l.get(0));
 			params.add(param);
 		}
 
@@ -326,7 +332,7 @@ public class JaxrsModel {
 		return ancestor.parameter(0).type();
 	}
 
-	public static Expression getParam(JaxrsParam p, TypeCache types, Map<JaxrsParam, String> converterVar) {
+	public static Expression getParam(JaxrsParam<?> p, TypeCache types, Map<JaxrsParam<?>, String> converterVar) {
 		NodeList<Expression> list = Utils.list(Utils.text(p.value), p.def == null ? new NullLiteralExpr() : Utils.text(p.def));
 		String m = "get" + p.getClass().getSimpleName().substring(5, p.getClass().getSimpleName().length() - 5);
 
@@ -349,11 +355,11 @@ public class JaxrsModel {
 		return e;
 	}
 
-	private <T extends WithName & WithAnnotation & WithType> JaxrsParam buildParam(T p, AnnotationModel a) {
+	private <T extends WithName & WithAnnotation & WithType> JaxrsParam<?> buildParam(T p, AnnotationModel a) {
 		if (BeanParam.class.getName().equals(a.name())) {
 			ClassModel cl = p.type().asClass();
-			Map<FieldModel, JaxrsParam> fields = new HashMap<>();
-			Map<MethodModel, JaxrsParam> setter = new HashMap<>();
+			Map<FieldModel, JaxrsParam<?>> fields = new HashMap<>();
+			Map<MethodModel, JaxrsParam<?>> setter = new HashMap<>();
 			for (FieldModel f : cl.fields()) {
 				List<AnnotationModel> l = f.annotations().stream().filter(v -> JARXS_PARAM.contains(v.name())).collect(Collectors.toList());
 				if (l.isEmpty())
@@ -383,26 +389,26 @@ public class JaxrsModel {
 
 				setter.put(m, buildParam(m.parameter(0), l.get(0)));
 			}
-			for (JaxrsParam i : setter.values())
+			for (JaxrsParam<?> i : setter.values())
 				processParamConvert(i.type);
-			for (JaxrsParam i : fields.values())
+			for (JaxrsParam<?> i : fields.values())
 				processParamConvert(i.type);
 
-			return new JaxrsBeanParam(p, cl, fields, setter);
+			return new JaxrsBeanParam<>(p, cl, fields, setter);
 		}
 		processParamConvert(p.type());
 		if (PathParam.class.getName().equals(a.name()))
-			return new JaxrsPathParam(p, a.value().orElse(""));
+			return new JaxrsPathParam<>(p, a.value().orElse(""));
 		if (QueryParam.class.getName().equals(a.name()))
-			return new JaxrsQueryParam(p, a.value().orElse(""));
+			return new JaxrsQueryParam<>(p, a.value().orElse(""));
 		if (CookieParam.class.getName().equals(a.name()))
-			return new JaxrsCookieParam(p, a.value().orElse(""));
+			return new JaxrsCookieParam<>(p, a.value().orElse(""));
 		if (HeaderParam.class.getName().equals(a.name()))
-			return new JaxrsHeaderParam(p, a.value().orElse(""));
+			return new JaxrsHeaderParam<>(p, a.value().orElse(""));
 		if (FormParam.class.getName().equals(a.name()))
-			return new JaxrsFormParam(p, a.value().orElse(""));
+			return new JaxrsFormParam<>(p, a.value().orElse(""));
 		if (MatrixParam.class.getName().equals(a.name()))
-			return new JaxrsMatrixParam(p, a.value().orElse(""));
+			return new JaxrsMatrixParam<>(p, a.value().orElse(""));
 
 		throw new RuntimeException("Unknow annotation " + a);
 	}

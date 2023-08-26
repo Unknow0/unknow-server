@@ -113,7 +113,7 @@ public class JaxRsServletBuilder {
 	private final List<JaxrsMapping> mappings;
 	private final Map<String, NameExpr> services = new HashMap<>();
 
-	private final Map<JaxrsParam, String> converterVar = new HashMap<>();
+	private final Map<JaxrsParam<?>, String> converterVar = new HashMap<>();
 
 	private final Map<JaxrsMapping, NameExpr> pathParams = new HashMap<>();
 
@@ -186,7 +186,7 @@ public class JaxRsServletBuilder {
 			b.addStatement(new TryStmt(t, Utils.list(new CatchClause(new com.github.javaparser.ast.body.Parameter(types.getClass(Exception.class), "e"), ca)), null));
 
 			int i = 0;
-			for (JaxrsParam p : m.params)
+			for (JaxrsParam<?> p : m.params)
 				processConverter(p, m.var + "$" + i, i++, b);
 
 			TypeModel type = m.m.type();
@@ -198,9 +198,9 @@ public class JaxRsServletBuilder {
 				b.addStatement(new AssignExpr(new NameExpr(m.var + "$r"), new MethodCallExpr(new TypeExpr(types.getClass(JaxrsEntityWriter.class)), "create",
 						Utils.list(new ClassExpr(types.get(m.m.type().name())), new NameExpr("r"), new NameExpr("ra"))), AssignExpr.Operator.ASSIGN));
 			}
-			for (JaxrsParam p : m.params) {
+			for (JaxrsParam<?> p : m.params) {
 				if (p instanceof JaxrsBeanParam)
-					beans.add((JaxrsBeanParam) p);
+					beans.add((JaxrsBeanParam<?>) p);
 			}
 		}
 	}
@@ -223,7 +223,7 @@ public class JaxRsServletBuilder {
 	 * @param string
 	 * @param b
 	 */
-	private void processConverter(JaxrsParam p, String n, int i, BlockStmt b) {
+	private void processConverter(JaxrsParam<?> p, String n, int i, BlockStmt b) {
 		if (p instanceof JaxrsBeanParam)
 			return;
 		converterVar.put(p, n);
@@ -332,7 +332,7 @@ public class JaxRsServletBuilder {
 		NameExpr n = pathParams.get(mapping);
 		if (n != null)
 			b.addStatement(new MethodCallExpr(new NameExpr("r"), "initPaths", Utils.list(n)));
-		for (JaxrsParam p : mapping.params)
+		for (JaxrsParam<?> p : mapping.params)
 			b.addStatement(Utils.assign(types.get(p.type), p.var, getParam(p)));
 		MethodModel m = mapping.m;
 		NodeList<Expression> arg = mapping.params.stream().map(p -> new NameExpr(p.var)).collect(Collectors.toCollection(() -> new NodeList<>()));
@@ -350,11 +350,11 @@ public class JaxRsServletBuilder {
 	 * @param value
 	 */
 
-	private Expression getParam(JaxrsParam p) {
+	private Expression getParam(JaxrsParam<?> p) {
 		if (p instanceof JaxrsBodyParam)
 			return new MethodCallExpr(new NameExpr(converterVar.get(p)), "read", Utils.list(new NameExpr("r")));
 		if (p instanceof JaxrsBeanParam)
-			return new MethodCallExpr(new NameExpr("BeansReader"), beans.get((JaxrsBeanParam) p), Utils.list(new NameExpr("r")));
+			return new MethodCallExpr(new NameExpr("BeansReader"), beans.get((JaxrsBeanParam<?>) p), Utils.list(new NameExpr("r")));
 		return JaxrsModel.getParam(p, types, converterVar);
 	}
 
