@@ -261,12 +261,10 @@ public class JaxrsModel {
 				methods.putIfAbsent(m.signature(), m);
 			}
 		}
-		if (basePath == null)
-			basePath = "";
+		if (basePath == null || basePath.isEmpty())
+			basePath = "/";
 		if (basePath.length() > 1 && basePath.endsWith("/"))
 			basePath = basePath.substring(0, basePath.length() - 1);
-		if (basePath.length() > 1 && basePath.charAt(0) == '/')
-			basePath = basePath.substring(1);
 		if (baseConsume == null)
 			baseConsume = ALL;
 		if (baseProduce == null)
