@@ -9,6 +9,7 @@ unknow_stop() {
 	pid=
 }
 native_start() {
+	chmod a+x server-native
 	./server-native > logs/native.log 2>&1 &
 	pid=$!
 }
