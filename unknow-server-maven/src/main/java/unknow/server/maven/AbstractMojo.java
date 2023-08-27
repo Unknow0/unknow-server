@@ -59,6 +59,9 @@ public abstract class AbstractMojo extends org.apache.maven.plugin.AbstractMojo 
 	@Parameter(name = "resources")
 	protected String resources;
 
+	@Parameter(name = "graalvm", defaultValue = "true")
+	protected boolean graalvm;
+
 	protected Output out;
 
 	/** created with init() */

@@ -91,12 +91,6 @@ public class ServletGenMojo extends AbstractMojo implements BuilderContext {
 	@Parameter(defaultValue = "unknow.server.http.servlet.session.NoSessionFactory")
 	private String sessionFactory;
 
-	@Parameter(defaultValue = "true")
-	private boolean graalvm;
-
-	@Parameter(defaultValue = "${project.build.outputDirectory}/META-INF/native-image/servletgen/resource-config.json")
-	private String graalvmResouceConfig;
-
 	@Parameter(defaultValue = "false")
 	private boolean addAccessLog;
 
@@ -171,12 +165,12 @@ public class ServletGenMojo extends AbstractMojo implements BuilderContext {
 	 */
 	private void generateGraalvmResources() throws MojoFailureException {
 		try {
-			Path path = Paths.get(graalvmResouceConfig);
+			Path path = Paths.get(resources + "/META-INF/native-image/" + id() + "/resource-config.json");
 			Files.createDirectories(path.getParent());
 			try (BufferedWriter w = Files.newBufferedWriter(path)) {
 				w.write("{\"resources\":{\"includes\":[");
 				Iterator<String> it = descriptor.resources.keySet().iterator();
-				w.append("{\"pattern\":\"").append(it.next().substring(1)).write("\"}");
+				w.append("{\"pattern\":\"\\\\Q").append(it.next().substring(1)).write("\\\\E\"}");
 				while (it.hasNext())
 					w.append(",{\"pattern\":\"").append(it.next().substring(1)).write("\"}");
 				w.write("]}}");
