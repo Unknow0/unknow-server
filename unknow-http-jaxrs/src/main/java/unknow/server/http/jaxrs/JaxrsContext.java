@@ -105,6 +105,7 @@ public class JaxrsContext {
 			List<MessageBodyWriter> list = writers.get(mime);
 			if (list == null)
 				writers.put(mime, list = new ArrayList<>(1));
+			list.add(writer);
 		}
 	}
 
