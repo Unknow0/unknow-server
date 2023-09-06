@@ -265,6 +265,8 @@ public class JaxrsModel {
 			basePath = "/";
 		if (basePath.length() > 1 && basePath.endsWith("/"))
 			basePath = basePath.substring(0, basePath.length() - 1);
+		if (basePath.charAt(0) != '/')
+			basePath = '/' + basePath;
 		if (baseConsume == null)
 			baseConsume = ALL;
 		if (baseProduce == null)

@@ -6,6 +6,7 @@ package unknow.server.maven.model.jvm;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 
@@ -24,9 +25,9 @@ public class JvmAnnotation implements AnnotationModel {
 		this.clazz = a.annotationType();
 		this.TOSTRING = m -> {
 			try {
-				m.setAccessible(true);
-				return toString(m.invoke(a));
-			} catch (Exception e) { //ignore
+				Object o = m.invoke(a);
+				return Objects.equals(o, m.getDefaultValue()) ? null : toString(o);
+			} catch (@SuppressWarnings("unused") Exception e) { //ignore
 			}
 			return null;
 		};
@@ -34,7 +35,7 @@ public class JvmAnnotation implements AnnotationModel {
 			try {
 				m.setAccessible(true);
 				Object o = m.invoke(a);
-				if (o == null)
+				if (o == null || o.equals(m.getDefaultValue()))
 					return null;
 				if (!o.getClass().isArray())
 					return new String[] { toString(o) };
@@ -43,7 +44,7 @@ public class JvmAnnotation implements AnnotationModel {
 				for (int i = 0; i < t.length; i++)
 					s[i] = toString(t[i]);
 				return s;
-			} catch (Exception e) { //ignore
+			} catch (@SuppressWarnings("unused") Exception e) { //ignore
 			}
 			return null;
 		};

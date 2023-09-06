@@ -3,9 +3,10 @@
  */
 package unknow.server.maven.jaxrs;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.math.BigDecimal;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -21,12 +22,6 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.github.javaparser.ast.CompilationUnit;
-import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
-import com.github.javaparser.ast.expr.IntegerLiteralExpr;
-import com.github.javaparser.ast.expr.LongLiteralExpr;
-import com.github.javaparser.ast.expr.MethodCallExpr;
-import com.github.javaparser.ast.expr.NameExpr;
 
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.ExternalDocumentation;
@@ -43,12 +38,6 @@ import io.swagger.v3.oas.models.parameters.RequestBody;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.servers.Server;
 import io.swagger.v3.oas.models.tags.Tag;
-import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import unknow.server.maven.TypeCache;
-import unknow.server.maven.Utils;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBodyParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsCookieParam;
@@ -136,29 +125,15 @@ public class OpenApiBuilder {
 	@SuppressWarnings("rawtypes")
 	private final Map<String, Schema> schemas = new HashMap<>();
 
-	public CompilationUnit build(MavenProject project, JaxrsModel model, String basePath, CompilationUnit cu, Map<String, String> existingClass) throws MojoExecutionException {
+	public void build(MavenProject project, JaxrsModel model, String file) throws MojoExecutionException {
 
-		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		ObjectMapper m = new ObjectMapper().enable(SerializationFeature.WRITE_ENUMS_USING_TO_STRING).disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
 				.setDefaultPropertyInclusion(Include.NON_EMPTY);
-		try {
-			m.writeValue(bos, build(project, model));
+		try (OutputStream out = Files.newOutputStream(java.nio.file.Paths.get(file))) {
+			m.writeValue(out, build(project, model));
 		} catch (IOException e) {
 			throw new MojoExecutionException(e);
 		}
-
-		TypeCache types = new TypeCache(cu, existingClass);
-		ClassOrInterfaceDeclaration cl = cu.addClass("OpenApi", Utils.PUBLIC).addSingleMemberAnnotation(WebServlet.class, Utils.text(basePath + "/openapi.json"))
-				.addExtendedType(types.getClass(HttpServlet.class));
-		cl.addFieldWithInitializer(types.get(long.class), "serialVersionUID", new LongLiteralExpr("1"), Utils.PSF);
-		cl.addFieldWithInitializer(types.get(byte[].class), "DATA", Utils.byteArray(bos.toByteArray()), Utils.PSF);
-
-		cl.addMethod("doGet", Utils.PUBLIC).addMarkerAnnotation(Override.class).addThrownException(types.getClass(IOException.class))
-				.addParameter(types.getClass(HttpServletRequest.class), "req").addParameter(types.getClass(HttpServletResponse.class), "res").getBody().get()
-				.addStatement(new MethodCallExpr(new NameExpr("res"), "setContentType", Utils.list(Utils.text("application/json"))))
-				.addStatement(new MethodCallExpr(new NameExpr("res"), "setContentLength", Utils.list(new IntegerLiteralExpr(Integer.toString(bos.size())))))
-				.addStatement(new MethodCallExpr(new MethodCallExpr(new NameExpr("res"), "getOutputStream"), "write", Utils.list(new NameExpr("DATA"))));
-		return cu;
 	}
 
 	private OpenAPI build(MavenProject project, JaxrsModel model) {
@@ -234,13 +209,13 @@ public class OpenApiBuilder {
 			return;
 		}
 
-		Parameter p = new Parameter().name(param.name).schema(schema(param.type));
+		Parameter p = new Parameter().name(param.value).schema(schema(param.type));
 		if (param instanceof JaxrsHeaderParam)
 			p.setIn("header");
 		else if (param instanceof JaxrsQueryParam)
 			p.setIn("query");
 		else if (param instanceof JaxrsPathParam)
-			p.setIn("path");
+			p.required(true).setIn("path");
 		else if (param instanceof JaxrsCookieParam)
 			p.setIn("cookie");
 		else if (param instanceof JaxrsMatrixParam)
@@ -310,6 +285,7 @@ public class OpenApiBuilder {
 		} else {
 			s = new Schema<>().type("object");
 			ClassModel c = type.asClass();
+
 			s.properties(c.fields().stream().collect(Collectors.toMap(f -> f.name(), f -> schema(f.type()))));
 			// TODO required => list of mendatory value
 			// TODO exemple

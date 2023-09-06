@@ -99,15 +99,15 @@ public class ModelLoader {
 		return new JvmClass(this, c, params);
 	}
 
-	private Class<?> tryLoad(String cl) {
+	private Class<?> tryLoad(String clazz) {
 		while (true) {
 			try {
-				return this.cl.loadClass(cl);
-			} catch (ClassNotFoundException e) {
-				int i = cl.lastIndexOf('.');
+				return cl.loadClass(clazz);
+			} catch (@SuppressWarnings("unused") ClassNotFoundException e) {
+				int i = clazz.lastIndexOf('.');
 				if (i < 0)
 					return null;
-				cl = cl.substring(0, i) + "$" + cl.substring(i + 1);
+				clazz = clazz.substring(0, i) + "$" + clazz.substring(i + 1);
 			}
 		}
 	}
@@ -123,15 +123,15 @@ public class ModelLoader {
 		if (!m.matches())
 			throw new RuntimeException("malformed class " + cl);
 		if (m.group(2) == null)
-			return Arrays.asList(m.group(1));
+			return Arrays.asList(m.group(1).trim());
 		if (m.group(2).trim().isEmpty())
-			return Arrays.asList(m.group(1), "");
+			return Arrays.asList(m.group(1).trim(), "");
 
 		List<String> list = new ArrayList<>();
 		list.add(m.group(1));
-		m = CLAZZ_LIST.matcher(m.group(2));
+		m = CLAZZ_LIST.matcher(m.group(2).trim());
 		while (m.find())
-			list.add(m.group(1));
+			list.add(m.group(1).trim());
 		return list;
 	}
 }

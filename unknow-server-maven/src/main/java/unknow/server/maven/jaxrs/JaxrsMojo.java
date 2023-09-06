@@ -123,7 +123,7 @@ public class JaxrsMojo extends AbstractMojo {
 		for (Entry<String, List<JaxrsMapping>> e : map.entrySet())
 			out.save(new JaxRsServletBuilder(newCu(), existingClass, e.getKey(), e.getValue(), beans, mt).build());
 
-		out.save(openapi.build(project, model, basePath, newCu(), existingClass));
+		openapi.build(project, model, resources + basePath + "/openapi.json");
 		beans.save(out);
 		mt.save(out);
 	}
@@ -157,14 +157,16 @@ public class JaxrsMojo extends AbstractMojo {
 
 		for (Entry<ClassModel, List<String>> e : model.readers.entrySet()) {
 			NodeList<Expression> l = new NodeList<>(new ObjectCreationExpr(null, types.getClass(e.getKey()), Utils.list()));
-			l.add(e.getKey().annotation(Priority.class).flatMap(a -> a.value()).map(a -> (Expression) new IntegerLiteralExpr(a)).orElseGet(() -> new FieldAccessExpr(new TypeExpr(types.get(Priorities.class)), "USER")));
+			l.add(e.getKey().annotation(Priority.class).flatMap(a -> a.value()).map(a -> (Expression) new IntegerLiteralExpr(a))
+					.orElseGet(() -> new FieldAccessExpr(new TypeExpr(types.get(Priorities.class)), "USER")));
 			for (String s : e.getValue())
 				l.add(Utils.text(s));
 			b.addStatement(new MethodCallExpr(ctx, "registerReader", l));
 		}
 		for (Entry<ClassModel, List<String>> e : model.writers.entrySet()) {
 			NodeList<Expression> l = new NodeList<>(new ObjectCreationExpr(null, types.getClass(e.getKey()), Utils.list()));
-			l.add(e.getKey().annotation(Priority.class).flatMap(a -> a.value()).map(a -> (Expression) new IntegerLiteralExpr(a)).orElseGet(() -> new FieldAccessExpr(new TypeExpr(types.get(Priorities.class)), "USER")));
+			l.add(e.getKey().annotation(Priority.class).flatMap(a -> a.value()).map(a -> (Expression) new IntegerLiteralExpr(a))
+					.orElseGet(() -> new FieldAccessExpr(new TypeExpr(types.get(Priorities.class)), "USER")));
 			for (String s : e.getValue())
 				l.add(Utils.text(s));
 			b.addStatement(new MethodCallExpr(ctx, "registerWriter", l));

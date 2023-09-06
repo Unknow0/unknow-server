@@ -264,9 +264,8 @@ public class JaxRsServletBuilder {
 				.addThrownException(IOException.class).getBody().get()
 				.addStatement(new TryStmt(b,
 						Utils.list(new CatchClause(new com.github.javaparser.ast.body.Parameter(types.getClass(Throwable.class), "e"),
-								new BlockStmt().addStatement(new MethodCallExpr(null, "log", Utils.list(Utils.text("failed to process"), new NameExpr("e"))))
-										.addStatement(new MethodCallExpr(new TypeExpr(types.getClass(JaxrsContext.class)), "sendError",
-												Utils.list(new NameExpr("req"), new NameExpr("e"), new NameExpr("res")))))),
+								new BlockStmt().addStatement(new MethodCallExpr(new TypeExpr(types.getClass(JaxrsContext.class)), "sendError",
+										Utils.list(new NameExpr("req"), new NameExpr("e"), new NameExpr("res")))))),
 						null));
 
 		Map<String, Map<String, JaxrsMapping>> consume = new HashMap<>();
@@ -298,7 +297,8 @@ public class JaxRsServletBuilder {
 			Statement stmt = def == null ? new ThrowStmt(new ObjectCreationExpr(null, types.getClass(NotSupportedException.class), Utils.list()))
 					: buildProduces(new BlockStmt(), def);
 			for (String s : k)
-				stmt = new IfStmt(new MethodCallExpr(new NameExpr("contentType"), "isCompatible", Utils.list(mt.type(s))), buildProduces(new BlockStmt(), consume.get(s)), stmt);
+				stmt = new IfStmt(new MethodCallExpr(new NameExpr("contentType"), "isCompatible", Utils.list(mt.type(s))), buildProduces(new BlockStmt(), consume.get(s)),
+						stmt);
 			b.addStatement(stmt);
 		}
 	}

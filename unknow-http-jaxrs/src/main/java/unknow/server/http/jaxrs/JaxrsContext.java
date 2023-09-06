@@ -128,6 +128,7 @@ public class JaxrsContext {
 				return;
 			}
 		} while ((c = c.getSuperclass()) != Object.class);
+		logger.error("No exception mapping found", t);
 		res.sendError(500);
 	}
 
