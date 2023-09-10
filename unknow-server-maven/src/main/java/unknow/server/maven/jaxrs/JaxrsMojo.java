@@ -27,6 +27,8 @@ import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.javaparser.ParseResult;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.NodeList;
@@ -85,6 +87,9 @@ public class JaxrsMojo extends AbstractMojo {
 	@Parameter(name = "basePath", defaultValue = "/")
 	private String basePath;
 
+	@Parameter(name = "objectMapper")
+	private String objectMapper;
+
 	private BeanParamBuilder beans;
 	private MediaTypesBuilder mt;
 
@@ -133,7 +138,6 @@ public class JaxrsMojo extends AbstractMojo {
 	 */
 
 	private void generateInitalizer() throws IOException, MojoExecutionException {
-
 		Path path = Paths.get(resources, "META-INF", "services", ServletContainerInitializer.class.getName());
 		Files.createDirectories(path.getParent());
 		try (Writer w = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
@@ -155,8 +159,19 @@ public class JaxrsMojo extends AbstractMojo {
 		if (!model.implicitConstructor.isEmpty() || !model.implicitFromString.isEmpty() || !model.implicitValueOf.isEmpty())
 			b.addStatement(new MethodCallExpr(ctx, "registerConverter", Utils.list(new ObjectCreationExpr(null, new ClassOrInterfaceType(null, "P"), Utils.list()))));
 
+		Expression m = null;
+		if (objectMapper != null) {
+			ParseResult<Expression> p = parser.parseExpression(objectMapper);
+			if (p.isSuccessful())
+				m = p.getResult().orElse(null);
+		}
+
 		for (Entry<ClassModel, List<String>> e : model.readers.entrySet()) {
-			NodeList<Expression> l = new NodeList<>(new ObjectCreationExpr(null, types.getClass(e.getKey()), Utils.list()));
+			NodeList<Expression> list = Utils.list();
+			if (m != null && e.getKey().constructors(loader.get(ObjectMapper.class.getName())).isPresent())
+				list.add(m);
+
+			NodeList<Expression> l = new NodeList<>(new ObjectCreationExpr(null, types.getClass(e.getKey()), list));
 			l.add(e.getKey().annotation(Priority.class).flatMap(a -> a.value()).map(a -> (Expression) new IntegerLiteralExpr(a))
 					.orElseGet(() -> new FieldAccessExpr(new TypeExpr(types.get(Priorities.class)), "USER")));
 			for (String s : e.getValue())
@@ -164,7 +179,11 @@ public class JaxrsMojo extends AbstractMojo {
 			b.addStatement(new MethodCallExpr(ctx, "registerReader", l));
 		}
 		for (Entry<ClassModel, List<String>> e : model.writers.entrySet()) {
-			NodeList<Expression> l = new NodeList<>(new ObjectCreationExpr(null, types.getClass(e.getKey()), Utils.list()));
+			NodeList<Expression> list = Utils.list();
+			if (m != null && e.getKey().constructors(loader.get(ObjectMapper.class.getName())).isPresent())
+				list.add(m);
+
+			NodeList<Expression> l = new NodeList<>(new ObjectCreationExpr(null, types.getClass(e.getKey()), list));
 			l.add(e.getKey().annotation(Priority.class).flatMap(a -> a.value()).map(a -> (Expression) new IntegerLiteralExpr(a))
 					.orElseGet(() -> new FieldAccessExpr(new TypeExpr(types.get(Priorities.class)), "USER")));
 			for (String s : e.getValue())
