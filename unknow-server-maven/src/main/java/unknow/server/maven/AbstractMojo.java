@@ -40,6 +40,8 @@ import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSol
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver;
 
 import unknow.server.maven.model.ModelLoader;
+import unknow.server.maven.model.ast.AstModelLoader;
+import unknow.server.maven.model.jvm.JvmModelLoader;
 
 /**
  * @author unknow
@@ -89,7 +91,7 @@ public abstract class AbstractMojo extends org.apache.maven.plugin.AbstractMojo 
 
 	protected void init() throws MojoFailureException {
 		cl = getClassLoader();
-		loader = new ModelLoader(cl, classes);
+		loader = ModelLoader.from(JvmModelLoader.GLOBAL, new JvmModelLoader(cl), new AstModelLoader(classes));
 
 		List<String> compileSourceRoots = project.getCompileSourceRoots();
 

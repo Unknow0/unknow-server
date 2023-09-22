@@ -12,7 +12,6 @@ import java.util.stream.Collectors;
 import unknow.server.maven.model.AnnotationModel;
 import unknow.server.maven.model.ClassModel;
 import unknow.server.maven.model.ConstructorModel;
-import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.model.ParamModel;
 
 /**
@@ -20,7 +19,7 @@ import unknow.server.maven.model.ParamModel;
  */
 public class JvmConstructor implements ConstructorModel, JvmMod {
 	private final ClassModel parent;
-	private final ModelLoader loader;
+	private final JvmModelLoader loader;
 	private final Constructor<?> c;
 	private Collection<AnnotationModel> annotations;
 	private List<ParamModel<ConstructorModel>> params;
@@ -32,7 +31,7 @@ public class JvmConstructor implements ConstructorModel, JvmMod {
 	 * @param loader the loader
 	 * @param c      the constructor
 	 */
-	public JvmConstructor(ClassModel parent, ModelLoader loader, Constructor<?> c) {
+	public JvmConstructor(ClassModel parent, JvmModelLoader loader, Constructor<?> c) {
 		this.parent = parent;
 		this.loader = loader;
 		this.c = c;

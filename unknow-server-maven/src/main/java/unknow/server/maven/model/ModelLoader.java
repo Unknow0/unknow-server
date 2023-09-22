@@ -12,22 +12,12 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.github.javaparser.ast.body.TypeDeclaration;
-
-import unknow.server.maven.model.ast.AstClass;
-import unknow.server.maven.model.ast.AstEnum;
-import unknow.server.maven.model.jvm.JvmClass;
-import unknow.server.maven.model.jvm.JvmEnum;
-
 /**
  * @author unknow
  */
-public class ModelLoader {
+public abstract class ModelLoader {
 	private static final Map<String, TypeModel> BUILTIN = new HashMap<>();
 	private static final TypeModel[] EMPTY = {};
-
-	protected static final ModelLoader local = new ModelLoader(ModelLoader.class.getClassLoader(), Collections.emptyMap());
-	public static final ClassModel OBJECT = new JvmClass(local, Object.class, EMPTY);
 
 	protected static final Pattern CLAZZ = Pattern.compile("(.+?)(?:<(.*?)>)?");
 	protected static final Pattern CLAZZ_LIST = Pattern.compile("(.+?(?:<.*?>)?)(?:,|$)");
@@ -35,15 +25,17 @@ public class ModelLoader {
 	static {
 		for (TypeModel t : PrimitiveModel.PRIMITIVES)
 			BUILTIN.put(t.name(), t);
-		BUILTIN.put(OBJECT.name(), OBJECT);
 	}
 
-	private final ClassLoader cl;
-	private final Map<String, TypeDeclaration<?>> classes;
+	private final Map<String, TypeModel> cache = new HashMap<>();
 
-	public ModelLoader(ClassLoader cl, Map<String, TypeDeclaration<?>> classes) {
-		this.cl = cl;
-		this.classes = classes;
+	protected ModelLoader() {
+	}
+
+	public static ModelLoader from(ModelLoader... loaders) {
+		if (loaders.length == 1)
+			return loaders[1];
+		return new CompositeLoader(loaders);
 	}
 
 	public TypeModel get(String cl) {
@@ -51,9 +43,22 @@ public class ModelLoader {
 	}
 
 	public TypeModel get(String cl, List<TypeParamModel> parameters) {
-		TypeModel type = BUILTIN.get(cl);
-		if (type != null)
-			return type;
+		String key = cl + "#" + parameters;
+		TypeModel t = BUILTIN.get(cl);
+		if (t != null)
+			return t;
+		t = cache.get(key);
+		if (t != null)
+			return t;
+
+		t = create(cl, parameters);
+		if (t == null)
+			throw new RuntimeException(this.getClass().getName() + ": Type not found " + cl);
+		cache.put(key, t);
+		return t;
+	}
+
+	private final TypeModel create(String cl, List<TypeParamModel> parameters) {
 		if (cl.endsWith("[]"))
 			return new ArrayModel(cl, get(cl.substring(0, cl.length() - 2), parameters));
 		if (cl.equals("?"))
@@ -77,40 +82,18 @@ public class ModelLoader {
 				params[i - 1] = map.containsKey(s) ? map.get(s) : get(s, parameters);
 			}
 		}
+		TypeModel t = map.get(cl);
+		if (t != null)
+			cl = t.name();
 
-		type = map.get(cl);
-		if (type != null)
-			cl = type.name();
-
-		TypeDeclaration<?> t = classes.get(cl);
-		if (t != null) {
-			if (t.isEnumDeclaration())
-				return new AstEnum(this, t.asEnumDeclaration());
-			else if (t.isClassOrInterfaceDeclaration())
-				return new AstClass(this, t.asClassOrInterfaceDeclaration(), params);
-			throw new RuntimeException("unsuported type " + t);
-		}
-		Class<?> c = tryLoad(cl);
-		if (c == null)
-			throw new RuntimeException("class not found " + cl);
-
-		if (c.isEnum())
-			return new JvmEnum(this, c, params);
-		return new JvmClass(this, c, params);
+		return load(this, cl, params);
 	}
 
-	private Class<?> tryLoad(String clazz) {
-		while (true) {
-			try {
-				return cl.loadClass(clazz);
-			} catch (@SuppressWarnings("unused") ClassNotFoundException e) {
-				int i = clazz.lastIndexOf('.');
-				if (i < 0)
-					return null;
-				clazz = clazz.substring(0, i) + "$" + clazz.substring(i + 1);
-			}
-		}
-	}
+	/**
+	 * @param params
+	 * @param cl
+	 */
+	protected abstract TypeModel load(ModelLoader loader, String cl, TypeModel[] params);
 
 	/**
 	 * split class into the class name and it's param
@@ -133,5 +116,24 @@ public class ModelLoader {
 		while (m.find())
 			list.add(m.group(1).trim());
 		return list;
+	}
+
+	private static class CompositeLoader extends ModelLoader {
+
+		private final ModelLoader[] loaders;
+
+		public CompositeLoader(ModelLoader... loaders) {
+			this.loaders = loaders;
+		}
+
+		@Override
+		protected TypeModel load(ModelLoader loader, String cl, TypeModel[] params) {
+			for (int i = 0; i < loaders.length; i++) {
+				TypeModel t = loaders[i].load(loader, cl, params);
+				if (t != null)
+					return t;
+			}
+			return null;
+		}
 	}
 }

@@ -7,8 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -27,6 +25,7 @@ import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeS
 
 import unknow.server.maven.model.ast.AstClass;
 import unknow.server.maven.model.jvm.JvmClass;
+import unknow.server.maven.model.jvm.JvmModelLoader;
 
 /**
  * @author unknow
@@ -50,7 +49,7 @@ public class ModelLoaderTest {
 
 	@Test
 	public void testCollection() {
-		ModelLoader loader = ModelLoader.local;
+		ModelLoader loader = JvmModelLoader.GLOBAL;
 
 		TypeModel col = loader.get(G.class.getName());
 		ClassModel slist = loader.get(StringList.class.getName()).asClass();
@@ -68,7 +67,6 @@ public class ModelLoaderTest {
 
 	public static final Stream<Arguments> testClassName() {
 		Class<?> cl = ModelLoaderTest.class;
-		ModelLoader loader = new ModelLoader(cl.getClassLoader(), Collections.emptyMap());
 
 		TypeSolver resolver = new ReflectionTypeSolver(false);
 		JavaSymbolSolver javaSymbolSolver = new JavaSymbolSolver(resolver);
@@ -80,9 +78,9 @@ public class ModelLoaderTest {
 				+ "}").getResult().orElse(null);
 
 		ClassOrInterfaceDeclaration ast = cu.findFirst(ClassOrInterfaceDeclaration.class, c -> "StringList".equals(c.getNameAsString())).orElse(null);
-		AstClass astList = new AstClass(loader, ast, new TypeModel[0]);
+		AstClass astList = new AstClass(JvmModelLoader.GLOBAL, ast, new TypeModel[0]);
 
-		JvmClass jvmList = new JvmClass(loader, StringList.class, new TypeModel[0]);
+		JvmClass jvmList = new JvmClass(JvmModelLoader.GLOBAL, StringList.class, new TypeModel[0]);
 		return Stream.of(Arguments.of(jvmList), Arguments.of(astList));
 
 	}

@@ -8,6 +8,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import unknow.server.maven.model.jvm.JvmModelLoader;
+
 /**
  * @author unknow
  */
@@ -68,7 +70,7 @@ public class PrimitiveModel implements TypeModel {
 	 * @return the boxed type
 	 */
 	public TypeModel boxed() {
-		return ModelLoader.local.get(boxed);
+		return JvmModelLoader.GLOBAL.get(boxed);
 	}
 
 	@Override

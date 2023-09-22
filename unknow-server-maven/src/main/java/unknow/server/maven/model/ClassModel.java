@@ -190,10 +190,17 @@ public interface ClassModel extends TypeModel, WithMod {
 	 * @return true this class is a boxed type for a primitive (Integer, Character, Double, ect..)
 	 */
 	default boolean isBoxedPrimitive() {
+		return unboxed() != null;
+	}
+
+	/**
+	 * @return the unboxed type or null if it's not a boxed type (Integer, Character, Double, ect..)
+	 */
+	default PrimitiveModel unboxed() {
 		for (PrimitiveModel t : PrimitiveModel.PRIMITIVES) {
 			if (this.equals(t.boxed()))
-				return true;
+				return t;
 		}
-		return false;
+		return null;
 	}
 }

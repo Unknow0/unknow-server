@@ -87,6 +87,16 @@ public interface TypeModel extends WithAnnotation, WithName {
 	 * @param cl the clazz
 	 * @return true if cl = this works
 	 */
+	default boolean isAssignableTo(Class<?> cl) {
+		return isAssignableTo(cl.getName());
+	}
+
+	/**
+	 * Determines if the type represented by the specified parameter is either the same as, or is a superclass or superinterface of, the type represented by this {@code TypeModel} object
+	 * 
+	 * @param cl the clazz
+	 * @return true if cl = this works
+	 */
 	default boolean isAssignableTo(String cl) {
 		return cl.equals(name());
 	}

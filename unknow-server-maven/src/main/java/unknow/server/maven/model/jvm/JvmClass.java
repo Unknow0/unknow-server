@@ -16,7 +16,6 @@ import unknow.server.maven.model.ClassModel;
 import unknow.server.maven.model.ConstructorModel;
 import unknow.server.maven.model.FieldModel;
 import unknow.server.maven.model.MethodModel;
-import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.model.TypeModel;
 import unknow.server.maven.model.TypeParamModel;
 
@@ -24,7 +23,7 @@ import unknow.server.maven.model.TypeParamModel;
  * @author unknow
  */
 public class JvmClass implements ClassModel, JvmMod {
-	private final ModelLoader loader;
+	private final JvmModelLoader loader;
 	protected final Class<?> cl;
 	private final TypeModel[] paramsClass;
 	private ClassModel superType;
@@ -35,7 +34,7 @@ public class JvmClass implements ClassModel, JvmMod {
 	private Collection<MethodModel> methods;
 	private List<TypeParamModel> parameters;
 
-	public JvmClass(ModelLoader loader, Class<?> cl, TypeModel[] paramsClass) {
+	public JvmClass(JvmModelLoader loader, Class<?> cl, TypeModel[] paramsClass) {
 		this.loader = loader;
 		this.cl = cl;
 		this.paramsClass = paramsClass;

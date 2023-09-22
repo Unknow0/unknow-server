@@ -1,0 +1,25 @@
+/**
+ * 
+ */
+package unknow.server.jaxb.handler;
+
+/**
+ * @author unknow
+ */
+public class CharHandler extends XmlDefaultHandler<Character> {
+
+	public static final CharHandler INSTANCE = new CharHandler();
+
+	private CharHandler() {
+	}
+
+	@Override
+	public String toString(Character t) {
+		return Character.toString(t);
+	}
+
+	@Override
+	public Character toObject(String s) { // TODO validation
+		return s.charAt(0);
+	}
+}

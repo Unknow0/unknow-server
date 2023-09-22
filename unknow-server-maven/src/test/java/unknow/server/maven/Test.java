@@ -4,7 +4,6 @@
 package unknow.server.maven;
 
 import java.util.Collection;
-import java.util.Collections;
 
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParseResult;
@@ -19,13 +18,14 @@ import unknow.server.maven.model.ClassModel;
 import unknow.server.maven.model.MethodModel;
 import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.model.TypeModel;
+import unknow.server.maven.model.jvm.JvmModelLoader;
 
 /**
  * @author unknow
  */
 public class Test {
 	public static void main(String[] arg) {
-		ModelLoader loader = new ModelLoader(Test.class.getClassLoader(), Collections.emptyMap());
+		ModelLoader loader = JvmModelLoader.GLOBAL;
 
 		CombinedTypeSolver resolver = new CombinedTypeSolver(new ReflectionTypeSolver(false), new JavaParserTypeSolver("src/test/java"));
 		JavaSymbolSolver javaSymbolSolver = new JavaSymbolSolver(resolver);

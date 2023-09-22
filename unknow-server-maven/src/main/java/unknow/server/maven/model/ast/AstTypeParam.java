@@ -70,7 +70,7 @@ public class AstTypeParam implements TypeParamModel {
 	@Override
 	public List<ClassModel> bounds() {
 		if (bounds == null)
-			bounds = p.getTypeBound().stream().map(t -> loader.get(t.resolve().describe(),c.parameters()).asClass()).collect(Collectors.toList());
+			bounds = p.getTypeBound().stream().map(t -> loader.get(t.resolve().describe(), c.parameters()).asClass()).collect(Collectors.toList());
 		return bounds;
 	}
 

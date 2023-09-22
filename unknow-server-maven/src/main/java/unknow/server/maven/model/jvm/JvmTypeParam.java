@@ -11,19 +11,18 @@ import java.util.stream.Collectors;
 
 import unknow.server.maven.model.AnnotationModel;
 import unknow.server.maven.model.ClassModel;
-import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.model.TypeModel;
 import unknow.server.maven.model.TypeParamModel;
 
 public class JvmTypeParam implements TypeParamModel {
-	private final ModelLoader loader;
+	private final JvmModelLoader loader;
 	private final ClassModel c;
 	private final TypeVariable<?> t;
 	private final TypeModel type;
 	private Collection<AnnotationModel> annotations;
 	private List<ClassModel> bounds;
 
-	public JvmTypeParam(ModelLoader loader, ClassModel c, TypeVariable<?> t, TypeModel type) {
+	public JvmTypeParam(JvmModelLoader loader, ClassModel c, TypeVariable<?> t, TypeModel type) {
 		this.loader = loader;
 		this.c = c;
 		this.t = t;
@@ -55,7 +54,7 @@ public class JvmTypeParam implements TypeParamModel {
 	@Override
 	public List<ClassModel> bounds() {
 		if (bounds == null)
-			bounds = Arrays.stream(t.getBounds()).map(b -> loader.get(b.getTypeName(),c.parameters()).asClass()).collect(Collectors.toList());
+			bounds = Arrays.stream(t.getBounds()).map(b -> loader.get(b.getTypeName(), c.parameters()).asClass()).collect(Collectors.toList());
 		return bounds;
 	}
 

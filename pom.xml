@@ -16,6 +16,7 @@
 		<cxf.version>4.0.2</cxf.version>
 		<jackson.version>2.15.2</jackson.version>
 		<unknow-sax.version>0.0.3</unknow-sax.version>
+		<prometheus.version>0.16.0</prometheus.version>
 	</properties>
 	<distributionManagement>
 		<repository>
@@ -38,6 +39,7 @@
 		<module>unknow-http-test</module>
 		<module>unknow-http-jaxws</module>
 		<module>unknow-http-jaxrs</module>
+		<module>unknow-server-jaxb</module>
 	</modules>
 	<build>
 		<pluginManagement>
@@ -211,6 +213,12 @@
 				<groupId>com.fasterxml.jackson.jakarta.rs</groupId>
 				<artifactId>jackson-jakarta-rs-json-provider</artifactId>
 				<version>${jackson.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>io.prometheus</groupId>
+				<artifactId>simpleclient</artifactId>
+				<version>${prometheus.version}</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>

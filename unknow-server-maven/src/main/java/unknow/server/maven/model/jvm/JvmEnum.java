@@ -10,7 +10,6 @@ import java.util.stream.Collectors;
 
 import unknow.server.maven.model.AnnotationModel;
 import unknow.server.maven.model.EnumModel;
-import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.model.TypeModel;
 
 /**
@@ -26,7 +25,7 @@ public class JvmEnum extends JvmClass implements EnumModel {
 	 * @param cl
 	 * @param loader
 	 */
-	public JvmEnum(ModelLoader loader, Class<?> cl, TypeModel params[]) {
+	public JvmEnum(JvmModelLoader loader, Class<?> cl, TypeModel params[]) {
 		super(loader, cl, params);
 	}
 

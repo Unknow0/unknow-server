@@ -30,6 +30,7 @@
 				<executions>
 					<execution>
 						<goals>
+							<goal>jaxb-generator</goal>
 							<goal>jaxws-generator</goal>
 							<goal>jaxrs-generator</goal>
 							<goal>servlet-generator</goal>
@@ -106,6 +107,11 @@
 		<dependency>
 			<groupId>${project.groupId}</groupId>
 			<artifactId>unknow-http</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>unknow-server-jaxb</artifactId>
 			<version>${project.version}</version>
 		</dependency>
 		<dependency>
