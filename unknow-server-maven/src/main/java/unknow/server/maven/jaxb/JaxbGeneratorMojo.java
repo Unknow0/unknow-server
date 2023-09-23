@@ -7,8 +7,14 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Consumer;
@@ -387,14 +393,43 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 		TypeCache types = new TypeCache(cu, existingClass);
 		ClassOrInterfaceDeclaration cl = cu.addClass("JaxbContextFactory")
 				.addExtendedType(types.getClass(ContextFactory.class));
-		BlockStmt b = cl.addConstructor(Modifier.Keyword.PUBLIC).getBody();
+		Map<String, List<TypeModel>> classes = new HashMap<>();
+
+		BlockStmt b = new BlockStmt();
 		for (Entry<String, XmlType> t : xmlLoader.entries()) {
-			if (!"http://www.w3.org/2001/XMLSchema".equals(t.getValue().ns()))
-				b.addStatement(new MethodCallExpr(null, "register", Utils.list(new ClassExpr(types.get(t.getKey())), new FieldAccessExpr(new TypeExpr(types.get(handlers.get(t.getValue()))), "INSTANCE"))));
+			if ("http://www.w3.org/2001/XMLSchema".equals(t.getValue().ns()))
+				continue;
+			TypeModel type = loader.get(t.getKey());
+			b.addStatement(new MethodCallExpr(null, "register", Utils.list(new ClassExpr(types.get(t.getKey())), new FieldAccessExpr(new TypeExpr(types.get(handlers.get(t.getValue()))), "INSTANCE"))));
+			classes.computeIfAbsent(type.packageName(), k -> new ArrayList<>()).add(type);
 		}
+
+		int i = 0;
+		NodeList<SwitchEntry> entries = new NodeList<>();
+		for (Entry<String, List<TypeModel>> e : classes.entrySet()) {
+			String n = "p$" + i++;
+			Expression c = new MethodCallExpr(new TypeExpr(types.get(Arrays.class)), "asList", e.getValue().stream().map(v -> new ClassExpr(types.get(v))).collect(Collectors.toCollection(() -> Utils.list())));
+			cl.addFieldWithInitializer(types.getClass(Collection.class, types.getClass(Class.class, TypeCache.ANY)), n, c, Utils.PSF);
+			entries.add(new SwitchEntry().setLabels(Utils.list(new StringLiteralExpr(e.getKey()))).addStatement(new ReturnStmt(new NameExpr(n))));
+		}
+
+		entries.add(new SwitchEntry().addStatement(new ReturnStmt(new MethodCallExpr(new TypeExpr(types.get(Collections.class)), "emptyList"))));
+
+		cl.addConstructor(Modifier.Keyword.PUBLIC).setBody(b);
+		cl.addMethod("getClasses", Utils.PUBLIC).addMarkerAnnotation(Override.class)
+				.setType(types.getClass(Collection.class, types.getClass(Class.class, TypeCache.ANY)))
+				.addParameter(types.get(String.class), "contextPackage")
+				.getBody().get()
+				.addStatement(new SwitchStmt(new NameExpr("contextPackage"), entries));
 		out.save(cu);
 
-		try (BufferedWriter w = Files.newBufferedWriter(Paths.get(resources, "META-INF", "services", JAXBContextFactory.class.getName()), StandardCharsets.UTF_8)) {
+		Path path = Paths.get(resources, "META-INF", "services", JAXBContextFactory.class.getName());
+		try {
+			Files.createDirectories(path.getParent());
+		} catch (IOException e) {
+			throw new MojoExecutionException(e);
+		}
+		try (BufferedWriter w = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
 			w.append(packageName).write(".JaxbContextFactory\n");
 		} catch (IOException e) {
 			throw new MojoExecutionException(e);

@@ -113,7 +113,11 @@ public class TypeCache {
 				t = new ClassOrInterfaceType(t, split[i]);
 			return t.setTypeArguments(params);
 		}
-		if (split.length > 1 && string == null) {
+		String p = cu.getPackageDeclaration().map(v -> v.getNameAsString()).orElse("");
+		int i = cl.lastIndexOf('.');
+		if (i > 0 && p.equals(cl.substring(0, i)))
+			existingClass.put(last, cl);
+		else if (split.length > 1 && string == null) {
 			cu.addImport(cl.replace('$', '.'));
 			existingClass.put(last, cl);
 		}

@@ -19,7 +19,7 @@ import jakarta.xml.bind.JAXBException;
 public abstract class ContextFactory implements JAXBContextFactory {
 	private final Map<Class<?>, XmlHandler<?>> handlers = new HashMap<>();
 
-	protected <T> void register(Class<T> cl, XmlRootHandler<T> h) {
+	protected <T> void register(Class<T> cl, XmlHandler<T> h) {
 		handlers.put(cl, h);
 	}
 
