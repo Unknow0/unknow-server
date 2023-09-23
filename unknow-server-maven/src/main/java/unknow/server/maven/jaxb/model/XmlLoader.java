@@ -17,9 +17,12 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Set;
 
 import javax.xml.namespace.QName;
 
@@ -48,7 +51,7 @@ import unknow.server.maven.model.jvm.JvmModelLoader;
 public class XmlLoader {
 	private static final Logger logger = LoggerFactory.getLogger(XmlLoader.class);
 
-	public static final XmlTypeSimple BOOLEAN = new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "FLOAT"), PrimitiveModel.FLOAT);
+	public static final XmlTypeSimple BOOLEAN = new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "boolean"), PrimitiveModel.BOOLEAN);
 	public static final XmlTypeSimple BYTE = new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "byte"), PrimitiveModel.BYTE);
 	public static final XmlTypeSimple SHORT = new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "short"), PrimitiveModel.SHORT);
 	public static final XmlTypeSimple INT = new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "int"), PrimitiveModel.INT);
@@ -81,8 +84,12 @@ public class XmlLoader {
 		types.put(BigDecimal.class.getName(), BIGDEC);
 	}
 
+	public Set<Entry<String, XmlType>> entries() {
+		return types.entrySet();
+	}
+
 	public Collection<XmlType> types() {
-		return types.values();
+		return new HashSet<>(types.values());
 	}
 
 	public XmlType add(TypeModel type) {

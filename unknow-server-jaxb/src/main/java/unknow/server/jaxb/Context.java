@@ -18,23 +18,24 @@ import jakarta.xml.bind.Validator;
  */
 public class Context extends JAXBContext {
 
-	private final Map<QName, XmlRootHandler<?>> handlers;
-	private final Map<Class<?>, XmlHandler<?>> elements;
+	private final Map<QName, XmlRootHandler<?>> rootElements;
+	private final Map<Class<?>, XmlRootHandler<?>> rootHandlers;
+	private final Map<Class<?>, XmlHandler<?>> handlers;
 
-	public Context(Map<QName, XmlRootHandler<?>> handlers, Map<Class<?>, XmlHandler<?>> elements) {
+	public Context(Map<QName, XmlRootHandler<?>> rootElements, Map<Class<?>, XmlRootHandler<?>> rootHandlers, Map<Class<?>, XmlHandler<?>> handlers) {
+		this.rootElements = rootElements;
+		this.rootHandlers = rootHandlers;
 		this.handlers = handlers;
-		this.elements = elements;
 	}
 
 	@Override
 	public Unmarshaller createUnmarshaller() throws JAXBException {
-		return new UnmarshallerImpl(handlers, elements);
+		return new UnmarshallerImpl(rootElements, handlers);
 	}
 
 	@Override
 	public Marshaller createMarshaller() throws JAXBException {
-		// TODO Auto-generated method stub
-		return null;
+		return new MarshallerImpl(rootHandlers);
 	}
 
 	@Override

@@ -3,8 +3,14 @@
  */
 package unknow.server.maven.jaxb;
 
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -28,6 +34,7 @@ import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.expr.AssignExpr;
 import com.github.javaparser.ast.expr.BinaryExpr;
+import com.github.javaparser.ast.expr.ClassExpr;
 import com.github.javaparser.ast.expr.EnclosedExpr;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.FieldAccessExpr;
@@ -51,7 +58,9 @@ import com.github.javaparser.ast.stmt.ThrowStmt;
 import com.github.javaparser.ast.stmt.WhileStmt;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 
+import jakarta.xml.bind.JAXBContextFactory;
 import jakarta.xml.bind.annotation.XmlRootElement;
+import unknow.server.jaxb.ContextFactory;
 import unknow.server.jaxb.StrReader;
 import unknow.server.jaxb.XmlHandler;
 import unknow.server.jaxb.XmlRootHandler;
@@ -125,11 +134,16 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 		// default handers
 
 		for (XmlType t : xmlLoader.types()) {
+			if ("http://www.w3.org/2001/XMLSchema".equals(t.ns()))
+				continue;
+
 			if (t instanceof XmlEnum)
 				buildHandler((XmlEnum) t);
 			else if (t instanceof XmlTypeComplex)
 				buildHandler((XmlTypeComplex) t);
 		}
+
+		buildContext();
 	}
 
 	private void buildHandler(XmlEnum xml) throws MojoExecutionException {
@@ -366,6 +380,25 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 				new WhileStmt(new MethodCallExpr(new NameExpr("r"), "hasNext"),
 						w.addStatement(i)))
 				.addStatement(new ThrowStmt(new ObjectCreationExpr(null, types.getClass(XMLStreamException.class), Utils.list(new StringLiteralExpr("EOF")))));
+	}
+
+	private void buildContext() throws MojoExecutionException {
+		CompilationUnit cu = newCu();
+		TypeCache types = new TypeCache(cu, existingClass);
+		ClassOrInterfaceDeclaration cl = cu.addClass("JaxbContextFactory")
+				.addExtendedType(types.getClass(ContextFactory.class));
+		BlockStmt b = cl.addConstructor(Modifier.Keyword.PUBLIC).getBody();
+		for (Entry<String, XmlType> t : xmlLoader.entries()) {
+			if (!"http://www.w3.org/2001/XMLSchema".equals(t.getValue().ns()))
+				b.addStatement(new MethodCallExpr(null, "register", Utils.list(new ClassExpr(types.get(t.getKey())), new FieldAccessExpr(new TypeExpr(types.get(handlers.get(t.getValue()))), "INSTANCE"))));
+		}
+		out.save(cu);
+
+		try (BufferedWriter w = Files.newBufferedWriter(Paths.get(resources, "META-INF", "services", JAXBContextFactory.class.getName()), StandardCharsets.UTF_8)) {
+			w.append(packageName).write(".JaxbContextFactory\n");
+		} catch (IOException e) {
+			throw new MojoExecutionException(e);
+		}
 	}
 
 	/**

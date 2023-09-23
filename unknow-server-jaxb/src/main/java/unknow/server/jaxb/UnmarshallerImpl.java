@@ -9,7 +9,6 @@ import java.io.InputStream;
 import java.io.Reader;
 import java.net.URL;
 import java.nio.file.Files;
-import java.util.HashMap;
 import java.util.Map;
 
 import javax.xml.namespace.QName;
@@ -19,6 +18,7 @@ import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.transform.Source;
+import javax.xml.transform.dom.DOMSource;
 import javax.xml.validation.Schema;
 
 import org.w3c.dom.Node;
@@ -39,18 +39,16 @@ import jakarta.xml.bind.attachment.AttachmentUnmarshaller;
 public class UnmarshallerImpl implements Unmarshaller {
 	private static final XMLInputFactory f = XMLInputFactory.newInstance();
 
-	private final Map<QName, XmlRootHandler<?>> rootElement;
-	private final Map<Class<?>, XmlHandler<?>> elements;
+	private final Map<QName, XmlRootHandler<?>> rootElements;
+	private final Map<Class<?>, XmlHandler<?>> handlers;
 
 	private Listener listener;
 	private ValidationEventHandler validationHandler;
 	private Schema schema;
 
-	private final Map<String, Object> properties = new HashMap<>();
-
-	public UnmarshallerImpl(Map<QName, XmlRootHandler<?>> rootElement, Map<Class<?>, XmlHandler<?>> elements) {
-		this.rootElement = rootElement;
-		this.elements = elements;
+	public UnmarshallerImpl(Map<QName, XmlRootHandler<?>> rootElement, Map<Class<?>, XmlHandler<?>> handlers) {
+		this.rootElements = rootElement;
+		this.handlers = handlers;
 	}
 
 	@Override
@@ -99,14 +97,12 @@ public class UnmarshallerImpl implements Unmarshaller {
 
 	@Override
 	public Object unmarshal(Node node) throws JAXBException {
-		// TODO convert to XMLStreamReader
-		return null;
+		return unmarshal(new DOMSource(node));
 	}
 
 	@Override
 	public <T> JAXBElement<T> unmarshal(Node node, Class<T> declaredType) throws JAXBException {
-		// TODO convert to XMLStreamReader
-		return null;
+		return unmarshal(new DOMSource(node), declaredType);
 	}
 
 	@Override
@@ -132,7 +128,7 @@ public class UnmarshallerImpl implements Unmarshaller {
 		try {
 			if (reader.getEventType() == XMLStreamConstants.START_DOCUMENT)
 				reader.nextTag();
-			XmlRootHandler<?> h = rootElement.get(reader.getName());
+			XmlRootHandler<?> h = rootElements.get(reader.getName());
 			if (h == null)
 				throw new JAXBException("No handler found for xml tag " + reader.getName());
 			return h.read(reader);
@@ -145,7 +141,7 @@ public class UnmarshallerImpl implements Unmarshaller {
 	public <T> JAXBElement<T> unmarshal(XMLStreamReader reader, Class<T> declaredType) throws JAXBException {
 		try {
 			QName n = reader.getName();
-			@SuppressWarnings("unchecked") XmlHandler<T> h = (XmlHandler<T>) elements.get(declaredType);
+			@SuppressWarnings("unchecked") XmlHandler<T> h = (XmlHandler<T>) handlers.get(declaredType);
 			if (h == null)
 				throw new JAXBException("No handler found for class " + declaredType);
 			return new JAXBElement<>(n, declaredType, h.read(reader));
@@ -184,12 +180,12 @@ public class UnmarshallerImpl implements Unmarshaller {
 
 	@Override
 	public void setProperty(String name, Object value) throws PropertyException {
-		properties.put(name, value);
+		throw new PropertyException("Property '" + name + "' not supported");
 	}
 
 	@Override
 	public Object getProperty(String name) throws PropertyException {
-		return properties.get(name);
+		throw new PropertyException("Property '" + name + "' not supported");
 	}
 
 	@Override
