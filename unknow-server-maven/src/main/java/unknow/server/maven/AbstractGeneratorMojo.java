@@ -59,7 +59,7 @@ public abstract class AbstractGeneratorMojo extends org.apache.maven.plugin.Abst
 
 	/** all class in src (fqn to classDef) */
 	protected final Map<String, TypeDeclaration<?>> classes = new HashMap<>();
-	private final Consumer<CompilationUnit> c = cu -> cu.walk(TypeDeclaration.class, c -> classes.put(c.resolve().getQualifiedName(), c));
+	private final Consumer<CompilationUnit> c = cu -> cu.walk(TypeDeclaration.class, v -> classes.put(v.resolve().getQualifiedName(), v));
 
 	protected final ModelLoader loader = new ModelLoader(classes);
 
