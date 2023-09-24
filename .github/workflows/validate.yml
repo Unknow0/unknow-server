@@ -21,7 +21,7 @@ jobs:
         server-password: MVN_PASS
 
     - name: build
-      run: mvn -B package
+      run: mvn -B verify package -Dcoverage
 
     - name: install xmllint
       run: |-
