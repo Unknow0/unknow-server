@@ -23,6 +23,8 @@ import unknow.server.http.data.ArrayMap;
  * @author unknow
  */
 public class FilterConfigImpl implements FilterConfig, FilterRegistration {
+	private static final String ALREADY_INITIALIZED = "already initialized";
+
 	private final String name;
 	private final Filter filter;
 	private final ServletContext context;
@@ -95,17 +97,17 @@ public class FilterConfigImpl implements FilterConfig, FilterRegistration {
 
 	@Override
 	public boolean setInitParameter(String name, String value) {
-		throw new IllegalStateException("already initialized");
+		throw new IllegalStateException(ALREADY_INITIALIZED);
 	}
 
 	@Override
 	public Set<String> setInitParameters(Map<String, String> initParameters) {
-		throw new IllegalStateException("already initialized");
+		throw new IllegalStateException(ALREADY_INITIALIZED);
 	}
 
 	@Override
 	public void addMappingForServletNames(EnumSet<DispatcherType> dispatcherTypes, boolean isMatchAfter, String... servletNames) {
-		throw new IllegalStateException("already initialized");
+		throw new IllegalStateException(ALREADY_INITIALIZED);
 	}
 
 	@Override
@@ -115,7 +117,7 @@ public class FilterConfigImpl implements FilterConfig, FilterRegistration {
 
 	@Override
 	public void addMappingForUrlPatterns(EnumSet<DispatcherType> dispatcherTypes, boolean isMatchAfter, String... urlPatterns) {
-		throw new IllegalStateException("already initialized");
+		throw new IllegalStateException(ALREADY_INITIALIZED);
 	}
 
 	@Override

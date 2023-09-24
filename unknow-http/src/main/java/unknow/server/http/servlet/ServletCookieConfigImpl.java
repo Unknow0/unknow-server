@@ -60,7 +60,7 @@ public class ServletCookieConfigImpl implements SessionCookieConfig {
 
 	@Deprecated
 	@Override
-	public void setComment(String comment) {
+	public void setComment(String comment) { // OK
 	}
 
 	@Override

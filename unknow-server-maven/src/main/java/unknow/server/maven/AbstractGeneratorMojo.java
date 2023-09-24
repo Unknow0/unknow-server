@@ -32,7 +32,7 @@ import unknow.server.maven.model.ModelLoader;
 /**
  * @author unknow
  */
-public abstract class AbstractMojo extends org.apache.maven.plugin.AbstractMojo {
+public abstract class AbstractGeneratorMojo extends org.apache.maven.plugin.AbstractMojo {
 	@Parameter(name = "src", defaultValue = "${project.build.sourceDirectory}")
 	protected String src;
 

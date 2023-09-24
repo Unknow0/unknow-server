@@ -35,17 +35,16 @@ public class PathTree {
 	 * @throws InterruptedException
 	 */
 	public FilterChain find(ServletRequestImpl req) throws InterruptedException {
-		req.setPathInfo(1);
+		if (req.getPaths().isEmpty()) {
+			req.setPathInfo(0);
+			return root.exact;
+		}
+
 		FilterChain f = tryFind(req, root, req.getPaths(), 0);
 		return f == null ? root.def : f;
 	}
 
-	private FilterChain tryFind(ServletRequestImpl req, PartNode last, List<String> part, int i) throws InterruptedException {
-		if (i == part.size()) {
-			req.setPathInfo(part.size());
-			return last.exact;
-		}
-
+	private FilterChain tryFind(ServletRequestImpl req, PartNode last, List<String> part, int i) {
 		while (last.nexts != null) {
 			PartNode n = next(last.nexts, part.get(i));
 			if (n == null)
@@ -56,16 +55,6 @@ public class PathTree {
 			}
 			last = n;
 			i++;
-		}
-		if (last.pattern != null) {
-			if (i + 1 < part.size()) {
-				FilterChain f = tryFind(req, last.pattern, part, i + 1);
-				if (f != null) // contextPath already set
-					return f;
-			} else {
-				req.setPathInfo(i);
-				return last.pattern.exact;
-			}
 		}
 
 		if (last.ends != null) {
@@ -220,24 +209,21 @@ public class PathTree {
 
 	public static class PartNode extends Node {
 		final PartNode[] nexts;
-		final PartNode pattern;
 		final Node[] ends;
 		final FilterChain def;
 
 		/**
 		 * create a new PartNode
 		 * 
-		 * @param part    the path part
-		 * @param nexts   the child part
-		 * @param pattern the pattern child (try if the child match)
-		 * @param ends    the end with pattern "*.jsp" pattern
-		 * @param exact   the "" pattern chains
-		 * @param def     the "/*" pattern
+		 * @param part  the path part
+		 * @param nexts the child part
+		 * @param ends  the end with pattern "*.jsp" pattern
+		 * @param exact the "" pattern chains
+		 * @param def   the "/*" pattern
 		 */
-		public PartNode(String part, PartNode[] nexts, PartNode pattern, Node[] ends, FilterChain exact, FilterChain def) {
+		public PartNode(String part, PartNode[] nexts, Node[] ends, FilterChain exact, FilterChain def) {
 			super(part, exact);
 			this.nexts = nexts;
-			this.pattern = pattern;
 			this.ends = ends;
 			this.def = def;
 		}
@@ -249,11 +235,6 @@ public class PathTree {
 				PartNode n = nexts[i];
 				name.append('/').append(n.part);
 				n.toString(sb, name);
-				name.setLength(l);
-			}
-			if (pattern != null) {
-				name.append("/{}");
-				pattern.toString(sb, name);
 				name.setLength(l);
 			}
 			name.append("/*");

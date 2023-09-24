@@ -41,7 +41,7 @@ public class PathTreeBuilder {
 
 	private final Node root;
 	private final Map<String, ServletConfigImpl> ending;
-	private final Map<String, List<FilterConfigImpl>> endingFilter;
+	private final Map<String, Set<FilterConfigImpl>> endingFilter;
 
 	private final DispatcherType dispatcherType;
 
@@ -70,7 +70,7 @@ public class PathTreeBuilder {
 			addServlet(servlets[i]);
 		for (int i = 0; i < filters.length; i++)
 			addFilter(filters[i]);
-		root.addDefault(defaultServlet, Collections.emptyList());
+		root.addDefault(defaultServlet, Collections.emptySet());
 		return new PathTree(buildTree(null, root));
 	}
 
@@ -80,7 +80,6 @@ public class PathTreeBuilder {
 		for (Entry<String, Node> e : n.nexts.entrySet())
 			nexts[i++] = buildTree(e.getKey(), e.getValue());
 		Arrays.sort(nexts, CMP);
-		PartNode pattern = n.pattern == null ? null : buildTree(null, n.pattern);
 		PathTree.Node[] ends = EMPTY;
 		if (n == root && (!endingFilter.isEmpty() || !ending.isEmpty())) {
 			Set<String> parts = new HashSet<>(endingFilter.keySet());
@@ -88,18 +87,18 @@ public class PathTreeBuilder {
 			ends = new PathTree.Node[parts.size()];
 			int j = 0;
 			for (String s : parts)
-				ends[j++] = new PathTree.Node(s, getChain(ending.getOrDefault(s, n.def), n.defFilter, endingFilter.getOrDefault(s, Collections.emptyList())));
+				ends[j++] = new PathTree.Node(s, getChain(ending.getOrDefault(s, n.def), n.defFilter, endingFilter.getOrDefault(s, Collections.emptySet())));
 		} else if (!endingFilter.isEmpty()) {
 			ends = new PathTree.Node[endingFilter.size()];
 			int j = 0;
-			for (Entry<String, List<FilterConfigImpl>> e : endingFilter.entrySet())
+			for (Entry<String, Set<FilterConfigImpl>> e : endingFilter.entrySet())
 				ends[j++] = new PathTree.Node(e.getKey(), getChain(n.def, n.defFilter, e.getValue()));
 		}
 		Arrays.sort(ends, CMP);
-		FilterChain exact = getChain(n.exact, n.exactsFilter, Collections.emptyList());
-		FilterChain def = getChain(n.def, n.defFilter, Collections.emptyList());
+		FilterChain exact = getChain(n.exact, n.exactsFilter, Collections.emptySet());
+		FilterChain def = getChain(n.def, n.defFilter, Collections.emptySet());
 
-		return new PartNode(part, nexts, pattern, ends, exact, def);
+		return new PartNode(part, nexts, ends, exact, def);
 	}
 
 	private FilterChain getChain(String name, Filter f, FilterChain next) {
@@ -109,7 +108,7 @@ public class PathTreeBuilder {
 		return c;
 	}
 
-	private FilterChain getChain(ServletConfigImpl s, List<FilterConfigImpl> filters, List<FilterConfigImpl> filters2) {
+	private FilterChain getChain(ServletConfigImpl s, Set<FilterConfigImpl> filters, Set<FilterConfigImpl> filters2) {
 		sb.setLength(0);
 		sb.append(s.getName());
 		FilterChain c = chains.get(sb.toString());
@@ -157,29 +156,19 @@ public class PathTreeBuilder {
 
 	private void addFilter(FilterConfigImpl f, String url) {
 		if (url.startsWith("*.")) {
-			List<FilterConfigImpl> list = endingFilter.get(url.substring(1));
-			if (list == null)
-				endingFilter.put(url.substring(1), list = new ArrayList<>());
-			if (!list.contains(f))
-				list.add(f);
+			endingFilter.computeIfAbsent(url.substring(1), k -> new HashSet<>()).add(f);
 		} else if (url.equals("/") || url.equals("/*")) {
-			if (!root.defFilter.contains(f))
-				root.defFilter.add(f);
-			if (!root.exactsFilter.contains(f))
-				root.exactsFilter.add(f);
+			root.defFilter.add(f);
+			root.exactsFilter.add(f);
 		} else if (url.endsWith("/*")) {
 			Node n = addPath(url.substring(1, url.length() - 2).split("/"));
-			if (!n.exactsFilter.contains(f))
-				n.exactsFilter.add(f);
-			if (!n.defFilter.contains(f))
-				n.defFilter.add(f);
+			n.exactsFilter.add(f);
+			n.defFilter.add(f);
 		} else if (url.equals("")) {
-			if (!root.exactsFilter.contains(f))
-				root.exactsFilter.add(f);
+			root.exactsFilter.add(f);
 		} else if (url.startsWith("/")) {
 			Node n = addPath(url.substring(1).split("/"));
-			if (!n.exactsFilter.contains(f))
-				n.exactsFilter.add(f);
+			n.exactsFilter.add(f);
 		}
 	}
 
@@ -207,22 +196,18 @@ public class PathTreeBuilder {
 		final Map<String, Node> nexts = new HashMap<>();
 
 		ServletConfigImpl exact;
-		final List<FilterConfigImpl> exactsFilter = new ArrayList<>();
+		final Set<FilterConfigImpl> exactsFilter = new HashSet<>();
 
 		ServletConfigImpl def;
-		final List<FilterConfigImpl> defFilter = new ArrayList<>();
+		final Set<FilterConfigImpl> defFilter = new HashSet<>();
 
-		Node pattern;
-
-		void addDefault(ServletConfigImpl def, List<FilterConfigImpl> defFilter) {
+		void addDefault(ServletConfigImpl def, Set<FilterConfigImpl> defFilter) {
 			if (this.def == null)
 				this.def = def;
 			if (this.exact == null)
 				this.exact = this.def;
 			this.defFilter.addAll(defFilter);
 			this.exactsFilter.addAll(defFilter);
-			if (pattern != null)
-				pattern.addDefault(this.def, this.defFilter);
 			for (Node n : nexts.values())
 				n.addDefault(this.def, this.defFilter);
 		}

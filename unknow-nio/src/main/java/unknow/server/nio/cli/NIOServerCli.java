@@ -68,13 +68,13 @@ public class NIOServerCli implements Callable<Integer> {
 	/**
 	 * called before the server start but after the property are parsed
 	 */
-	protected void init() throws Exception {
+	protected void init() throws Exception { // OK
 	}
 
 	/**
 	 * called after the server shut down
 	 */
-	protected void destroy() throws Exception {
+	protected void destroy() throws Exception { // OK
 	}
 
 	@Override
@@ -129,11 +129,11 @@ public class NIOServerCli implements Callable<Integer> {
 		}
 
 		@Override
-		public void onRead() throws InterruptedException, IOException {
+		public void onRead() throws InterruptedException, IOException { // OK
 		}
 
 		@Override
-		public void onWrite() throws InterruptedException, IOException {
+		public void onWrite() throws InterruptedException, IOException { // OK
 		}
 
 		@Override
@@ -142,7 +142,7 @@ public class NIOServerCli implements Callable<Integer> {
 		}
 
 		@Override
-		public void free() {
+		public void free() { // OK
 		}
 	}
 }

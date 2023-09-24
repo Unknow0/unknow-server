@@ -112,7 +112,7 @@ public class NIOLoop implements Runnable {
 	/**
 	 * called on server startup
 	 */
-	protected void onStartup() {
+	protected void onStartup() { // for override
 	}
 
 	/**
@@ -123,7 +123,7 @@ public class NIOLoop implements Runnable {
 	 * @throws InterruptedException
 	 */
 	@SuppressWarnings("unused")
-	protected void selected(SelectionKey key) throws IOException, InterruptedException {
+	protected void selected(SelectionKey key) throws IOException, InterruptedException { // for override
 	}
 
 	/**
@@ -133,18 +133,18 @@ public class NIOLoop implements Runnable {
 	 * @throws InterruptedException
 	 */
 	@SuppressWarnings("unused")
-	protected void onSelect(boolean close) throws InterruptedException {
+	protected void onSelect(boolean close) throws InterruptedException { // for override
 	}
 
 	/**
 	 * called before the server enter the stop mode
 	 */
-	protected void beforeStop() {
+	protected void beforeStop() { // for override
 	}
 
 	/**
 	 * called when the server stopped
 	 */
-	protected void afterStop() {
+	protected void afterStop() { // for override
 	}
 }

@@ -41,6 +41,10 @@ import unknow.server.nio.Connection.Out;
  * @author unknow
  */
 public class ServletResponseImpl implements HttpServletResponse {
+	/**
+	 * 
+	 */
+	private static final String UNKNOWN = "Unknown";
 	private static final Logger log = LoggerFactory.getLogger(ServletResponseImpl.class);
 	private static final byte[] CRLF = new byte[] { '\r', '\n' };
 	private static final byte[] QUOTE = new byte[] { '\\', '"' };
@@ -116,7 +120,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 		commited = true;
 
 		HttpError http = HttpError.fromStatus(status);
-		out.write(http == null ? HttpError.encodeStatusLine(status, "Unknown") : http.encoded);
+		out.write(http == null ? HttpError.encodeStatusLine(status, UNKNOWN) : http.encoded);
 		for (Entry<String, List<String>> e : headers.entrySet())
 			writeHeader(e.getKey(), e.getValue());
 		if (type != null && !headers.containsKey("content-type")) {
@@ -197,9 +201,13 @@ public class ServletResponseImpl implements HttpServletResponse {
 		commit();
 	}
 
-	public void sendError(int sc, Throwable t, String msg) throws IOException {
+	private void checkCommited() {
 		if (commited)
 			throw new IllegalStateException("already commited");
+	}
+
+	public void sendError(int sc, Throwable t, String msg) throws IOException {
+		checkCommited();
 		status = sc;
 		ServletManager manager = ctx.getServletManager();
 		FilterChain f = manager.getError(sc, t);
@@ -225,11 +233,11 @@ public class ServletResponseImpl implements HttpServletResponse {
 		commited = true;
 		HttpError e = HttpError.fromStatus(sc);
 		if (msg == null) {
-			out.write(e == null ? HttpError.encodeEmptyReponse(sc, "Unknown") : e.empty());
+			out.write(e == null ? HttpError.encodeEmptyReponse(sc, UNKNOWN) : e.empty());
 			return;
 		}
 
-		out.write(e == null ? HttpError.encodeStatusLine(sc, "Unknown") : e.encoded);
+		out.write(e == null ? HttpError.encodeStatusLine(sc, UNKNOWN) : e.encoded);
 		byte[] bytes = msg.getBytes(StandardCharsets.UTF_8);
 
 		out.write(CONTENT_HTML);
@@ -334,8 +342,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 
 	@Override
 	public void resetBuffer() {
-		if (isCommitted())
-			throw new IllegalStateException("already commited");
+		checkCommited();
 		if (servletOut != null)
 			servletOut.resetBuffers();
 	}
@@ -395,8 +402,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 
 	@Override
 	public void sendRedirect(String location) throws IOException {
-		if (commited)
-			throw new IllegalStateException("already commited");
+		checkCommited();
 		commited = true;
 		status = HttpError.FOUND.code;
 		commit();
