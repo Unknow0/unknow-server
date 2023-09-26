@@ -42,7 +42,7 @@ public class AstParam<T extends WithParent<ClassModel>> implements ParamModel<T>
 	@Override
 	public Collection<AnnotationModel> annotations() {
 		if (annotations == null)
-			annotations = p.getAnnotations().stream().map(a -> new AstAnnotation(a)).collect(Collectors.toList());
+			annotations = p.getAnnotations().stream().map(a -> new AstAnnotation(loader, a)).collect(Collectors.toList());
 		return annotations;
 	}
 

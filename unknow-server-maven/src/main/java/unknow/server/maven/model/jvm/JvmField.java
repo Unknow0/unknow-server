@@ -38,7 +38,7 @@ public class JvmField implements FieldModel, JvmMod {
 	@Override
 	public Collection<AnnotationModel> annotations() {
 		if (annotations == null)
-			annotations = Arrays.stream(f.getAnnotations()).map(a -> new JvmAnnotation(a)).collect(Collectors.toList());
+			annotations = Arrays.stream(f.getAnnotations()).map(a -> new JvmAnnotation(loader, a)).collect(Collectors.toList());
 		return annotations;
 	}
 

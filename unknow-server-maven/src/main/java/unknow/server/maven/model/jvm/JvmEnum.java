@@ -33,18 +33,19 @@ public class JvmEnum extends JvmClass implements EnumModel {
 	@Override
 	public Collection<AnnotationModel> annotations() {
 		if (annotations == null)
-			annotations = Arrays.stream(cl.getAnnotations()).map(a -> new JvmAnnotation(a)).collect(Collectors.toList());
+			annotations = Arrays.stream(cl.getAnnotations()).map(a -> new JvmAnnotation(loader, a)).collect(Collectors.toList());
 		return annotations;
 	}
 
 	@Override
 	public List<EnumConstant> entries() {
 		if (entries == null)
-			entries = Arrays.stream(cl.getEnumConstants()).map(c -> new JvmEnumConstant((Enum<?>) c)).collect(Collectors.toList());
+			entries = Arrays.stream(cl.getEnumConstants()).map(c -> new JvmEnumConstant(loader, (Enum<?>) c)).collect(Collectors.toList());
 		return entries;
 	}
 
-	private static class JvmEnumConstant implements EnumConstant {
+	public static class JvmEnumConstant implements EnumConstant {
+		private final ModelLoader loader;
 		private final Enum<?> e;
 		private List<AnnotationModel> annotations;
 
@@ -53,7 +54,8 @@ public class JvmEnum extends JvmClass implements EnumModel {
 		 * 
 		 * @param e
 		 */
-		public JvmEnumConstant(Enum<?> e) {
+		public JvmEnumConstant(ModelLoader loader, Enum<?> e) {
+			this.loader = loader;
 			this.e = e;
 		}
 
@@ -61,7 +63,7 @@ public class JvmEnum extends JvmClass implements EnumModel {
 		public Collection<AnnotationModel> annotations() {
 			if (annotations == null) {
 				try {
-					annotations = Arrays.stream(e.getClass().getField(name()).getAnnotations()).map(a -> new JvmAnnotation(a)).collect(Collectors.toList());
+					annotations = Arrays.stream(e.getClass().getField(name()).getAnnotations()).map(a -> new JvmAnnotation(loader, a)).collect(Collectors.toList());
 				} catch (NoSuchFieldException e) {
 					throw new RuntimeException(e);
 				}

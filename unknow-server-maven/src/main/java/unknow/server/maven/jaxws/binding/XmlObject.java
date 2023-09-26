@@ -84,9 +84,11 @@ public class XmlObject extends XmlType<ClassModel> {
 	private void init() {
 		ClassModel c = javaType();
 
-		XmlAccessType type = c.annotation(XmlAccessorType.class).flatMap(a -> a.value()).map(XmlAccessType::valueOf).orElse(XmlAccessType.PUBLIC_MEMBER);
+		XmlAccessType type = c.annotation(XmlAccessorType.class).flatMap(a -> a.value()).map(v -> v.asLiteral()).map(XmlAccessType::valueOf)
+				.orElse(XmlAccessType.PUBLIC_MEMBER);
 
-		List<String> propOrder = c.annotation(jakarta.xml.bind.annotation.XmlType.class).flatMap(a -> a.values("propOrder")).map(Arrays::asList).orElse(Collections.emptyList());
+		List<String> propOrder = c.annotation(jakarta.xml.bind.annotation.XmlType.class).flatMap(a -> a.member("propOrder")).map(v -> Arrays.asList(v.asArrayLiteral()))
+				.orElse(Collections.emptyList());
 
 		Map<String, FieldModel> fields = new HashMap<>();
 
@@ -148,18 +150,19 @@ public class XmlObject extends XmlType<ClassModel> {
 				} else if (attr.isPresent()) {
 					if (!t.isSimple())
 						throw new RuntimeException("only simple type allowed in attribute in '" + c.name() + "'");
-					n = attr.flatMap(a -> a.value("name")).map(i -> "##default".equals(i) ? null : i).orElse(n);
-					String ns = attr.flatMap(a -> a.value("namespace")).map(i -> "##default".equals(i) ? null : i).orElse("");
+					n = attr.flatMap(a -> a.member("name")).map(i -> i.asLiteral()).filter(i -> !"##default".equals(i)).orElse(n);
+					String ns = attr.flatMap(a -> a.member("namespace")).map(i -> i.asLiteral()).filter(i -> !"##default".equals(i)).orElse("");
 					attrs.add(new XmlField<>(t, ns, n, m.name(), setter));
 				} else {
-					n = elem.flatMap(a -> a.value("name")).map(i -> "##default".equals(i) ? null : i).orElse(n);
-					String ns = elem.flatMap(a -> a.value("namespace")).map(i -> "##default".equals(i) ? null : i).orElse("");
+					n = elem.flatMap(a -> a.member("name")).map(i -> i.asLiteral()).filter(i -> !"##default".equals(i)).orElse(n);
+					String ns = elem.flatMap(a -> a.member("namespace")).map(i -> i.asLiteral()).filter(i -> !"##default".equals(i)).orElse("");
 					elems.add(new XmlField<>(t, ns, n, m.name(), setter));
 				}
 			}
 		}
 
-		XmlAccessOrder defaultOrder = c.annotation(XmlAccessorOrder.class).flatMap(a -> a.value()).map(a -> XmlAccessOrder.valueOf(a)).orElse(XmlAccessOrder.UNDEFINED);
+		XmlAccessOrder defaultOrder = c.annotation(XmlAccessorOrder.class).flatMap(a -> a.value()).map(a -> XmlAccessOrder.valueOf(a.asLiteral()))
+				.orElse(XmlAccessOrder.UNDEFINED);
 
 		if (!propOrder.isEmpty() || defaultOrder != XmlAccessOrder.UNDEFINED) {
 			Collections.sort(elems, (o, b) -> {

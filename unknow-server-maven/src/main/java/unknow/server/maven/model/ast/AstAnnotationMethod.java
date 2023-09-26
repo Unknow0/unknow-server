@@ -4,10 +4,11 @@
 package unknow.server.maven.model.ast;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.body.AnnotationMemberDeclaration;
 import com.github.javaparser.ast.nodeTypes.NodeWithModifiers;
 
 import unknow.server.maven.model.AnnotationModel;
@@ -21,13 +22,13 @@ import unknow.server.maven.model.TypeModel;
 /**
  * @author unknow
  */
-public class AstMethod implements MethodModel, AstMod {
+public class AstAnnotationMethod implements MethodModel, AstMod {
 	private final ClassModel parent;
 	private final ModelLoader loader;
-	private final MethodDeclaration m;
+	private final AnnotationMemberDeclaration m;
 	private Collection<AnnotationModel> annotations;
 	private TypeModel type;
-	private List<ParamModel<MethodModel>> params;
+	private AnnotationValue defaultValue;
 
 	/**
 	 * create new AstMethod
@@ -35,7 +36,7 @@ public class AstMethod implements MethodModel, AstMod {
 	 * @param loader
 	 * @param m
 	 */
-	public AstMethod(ClassModel parent, ModelLoader loader, MethodDeclaration m) {
+	public AstAnnotationMethod(ClassModel parent, ModelLoader loader, AnnotationMemberDeclaration m) {
 		this.parent = parent;
 		this.loader = loader;
 		this.m = m;
@@ -78,13 +79,13 @@ public class AstMethod implements MethodModel, AstMod {
 
 	@Override
 	public List<ParamModel<MethodModel>> parameters() {
-		if (params == null)
-			params = m.getParameters().stream().map(p -> new AstParam<MethodModel>(loader, this, p)).collect(Collectors.toList());
-		return params;
+		return Collections.emptyList();
 	}
 
 	@Override
 	public AnnotationValue defaultValue() {
-		return AnnotationValue.NULL;
+		if (defaultValue == null)
+			defaultValue = m.getDefaultValue().map(v -> AstAnnotation.value(loader, v)).orElse(AnnotationValue.NULL);
+		return defaultValue;
 	}
 }

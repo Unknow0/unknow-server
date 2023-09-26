@@ -14,12 +14,17 @@ import unknow.server.maven.model.util.WithType;
 /**
  * @author unknow
  */
-public interface MethodModel extends WithAnnotation, WithMod, WithName, WithType,WithParent<ClassModel> {
+public interface MethodModel extends WithAnnotation, WithMod, WithName, WithType, WithParent<ClassModel> {
 
 	/**
 	 * @return generic param
 	 */
 	List<ParamModel<MethodModel>> parameters();
+
+	/**
+	 * @return annotation default value
+	 */
+	AnnotationValue defaultValue();
 
 	/**
 	 * @param i index of the parameter to get

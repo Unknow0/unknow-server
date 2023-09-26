@@ -12,6 +12,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.apache.maven.plugin.MojoExecutionException;
@@ -23,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
+import io.swagger.v3.oas.annotations.tags.Tags;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.ExternalDocumentation;
 import io.swagger.v3.oas.models.OpenAPI;
@@ -36,6 +38,7 @@ import io.swagger.v3.oas.models.parameters.Parameter;
 import io.swagger.v3.oas.models.parameters.Parameter.StyleEnum;
 import io.swagger.v3.oas.models.parameters.RequestBody;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
 import io.swagger.v3.oas.models.tags.Tag;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam;
@@ -119,6 +122,7 @@ public class OpenApiBuilder {
 	public Info info;
 	public List<Server> servers;
 	public List<SecurityRequirement> security;
+	public Map<String, SecurityScheme> securityScheme;
 	public List<Tag> tags;
 	public ExternalDocumentation externalDocs;
 
@@ -158,7 +162,7 @@ public class OpenApiBuilder {
 
 		for (JaxrsMapping m : model.mappings()) {
 			AnnotationModel a = m.m.annotation(io.swagger.v3.oas.annotations.Operation.class).orElse(null);
-			if (a != null && "true".equals(a.value("hidden").orElse("")))
+			if (a != null && a.member("hidden").map(v -> v.asBoolean()).orElse(false))
 				continue;
 
 			PathItem p = paths.computeIfAbsent(m.path, k -> new PathItem());
@@ -168,12 +172,17 @@ public class OpenApiBuilder {
 				logger.warn("can't map operation " + m.httpMethod + " " + m.path + " duplicate or unupported");
 				continue;
 			}
+			Optional<AnnotationModel> t = m.m.parent().annotation(Tags.class);
+			if (t.isPresent()) {
+				logger.error(">> {}", t.get().value().get());
+			}
+
 			if (a != null) {
-				a.values("tags").ifPresent(v -> o.setTags(Arrays.asList(v)));
-				a.value("summary").ifPresent(v -> o.setSummary(v));
-				a.value("description").ifPresent(v -> o.setDescription(v));
-				a.value("operationId").ifPresent(v -> o.setOperationId(v));
-				a.value("deprecated").ifPresent(v -> o.setDeprecated(Boolean.parseBoolean(v)));
+				a.member("tags").ifPresent(v -> o.setTags(Arrays.asList(v.asArrayLiteral())));
+				a.member("summary").ifPresent(v -> o.setSummary(v.asLiteral()));
+				a.member("description").ifPresent(v -> o.setDescription(v.asLiteral()));
+				a.member("operationId").ifPresent(v -> o.setOperationId(v.asLiteral()));
+				a.member("deprecated").ifPresent(v -> o.setDeprecated(v.asBoolean()));
 
 				// TODO externalDocs, responses, security, servers, extensions
 			}
@@ -182,7 +191,7 @@ public class OpenApiBuilder {
 				addParameters(o, param);
 
 		}
-		return spec.components(new Components().schemas(schemas)).paths(paths);
+		return spec.components(new Components().securitySchemes(securityScheme).schemas(schemas)).paths(paths);
 	}
 
 	/**
@@ -223,14 +232,14 @@ public class OpenApiBuilder {
 
 		AnnotationModel a = param.p.annotation(io.swagger.v3.oas.annotations.Parameter.class).orElse(null);
 		if (a != null) {
-			if (a.value("hidden").orElse("false").equals("true"))
+			if (a.member("hidden").map(v -> v.asBoolean()).orElse(false))
 				return;
 
-			a.value("name").ifPresent(v -> p.setName(v));
-			a.value("in").filter(v -> !v.isEmpty()).ifPresent(v -> p.setIn(v));
-			a.value("description").ifPresent(v -> p.setDescription(v));
-			a.value("required").ifPresent(v -> p.setRequired(Boolean.parseBoolean(v)));
-			a.value("deprecated").ifPresent(v -> p.setDeprecated(Boolean.parseBoolean(v)));
+			a.member("name").ifPresent(v -> p.setName(v.asLiteral()));
+			a.member("in").map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> p.setIn(v));
+			a.member("description").ifPresent(v -> p.setDescription(v.asLiteral()));
+			a.member("required").ifPresent(v -> p.setRequired(v.asBoolean()));
+			a.member("deprecated").ifPresent(v -> p.setDeprecated(v.asBoolean()));
 			// allowEmptyValue
 			// style
 			// explode

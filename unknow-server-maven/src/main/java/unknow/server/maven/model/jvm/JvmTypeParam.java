@@ -48,14 +48,14 @@ public class JvmTypeParam implements TypeParamModel {
 	@Override
 	public Collection<AnnotationModel> annotations() {
 		if (annotations == null)
-			annotations = Arrays.stream(t.getAnnotations()).map(a -> new JvmAnnotation(a)).collect(Collectors.toList());
+			annotations = Arrays.stream(t.getAnnotations()).map(a -> new JvmAnnotation(loader, a)).collect(Collectors.toList());
 		return annotations;
 	}
 
 	@Override
 	public List<ClassModel> bounds() {
 		if (bounds == null)
-			bounds = Arrays.stream(t.getBounds()).map(b -> loader.get(b.getTypeName(),c.parameters()).asClass()).collect(Collectors.toList());
+			bounds = Arrays.stream(t.getBounds()).map(b -> loader.get(b.getTypeName(), c.parameters()).asClass()).collect(Collectors.toList());
 		return bounds;
 	}
 

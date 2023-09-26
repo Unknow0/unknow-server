@@ -46,7 +46,7 @@ public class AstConstructor implements ConstructorModel, AstMod {
 	@Override
 	public Collection<AnnotationModel> annotations() {
 		if (annotations == null) {
-			annotations = c.getAnnotations().stream().map(a -> new AstAnnotation(a)).collect(Collectors.toList());
+			annotations = c.getAnnotations().stream().map(a -> new AstAnnotation(loader, a)).collect(Collectors.toList());
 		}
 		return annotations;
 	}
@@ -56,7 +56,6 @@ public class AstConstructor implements ConstructorModel, AstMod {
 		return c;
 	}
 
-	@SuppressWarnings("unused")
 	@Override
 	public List<ParamModel<ConstructorModel>> parameters() {
 		if (params == null)

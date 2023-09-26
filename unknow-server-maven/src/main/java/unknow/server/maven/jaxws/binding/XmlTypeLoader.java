@@ -92,8 +92,8 @@ public class XmlTypeLoader {
 
 		Factory factory = null;
 		Optional<AnnotationModel> o = c.annotation(jakarta.xml.bind.annotation.XmlType.class);
-		String cl = o.flatMap(a -> a.value("factoryClass")).orElse(null);
-		String method = o.flatMap(a -> a.value("factoryMethod")).orElse("");
+		String cl = o.flatMap(a -> a.member("factoryClass")).map(v -> v.asLiteral()).orElse(null);
+		String method = o.flatMap(a -> a.member("factoryMethod")).map(v -> v.asLiteral()).orElse("");
 
 		if (!method.isEmpty()) {
 			if (jakarta.xml.bind.annotation.XmlType.DEFAULT.class.getCanonicalName().equals(cl))
@@ -101,8 +101,8 @@ public class XmlTypeLoader {
 			else
 				factory = new Factory(cl, method);
 		}
-		name = o.flatMap(a -> a.value("name")).map(v -> "##default".equals(v) ? null : v).orElse(name);
-		namespace = o.flatMap(a -> a.value("namespace")).map(v -> "##default".equals(v) ? null : v).orElse(namespace);
+		name = o.flatMap(a -> a.member("name")).map(v -> v.asLiteral()).filter(v -> !"##default".equals(v)).orElse(name);
+		namespace = o.flatMap(a -> a.member("namespace")).map(v -> v.asLiteral()).filter(v -> !"##default".equals(v)).orElse(namespace);
 
 		return new XmlObject(c, namespace, name, factory, this);
 	}
@@ -110,11 +110,12 @@ public class XmlTypeLoader {
 	private static String getNs(TypeModel c) {
 		// TODO get namespace data from package annotation
 		String ns = "";
-		return c.annotation(jakarta.xml.bind.annotation.XmlType.class).flatMap(a -> a.value("namespace")).map(v -> "##default".equals(v) ? null : v).orElse(ns);
+		return c.annotation(jakarta.xml.bind.annotation.XmlType.class).flatMap(a -> a.member("namespace")).map(v -> v.asLiteral()).filter(v -> !"##default".equals(v))
+				.orElse(ns);
 	}
 
 	private static String getName(TypeModel c) {
 		String name = c.simpleName();
-		return c.annotation(jakarta.xml.bind.annotation.XmlType.class).flatMap(a -> a.value("name")).map(v -> "##default".equals(v) ? null : v).orElse(name);
+		return c.annotation(jakarta.xml.bind.annotation.XmlType.class).flatMap(a -> a.member("name")).map(v -> v.asLiteral()).filter(v -> !"##default".equals(v)).orElse(name);
 	}
 }
