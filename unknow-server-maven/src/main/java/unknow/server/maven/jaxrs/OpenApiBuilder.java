@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -51,6 +52,7 @@ import unknow.server.maven.jaxrs.JaxrsParam.JaxrsQueryParam;
 import unknow.server.maven.model.AnnotationModel;
 import unknow.server.maven.model.ClassModel;
 import unknow.server.maven.model.EnumModel;
+import unknow.server.maven.model.FieldModel;
 import unknow.server.maven.model.TypeModel;
 
 public class OpenApiBuilder {
@@ -280,9 +282,11 @@ public class OpenApiBuilder {
 			ClassModel c = type.asClass().ancestor(Collection.class.getName());
 			if (c != null)
 				return new Schema<>().type("array").items(schema(c.parameter(0).type()));
+			c = type.asClass().ancestor(Map.class.getName());
+			if (c != null) {
+				return new Schema<>().type("object").additionalProperties(schema(c.parameter(1).type()));
+			}
 		}
-
-		// TODO map
 
 		if (type.isEnum()) {
 			EnumModel e = type.asEnum();
@@ -292,11 +296,14 @@ public class OpenApiBuilder {
 			// @JsonProperty on entries
 			s = new Schema<>().type("string")._enum(e.entries().stream().map(v -> v.name()).collect(Collectors.toList()));
 		} else {
-			s = new Schema<>().type("object");
+			List<String> requied = new ArrayList<>();
+			s = new Schema<>().type("object").required(requied);
 			ClassModel c = type.asClass();
 
-			s.properties(c.fields().stream().collect(Collectors.toMap(f -> f.name(), f -> schema(f.type()))));
-			// TODO required => list of mendatory value
+			for (FieldModel f : c.fields()) {
+				s.addProperty(f.name(), schema(f.type()));
+				// TODO add required value from jackson
+			}
 			// TODO exemple
 		}
 		schemas.put(n, s);
