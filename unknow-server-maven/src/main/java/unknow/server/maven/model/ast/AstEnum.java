@@ -46,7 +46,7 @@ public class AstEnum extends AstBaseClass<EnumDeclaration> implements EnumModel 
 	@Override
 	public List<EnumConstant> entries() {
 		if (entries == null)
-			entries = c.getEntries().stream().map(c -> new AstEnumConstant(c)).collect(Collectors.toList());
+			entries = c.getEntries().stream().map(c -> new AstEnumConstant(loader, c)).collect(Collectors.toList());
 		return entries;
 	}
 
@@ -58,7 +58,8 @@ public class AstEnum extends AstBaseClass<EnumDeclaration> implements EnumModel 
 	@Override
 	public List<ClassModel> interfaces() {
 		if (interfaces == null)
-			interfaces = c.getImplementedTypes().stream().map(c -> loader.get(c.resolve().describe(), parameters()).asClass()).filter(c -> !"java.lang.Object".equals(c.name())).collect(Collectors.toList());
+			interfaces = c.getImplementedTypes().stream().map(c -> loader.get(c.resolve().describe(), parameters()).asClass())
+					.filter(c -> !"java.lang.Object".equals(c.name())).collect(Collectors.toList());
 		return interfaces;
 	}
 
@@ -68,6 +69,7 @@ public class AstEnum extends AstBaseClass<EnumDeclaration> implements EnumModel 
 	}
 
 	private static class AstEnumConstant implements EnumConstant {
+		private final ModelLoader loader;
 		private final EnumConstantDeclaration e;
 		private List<AnnotationModel> annotations;
 
@@ -76,14 +78,15 @@ public class AstEnum extends AstBaseClass<EnumDeclaration> implements EnumModel 
 		 * 
 		 * @param e
 		 */
-		public AstEnumConstant(EnumConstantDeclaration e) {
+		public AstEnumConstant(ModelLoader loader, EnumConstantDeclaration e) {
+			this.loader = loader;
 			this.e = e;
 		}
 
 		@Override
 		public Collection<AnnotationModel> annotations() {
 			if (annotations == null)
-				annotations = e.getAnnotations().stream().map(a -> new AstAnnotation(a)).collect(Collectors.toList());
+				annotations = e.getAnnotations().stream().map(a -> new AstAnnotation(loader, a)).collect(Collectors.toList());
 			return annotations;
 		}
 

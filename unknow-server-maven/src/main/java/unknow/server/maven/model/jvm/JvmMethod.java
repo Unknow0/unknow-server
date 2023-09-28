@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import unknow.server.maven.model.AnnotationModel;
+import unknow.server.maven.model.AnnotationValue;
 import unknow.server.maven.model.ClassModel;
 import unknow.server.maven.model.MethodModel;
 import unknow.server.maven.model.ParamModel;
@@ -24,6 +25,7 @@ public class JvmMethod implements MethodModel, JvmMod {
 	private final Method m;
 	private Collection<AnnotationModel> annotations;
 	private List<ParamModel<MethodModel>> params;
+	private AnnotationValue defaultValue;
 
 	/**
 	 * create new JvmField
@@ -45,7 +47,7 @@ public class JvmMethod implements MethodModel, JvmMod {
 	@Override
 	public Collection<AnnotationModel> annotations() {
 		if (annotations == null)
-			annotations = Arrays.stream(m.getAnnotations()).map(a -> new JvmAnnotation(a)).collect(Collectors.toList());
+			annotations = Arrays.stream(m.getAnnotations()).map(a -> new JvmAnnotation(loader, a)).collect(Collectors.toList());
 		return annotations;
 	}
 
@@ -64,12 +66,18 @@ public class JvmMethod implements MethodModel, JvmMod {
 		return loader.get(m.getGenericReturnType().getTypeName(), parent.parameters());
 	}
 
-	@SuppressWarnings("unused")
 	@Override
 	public List<ParamModel<MethodModel>> parameters() {
 		if (params == null)
 			params = Arrays.stream(m.getParameters()).map(p -> new JvmParam<MethodModel>(loader, this, p)).collect(Collectors.toList());
 		return params;
+	}
+
+	@Override
+	public AnnotationValue defaultValue() {
+		if (defaultValue == null)
+			defaultValue = JvmAnnotation.getValue(loader, m.getDefaultValue());
+		return defaultValue;
 	}
 
 	@Override

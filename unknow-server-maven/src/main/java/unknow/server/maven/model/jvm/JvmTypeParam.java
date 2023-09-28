@@ -47,7 +47,7 @@ public class JvmTypeParam implements TypeParamModel {
 	@Override
 	public Collection<AnnotationModel> annotations() {
 		if (annotations == null)
-			annotations = Arrays.stream(t.getAnnotations()).map(a -> new JvmAnnotation(a)).collect(Collectors.toList());
+			annotations = Arrays.stream(t.getAnnotations()).map(a -> new JvmAnnotation(loader, a)).collect(Collectors.toList());
 		return annotations;
 	}
 

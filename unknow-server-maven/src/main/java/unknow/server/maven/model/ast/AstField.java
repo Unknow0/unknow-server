@@ -45,7 +45,7 @@ public class AstField implements FieldModel, AstMod {
 	@Override
 	public Collection<AnnotationModel> annotations() {
 		if (annotations == null)
-			annotations = f.getAnnotations().stream().map(a -> new AstAnnotation(a)).collect(Collectors.toList());
+			annotations = f.getAnnotations().stream().map(a -> new AstAnnotation(loader, a)).collect(Collectors.toList());
 		return annotations;
 	}
 

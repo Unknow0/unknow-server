@@ -27,7 +27,7 @@ public class XmlEnum extends XmlType<EnumModel> {
 		this.convertMethod = convertMethod;
 		entries = new ArrayList<>();
 		for (EnumConstant e : type.entries())
-			entries.add(new XmlEnumEntry(e.name(), e.annotation(XmlEnumValue.class).flatMap(a -> a.value()).orElse(e.name())));
+			entries.add(new XmlEnumEntry(e.name(), e.annotation(XmlEnumValue.class).flatMap(a -> a.value()).map(v -> v.asLiteral()).orElse(e.name())));
 	}
 
 	@Override

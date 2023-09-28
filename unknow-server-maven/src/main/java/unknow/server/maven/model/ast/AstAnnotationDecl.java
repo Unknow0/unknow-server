@@ -1,20 +1,18 @@
-/**
- * 
- */
 package unknow.server.maven.model.ast;
 
-import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.PackageDeclaration;
+import com.github.javaparser.ast.body.AnnotationDeclaration;
+import com.github.javaparser.ast.body.AnnotationMemberDeclaration;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.EnumDeclaration;
-import com.github.javaparser.ast.body.FieldDeclaration;
-import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.ast.nodeTypes.NodeWithModifiers;
 import com.github.javaparser.ast.nodeTypes.NodeWithSimpleName;
 
@@ -26,28 +24,38 @@ import unknow.server.maven.model.MethodModel;
 import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.model.TypeParamModel;
 
-/**
- * @author unknow
- */
-public abstract class AstBaseClass<T extends TypeDeclaration<?>> implements ClassModel, AstMod {
-	protected final ModelLoader loader;
-	protected final T c;
+public class AstAnnotationDecl implements ClassModel, AstMod {
+	private final ModelLoader loader;
+	private final AnnotationDeclaration a;
 	private String name;
 	private Collection<AnnotationModel> annotations;
-	private Collection<ConstructorModel> constructors;
-	private Collection<FieldModel> fields;
 	private Collection<MethodModel> methods;
 
-	protected AstBaseClass(ModelLoader loader, T c) {
+	protected AstAnnotationDecl(ModelLoader loader, AnnotationDeclaration a) {
 		this.loader = loader;
-		this.c = c;
+		this.a = a;
+	}
+
+	@Override
+	public ClassModel superType() {
+		return loader.get(Object.class.getName()).asClass();
+	}
+
+	@Override
+	public List<ClassModel> interfaces() {
+		return Collections.emptyList();
+	}
+
+	@Override
+	public List<TypeParamModel> parameters() {
+		return Collections.emptyList();
 	}
 
 	@Override
 	public String name() {
 		if (name == null) {
-			name = c.getNameAsString();
-			Node p = c.getParentNode().orElse(null);
+			name = a.getNameAsString();
+			Node p = a.getParentNode().orElse(null);
 			while (p != null) {
 				if (p instanceof ClassOrInterfaceDeclaration || p instanceof EnumDeclaration)
 					name = ((NodeWithSimpleName<?>) p).getNameAsString() + "$" + name;
@@ -63,54 +71,37 @@ public abstract class AstBaseClass<T extends TypeDeclaration<?>> implements Clas
 	}
 
 	@Override
-	public String genericName() {
-		if (parameters().isEmpty())
-			return name();
-		StringBuilder sb = new StringBuilder(name()).append('<');
-		for (TypeParamModel p : parameters())
-			sb.append(p.type()).append(',');
-		sb.setCharAt(sb.length() - 1, '>');
-		return sb.toString();
-	}
-
-	@Override
-	public NodeWithModifiers<?> object() {
-		return c;
-	}
-
-	@Override
 	public Collection<AnnotationModel> annotations() {
 		if (annotations == null)
-			annotations = c.getAnnotations().stream().map(a -> new AstAnnotation(loader, a)).collect(Collectors.toList());
+			annotations = a.getAnnotations().stream().map(a -> new AstAnnotation(loader, a)).collect(Collectors.toList());
 		return annotations;
 	}
 
 	@Override
+	public NodeWithModifiers<?> object() {
+		return a;
+	}
+
+	@Override
 	public Collection<ConstructorModel> constructors() {
-		if (constructors == null)
-			constructors = c.getConstructors().stream().map(c -> new AstConstructor(this, loader, c)).collect(Collectors.toList());
-		return constructors;
+		return Collections.emptyList();
 	}
 
 	@Override
 	public Collection<FieldModel> fields() {
-		if (fields == null) {
-			fields = new ArrayList<>();
-			for (FieldDeclaration f : c.getFields())
-				f.getVariables().stream().map(v -> new AstField(loader, this, f, v)).forEach(fields::add);
-		}
-		return fields;
+		return Collections.emptyList();
 	}
 
 	@Override
 	public Collection<MethodModel> methods() {
 		if (methods == null)
-			methods = c.getMethods().stream().map(m -> new AstMethod(this, loader, m)).collect(Collectors.toList());
+			methods = a.getMembers().stream().filter(m -> m instanceof AnnotationMemberDeclaration)
+					.map(m -> new AstAnnotationMethod(this, loader, (AnnotationMemberDeclaration) m)).collect(Collectors.toList());
 		return methods;
 	}
 
 	@Override
 	public String toString() {
-		return genericName();
+		return "@" + name();
 	}
 }

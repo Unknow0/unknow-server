@@ -45,7 +45,7 @@ public abstract class JaxrsParam<T extends WithName & WithAnnotation & WithType>
 		this.value = value;
 
 		this.var = prefix + "$" + p.name();
-		this.def = p.annotation(DefaultValue.class).flatMap(a -> a.value()).orElseGet(() -> {
+		this.def = p.annotation(DefaultValue.class).flatMap(a -> a.value()).map(v -> v.asLiteral()).orElseGet(() -> {
 			if (!type.isPrimitive())
 				return null;
 			if (type == PrimitiveModel.BOOLEAN)
@@ -64,8 +64,7 @@ public abstract class JaxrsParam<T extends WithName & WithAnnotation & WithType>
 		public final Map<FieldModel, JaxrsParam<?>> fields;
 		public final Map<MethodModel, JaxrsParam<?>> setters;
 
-		public JaxrsBeanParam(T p, ClassModel clazz, Map<FieldModel, JaxrsParam<?>> fields,
-				Map<MethodModel, JaxrsParam<?>> setters) {
+		public JaxrsBeanParam(T p, ClassModel clazz, Map<FieldModel, JaxrsParam<?>> fields, Map<MethodModel, JaxrsParam<?>> setters) {
 			super(p, "o", null);
 			this.clazz = clazz;
 			this.fields = fields;

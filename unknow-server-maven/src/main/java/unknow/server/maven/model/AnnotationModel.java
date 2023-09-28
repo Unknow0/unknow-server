@@ -3,6 +3,7 @@
  */
 package unknow.server.maven.model;
 
+import java.util.Collection;
 import java.util.Optional;
 
 import unknow.server.maven.model.util.WithName;
@@ -12,29 +13,13 @@ import unknow.server.maven.model.util.WithName;
  */
 public interface AnnotationModel extends WithName {
 
-	/**
-	 * @param name value to get
-	 * @return the value as String
-	 */
-	Optional<String> value(String name);
+	Collection<AnnotationMemberModel> members();
 
-	/**
-	 * @return "value"
-	 */
-	default Optional<String> value() {
-		return value("value");
+	default Optional<AnnotationMemberModel> value() {
+		return member("value");
 	}
 
-	/**
-	 * @param name value to get
-	 * @return the value as String array
-	 */
-	Optional<String[]> values(String name);
-
-	/**
-	 * @return "value"
-	 */
-	default Optional<String[]> values() {
-		return values("value");
+	default Optional<AnnotationMemberModel> member(String name) {
+		return members().stream().filter(m -> name.equals(m.name())).findAny();
 	}
 }

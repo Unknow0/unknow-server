@@ -47,7 +47,7 @@ public class AstTypeParam implements TypeParamModel {
 	@Override
 	public Collection<AnnotationModel> annotations() {
 		if (annotations == null) {
-			annotations = p.getAnnotations().stream().map(a -> new AstAnnotation(a)).collect(Collectors.toList());
+			annotations = p.getAnnotations().stream().map(a -> new AstAnnotation(loader, a)).collect(Collectors.toList());
 		}
 		return annotations;
 	}

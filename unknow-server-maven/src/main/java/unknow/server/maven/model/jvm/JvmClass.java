@@ -23,7 +23,7 @@ import unknow.server.maven.model.TypeParamModel;
  * @author unknow
  */
 public class JvmClass implements ClassModel, JvmMod {
-	private final JvmModelLoader loader;
+	protected final JvmModelLoader loader;
 	protected final Class<?> cl;
 	private final TypeModel[] paramsClass;
 	private ClassModel superType;
@@ -53,7 +53,7 @@ public class JvmClass implements ClassModel, JvmMod {
 	@Override
 	public Collection<AnnotationModel> annotations() {
 		if (annotations == null)
-			annotations = Arrays.stream(cl.getAnnotations()).map(a -> new JvmAnnotation(a)).collect(Collectors.toList());
+			annotations = Arrays.stream(cl.getAnnotations()).map(a -> new JvmAnnotation(loader, a)).collect(Collectors.toList());
 		return annotations;
 	}
 

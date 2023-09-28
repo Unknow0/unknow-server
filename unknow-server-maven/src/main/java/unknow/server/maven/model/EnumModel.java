@@ -4,6 +4,7 @@
 package unknow.server.maven.model;
 
 import java.util.List;
+import java.util.Optional;
 
 import unknow.server.maven.model.util.WithAnnotation;
 
@@ -21,6 +22,10 @@ public interface EnumModel extends ClassModel {
 	 * @return declared enum entries
 	 */
 	List<EnumConstant> entries();
+
+	default Optional<EnumConstant> entry(String name) {
+		return entries().stream().filter(e -> e.name().equals(name)).findAny();
+	}
 
 	/**
 	 * an enum constant

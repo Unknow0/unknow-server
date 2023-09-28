@@ -45,7 +45,7 @@ public class JvmConstructor implements ConstructorModel, JvmMod {
 	@Override
 	public Collection<AnnotationModel> annotations() {
 		if (annotations == null)
-			annotations = Arrays.stream(c.getAnnotations()).map(a -> new JvmAnnotation(a)).collect(Collectors.toList());
+			annotations = Arrays.stream(c.getAnnotations()).map(a -> new JvmAnnotation(loader, a)).collect(Collectors.toList());
 		return annotations;
 	}
 
@@ -54,7 +54,6 @@ public class JvmConstructor implements ConstructorModel, JvmMod {
 		return c.getModifiers();
 	}
 
-	@SuppressWarnings("unused")
 	@Override
 	public List<ParamModel<ConstructorModel>> parameters() {
 		if (params == null)

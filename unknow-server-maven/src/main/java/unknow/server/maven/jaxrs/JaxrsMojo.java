@@ -172,7 +172,7 @@ public class JaxrsMojo extends AbstractMojo {
 				list.add(m);
 
 			NodeList<Expression> l = new NodeList<>(new ObjectCreationExpr(null, types.getClass(e.getKey()), list));
-			l.add(e.getKey().annotation(Priority.class).flatMap(a -> a.value()).map(a -> (Expression) new IntegerLiteralExpr(a))
+			l.add(e.getKey().annotation(Priority.class).flatMap(a -> a.value()).map(a -> (Expression) new IntegerLiteralExpr(a.asLiteral()))
 					.orElseGet(() -> new FieldAccessExpr(new TypeExpr(types.get(Priorities.class)), "USER")));
 			for (String s : e.getValue())
 				l.add(Utils.text(s));
@@ -184,7 +184,7 @@ public class JaxrsMojo extends AbstractMojo {
 				list.add(m);
 
 			NodeList<Expression> l = new NodeList<>(new ObjectCreationExpr(null, types.getClass(e.getKey()), list));
-			l.add(e.getKey().annotation(Priority.class).flatMap(a -> a.value()).map(a -> (Expression) new IntegerLiteralExpr(a))
+			l.add(e.getKey().annotation(Priority.class).flatMap(a -> a.value()).map(a -> (Expression) new IntegerLiteralExpr(a.asLiteral()))
 					.orElseGet(() -> new FieldAccessExpr(new TypeExpr(types.get(Priorities.class)), "USER")));
 			for (String s : e.getValue())
 				l.add(Utils.text(s));
