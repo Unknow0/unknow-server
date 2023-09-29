@@ -36,6 +36,12 @@ public class AstAnnotation implements AnnotationModel {
 	private final AnnotationExpr a;
 	private final Collection<AnnotationMemberModel> members;
 
+	/**
+	 * create new AstAnnotation
+	 * 
+	 * @param loader
+	 * @param a
+	 */
 	public AstAnnotation(ModelLoader loader, AnnotationExpr a) {
 		this.name = a.resolve().getQualifiedName();
 		this.a = a;
@@ -78,6 +84,11 @@ public class AstAnnotation implements AnnotationModel {
 		return members;
 	}
 
+	/**
+	 * @param loader
+	 * @param v
+	 * @return expression as AnnotationValue
+	 */
 	public static AnnotationValue value(ModelLoader loader, Expression v) {
 		if (v.isNullLiteralExpr())
 			return AnnotationValue.NULL;

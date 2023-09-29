@@ -32,6 +32,8 @@ public class AstMethod implements MethodModel, AstMod {
 	/**
 	 * create new AstMethod
 	 * 
+	 * @param parent
+	 * 
 	 * @param loader
 	 * @param m
 	 */
@@ -76,6 +78,7 @@ public class AstMethod implements MethodModel, AstMod {
 		return type;
 	}
 
+	@SuppressWarnings("unused")
 	@Override
 	public List<ParamModel<MethodModel>> parameters() {
 		if (params == null)

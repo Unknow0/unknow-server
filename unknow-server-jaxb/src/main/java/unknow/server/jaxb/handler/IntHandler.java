@@ -3,10 +3,12 @@
  */
 package unknow.server.jaxb.handler;
 
+import unknow.server.jaxb.XmlSimpleHandler;
+
 /**
  * @author unknow
  */
-public class IntHandler extends XmlDefaultHandler<Integer> {
+public class IntHandler implements XmlSimpleHandler<Integer> {
 
 	public static final IntHandler INSTANCE = new IntHandler();
 

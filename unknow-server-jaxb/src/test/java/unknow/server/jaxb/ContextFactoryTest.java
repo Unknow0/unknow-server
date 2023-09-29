@@ -34,7 +34,7 @@ public class ContextFactoryTest {
 	public void h() throws XMLStreamException {
 		XMLStreamReader r = f.createXMLStreamReader(new StringReader("<o a='4'>test</o>"));
 		r.nextTag();
-		O o = new OHandler().read(r);
+		O o = new OHandler().read(r, null, null);
 		assertEquals(o.a, 4);
 		assertEquals(o.v, "test");
 	}

@@ -63,10 +63,10 @@ public class XmlTypeComplex implements XmlType {
 	}
 
 	public static class Factory {
-		public final String clazz;
+		public final ClassModel clazz;
 		public final String method;
 
-		public Factory(String clazz, String method) {
+		public Factory(ClassModel clazz, String method) {
 			this.clazz = clazz;
 			this.method = method;
 		}

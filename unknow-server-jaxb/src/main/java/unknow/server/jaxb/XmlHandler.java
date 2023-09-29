@@ -15,23 +15,29 @@ import javax.xml.stream.XMLStreamWriter;
  */
 public interface XmlHandler<T> {
 
+	/**
+	 * @param c
+	 */
 	void collectNS(Consumer<String> c);
 
 	/**
 	 * write object content
 	 * 
-	 * @param w writer to write to
-	 * @param t object to write
+	 * @param w        writer to write to
+	 * @param t        object to write
+	 * @param listener
 	 * @throws XMLStreamException in case of error
 	 */
-	void write(XMLStreamWriter w, T t) throws XMLStreamException;
+	void write(XMLStreamWriter w, T t, MarshallerImpl listener) throws XMLStreamException;
 
 	/**
 	 * read object content
 	 * 
-	 * @param r reader to read from
+	 * @param r        reader to read from
+	 * @param parent
+	 * @param listener
 	 * @return object read
 	 * @throws XMLStreamException in case of error
 	 */
-	T read(XMLStreamReader r) throws XMLStreamException;
+	T read(XMLStreamReader r, Object parent, UnmarshallerImpl listener) throws XMLStreamException;
 }

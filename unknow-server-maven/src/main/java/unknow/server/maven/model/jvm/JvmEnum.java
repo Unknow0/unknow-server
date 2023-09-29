@@ -24,6 +24,7 @@ public class JvmEnum extends JvmClass implements EnumModel {
 	 * 
 	 * @param cl
 	 * @param loader
+	 * @param params
 	 */
 	public JvmEnum(JvmModelLoader loader, Class<?> cl, TypeModel params[]) {
 		super(loader, cl, params);
@@ -43,17 +44,21 @@ public class JvmEnum extends JvmClass implements EnumModel {
 		return entries;
 	}
 
+	/**
+	 * @author unknow
+	 */
 	public static class JvmEnumConstant implements EnumConstant {
-		private final ModelLoader loader;
+		private final JvmModelLoader loader;
 		private final Enum<?> e;
 		private List<AnnotationModel> annotations;
 
 		/**
 		 * create new AstEnumConstant
 		 * 
+		 * @param loader
 		 * @param e
 		 */
-		public JvmEnumConstant(ModelLoader loader, Enum<?> e) {
+		public JvmEnumConstant(JvmModelLoader loader, Enum<?> e) {
 			this.loader = loader;
 			this.e = e;
 		}

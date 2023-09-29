@@ -54,6 +54,7 @@ public class JvmConstructor implements ConstructorModel, JvmMod {
 		return c.getModifiers();
 	}
 
+	@SuppressWarnings("unused")
 	@Override
 	public List<ParamModel<ConstructorModel>> parameters() {
 		if (params == null)

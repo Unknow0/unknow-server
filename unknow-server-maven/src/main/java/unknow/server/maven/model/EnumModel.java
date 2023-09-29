@@ -23,6 +23,10 @@ public interface EnumModel extends ClassModel {
 	 */
 	List<EnumConstant> entries();
 
+	/**
+	 * @param name
+	 * @return enum constant with name
+	 */
 	default Optional<EnumConstant> entry(String name) {
 		return entries().stream().filter(e -> e.name().equals(name)).findAny();
 	}

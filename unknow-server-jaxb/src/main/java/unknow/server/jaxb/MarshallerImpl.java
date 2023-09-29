@@ -40,6 +40,7 @@ public class MarshallerImpl implements Marshaller {
 	private String encoding = "utf8";
 	private boolean indented = false;
 	private boolean fragment = false;
+	private Listener listener;
 
 	public MarshallerImpl(Map<Class<?>, XmlRootHandler<?>> rootHandlers) {
 		this.rootHandlers = rootHandlers;
@@ -108,7 +109,7 @@ public class MarshallerImpl implements Marshaller {
 		try {
 			if (!fragment)
 				writer.writeStartDocument(encoding, "1.0");
-			h.writeRoot(writer, jaxbElement);
+			h.writeRoot(writer, jaxbElement, this);
 			if (!fragment)
 				writer.writeEndDocument();
 		} catch (XMLStreamException e) {
@@ -211,14 +212,21 @@ public class MarshallerImpl implements Marshaller {
 
 	@Override
 	public void setListener(Listener listener) {
-		// TODO Auto-generated method stub
-
+		this.listener = listener;
 	}
 
 	@Override
 	public Listener getListener() {
-		// TODO Auto-generated method stub
-		return null;
+		return listener;
 	}
 
+	public void beforeMarshal(Object target) {
+		if (listener != null)
+			listener.beforeMarshal(target);
+	}
+
+	public void afterMarshal(Object target) {
+		if (listener != null)
+			listener.afterMarshal(target);
+	}
 }

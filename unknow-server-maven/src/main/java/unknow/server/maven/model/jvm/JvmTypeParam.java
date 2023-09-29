@@ -14,6 +14,9 @@ import unknow.server.maven.model.ClassModel;
 import unknow.server.maven.model.TypeModel;
 import unknow.server.maven.model.TypeParamModel;
 
+/**
+ * @author unknow
+ */
 public class JvmTypeParam implements TypeParamModel {
 	private final JvmModelLoader loader;
 	private final ClassModel c;
@@ -22,6 +25,14 @@ public class JvmTypeParam implements TypeParamModel {
 	private Collection<AnnotationModel> annotations;
 	private List<ClassModel> bounds;
 
+	/**
+	 * create new JvmTypeParam
+	 * 
+	 * @param loader
+	 * @param c
+	 * @param t
+	 * @param type
+	 */
 	public JvmTypeParam(JvmModelLoader loader, ClassModel c, TypeVariable<?> t, TypeModel type) {
 		this.loader = loader;
 		this.c = c;

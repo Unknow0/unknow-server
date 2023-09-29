@@ -3,10 +3,12 @@
  */
 package unknow.server.jaxb.handler;
 
+import unknow.server.jaxb.XmlSimpleHandler;
+
 /**
  * @author unknow
  */
-public class ShortHandler extends XmlDefaultHandler<Short> {
+public class ShortHandler implements XmlSimpleHandler<Short> {
 
 	public static final ShortHandler INSTANCE = new ShortHandler();
 

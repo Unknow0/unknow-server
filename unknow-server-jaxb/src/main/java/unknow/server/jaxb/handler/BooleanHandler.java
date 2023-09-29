@@ -3,10 +3,12 @@
  */
 package unknow.server.jaxb.handler;
 
+import unknow.server.jaxb.XmlSimpleHandler;
+
 /**
  * @author unknow
  */
-public class BooleanHandler extends XmlDefaultHandler<Boolean> {
+public class BooleanHandler implements XmlSimpleHandler<Boolean> {
 
 	public static final BooleanHandler INSTANCE = new BooleanHandler();
 

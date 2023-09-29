@@ -27,14 +27,14 @@ public class OHandler extends XmlRootHandler<O> {
 	}
 
 	@Override
-	public void write(XMLStreamWriter w, O t) throws XMLStreamException {
+	public void write(XMLStreamWriter w, O t, MarshallerImpl listener) throws XMLStreamException {
 		w.writeAttribute("a", Integer.toString(t.a));
 		// or write CDATA
 		w.writeCharacters(t.v);
 	}
 
 	@Override
-	public O read(XMLStreamReader r) throws XMLStreamException {
+	public O read(XMLStreamReader r, Object parent, UnmarshallerImpl listener) throws XMLStreamException {
 		O o = new O();
 		for (int i = 0; i < r.getAttributeCount(); i++) {
 			QName n = r.getAttributeName(i);
@@ -50,7 +50,7 @@ public class OHandler extends XmlRootHandler<O> {
 			}
 			if (n == XMLStreamConstants.START_ELEMENT) {
 				if (A.equals(r.getName()))
-					INSTANCE.read(r);
+					INSTANCE.read(r, o, listener);
 				else
 					throw new XMLStreamException("Extra element " + r.getName() + " in " + O.class);
 			} else if (n == XMLStreamConstants.END_ELEMENT)

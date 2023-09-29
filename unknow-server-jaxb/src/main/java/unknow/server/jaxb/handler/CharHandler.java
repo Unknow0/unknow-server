@@ -3,10 +3,12 @@
  */
 package unknow.server.jaxb.handler;
 
+import unknow.server.jaxb.XmlSimpleHandler;
+
 /**
  * @author unknow
  */
-public class CharHandler extends XmlDefaultHandler<Character> {
+public class CharHandler implements XmlSimpleHandler<Character> {
 
 	public static final CharHandler INSTANCE = new CharHandler();
 

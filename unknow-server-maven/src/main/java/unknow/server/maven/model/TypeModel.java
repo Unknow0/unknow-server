@@ -5,17 +5,19 @@ package unknow.server.maven.model;
 
 import unknow.server.maven.model.util.WithAnnotation;
 import unknow.server.maven.model.util.WithName;
+import unknow.server.maven.model.util.WithParent;
 
 /**
  * @author unknow
  */
-public interface TypeModel extends WithAnnotation, WithName {
+public interface TypeModel extends WithAnnotation, WithName, WithParent<PackageModel> {
 	/**
 	 * @return type fully qualified name with actual parameter
 	 */
 	@Override
 	String name();
 
+	/** @return generic name */
 	default String genericName() {
 		return name();
 	}
@@ -36,13 +38,13 @@ public interface TypeModel extends WithAnnotation, WithName {
 		return i < 0 ? name : name.substring(i + 1);
 	}
 
-	/**
-	 * @return package
-	 */
+	@Override
+	default PackageModel parent() {
+		return null;
+	}
+
 	default String packageName() {
-		String name = name();
-		int i = name.lastIndexOf(".");
-		return i < 0 ? "" : name.substring(0, i);
+		return parent() == null ? "" : parent().name();
 	}
 
 	/**
@@ -52,6 +54,9 @@ public interface TypeModel extends WithAnnotation, WithName {
 		return this instanceof PrimitiveModel;
 	}
 
+	/**
+	 * @return this as a primive
+	 */
 	default PrimitiveModel asPrimitive() {
 		if (this instanceof PrimitiveModel)
 			return (PrimitiveModel) this;
@@ -65,6 +70,9 @@ public interface TypeModel extends WithAnnotation, WithName {
 		return this instanceof ClassModel;
 	}
 
+	/**
+	 * @return this as a class
+	 */
 	default ClassModel asClass() {
 		if (this instanceof ClassModel)
 			return (ClassModel) this;
@@ -140,6 +148,9 @@ public interface TypeModel extends WithAnnotation, WithName {
 		return this instanceof WildcardModel;
 	}
 
+	/**
+	 * @return this as a wildcard
+	 */
 	default WildcardModel asWildcard() {
 		if (this instanceof WildcardModel)
 			return (WildcardModel) this;
@@ -154,6 +165,7 @@ public interface TypeModel extends WithAnnotation, WithName {
 	}
 
 	/**
+	 * @param t
 	 * @return true if type are equals
 	 */
 	default boolean equals(TypeModel t) {

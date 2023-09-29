@@ -3,10 +3,12 @@
  */
 package unknow.server.jaxb.handler;
 
+import unknow.server.jaxb.XmlSimpleHandler;
+
 /**
  * @author unknow
  */
-public class ByteHandler extends XmlDefaultHandler<Byte> {
+public class ByteHandler implements XmlSimpleHandler<Byte> {
 
 	public static final ByteHandler INSTANCE = new ByteHandler();
 

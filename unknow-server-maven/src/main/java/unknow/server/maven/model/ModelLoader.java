@@ -32,16 +32,29 @@ public abstract class ModelLoader {
 	protected ModelLoader() {
 	}
 
+	/**
+	 * @param loaders
+	 * @return a model loader
+	 */
 	public static ModelLoader from(ModelLoader... loaders) {
 		if (loaders.length == 1)
 			return loaders[1];
 		return new CompositeLoader(loaders);
 	}
 
+	/**
+	 * @param cl
+	 * @return the loaded type
+	 */
 	public TypeModel get(String cl) {
 		return get(cl, Collections.emptyList());
 	}
 
+	/**
+	 * @param cl         class
+	 * @param parameters actual type params
+	 * @return the loaded type
+	 */
 	public TypeModel get(String cl, List<TypeParamModel> parameters) {
 		String key = cl + "#" + parameters;
 		TypeModel t = BUILTIN.get(cl);

@@ -16,7 +16,6 @@ import unknow.server.maven.model.AnnotationValue.AnnotationValueArray;
 import unknow.server.maven.model.AnnotationValue.AnnotationValueClass;
 import unknow.server.maven.model.AnnotationValue.AnnotationValueEnum;
 import unknow.server.maven.model.AnnotationValue.AnnotationValueLiteral;
-import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.model.jvm.JvmEnum.JvmEnumConstant;
 
 /**
@@ -26,7 +25,13 @@ public class JvmAnnotation implements AnnotationModel {
 	private final Annotation a;
 	private final Collection<AnnotationMemberModel> members;
 
-	public JvmAnnotation(ModelLoader loader, Annotation a) {
+	/**
+	 * create new JvmAnnotation
+	 * 
+	 * @param loader
+	 * @param a
+	 */
+	public JvmAnnotation(JvmModelLoader loader, Annotation a) {
 		this.a = a;
 		this.members = new ArrayList<>();
 
@@ -59,7 +64,12 @@ public class JvmAnnotation implements AnnotationModel {
 		return name();
 	}
 
-	public static AnnotationValue getValue(ModelLoader loader, Object o) {
+	/**
+	 * @param loader
+	 * @param o
+	 * @return object as annotation value
+	 */
+	public static AnnotationValue getValue(JvmModelLoader loader, Object o) {
 		if (o == null)
 			return AnnotationValue.NULL;
 		if (o.getClass().isArray()) {

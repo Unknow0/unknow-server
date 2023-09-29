@@ -26,6 +26,7 @@ public class JvmField implements FieldModel, JvmMod {
 	 * create new JvmField
 	 * 
 	 * @param loader the loader
+	 * @param cl
 	 * @param f      the field
 	 */
 	public JvmField(JvmModelLoader loader, ClassModel cl, Field f) {

@@ -15,6 +15,12 @@ public class ArrayModel implements TypeModel, WithType {
 	private final String name;
 	private final TypeModel type;
 
+	/**
+	 * create new ArrayModel
+	 * 
+	 * @param name
+	 * @param type
+	 */
 	public ArrayModel(String name, TypeModel type) {
 		this.name = name;
 		this.type = type;

@@ -131,7 +131,7 @@ public class UnmarshallerImpl implements Unmarshaller {
 			XmlRootHandler<?> h = rootElements.get(reader.getName());
 			if (h == null)
 				throw new JAXBException("No handler found for xml tag " + reader.getName());
-			return h.read(reader);
+			return h.read(reader, null, this);
 		} catch (XMLStreamException e) {
 			throw new JAXBException(e);
 		}
@@ -144,7 +144,7 @@ public class UnmarshallerImpl implements Unmarshaller {
 			@SuppressWarnings("unchecked") XmlHandler<T> h = (XmlHandler<T>) handlers.get(declaredType);
 			if (h == null)
 				throw new JAXBException("No handler found for class " + declaredType);
-			return new JAXBElement<>(n, declaredType, h.read(reader));
+			return new JAXBElement<>(n, declaredType, h.read(reader, null, this));
 		} catch (XMLStreamException e) {
 			throw new JAXBException(e);
 		}
@@ -242,5 +242,15 @@ public class UnmarshallerImpl implements Unmarshaller {
 	public boolean isValidating() throws JAXBException {
 		// TODO Auto-generated method stub
 		return false;
+	}
+
+	public void beforeUnmarshal(Object target, Object parent) {
+		if (listener != null)
+			listener.beforeUnmarshal(target, parent);
+	}
+
+	public void afterUnmarshal(Object target, Object parent) {
+		if (listener != null)
+			listener.afterUnmarshal(target, parent);
 	}
 }

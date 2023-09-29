@@ -30,6 +30,7 @@ public class JvmMethod implements MethodModel, JvmMod {
 	/**
 	 * create new JvmField
 	 * 
+	 * @param parent
 	 * @param loader the loader
 	 * @param m      the method
 	 */
@@ -66,6 +67,7 @@ public class JvmMethod implements MethodModel, JvmMod {
 		return loader.get(m.getGenericReturnType().getTypeName(), parent.parameters());
 	}
 
+	@SuppressWarnings("unused")
 	@Override
 	public List<ParamModel<MethodModel>> parameters() {
 		if (params == null)

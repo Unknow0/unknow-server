@@ -3,10 +3,12 @@
  */
 package unknow.server.jaxb.handler;
 
+import unknow.server.jaxb.XmlSimpleHandler;
+
 /**
  * @author unknow
  */
-public class LongHandler extends XmlDefaultHandler<Long> {
+public class LongHandler implements XmlSimpleHandler<Long> {
 
 	public static final LongHandler INSTANCE = new LongHandler();
 

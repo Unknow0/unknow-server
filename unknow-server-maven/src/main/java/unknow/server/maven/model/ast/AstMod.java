@@ -12,6 +12,9 @@ import unknow.server.maven.model.util.WithMod;
  * @author unknow
  */
 public interface AstMod extends WithMod {
+	/**
+	 * @return the object with modifier
+	 */
 	NodeWithModifiers<?> object();
 
 	@Override

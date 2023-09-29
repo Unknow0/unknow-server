@@ -32,6 +32,7 @@ import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Node;
+import com.github.javaparser.ast.PackageDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.resolution.TypeSolver;
 import com.github.javaparser.symbolsolver.JavaSymbolSolver;
@@ -81,7 +82,11 @@ public abstract class AbstractMojo extends org.apache.maven.plugin.AbstractMojo 
 
 	/** all class in src (fqn to classDef) */
 	protected final Map<String, TypeDeclaration<?>> classes = new HashMap<>();
-	private final Consumer<CompilationUnit> c = cu -> cu.walk(TypeDeclaration.class, c -> classes.put(c.resolve().getQualifiedName(), c));
+	protected final Map<String, PackageDeclaration> packages = new HashMap<>();
+	private final Consumer<CompilationUnit> c = cu -> {
+		cu.walk(TypeDeclaration.class, c -> classes.put(c.resolve().getQualifiedName(), c));
+		cu.getPackageDeclaration().filter(p -> p.getAnnotations() != null).ifPresent(p -> packages.put(p.getNameAsString(), p));
+	};
 
 	protected ModelLoader loader;
 
@@ -91,7 +96,7 @@ public abstract class AbstractMojo extends org.apache.maven.plugin.AbstractMojo 
 
 	protected void init() throws MojoFailureException {
 		cl = getClassLoader();
-		loader = ModelLoader.from(JvmModelLoader.GLOBAL, new JvmModelLoader(cl), new AstModelLoader(classes));
+		loader = ModelLoader.from(JvmModelLoader.GLOBAL, new JvmModelLoader(cl), new AstModelLoader(classes, packages));
 
 		List<String> compileSourceRoots = project.getCompileSourceRoots();
 
@@ -119,6 +124,9 @@ public abstract class AbstractMojo extends org.apache.maven.plugin.AbstractMojo 
 		}
 	}
 
+	/**
+	 * @return a newly created compilationUnit
+	 */
 	public CompilationUnit newCu() {
 		CompilationUnit cu = new CompilationUnit(packageName);
 		cu.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolSolver);
@@ -160,7 +168,8 @@ public abstract class AbstractMojo extends org.apache.maven.plugin.AbstractMojo 
 				Files.walkFileTree(Paths.get(s), new SimpleFileVisitor<Path>() {
 					@Override
 					public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-						if (!file.getFileName().toString().endsWith(".java"))
+						String f = file.getFileName().toString();
+						if (!f.endsWith(".java"))
 							return FileVisitResult.CONTINUE;
 						parser.parse(file).ifSuccessful(p);
 						if (count == file.getNameCount() && file.startsWith(local)) {

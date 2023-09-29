@@ -3,10 +3,12 @@
  */
 package unknow.server.jaxb.handler;
 
+import unknow.server.jaxb.XmlSimpleHandler;
+
 /**
  * @author unknow
  */
-public class FloatHandler extends XmlDefaultHandler<Float> {
+public class FloatHandler implements XmlSimpleHandler<Float> {
 
 	public static final FloatHandler INSTANCE = new FloatHandler();
 

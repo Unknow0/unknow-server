@@ -3,10 +3,12 @@
  */
 package unknow.server.jaxb.handler;
 
+import unknow.server.jaxb.XmlSimpleHandler;
+
 /**
  * @author unknow
  */
-public class DoubleHandler extends XmlDefaultHandler<Double> {
+public class DoubleHandler implements XmlSimpleHandler<Double> {
 
 	public static final DoubleHandler INSTANCE = new DoubleHandler();
 

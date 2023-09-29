@@ -134,7 +134,7 @@ public class XmlLoader {
 	}
 
 	private XmlType createObject(ClassModel c) {
-		XmlAccessType type = c.annotation(XmlAccessorType.class).flatMap(a -> a.value()).map(XmlAccessType::valueOf).orElse(XmlAccessType.PUBLIC_MEMBER);
+		XmlAccessType type = c.annotation(XmlAccessorType.class).flatMap(a -> a.value()).map(a -> XmlAccessType.valueOf(a.asLiteral())).orElse(XmlAccessType.PUBLIC_MEMBER);
 
 		Map<String, FieldModel> fields = new HashMap<>();
 
@@ -199,12 +199,12 @@ public class XmlLoader {
 				} else if (attr.isPresent()) {
 					if (!(add(t) instanceof XmlTypeSimple))
 						throw new RuntimeException("only simple type allowed in attribute in '" + c.name() + "'");
-					n = attr.flatMap(a -> a.value("name")).map(i -> "##default".equals(i) ? null : i).orElse(n);
-					String ns = attr.flatMap(a -> a.value("namespace")).map(i -> "##default".equals(i) ? null : i).orElse("");
+					n = attr.flatMap(a -> a.member("name")).map(a -> a.asLiteral()).map(i -> "##default".equals(i) ? null : i).orElse(n);
+					String ns = attr.flatMap(a -> a.member("namespace")).map(a -> a.asLiteral()).map(i -> "##default".equals(i) ? null : i).orElse("");
 					attrs.add(new XmlElement(this, new QName(ns, n), t, m.name(), setter));
 				} else {
-					n = elem.flatMap(a -> a.value("name")).map(i -> "##default".equals(i) ? null : i).orElse(n);
-					String ns = elem.flatMap(a -> a.value("namespace")).map(i -> "##default".equals(i) ? null : i).orElse("");
+					n = elem.flatMap(a -> a.member("name")).map(a -> a.asLiteral()).map(i -> "##default".equals(i) ? null : i).orElse(n);
+					String ns = elem.flatMap(a -> a.member("namespace")).map(a -> a.asLiteral()).map(i -> "##default".equals(i) ? null : i).orElse("");
 					elems.add(new XmlElement(this, new QName(ns, n), t, m.name(), setter));
 				}
 			}
@@ -214,8 +214,8 @@ public class XmlLoader {
 			throw new RuntimeException("Mixed content not supported in " + c);
 
 		XmlElements elements;
-		XmlAccessOrder defaultOrder = c.annotation(XmlAccessorOrder.class).flatMap(a -> a.value()).map(a -> XmlAccessOrder.valueOf(a)).orElse(XmlAccessOrder.UNDEFINED);
-		List<String> propOrder = c.annotation(jakarta.xml.bind.annotation.XmlType.class).flatMap(a -> a.values("propOrder")).map(Arrays::asList).orElse(Collections.emptyList());
+		XmlAccessOrder defaultOrder = c.annotation(XmlAccessorOrder.class).flatMap(a -> a.value()).map(a -> a.asLiteral()).map(a -> XmlAccessOrder.valueOf(a)).orElse(XmlAccessOrder.UNDEFINED);
+		List<String> propOrder = c.annotation(jakarta.xml.bind.annotation.XmlType.class).flatMap(a -> a.member("propOrder")).map(a -> a.asArrayLiteral()).map(Arrays::asList).orElse(Collections.emptyList());
 		if (propOrder.isEmpty()) {
 			if (defaultOrder == XmlAccessOrder.ALPHABETICAL)
 				Collections.sort(elems, (a, b) -> a.getter().compareTo(b.getter()));
@@ -239,8 +239,8 @@ public class XmlLoader {
 
 		Optional<AnnotationModel> a = c.annotation(jakarta.xml.bind.annotation.XmlType.class);
 		Factory f = new Factory(
-				a.flatMap(v -> v.value("factoryClass")).filter(v -> !v.equals(jakarta.xml.bind.annotation.XmlType.DEFAULT.class.getName())).orElse(c.name()),
-				a.flatMap(v -> v.value("factoryMethod")).orElse(""));
+				a.flatMap(v -> v.member("factoryClass")).map(v -> v.asClass().asClass()).filter(v -> !v.isAssignableTo(jakarta.xml.bind.annotation.XmlType.DEFAULT.class.getName())).orElse(c),
+				a.flatMap(v -> v.member("factoryMethod")).map(v -> v.asLiteral()).orElse(""));
 		return new XmlTypeComplex(qname(c), c, f, attrs, elements, value);
 	}
 
@@ -250,8 +250,8 @@ public class XmlLoader {
 		String name = type.simpleName();
 		String ns = ""; // TODO get from package annotation
 		if (a.isPresent()) {
-			name = a.flatMap(v -> v.value("name")).filter(v -> !v.equals("##default")).orElse(name);
-			ns = a.flatMap(v -> v.value("namespace")).filter(v -> !v.equals("##default")).orElse(ns);
+			name = a.flatMap(v -> v.member("name")).map(v -> v.asLiteral()).filter(v -> !v.equals("##default")).orElse(name);
+			ns = a.flatMap(v -> v.member("namespace")).map(v -> v.asLiteral()).filter(v -> !v.equals("##default")).orElse(ns);
 		}
 		return new QName(name, ns);
 	}

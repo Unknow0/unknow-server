@@ -24,13 +24,16 @@ import unknow.server.maven.model.ConstructorModel;
 import unknow.server.maven.model.FieldModel;
 import unknow.server.maven.model.MethodModel;
 import unknow.server.maven.model.ModelLoader;
+import unknow.server.maven.model.PackageModel;
 import unknow.server.maven.model.TypeParamModel;
 
 /**
  * @author unknow
+ * @param <T>
  */
 public abstract class AstBaseClass<T extends TypeDeclaration<?>> implements ClassModel, AstMod {
 	protected final ModelLoader loader;
+	protected final PackageModel p;
 	protected final T c;
 	private String name;
 	private Collection<AnnotationModel> annotations;
@@ -38,9 +41,15 @@ public abstract class AstBaseClass<T extends TypeDeclaration<?>> implements Clas
 	private Collection<FieldModel> fields;
 	private Collection<MethodModel> methods;
 
-	protected AstBaseClass(ModelLoader loader, T c) {
+	protected AstBaseClass(ModelLoader loader, PackageDeclaration p, T c) {
 		this.loader = loader;
+		this.p = p == null ? null : new AstPackage(loader, p);
 		this.c = c;
+	}
+
+	@Override
+	public PackageModel parent() {
+		return p;
 	}
 
 	@Override

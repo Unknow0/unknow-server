@@ -42,11 +42,12 @@ public abstract class XmlRootHandler<T> implements XmlHandler<T> {
 	/**
 	 * write root element
 	 * 
-	 * @param w writer
-	 * @param t object
+	 * @param w        writer
+	 * @param t        object
+	 * @param listener
 	 * @throws XMLStreamException on error
 	 */
-	public final void writeRoot(XMLStreamWriter w, T t) throws XMLStreamException {
+	public final void writeRoot(XMLStreamWriter w, T t, MarshallerImpl listener) throws XMLStreamException {
 		Map<String, Integer> nscount = new HashMap<>();
 		nscount.put(qname.getNamespaceURI(), 1);
 		collectNS(n -> nscount.merge(n, 1, Integer::sum));
@@ -58,7 +59,7 @@ public abstract class XmlRootHandler<T> implements XmlHandler<T> {
 		for (Entry<String, String> e : ns.entrySet())
 			w.writeNamespace(e.getKey(), e.getValue());
 
-		write(w, t);
+		write(w, t, listener);
 	}
 
 	public static Map<String, String> buildNsMapping(Map<String, Integer> ns) {

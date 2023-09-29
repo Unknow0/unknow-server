@@ -10,10 +10,16 @@ import unknow.server.maven.model.TypeModel;
  * @author unknow
  */
 public class JvmModelLoader extends ModelLoader {
+	/** global jvm loader */
 	public static final JvmModelLoader GLOBAL = new JvmModelLoader(JvmModelLoader.class.getClassLoader());
 
 	private final ClassLoader cl;
 
+	/**
+	 * create new JvmModelLoader
+	 * 
+	 * @param cl
+	 */
 	public JvmModelLoader(ClassLoader cl) {
 		this.cl = cl;
 	}

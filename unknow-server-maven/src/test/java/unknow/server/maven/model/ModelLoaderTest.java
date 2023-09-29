@@ -78,7 +78,7 @@ public class ModelLoaderTest {
 				+ "}").getResult().orElse(null);
 
 		ClassOrInterfaceDeclaration ast = cu.findFirst(ClassOrInterfaceDeclaration.class, c -> "StringList".equals(c.getNameAsString())).orElse(null);
-		AstClass astList = new AstClass(JvmModelLoader.GLOBAL, ast, new TypeModel[0]);
+		AstClass astList = new AstClass(JvmModelLoader.GLOBAL, null, ast, new TypeModel[0]);
 
 		JvmClass jvmList = new JvmClass(JvmModelLoader.GLOBAL, StringList.class, new TypeModel[0]);
 		return Stream.of(Arguments.of(jvmList), Arguments.of(astList));

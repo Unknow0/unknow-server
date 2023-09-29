@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.github.javaparser.ast.PackageDeclaration;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedReferenceTypeDeclaration;
 
@@ -27,14 +28,15 @@ public class AstClass extends AstBaseClass<ClassOrInterfaceDeclaration> {
 	/**
 	 * create new AstClass
 	 * 
-	 * @param loader the loader
-	 * @param cl     the class declaration
+	 * @param loader      the loader
+	 * @param p           the package
+	 * @param cl          the class declaration
+	 * @param paramsClass class parameter
 	 */
-	public AstClass(ModelLoader loader, ClassOrInterfaceDeclaration cl, TypeModel[] paramsClass) {
-		super(loader, cl);
+	public AstClass(ModelLoader loader, PackageDeclaration p, ClassOrInterfaceDeclaration cl, TypeModel[] paramsClass) {
+		super(loader, p, cl);
 		this.paramsClass = paramsClass;
 	}
-
 
 	@Override
 	public ClassModel superType() {

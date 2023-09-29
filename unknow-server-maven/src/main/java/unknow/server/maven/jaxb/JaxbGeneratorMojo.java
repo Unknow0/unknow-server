@@ -17,6 +17,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -65,9 +66,13 @@ import com.github.javaparser.ast.stmt.WhileStmt;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 
 import jakarta.xml.bind.JAXBContextFactory;
+import jakarta.xml.bind.Marshaller;
+import jakarta.xml.bind.Unmarshaller;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import unknow.server.jaxb.ContextFactory;
+import unknow.server.jaxb.MarshallerImpl;
 import unknow.server.jaxb.StrReader;
+import unknow.server.jaxb.UnmarshallerImpl;
 import unknow.server.jaxb.XmlHandler;
 import unknow.server.jaxb.XmlRootHandler;
 import unknow.server.jaxb.XmlSimpleHandler;
@@ -90,6 +95,7 @@ import unknow.server.maven.jaxb.model.XmlLoader;
 import unknow.server.maven.jaxb.model.XmlType;
 import unknow.server.maven.jaxb.model.XmlTypeComplex;
 import unknow.server.maven.model.AnnotationModel;
+import unknow.server.maven.model.MethodModel;
 import unknow.server.maven.model.TypeModel;
 
 /**
@@ -179,36 +185,6 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 					new ObjectCreationExpr(null, types.getClass(QName.class), Utils.list(new StringLiteralExpr(qname.getNamespaceURI()), new StringLiteralExpr(qname.getLocalPart()))))));
 		}
 
-		cl.addMethod("collectNS", Utils.PUBLIC).addMarkerAnnotation(Override.class)
-				.addParameter(types.getClass(Consumer.class, types.get(String.class)), "c")
-				.getBody().get()
-				.addStatement(new MethodCallExpr(new NameExpr("c"), "accept", Utils.list(new StringLiteralExpr("http://www.w3.org/2001/XMLSchema"))));
-
-		cl.addMethod("write", Utils.PUBLIC).addMarkerAnnotation(Override.class)
-				.addThrownException(types.getClass(XMLStreamException.class))
-				.addParameter(types.get(XMLStreamWriter.class), "w").addParameter(types.get(t), "t")
-				.getBody().get()
-				.addStatement(new MethodCallExpr(new NameExpr("w"), "writeCharacters", Utils.list(new MethodCallExpr(null, "toString", Utils.list(new NameExpr("t"))))));
-
-		cl.addMethod("read", Utils.PUBLIC).addMarkerAnnotation(Override.class)
-				.addThrownException(types.getClass(XMLStreamException.class))
-				.addParameter(types.get(XMLStreamReader.class), "r").setType(types.get(t))
-				.getBody().get()
-				.addStatement(Utils.assign(types.get(t), "o", new NullLiteralExpr()))
-				.addStatement(new WhileStmt(new MethodCallExpr(new NameExpr("r"), "hasNext"),
-						new BlockStmt()
-								.addStatement(Utils.assign(types.get(int.class), "n", new MethodCallExpr(new NameExpr("r"), "next")))
-								.addStatement(new IfStmt(
-										new BinaryExpr(new NameExpr("n"), new FieldAccessExpr(new TypeExpr(types.get(XMLStreamConstants.class)), "CHARACTERS"), BinaryExpr.Operator.EQUALS),
-										new BlockStmt()
-												.addStatement(new AssignExpr(new NameExpr("o"), new MethodCallExpr(null, "toObject", Utils.list(new MethodCallExpr(new TypeExpr(types.get(StrReader.class)), "read", Utils.list(new NameExpr("r"))))), AssignExpr.Operator.ASSIGN))
-												.addStatement(new AssignExpr(new NameExpr("n"), new MethodCallExpr(new NameExpr("r"), "getEventType"), AssignExpr.Operator.ASSIGN)),
-										null))
-								.addStatement(new IfStmt(
-										new BinaryExpr(new NameExpr("n"), new FieldAccessExpr(new TypeExpr(types.get(XMLStreamConstants.class)), "CHARACTERS"), BinaryExpr.Operator.EQUALS),
-										new ReturnStmt(new NameExpr("o")), null))))
-				.addStatement(new ThrowStmt(new ObjectCreationExpr(null, types.getClass(XMLStreamException.class), Utils.list(new StringLiteralExpr("EOF")))));
-
 		NodeList<SwitchEntry> list = xml.entries().stream().map(e -> new SwitchEntry().setLabels(Utils.list(new NameExpr(e.name()))).addStatement(new ReturnStmt(new StringLiteralExpr(e.value())))).collect(Collectors.toCollection(() -> Utils.list()));
 		list.add(new SwitchEntry().addStatement(new ThrowStmt(new ObjectCreationExpr(null, types.getClass(XMLStreamException.class), Utils.list(new StringLiteralExpr("Unsupported enum constant"))))));
 		cl.addMethod("toString", Utils.PUBLIC).addMarkerAnnotation(Override.class)
@@ -287,7 +263,10 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 	private void buildWriter(ClassOrInterfaceDeclaration cl, TypeCache types, XmlTypeComplex xml) {
 		BlockStmt b = cl.addMethod("write", Utils.PUBLIC).addMarkerAnnotation(Override.class).addThrownException(types.get(XMLStreamException.class).asClassOrInterfaceType())
 				.addParameter(types.get(XMLStreamWriter.class), "w").addParameter(types.get(xml.type()), "t")
+				.addParameter(types.get(MarshallerImpl.class), "listener")
 				.getBody().get();
+		xml.type().asClass().method("beforeMarshal", loader.get(Marshaller.class.getName())).ifPresent(m -> b.addStatement(new MethodCallExpr(new NameExpr("o"), "beforeMarshal", Utils.list(new NameExpr("listener")))));
+		b.addStatement(new MethodCallExpr(new NameExpr("listener"), "beforeMarshal", Utils.list(new NameExpr("t"))));
 
 		if (!xml.getAttributes().isEmpty()) {
 			b.addStatement(new VariableDeclarationExpr(types.get(String.class), "s"));
@@ -307,7 +286,7 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 						new BlockStmt().addStatement(Utils.assign(types.get(e.type()), "o", new MethodCallExpr(new NameExpr("t"), e.getter())))
 								.addStatement(new IfStmt(new BinaryExpr(new NameExpr("o"), new NullLiteralExpr(), BinaryExpr.Operator.EQUALS),
 										new BlockStmt().addStatement(new MethodCallExpr(new NameExpr("w"), "writeStartElement", Utils.list(Utils.text(e.ns()), Utils.text(e.name()))))
-												.addStatement(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(handlers.get(e.xmlType()))), "INSTANCE"), "write", Utils.list(new NameExpr("w"), new NameExpr("o"))))
+												.addStatement(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(handlers.get(e.xmlType()))), "INSTANCE"), "write", Utils.list(new NameExpr("w"), new NameExpr("o"), new NameExpr("listener"))))
 												.addStatement(new MethodCallExpr(new NameExpr("w"), "writeEndElement", Utils.list())),
 										null)));
 			}
@@ -316,6 +295,9 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 			XmlElement value = xml.getValue();
 			b.addStatement(new MethodCallExpr(new NameExpr("w"), "writeCharacters", Utils.list(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(handlers.get(value.xmlType()))), "INSTANCE"), "toString", Utils.list(new MethodCallExpr(new NameExpr("t"), value.getter()))))));
 		}
+
+		xml.type().asClass().method("afterMarshal", loader.get(Marshaller.class.getName())).ifPresent(m -> b.addStatement(new MethodCallExpr(new NameExpr("o"), "afterMarshal", Utils.list(new NameExpr("listener")))));
+		b.addStatement(new MethodCallExpr(new NameExpr("listener"), "afterMarshal", Utils.list(new NameExpr("t"))));
 	}
 
 	/**
@@ -332,8 +314,11 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 
 		BlockStmt b = cl.addMethod("read", Utils.PUBLIC).addMarkerAnnotation(Override.class).addThrownException(types.get(XMLStreamException.class).asClassOrInterfaceType())
 				.addParameter(types.get(XMLStreamReader.class), "r").setType(types.get(xml.type()))
+				.addParameter(types.get(Object.class), "parent").addParameter(types.get(UnmarshallerImpl.class), "listener")
 				.getBody().get()
 				.addStatement(Utils.assign(types.get(xml.type()), "o", create));
+		xml.type().asClass().method("beforeUnmarshal", loader.get(Unmarshaller.class.getName()), loader.get(Object.class.getName())).ifPresent(m -> b.addStatement(new MethodCallExpr(new NameExpr("o"), "beforeUnmarshal", Utils.list(new NameExpr("listener"), new NameExpr("parent")))));
+		b.addStatement(new MethodCallExpr(new NameExpr("listener"), "beforeUnmarshal", Utils.list(new NameExpr("o"), new NameExpr("parent"))));
 
 		if (!xml.getAttributes().isEmpty()) {
 			IfStmt i = null;
@@ -352,9 +337,14 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 					new BlockStmt().addStatement(Utils.assign(types.get(QName.class), "n", new MethodCallExpr(new NameExpr("r"), "getAttributeName", Utils.list(new NameExpr("i"))))).addStatement(i)));
 		}
 
+		BlockStmt r = new BlockStmt();
+		xml.type().asClass().method("afterUnmarshal", loader.get(Unmarshaller.class.getName()), loader.get(Object.class.getName())).ifPresent(m -> b.addStatement(new MethodCallExpr(new NameExpr("o"), "beforeUnmarshal", Utils.list(new NameExpr("listener"), new NameExpr("parent")))));
+
 		IfStmt i = new IfStmt(
 				new BinaryExpr(new NameExpr("n"), new FieldAccessExpr(new TypeExpr(types.get(XMLStreamConstants.class)), "END_ELEMENT"), BinaryExpr.Operator.EQUALS),
-				new ReturnStmt(new NameExpr("o")), null);
+				r.addStatement(new MethodCallExpr(new NameExpr("listener"), "afterUnmarshal", Utils.list(new NameExpr("o"), new NameExpr("parent"))))
+						.addStatement(new ReturnStmt(new NameExpr("o"))),
+				null);
 
 		if (xml.getElements().iterator().hasNext()) {
 			int c = 0;
@@ -362,7 +352,7 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 			for (XmlElement e : xml.getElements()) {
 				j = new IfStmt(new MethodCallExpr(new NameExpr(e.name() + "$e" + c++), "equals", Utils.list(new NameExpr("q"))),
 						new ExpressionStmt(new MethodCallExpr(new NameExpr("o"), e.setter(), Utils.list(
-								new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(handlers.get(e.xmlType()))), "INSTANCE"), "read", Utils.list(new NameExpr("r")))))),
+								new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(handlers.get(e.xmlType()))), "INSTANCE"), "read", Utils.list(new NameExpr("r"), new NameExpr("o"), new NameExpr("listener")))))),
 						j);
 			}
 
@@ -446,8 +436,8 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 		// TODO
 //		XmlSchema
 		return new QName(
-				r.value("namespace").filter(v -> !"##default".equals(v)).orElse(""),
-				r.value("name").filter(v -> !"##default".equals(v)).orElse(t.simpleName()));
+				r.member("namespace").map(v -> v.asLiteral()).filter(v -> !"##default".equals(v)).orElse(""),
+				r.member("name").map(v -> v.asLiteral()).filter(v -> !"##default".equals(v)).orElse(t.simpleName()));
 	}
 
 }

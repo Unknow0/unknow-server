@@ -14,6 +14,10 @@ import unknow.server.maven.model.ParamModel;
 import unknow.server.maven.model.TypeModel;
 import unknow.server.maven.model.util.WithParent;
 
+/**
+ * @author unknow
+ * @param <T>
+ */
 public class JvmParam<T extends WithParent<ClassModel>> implements ParamModel<T> {
 	private final JvmModelLoader loader;
 	private final T m;
@@ -21,6 +25,13 @@ public class JvmParam<T extends WithParent<ClassModel>> implements ParamModel<T>
 	private TypeModel type;
 	private Collection<AnnotationModel> annotations;
 
+	/**
+	 * create new JvmParam
+	 * 
+	 * @param loader
+	 * @param m
+	 * @param p
+	 */
 	public JvmParam(JvmModelLoader loader, T m, Parameter p) {
 		this.loader = loader;
 		this.m = m;

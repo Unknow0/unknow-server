@@ -5,10 +5,12 @@ package unknow.server.jaxb.handler;
 
 import java.math.BigDecimal;
 
+import unknow.server.jaxb.XmlSimpleHandler;
+
 /**
  * @author unknow
  */
-public class BigDecimalHandler extends XmlDefaultHandler<BigDecimal> {
+public class BigDecimalHandler implements XmlSimpleHandler<BigDecimal> {
 
 	public static final BigDecimalHandler INSTANCE = new BigDecimalHandler();
 

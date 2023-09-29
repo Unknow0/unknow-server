@@ -29,6 +29,7 @@ public class AstConstructor implements ConstructorModel, AstMod {
 	/**
 	 * create new AstMethod
 	 * 
+	 * @param parent
 	 * @param loader
 	 * @param c
 	 */
@@ -56,6 +57,7 @@ public class AstConstructor implements ConstructorModel, AstMod {
 		return c;
 	}
 
+	@SuppressWarnings("unused")
 	@Override
 	public List<ParamModel<ConstructorModel>> parameters() {
 		if (params == null)

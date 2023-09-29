@@ -23,6 +23,11 @@ public class AncestrorIterator implements Iterator<ClassModel> {
 	private final Queue<ClassModel> queue;
 	private final Set<String> saw;
 
+	/**
+	 * create new AncestrorIterator
+	 * 
+	 * @param clazz
+	 */
 	public AncestrorIterator(ClassModel clazz) {
 		this.queue = new LinkedBlockingQueue<>();
 		this.queue.add(clazz);

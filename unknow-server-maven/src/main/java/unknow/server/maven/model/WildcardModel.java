@@ -10,11 +10,18 @@ import java.util.Collections;
  * @author unknow
  */
 public class WildcardModel implements TypeModel {
+	/** empty wildcard */
 	public static final WildcardModel EMPTY = new WildcardModel(null, false);
 
 	private final TypeModel bound;
 	private final boolean upper;
 
+	/**
+	 * create new WildcardModel
+	 * 
+	 * @param bound
+	 * @param upper
+	 */
 	public WildcardModel(TypeModel bound, boolean upper) {
 		this.bound = bound;
 		this.upper = upper;
@@ -30,10 +37,16 @@ public class WildcardModel implements TypeModel {
 		return "?";
 	}
 
+	/**
+	 * @return the wound type (after ?)
+	 */
 	public TypeModel bound() {
 		return bound;
 	}
 
+	/**
+	 * @return if true extends else super
+	 */
 	public boolean isUpperBound() {
 		return upper;
 	}
