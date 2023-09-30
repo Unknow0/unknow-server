@@ -3,6 +3,8 @@
  */
 package unknow.server.http.test.xml;
 
+import java.util.List;
+
 import jakarta.xml.bind.annotation.XmlAccessType;
 import jakarta.xml.bind.annotation.XmlAccessorType;
 import jakarta.xml.bind.annotation.XmlAttribute;
@@ -18,7 +20,7 @@ public class Root {
 	private int value;
 
 	@XmlElement
-	private String elem;
+	private List<String> elem;
 
 	public int getValue() {
 		return value;
@@ -28,11 +30,11 @@ public class Root {
 		this.value = value;
 	}
 
-	public String getElem() {
+	public List<String> getElem() {
 		return elem;
 	}
 
-	public void setElem(String elem) {
+	public void setElem(List<String> elem) {
 		this.elem = elem;
 	}
 

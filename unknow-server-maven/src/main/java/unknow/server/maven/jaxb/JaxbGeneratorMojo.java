@@ -14,10 +14,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -39,6 +40,8 @@ import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
+import com.github.javaparser.ast.expr.ArrayAccessExpr;
+import com.github.javaparser.ast.expr.ArrayInitializerExpr;
 import com.github.javaparser.ast.expr.AssignExpr;
 import com.github.javaparser.ast.expr.BinaryExpr;
 import com.github.javaparser.ast.expr.ClassExpr;
@@ -55,15 +58,19 @@ import com.github.javaparser.ast.expr.TypeExpr;
 import com.github.javaparser.ast.expr.UnaryExpr;
 import com.github.javaparser.ast.expr.VariableDeclarationExpr;
 import com.github.javaparser.ast.stmt.BlockStmt;
+import com.github.javaparser.ast.stmt.ContinueStmt;
 import com.github.javaparser.ast.stmt.ExpressionStmt;
+import com.github.javaparser.ast.stmt.ForEachStmt;
 import com.github.javaparser.ast.stmt.ForStmt;
 import com.github.javaparser.ast.stmt.IfStmt;
 import com.github.javaparser.ast.stmt.ReturnStmt;
+import com.github.javaparser.ast.stmt.Statement;
 import com.github.javaparser.ast.stmt.SwitchEntry;
 import com.github.javaparser.ast.stmt.SwitchStmt;
 import com.github.javaparser.ast.stmt.ThrowStmt;
 import com.github.javaparser.ast.stmt.WhileStmt;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
+import com.github.javaparser.ast.type.Type;
 
 import jakarta.xml.bind.JAXBContextFactory;
 import jakarta.xml.bind.Marshaller;
@@ -89,13 +96,13 @@ import unknow.server.jaxb.handler.StringHandler;
 import unknow.server.maven.AbstractMojo;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
+import unknow.server.maven.jaxb.model.XmlCollection;
 import unknow.server.maven.jaxb.model.XmlElement;
 import unknow.server.maven.jaxb.model.XmlEnum;
 import unknow.server.maven.jaxb.model.XmlLoader;
 import unknow.server.maven.jaxb.model.XmlType;
 import unknow.server.maven.jaxb.model.XmlTypeComplex;
 import unknow.server.maven.model.AnnotationModel;
-import unknow.server.maven.model.MethodModel;
 import unknow.server.maven.model.TypeModel;
 
 /**
@@ -232,8 +239,15 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 		for (XmlElement e : xml.getAttributes())
 			cl.addFieldWithInitializer(types.get(QName.class), e.name() + "$a" + i++, new ObjectCreationExpr(null, types.getClass(QName.class), Utils.list(new StringLiteralExpr(e.ns()), new StringLiteralExpr(e.name()))), Utils.PSF);
 		i = 0;
-		for (XmlElement e : xml.getElements())
+		Map<TypeModel, String> emptyArray = new HashMap<>();
+		for (XmlElement e : xml.getElements()) {
 			cl.addFieldWithInitializer(types.get(QName.class), e.name() + "$e" + i++, new ObjectCreationExpr(null, types.getClass(QName.class), Utils.list(new StringLiteralExpr(e.ns()), new StringLiteralExpr(e.name()))), Utils.PSF);
+			if (e.xmlType() instanceof XmlCollection && e.type().isArray()) {
+				String name = "EMPTY$" + emptyArray.size();
+				emptyArray.put(e.type(), name);
+				cl.addFieldWithInitializer(types.get(e.type()), name, new ArrayInitializerExpr(), Utils.PSF);
+			}
+		}
 
 		BlockStmt b = cl.addConstructor(Modifier.Keyword.PRIVATE).getBody();
 		QName qname = getRootQN(t);
@@ -255,7 +269,7 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 			b.addStatement(new MethodCallExpr(new NameExpr("c"), "accept", Utils.list(new StringLiteralExpr(a.ns()))));
 
 		buildWriter(cl, types, xml);
-		buildReader(cl, types, xml);
+		buildReader(cl, types, xml, emptyArray);
 
 		out.save(cu);
 	}
@@ -280,16 +294,40 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 			}
 		}
 
-		if (xml.getElements() != null) {
-			for (XmlElement e : xml.getElements()) {
-				b.addStatement(
-						new BlockStmt().addStatement(Utils.assign(types.get(e.type()), "o", new MethodCallExpr(new NameExpr("t"), e.getter())))
-								.addStatement(new IfStmt(new BinaryExpr(new NameExpr("o"), new NullLiteralExpr(), BinaryExpr.Operator.EQUALS),
-										new BlockStmt().addStatement(new MethodCallExpr(new NameExpr("w"), "writeStartElement", Utils.list(Utils.text(e.ns()), Utils.text(e.name()))))
-												.addStatement(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(handlers.get(e.xmlType()))), "INSTANCE"), "write", Utils.list(new NameExpr("w"), new NameExpr("o"), new NameExpr("listener"))))
-												.addStatement(new MethodCallExpr(new NameExpr("w"), "writeEndElement", Utils.list())),
-										null)));
+		int i = 0;
+		for (XmlElement e : xml.getElements()) {
+			String n = "o$" + i++;
+			BlockStmt w;
+
+			XmlType t = e.xmlType();
+			if (t instanceof XmlCollection) {
+				XmlCollection c = (XmlCollection) t;
+				BlockStmt p = new BlockStmt()
+						.addStatement(new IfStmt(
+								new BinaryExpr(new NameExpr("e"), new NullLiteralExpr(), BinaryExpr.Operator.EQUALS),
+								new ContinueStmt(), null))
+						.addStatement(new MethodCallExpr(new NameExpr("w"), "writeStartElement", Utils.list(Utils.text(e.ns()), Utils.text(e.name()))))
+						.addStatement(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(handlers.get(c.component()))), "INSTANCE"), "write", Utils.list(new NameExpr("w"), new NameExpr("e"), new NameExpr("listener"))))
+						.addStatement(new MethodCallExpr(new NameExpr("w"), "writeEndElement", Utils.list()));
+
+				if (t.type().isArray()) {
+					p.addStatement(0, Utils.assign(types.get(c.component().type()), "e", new ArrayAccessExpr(new NameExpr(n), new NameExpr("i"))));
+					w = new BlockStmt().addStatement(
+							new ForStmt(Utils.list(Utils.assign(types.get("int"), "i", new IntegerLiteralExpr("0"))), new BinaryExpr(new NameExpr("i"), new FieldAccessExpr(new NameExpr(n), "length"), BinaryExpr.Operator.LESS), Utils.list(new UnaryExpr(new NameExpr("i"), UnaryExpr.Operator.POSTFIX_INCREMENT)),
+									p));
+				} else {
+					w = new BlockStmt().addStatement(new ForEachStmt(new VariableDeclarationExpr(types.get(c.component().type()), "e"), new NameExpr(n), p));
+				}
+			} else {
+				w = new BlockStmt()
+						.addStatement(new MethodCallExpr(new NameExpr("w"), "writeStartElement", Utils.list(Utils.text(e.ns()), Utils.text(e.name()))))
+						.addStatement(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(handlers.get(e.xmlType()))), "INSTANCE"), "write", Utils.list(new NameExpr("w"), new NameExpr(n), new NameExpr("listener"))))
+						.addStatement(new MethodCallExpr(new NameExpr("w"), "writeEndElement", Utils.list()));
 			}
+			b.addStatement(Utils.assign(types.get(e.type()), n, new MethodCallExpr(new NameExpr("t"), e.getter())))
+					.addStatement(new IfStmt(new BinaryExpr(new NameExpr(n), new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS),
+							w,
+							null));
 		}
 		if (xml.getValue() != null) {
 			XmlElement value = xml.getValue();
@@ -304,8 +342,9 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 	 * @param cl
 	 * @param types
 	 * @param xml
+	 * @param emptyArray
 	 */
-	private void buildReader(ClassOrInterfaceDeclaration cl, TypeCache types, XmlTypeComplex xml) {
+	private void buildReader(ClassOrInterfaceDeclaration cl, TypeCache types, XmlTypeComplex xml, Map<TypeModel, String> emptyArray) {
 		Expression create;
 		if ("".equals(xml.factory().method))
 			create = new ObjectCreationExpr(null, types.getClass(xml.factory().clazz), Utils.list());
@@ -320,6 +359,12 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 		xml.type().asClass().method("beforeUnmarshal", loader.get(Unmarshaller.class.getName()), loader.get(Object.class.getName())).ifPresent(m -> b.addStatement(new MethodCallExpr(new NameExpr("o"), "beforeUnmarshal", Utils.list(new NameExpr("listener"), new NameExpr("parent")))));
 		b.addStatement(new MethodCallExpr(new NameExpr("listener"), "beforeUnmarshal", Utils.list(new NameExpr("o"), new NameExpr("parent"))));
 
+		for (XmlElement e : xml.getElements()) {
+			if (!(e.xmlType() instanceof XmlCollection))
+				continue;
+			Type t = e.type().isArray() ? types.getClass(List.class, types.get(e.type().asArray().type())) : types.get(e.type());
+			b.addStatement(Utils.assign(t, "l$" + e.name(), new NullLiteralExpr()));
+		}
 		if (!xml.getAttributes().isEmpty()) {
 			IfStmt i = null;
 			int c = 0;
@@ -338,6 +383,16 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 		}
 
 		BlockStmt r = new BlockStmt();
+		for (XmlElement e : xml.getElements()) {
+			if (!(e.xmlType() instanceof XmlCollection))
+				continue;
+			Expression v = new NameExpr("l$" + e.name());
+			if (e.type().isArray())
+				v = new MethodCallExpr(v, "toArray", Utils.list(new NameExpr(emptyArray.get(e.type()))));
+			r.addStatement(new IfStmt(new BinaryExpr(new NameExpr("l$" + e.name()), new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS),
+					new ExpressionStmt(new MethodCallExpr(new NameExpr("o"), e.setter(), Utils.list(v))), null));
+		}
+
 		xml.type().asClass().method("afterUnmarshal", loader.get(Unmarshaller.class.getName()), loader.get(Object.class.getName())).ifPresent(m -> b.addStatement(new MethodCallExpr(new NameExpr("o"), "beforeUnmarshal", Utils.list(new NameExpr("listener"), new NameExpr("parent")))));
 
 		IfStmt i = new IfStmt(
@@ -350,10 +405,21 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 			int c = 0;
 			IfStmt j = null;
 			for (XmlElement e : xml.getElements()) {
-				j = new IfStmt(new MethodCallExpr(new NameExpr(e.name() + "$e" + c++), "equals", Utils.list(new NameExpr("q"))),
-						new ExpressionStmt(new MethodCallExpr(new NameExpr("o"), e.setter(), Utils.list(
-								new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(handlers.get(e.xmlType()))), "INSTANCE"), "read", Utils.list(new NameExpr("r"), new NameExpr("o"), new NameExpr("listener")))))),
-						j);
+				Statement s;
+				if (e.xmlType() instanceof XmlCollection) {
+					XmlCollection t = (XmlCollection) e.xmlType();
+					NameExpr n = new NameExpr("l$" + e.name());
+					s = new BlockStmt()
+							.addStatement(new IfStmt(
+									new BinaryExpr(n, new NullLiteralExpr(), BinaryExpr.Operator.EQUALS),
+									new ExpressionStmt(new AssignExpr(n, new ObjectCreationExpr(null, types.getClass(e.type().isAssignableTo(Set.class) ? HashSet.class : ArrayList.class, TypeCache.EMPTY), Utils.list()), AssignExpr.Operator.ASSIGN)), null))
+							.addStatement(new MethodCallExpr(n, "add", Utils.list(
+									new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(handlers.get(t.component()))), "INSTANCE"), "read", Utils.list(new NameExpr("r"), new NameExpr("o"), new NameExpr("listener"))))));
+				} else
+					s = new ExpressionStmt(new MethodCallExpr(new NameExpr("o"), e.setter(), Utils.list(
+							new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(handlers.get(e.xmlType()))), "INSTANCE"), "read", Utils.list(new NameExpr("r"), new NameExpr("o"), new NameExpr("listener"))))));
+
+				j = new IfStmt(new MethodCallExpr(new NameExpr(e.name() + "$e" + c++), "equals", Utils.list(new NameExpr("q"))), s, j);
 			}
 
 			i = new IfStmt(
@@ -387,10 +453,11 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 
 		BlockStmt b = new BlockStmt();
 		for (Entry<String, XmlType> t : xmlLoader.entries()) {
-			if ("http://www.w3.org/2001/XMLSchema".equals(t.getValue().ns()))
+			String h = handlers.get(t.getValue());
+			if (h == null || "http://www.w3.org/2001/XMLSchema".equals(t.getValue().ns()))
 				continue;
 			TypeModel type = loader.get(t.getKey());
-			b.addStatement(new MethodCallExpr(null, "register", Utils.list(new ClassExpr(types.get(t.getKey())), new FieldAccessExpr(new TypeExpr(types.get(handlers.get(t.getValue()))), "INSTANCE"))));
+			b.addStatement(new MethodCallExpr(null, "register", Utils.list(new ClassExpr(types.get(t.getKey())), new FieldAccessExpr(new TypeExpr(types.get(h)), "INSTANCE"))));
 			classes.computeIfAbsent(type.packageName(), k -> new ArrayList<>()).add(type);
 		}
 

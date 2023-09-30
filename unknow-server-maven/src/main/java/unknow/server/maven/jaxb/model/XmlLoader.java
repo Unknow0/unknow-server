@@ -58,6 +58,7 @@ public class XmlLoader {
 	public static final XmlTypeSimple LONG = new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "long"), PrimitiveModel.LONG);
 	public static final XmlTypeSimple FLOAT = new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "float"), PrimitiveModel.FLOAT);
 	public static final XmlTypeSimple DOUBLE = new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "double"), PrimitiveModel.DOUBLE);
+	public static final XmlTypeSimple CHAR = new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "string"), PrimitiveModel.CHAR);
 	public static final XmlTypeSimple STRING = new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "string"), JvmModelLoader.GLOBAL.get(String.class.getName()));
 	public static final XmlTypeSimple BIGINT = new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "integer"), JvmModelLoader.GLOBAL.get(BigInteger.class.getName()));
 	public static final XmlTypeSimple BIGDEC = new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "decimal"), JvmModelLoader.GLOBAL.get(BigDecimal.class.getName()));
@@ -79,6 +80,8 @@ public class XmlLoader {
 		types.put(PrimitiveModel.FLOAT.boxed().name(), FLOAT);
 		types.put(PrimitiveModel.DOUBLE.name(), DOUBLE);
 		types.put(PrimitiveModel.DOUBLE.boxed().name(), DOUBLE);
+		types.put(PrimitiveModel.CHAR.name(), CHAR);
+		types.put(PrimitiveModel.CHAR.boxed().name(), CHAR);
 		types.put(String.class.getName(), STRING);
 		types.put(BigInteger.class.getName(), BIGINT);
 		types.put(BigDecimal.class.getName(), BIGDEC);
@@ -102,7 +105,7 @@ public class XmlLoader {
 	}
 
 	private XmlType create(TypeModel type) {
-		if (type.isPrimitive()) // TODO char ?
+		if (type.isPrimitive()) // should not happen
 			throw new RuntimeException("Unsupported primitive " + type);
 		if (type.isEnum()) {
 			// TODO get type
@@ -110,12 +113,12 @@ public class XmlLoader {
 			return new XmlEnum(qname(type), type.asEnum(), XmlLoader.STRING);
 		}
 		if (type.isArray())
-			return new XmlTypeSimple(new QName(""), null); // TODO
+			return new XmlCollection(type, add(type.asArray().type()));
 
 		ClassModel cl = type.asClass();
-		if (cl.isBoxedPrimitive()) // TODO Character
+		if (cl.isBoxedPrimitive()) // should not happen
 			throw new RuntimeException("Unsupported boxed primitive " + type);
-		if (cl.isAssignableTo(CharSequence.class))
+		if (cl.isAssignableTo(String.class))
 			return STRING;
 
 		if (cl.isAssignableTo(Duration.class.getName()))
@@ -127,8 +130,9 @@ public class XmlLoader {
 		if (cl.isAssignableTo(LocalDateTime.class) || cl.isAssignableTo(OffsetDateTime.class) || cl.isAssignableTo(ZonedDateTime.class))
 			return new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "dateTime"), cl);
 
-		if (cl.isAssignableTo(Collection.class.getName()))
-			return new XmlTypeSimple(new QName(""), null); // TODO
+		ClassModel col = cl.ancestor(Collection.class.getName());
+		if (col != null)
+			return new XmlCollection(type, add(col.parameter(0).type()));
 
 		return createObject(cl);
 	}

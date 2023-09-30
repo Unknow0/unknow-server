@@ -21,18 +21,18 @@ public class Complex {
 		_B
 	}
 
-	private E e;
+	private E[] e;
 
 	private String a;
 	private String b;
 
 	private Complex loop;
 
-	public E getE() {
+	public E[] getE() {
 		return e;
 	}
 
-	public void setE(E e) {
+	public void setE(E[] e) {
 		this.e = e;
 	}
 
