@@ -9,21 +9,6 @@
 	<build>
 		<plugins>
 			<plugin>
-				<artifactId>maven-clean-plugin</artifactId>
-				<configuration>
-					<filesets>
-						<fileset>
-							<directory>src/main/java/unknow/server/http/test/generated</directory>
-							<followSymlinks>false</followSymlinks>
-							<useDefaultExcludes>true</useDefaultExcludes>
-							<includes>
-								<include>*.java</include>
-							</includes>
-						</fileset>
-					</filesets>
-				</configuration>
-			</plugin>
-			<plugin>
 				<groupId>unknow.server</groupId>
 				<artifactId>unknow-server-maven</artifactId>
 				<version>${project.version}</version>
@@ -31,7 +16,7 @@
 					<execution>
 						<goals>
 							<goal>jaxb-generator</goal>
-							<goal>jaxws-generator</goal>
+							<!--goal>jaxws-generator</goal-->
 							<goal>jaxrs-generator</goal>
 							<goal>servlet-generator</goal>
 						</goals>

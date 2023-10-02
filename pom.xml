@@ -17,6 +17,7 @@
 		<jackson.version>2.15.2</jackson.version>
 		<unknow-sax.version>0.0.3</unknow-sax.version>
 		<prometheus.version>0.16.0</prometheus.version>
+		<jmh.version>1.37</jmh.version>
 	</properties>
 	<distributionManagement>
 		<repository>
@@ -31,15 +32,16 @@
 		</repository>
 	</repositories>
 	<modules>
+		<module>unknow-server-bench</module>
+		<module>unknow-server-maven</module>
 		<module>unknow-server-util</module>
+		<module>unknow-server-jaxb</module>
 		<module>unknow-nio</module>
 		<module>unknow-http</module>
 		<module>unknow-protobuf</module>
-		<module>unknow-server-maven</module>
 		<module>unknow-http-test</module>
 		<module>unknow-http-jaxws</module>
 		<module>unknow-http-jaxrs</module>
-		<module>unknow-server-jaxb</module>
 	</modules>
 	<build>
 		<pluginManagement>
@@ -54,6 +56,11 @@
 								<groupId>info.picocli</groupId>
 								<artifactId>picocli-codegen</artifactId>
 								<version>${picocli.version}</version>
+							</path>
+							<path>
+								<groupId>org.openjdk.jmh</groupId>
+								<artifactId>jmh-generator-annprocess</artifactId>
+								<version>${jmh.version}</version>
 							</path>
 						</annotationProcessorPaths>
 						<compilerArgs>
@@ -214,11 +221,20 @@
 				<artifactId>jackson-jakarta-rs-json-provider</artifactId>
 				<version>${jackson.version}</version>
 			</dependency>
-
+			<dependency>
+				<groupId>org.openjdk.jmh</groupId>
+				<artifactId>jmh-core</artifactId>
+				<version>${jmh.version}</version>
+			</dependency>
 			<dependency>
 				<groupId>io.prometheus</groupId>
 				<artifactId>simpleclient</artifactId>
 				<version>${prometheus.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.xmlbeans</groupId>
+				<artifactId>xmlbeans</artifactId>
+				<version>5.1.1</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>

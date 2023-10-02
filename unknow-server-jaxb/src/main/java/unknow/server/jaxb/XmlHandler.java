@@ -5,6 +5,7 @@ package unknow.server.jaxb;
 
 import java.util.function.Consumer;
 
+import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
@@ -40,4 +41,18 @@ public interface XmlHandler<T> {
 	 * @throws XMLStreamException in case of error
 	 */
 	T read(XMLStreamReader r, Object parent, UnmarshallerImpl listener) throws XMLStreamException;
+
+	public static void skipTag(XMLStreamReader r) throws XMLStreamException {
+		int i = 1;
+		while (r.hasNext()) {
+			switch (r.next()) {
+				case XMLStreamConstants.START_ELEMENT:
+					i++;
+					break;
+				case XMLStreamConstants.END_ELEMENT:
+					if (--i == 0)
+						return;
+			}
+		}
+	}
 }

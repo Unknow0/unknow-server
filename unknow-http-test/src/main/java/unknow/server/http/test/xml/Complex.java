@@ -5,12 +5,14 @@ package unknow.server.http.test.xml;
 
 import jakarta.xml.bind.annotation.XmlEnum;
 import jakarta.xml.bind.annotation.XmlEnumValue;
+import jakarta.xml.bind.annotation.XmlRootElement;
 import jakarta.xml.bind.annotation.XmlType;
 
 /**
  * @author unknow
  */
 @XmlType(propOrder = { "a", "b", "e", "loop" }, namespace = "unknow.test.xml")
+@XmlRootElement(namespace = "http://test.unknow", name = "complex")
 public class Complex {
 	@XmlEnum
 	@XmlType(namespace = "unknow.test.xml")
