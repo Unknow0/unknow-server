@@ -24,7 +24,7 @@ public class Main extends Builder {
 		TypeCache t = ctx.type();
 		ctx.self().addMethod("main", Modifier.Keyword.PUBLIC, Modifier.Keyword.STATIC)
 				.addParameter(String[].class, "arg")
-				.getBody().get()
+				.createBody()
 				.addStatement(new MethodCallExpr(new TypeExpr(t.getClass(System.class)), "exit").addArgument(new MethodCallExpr(new ObjectCreationExpr(null, t.getClass(CommandLine.class), Utils.list(new ObjectCreationExpr(null, t.getClass(ctx.self()), Utils.list()))), "execute").addArgument(new NameExpr("arg"))));
 	}
 }

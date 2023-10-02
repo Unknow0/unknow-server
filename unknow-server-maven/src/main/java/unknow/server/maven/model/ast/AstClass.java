@@ -44,7 +44,7 @@ public class AstClass extends AstBaseClass<ClassOrInterfaceDeclaration> {
 			return null;
 		if (superType == null) {
 			ResolvedReferenceTypeDeclaration r = c.resolve();
-			superType = loader.get(r.asClass().getSuperClass().map(c -> c.describe()).get(), parameters()).asClass();
+			superType = loader.get(r.asClass().getSuperClass().map(c -> c.describe()).orElse("java.lang.Object"), parameters()).asClass();
 		}
 		return superType;
 	}
@@ -52,7 +52,8 @@ public class AstClass extends AstBaseClass<ClassOrInterfaceDeclaration> {
 	@Override
 	public List<ClassModel> interfaces() {
 		if (interfaces == null) {
-			interfaces = (c.isInterface() ? c.getExtendedTypes() : c.getImplementedTypes()).stream().map(c -> loader.get(c.resolve().describe(), parameters()).asClass()).filter(c -> !"java.lang.Object".equals(c.name())).collect(Collectors.toList());
+			interfaces = (c.isInterface() ? c.getExtendedTypes() : c.getImplementedTypes()).stream().map(c -> loader.get(c.resolve().describe(), parameters()).asClass())
+					.filter(c -> !"java.lang.Object".equals(c.name())).collect(Collectors.toList());
 		}
 		return interfaces;
 	}

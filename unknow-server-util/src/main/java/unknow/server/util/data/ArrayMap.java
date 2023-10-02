@@ -8,6 +8,7 @@ import java.util.Collection;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 
 /**
@@ -336,6 +337,8 @@ public class ArrayMap<T> implements Map<String, T> {
 
 		@Override
 		public Map.Entry<String, T> next() {
+			if (i == len)
+				throw new NoSuchElementException();
 			return new MapEntry<>(key[i], value[i++]);
 		}
 	}

@@ -28,6 +28,7 @@ public class BuffersInputStream extends InputStream {
 				mark[l++] = (byte) b;
 			return b;
 		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
 			throw new IOException(e);
 		}
 	}
@@ -42,6 +43,7 @@ public class BuffersInputStream extends InputStream {
 		try {
 			len = buffers.read(b, off, len, true);
 		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
 			throw new IOException(e);
 		}
 		if (mark != null && len >= 0) {
@@ -71,6 +73,7 @@ public class BuffersInputStream extends InputStream {
 		try {
 			buffers.prepend(mark, 0, l);
 		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
 			throw new IOException(e);
 		}
 		mark = null;

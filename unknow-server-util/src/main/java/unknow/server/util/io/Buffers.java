@@ -53,7 +53,6 @@ public class Buffers {
 			len++;
 			cond.signalAll();
 		} finally {
-			validate();
 			lock.unlock();
 		}
 	}
@@ -87,7 +86,6 @@ public class Buffers {
 			tail = writeInto(tail, buf, o, l);
 			cond.signalAll();
 		} finally {
-			validate();
 			lock.unlock();
 		}
 	}
@@ -108,7 +106,6 @@ public class Buffers {
 			tail = writeInto(tail, bb);
 			cond.signalAll();
 		} finally {
-			validate();
 			lock.unlock();
 		}
 	}
@@ -137,7 +134,6 @@ public class Buffers {
 				tail = c;
 			cond.signalAll();
 		} finally {
-			validate();
 			lock.unlock();
 		}
 	}
@@ -165,7 +161,6 @@ public class Buffers {
 				tail = c;
 			cond.signalAll();
 		} finally {
-			validate();
 			lock.unlock();
 		}
 	}
@@ -189,13 +184,12 @@ public class Buffers {
 			if (len == 0)
 				return -1;
 			int r = head.b[head.o++];
-			if (len-- == 0)
+			if (--len == 0)
 				tail = null;
 			if (--head.l == 0)
 				head = Chunk.free(head);
 			return r;
 		} finally {
-			validate();
 			lock.unlock();
 		}
 	}
@@ -241,7 +235,6 @@ public class Buffers {
 			}
 			return v;
 		} finally {
-			validate();
 			lock.unlock();
 		}
 	}
@@ -282,7 +275,6 @@ public class Buffers {
 			}
 			return true;
 		} finally {
-			validate();
 			lock.unlock();
 		}
 	}
@@ -349,11 +341,9 @@ public class Buffers {
 					buf.tail.next = h;
 				buf.tail = last;
 			} finally {
-				buf.validate();
 				buf.lock.unlock();
 			}
 		} finally {
-			validate();
 			lock.unlock();
 		}
 	}
@@ -383,7 +373,6 @@ public class Buffers {
 			} else
 				tail = null;
 		} finally {
-			validate();
 			lock.unlock();
 		}
 	}
@@ -401,7 +390,6 @@ public class Buffers {
 				c = Chunk.free(c);
 			head = tail = null;
 		} finally {
-			validate();
 			lock.unlock();
 		}
 	}
@@ -453,7 +441,6 @@ public class Buffers {
 			}
 			return l == 0 ? WalkResult.MAX : WalkResult.END;
 		} finally {
-			validate();
 			lock.unlock();
 		}
 	}
@@ -479,7 +466,6 @@ public class Buffers {
 			}
 			return b.b[b.o + off];
 		} finally {
-			validate();
 			lock.unlock();
 		}
 	}
@@ -534,27 +520,9 @@ public class Buffers {
 		try {
 			BuffersUtils.toString(sb, this, 0, len);
 		} catch (@SuppressWarnings("unused") InterruptedException e) { // ignore
+			Thread.currentThread().interrupt();
 		}
 		return sb.toString();
-	}
-
-	private void validate() {
-//		int l = 0;
-//		Chunk c = head;
-//		Chunk last = null;
-//		while (c != null) {
-//			l += c.l;
-//			if (c.o > 4096 || c.o < 0)
-//				throw new IllegalStateException("Invalid offset " + c.o);
-//			if (c.l < 0 || c.l > 4096)
-//				throw new IllegalStateException("Invalid length " + c.l);
-//			last = c;
-//			c = c.next;
-//		}
-//		if (l != len)
-//			throw new IllegalStateException("Invalid total length " + l + " " + len);
-//		if (last != tail)
-//			throw new IllegalStateException("Wrong tail");
 	}
 
 	public interface Walker {

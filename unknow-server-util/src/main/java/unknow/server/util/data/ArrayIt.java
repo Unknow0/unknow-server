@@ -4,6 +4,7 @@
 package unknow.server.util.data;
 
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 public class ArrayIt<T> implements Iterator<T> {
 	private final T[] data;
@@ -21,6 +22,8 @@ public class ArrayIt<T> implements Iterator<T> {
 
 	@Override
 	public T next() {
+		if(i==data.length)
+			throw new NoSuchElementException();
 		return data[i++];
 	}
 }

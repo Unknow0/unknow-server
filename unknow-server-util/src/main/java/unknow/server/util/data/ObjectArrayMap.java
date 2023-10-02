@@ -9,6 +9,7 @@ import java.util.Comparator;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 
 /**
@@ -241,6 +242,8 @@ public class ObjectArrayMap<K, V> implements Map<K, V> {
 
 		@Override
 		public K next() {
+			if (i == len)
+				throw new NoSuchElementException();
 			return key[i++];
 		}
 

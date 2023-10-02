@@ -199,14 +199,14 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 		list.add(new SwitchEntry().addStatement(
 				new ThrowStmt(new ObjectCreationExpr(null, types.getClass(XMLStreamException.class), Utils.list(new StringLiteralExpr("Unsupported enum constant"))))));
 		cl.addMethod("toString", Utils.PUBLIC).addMarkerAnnotation(Override.class).addThrownException(types.getClass(XMLStreamException.class))
-				.addParameter(types.get(xml.type()), "o").setType(types.get(String.class)).getBody().get().addStatement(new SwitchStmt(new NameExpr("o"), list));
+				.addParameter(types.get(xml.type()), "o").setType(types.get(String.class)).createBody().addStatement(new SwitchStmt(new NameExpr("o"), list));
 
 		list = xml.entries().stream().map(e -> new SwitchEntry().setLabels(Utils.list(new StringLiteralExpr(e.value())))
 				.addStatement(new ReturnStmt(new FieldAccessExpr(new TypeExpr(types.get(t)), e.name())))).collect(Collectors.toCollection(() -> Utils.list()));
 		list.add(new SwitchEntry().addStatement(new ThrowStmt(new ObjectCreationExpr(null, types.getClass(XMLStreamException.class),
 				Utils.list(new BinaryExpr(new StringLiteralExpr("Unsupported enum value "), new NameExpr("s"), BinaryExpr.Operator.PLUS))))));
 		cl.addMethod("toObject", Utils.PUBLIC).addMarkerAnnotation(Override.class).addThrownException(types.getClass(XMLStreamException.class))
-				.addParameter(types.get(String.class), "s").setType(types.get(xml.type())).getBody().get().addStatement(new SwitchStmt(new NameExpr("s"), list));
+				.addParameter(types.get(String.class), "s").setType(types.get(xml.type())).createBody().addStatement(new SwitchStmt(new NameExpr("s"), list));
 
 		out.save(cu);
 	}
@@ -276,7 +276,7 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 	private void buildWriter(ClassOrInterfaceDeclaration cl, TypeCache types, XmlTypeComplex xml) {
 		BlockStmt b = cl.addMethod("write", Utils.PUBLIC).addMarkerAnnotation(Override.class).addThrownException(types.get(XMLStreamException.class).asClassOrInterfaceType())
 				.addParameter(types.get(XMLStreamWriter.class), "w").addParameter(types.get(xml.type()), "t").addParameter(types.get(MarshallerImpl.class), "listener")
-				.getBody().get();
+				.createBody();
 		xml.type().asClass().method("beforeMarshal", loader.get(Marshaller.class.getName()))
 				.ifPresent(m -> b.addStatement(new MethodCallExpr(new NameExpr("o"), "beforeMarshal", Utils.list(new NameExpr("listener")))));
 		b.addStatement(new MethodCallExpr(new NameExpr("listener"), "beforeMarshal", Utils.list(new NameExpr("t"))));
@@ -352,7 +352,7 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 
 		BlockStmt b = cl.addMethod("read", Utils.PUBLIC).addMarkerAnnotation(Override.class).addThrownException(types.get(XMLStreamException.class).asClassOrInterfaceType())
 				.addParameter(types.get(XMLStreamReader.class), "r").setType(types.get(xml.type())).addParameter(types.get(Object.class), "parent")
-				.addParameter(types.get(UnmarshallerImpl.class), "listener").getBody().get().addStatement(Utils.assign(types.get(xml.type()), "o", create));
+				.addParameter(types.get(UnmarshallerImpl.class), "listener").createBody().addStatement(Utils.assign(types.get(xml.type()), "o", create));
 		xml.type().asClass().method("beforeUnmarshal", loader.get(Unmarshaller.class.getName()), loader.get(Object.class.getName()))
 				.ifPresent(m -> b.addStatement(new MethodCallExpr(new NameExpr("o"), "beforeUnmarshal", Utils.list(new NameExpr("listener"), new NameExpr("parent")))));
 		b.addStatement(new MethodCallExpr(new NameExpr("listener"), "beforeUnmarshal", Utils.list(new NameExpr("o"), new NameExpr("parent"))));
@@ -479,7 +479,7 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 
 		cl.addConstructor(Modifier.Keyword.PUBLIC).setBody(b);
 		cl.addMethod("getClasses", Utils.PUBLIC).addMarkerAnnotation(Override.class).setType(types.getClass(Collection.class, types.getClass(Class.class, TypeCache.ANY)))
-				.addParameter(types.get(String.class), "contextPackage").getBody().get().addStatement(new SwitchStmt(new NameExpr("contextPackage"), entries));
+				.addParameter(types.get(String.class), "contextPackage").createBody().addStatement(new SwitchStmt(new NameExpr("contextPackage"), entries));
 		out.save(cu);
 
 		Path path = Paths.get(resources, "META-INF", "services", JAXBContextFactory.class.getName());

@@ -5,6 +5,7 @@ package unknow.server.maven.model.util;
 
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -42,6 +43,8 @@ public class AncestrorIterator implements Iterator<ClassModel> {
 
 	@Override
 	public ClassModel next() {
+		if (queue.isEmpty())
+			throw new NoSuchElementException();
 		ClassModel poll = queue.poll();
 		ClassModel s = poll.superType();
 		if (s != null && !"java.lang.Object".equals(s.name())) {
