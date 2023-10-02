@@ -16,9 +16,9 @@ public class Complex {
 	@XmlType(namespace = "unknow.test.xml")
 	public enum E {
 		@XmlEnumValue("a")
-		_A,
+		A,
 		@XmlEnumValue("b")
-		_B
+		B
 	}
 
 	private E e;

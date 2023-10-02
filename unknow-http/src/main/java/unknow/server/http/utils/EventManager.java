@@ -58,8 +58,14 @@ public class EventManager {
 		this.sessionIdListeners = sessionIdListeners;
 	}
 
+	private static final void error(EventListener l, Exception e) {
+		log.error("failed to notify {}", l, e);
+	}
+
 	/**
 	 * notify of the context initialization
+	 * 
+	 * @param context
 	 */
 	public void fireContextInitialized(ServletContext context) {
 		ServletContextEvent e = new ServletContextEvent(context);
@@ -67,13 +73,15 @@ public class EventManager {
 			try {
 				l.contextInitialized(e);
 			} catch (Exception ex) {
-				log.error("failed to notify {}", l, ex);
+				error(l, ex);
 			}
 		}
 	}
 
 	/**
 	 * notify the context destruction
+	 * 
+	 * @param context
 	 */
 	public void fireContextDestroyed(ServletContext context) {
 		ServletContextEvent e = new ServletContextEvent(context);
@@ -81,7 +89,7 @@ public class EventManager {
 			try {
 				l.contextInitialized(e);
 			} catch (Exception ex) {
-				log.error("failed to notify {}", l, ex);
+				error(l, ex);
 			}
 		}
 	}
@@ -89,42 +97,48 @@ public class EventManager {
 	/**
 	 * fire a change in the context attribute
 	 * 
-	 * @param key   the key that changed
-	 * @param value the new value
-	 * @param old   the old value
+	 * @param context
+	 * @param key     the key that changed
+	 * @param value   the new value
+	 * @param old     the old value
 	 */
 	public void fireContextAttribute(ServletContext context, String key, Object value, Object old) {
 		if (contextAttributeListeners.isEmpty())
 			return;
-		if (value == null) {
-			ServletContextAttributeEvent e = new ServletContextAttributeEvent(context, key, old);
-			for (ServletContextAttributeListener l : contextAttributeListeners) {
-				try {
-					l.attributeRemoved(e);
-				} catch (Exception ex) {
-					log.error("failed to notify {}", l, ex);
-				}
+		if (value == null)
+			fireContextAttributeRemoved(new ServletContextAttributeEvent(context, key, old));
+		else if (old == null)
+			fireContextAttributeAdded(new ServletContextAttributeEvent(context, key, value));
+		else
+			fireContextAttributeReplaced(new ServletContextAttributeEvent(context, key, old));
+	}
+
+	private void fireContextAttributeRemoved(ServletContextAttributeEvent e) {
+		for (ServletContextAttributeListener l : contextAttributeListeners) {
+			try {
+				l.attributeRemoved(e);
+			} catch (Exception ex) {
+				error(l, ex);
 			}
-		} else if (old == null) {
-			ServletContextAttributeEvent e = new ServletContextAttributeEvent(context, key, value);
-			for (ServletContextAttributeListener l : contextAttributeListeners) {
-				try {
-					l.attributeAdded(e);
-				} catch (Exception ex) {
-					log.error("failed to notify {}", l, ex);
+		}
+	}
 
-				}
+	private void fireContextAttributeAdded(ServletContextAttributeEvent e) {
+		for (ServletContextAttributeListener l : contextAttributeListeners) {
+			try {
+				l.attributeAdded(e);
+			} catch (Exception ex) {
+				error(l, ex);
 			}
+		}
+	}
 
-		} else {
-			ServletContextAttributeEvent e = new ServletContextAttributeEvent(context, key, old);
-			for (ServletContextAttributeListener l : contextAttributeListeners) {
-				try {
-					l.attributeReplaced(e);
-				} catch (Exception ex) {
-					log.error("failed to notify {}", l, ex);
-
-				}
+	private void fireContextAttributeReplaced(ServletContextAttributeEvent e) {
+		for (ServletContextAttributeListener l : contextAttributeListeners) {
+			try {
+				l.attributeReplaced(e);
+			} catch (Exception ex) {
+				error(l, ex);
 			}
 		}
 	}
@@ -140,8 +154,7 @@ public class EventManager {
 			try {
 				l.requestInitialized(e);
 			} catch (Exception ex) {
-				log.error("failed to notify {}", l, ex);
-
+				error(l, ex);
 			}
 		}
 	}
@@ -157,8 +170,7 @@ public class EventManager {
 			try {
 				l.requestDestroyed(e);
 			} catch (Exception ex) {
-				log.error("failed to notify {}", l, ex);
-
+				error(l, ex);
 			}
 		}
 	}
@@ -174,36 +186,40 @@ public class EventManager {
 	public void fireRequestAttribute(ServletRequest req, String key, Object value, Object old) {
 		if (contextAttributeListeners.isEmpty())
 			return;
-		if (value == null) {
-			ServletRequestAttributeEvent e = new ServletRequestAttributeEvent(req.getServletContext(), req, key, old);
-			for (ServletRequestAttributeListener l : requestAttributeListeners) {
-				try {
-					l.attributeRemoved(e);
-				} catch (Exception ex) {
-					log.error("failed to notify {}", l, ex);
+		if (value == null)
+			fireRequestAttributeRemoved(new ServletRequestAttributeEvent(req.getServletContext(), req, key, old));
+		else if (old == null)
+			fireRequestAttributeAdded(new ServletRequestAttributeEvent(req.getServletContext(), req, key, value));
+		else
+			fireRequestAttributeReplaced(new ServletRequestAttributeEvent(req.getServletContext(), req, key, old));
+	}
 
-				}
+	private void fireRequestAttributeRemoved(ServletRequestAttributeEvent e) {
+		for (ServletRequestAttributeListener l : requestAttributeListeners) {
+			try {
+				l.attributeRemoved(e);
+			} catch (Exception ex) {
+				error(l, ex);
 			}
-		} else if (old == null) {
-			ServletRequestAttributeEvent e = new ServletRequestAttributeEvent(req.getServletContext(), req, key, value);
-			for (ServletRequestAttributeListener l : requestAttributeListeners) {
-				try {
-					l.attributeAdded(e);
-				} catch (Exception ex) {
-					log.error("failed to notify {}", l, ex);
+		}
+	}
 
-				}
+	private void fireRequestAttributeAdded(ServletRequestAttributeEvent e) {
+		for (ServletRequestAttributeListener l : requestAttributeListeners) {
+			try {
+				l.attributeAdded(e);
+			} catch (Exception ex) {
+				error(l, ex);
 			}
+		}
+	}
 
-		} else {
-			ServletRequestAttributeEvent e = new ServletRequestAttributeEvent(req.getServletContext(), req, key, old);
-			for (ServletRequestAttributeListener l : requestAttributeListeners) {
-				try {
-					l.attributeReplaced(e);
-				} catch (Exception ex) {
-					log.error("failed to notify {}", l, ex);
-
-				}
+	private void fireRequestAttributeReplaced(ServletRequestAttributeEvent e) {
+		for (ServletRequestAttributeListener l : requestAttributeListeners) {
+			try {
+				l.attributeReplaced(e);
+			} catch (Exception ex) {
+				error(l, ex);
 			}
 		}
 	}

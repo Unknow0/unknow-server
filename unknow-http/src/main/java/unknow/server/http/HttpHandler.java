@@ -96,7 +96,7 @@ public class HttpHandler implements Handler, Runnable {
 		this.keepAliveIdle = keepAliveIdle;
 		meta = new Buffers();
 		sb = new StringBuilder();
-		decode = new Decode();
+		decode = new Decode(sb);
 	}
 
 	@Override
@@ -221,9 +221,6 @@ public class HttpHandler implements Handler, Runnable {
 				return false;
 			String key = sb.toString();
 			sb.setLength(0);
-			List<String> list = map.get(key);
-			if (list == null)
-				map.put(key, list = new ArrayList<>(1));
 
 			o = i + 1;
 			if (i < e && data.get(i) == EQUAL) {
@@ -235,7 +232,7 @@ public class HttpHandler implements Handler, Runnable {
 					return false;
 				o = i + 1;
 			}
-			list.add(sb.toString());
+			map.computeIfAbsent(key, k -> new ArrayList<>(1)).add(sb.toString());
 			sb.setLength(0);
 		}
 		return true;
@@ -350,11 +347,16 @@ public class HttpHandler implements Handler, Runnable {
 		return co.getIn();
 	}
 
-	private final class Decode implements Walker {
+	private static final class Decode implements Walker {
 		private final CharsetDecoder d = StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPLACE).onUnmappableCharacter(CodingErrorAction.REPLACE);
 		private final char[] tmp = new char[2048];
 		private final CharBuffer cbuf = CharBuffer.wrap(tmp);
 		private final ByteBuffer bbuf = ByteBuffer.allocate(4096);
+		private final StringBuilder sb;
+
+		public Decode(StringBuilder sb) {
+			this.sb = sb;
+		}
 
 		private int m = 0;
 		private byte pending = 0;

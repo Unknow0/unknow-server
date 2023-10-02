@@ -108,8 +108,6 @@ public final class HttpError {
 	 */
 	public static HttpError fromStatus(int status) {
 		switch (status) {
-			default:
-				return null;
 			case 100:
 				return CONTINUE;
 			case 101:
@@ -188,6 +186,8 @@ public final class HttpError {
 				return HEADER_TOO_LARGE;
 			case 500:
 				return SERVER_ERROR;
+			default:
+				return null;
 		}
 	}
 

@@ -23,7 +23,7 @@ public class EmptyStream extends ServletOutputStream implements Output {
 	}
 
 	@Override
-	public void resetBuffers() {
+	public void resetBuffers() { // OK
 	}
 
 	@Override
@@ -42,10 +42,10 @@ public class EmptyStream extends ServletOutputStream implements Output {
 	}
 
 	@Override
-	public void setWriteListener(WriteListener writeListener) {
+	public void setWriteListener(WriteListener writeListener) { // OK
 	}
 
 	@Override
-	public void write(int b) throws IOException {
+	public void write(int b) throws IOException { // OK
 	}
 }

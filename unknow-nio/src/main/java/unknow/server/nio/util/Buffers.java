@@ -181,10 +181,8 @@ public class Buffers {
 		lock.lockInterruptibly();
 		try {
 			if (wait) {
-				while (len == 0) {
-					System.out.println("Wait " + Thread.currentThread());
+				while (len == 0)
 					cond.await();
-				}
 			}
 			if (len == 0)
 				return -1;
@@ -216,10 +214,8 @@ public class Buffers {
 		lock.lockInterruptibly();
 		try {
 			if (wait) {
-				while (len == 0) {
-					System.out.println("Wait " + Thread.currentThread());
+				while (len == 0)
 					cond.await();
-				}
 			}
 			if (len == 0)
 				return -1;
@@ -258,10 +254,8 @@ public class Buffers {
 		lock.lockInterruptibly();
 		try {
 			if (wait) {
-				while (len == 0) {
-					System.out.println("Wait " + Thread.currentThread());
+				while (len == 0)
 					cond.await();
-				}
 			}
 			int l = bb.remaining();
 			if (head == null || l == 0)
@@ -299,10 +293,8 @@ public class Buffers {
 		lock.lockInterruptibly();
 		try {
 			if (wait) {
-				while (len == 0) {
-					System.out.println("Wait " + Thread.currentThread());
+				while (len == 0)
 					cond.await();
-				}
 			}
 			if (l == 0 || head == null)
 				return;

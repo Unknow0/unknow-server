@@ -39,7 +39,7 @@ public class PathTreeTest {
 		FilterChain exacts = new FC("exacts");
 		FilterChain defaults = new FC("defaults");
 
-		PathTree tree = new PathTree(new PartNode(null, null, null, null, exacts, defaults));
+		PathTree tree = new PathTree(new PartNode(null, null, null, exacts, defaults));
 
 		assertEquals(exacts, tree.find(mock));
 
@@ -55,7 +55,7 @@ public class PathTreeTest {
 		PartNode[] next = { first.part(), second.part() };
 		Arrays.sort(next, (a, b) -> PathTree.compare(a.part, b.part));
 
-		PathTree tree = new PathTree(new PartNode(null, next, null, null, null, defaults));
+		PathTree tree = new PathTree(new PartNode(null, next, null, null, defaults));
 
 		path.add("toto");
 		assertEquals(defaults, tree.find(mock));
@@ -75,7 +75,7 @@ public class PathTreeTest {
 		Node[] ends = { jsp.node(), html.node() };
 		Arrays.sort(ends, (a, b) -> PathTree.compare(a.part, b.part));
 
-		PathTree tree = new PathTree(new PartNode(null, null, null, ends, null, defaults));
+		PathTree tree = new PathTree(new PartNode(null, null, ends, null, defaults));
 
 		path.add("bla.txt");
 		assertEquals(defaults, tree.find(mock));
@@ -87,24 +87,4 @@ public class PathTreeTest {
 		assertEquals(html, tree.find(mock));
 	}
 
-	@Test
-	public void pattern() throws InterruptedException {
-		FC defaults = new FC("defaults");
-		FC patternExa = new FC("pattern exact");
-		FC patternDef = new FC("pattern default");
-		FC end = new FC("end");
-		PartNode partNode = new PartNode(null, new PartNode[] { end.part() }, null, null, patternExa, patternDef);
-		PathTree tree = new PathTree(new PartNode(null, null, partNode, null, defaults, defaults));
-
-		assertEquals(defaults, tree.find(mock));
-
-		path.add("test");
-		assertEquals(patternExa, tree.find(mock));
-
-		path.add("bla");
-		assertEquals(patternDef, tree.find(mock));
-
-		path.set(1, "end");
-		assertEquals(end, tree.find(mock));
-	}
 }
