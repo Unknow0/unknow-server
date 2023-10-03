@@ -64,6 +64,7 @@ import jakarta.ws.rs.ext.Provider;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam;
+import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam.JaxrsBeanFieldParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBodyParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsCookieParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsFormParam;
@@ -312,9 +313,9 @@ public class JaxrsModel {
 		mappings.add(new JaxrsMapping("m$" + mappings.size(), clazz, m, method, params, path, consume, produce));
 	}
 
-	private static MethodModel getSetter(ClassModel cl, String name, TypeModel type) {
+	private static Optional<MethodModel> getSetter(ClassModel cl, String name, TypeModel type) {
 		String set = "set" + Character.toUpperCase(name.charAt(0)) + name.substring(1);
-		return cl.method(set, type).orElseThrow(() -> new RuntimeException("Can't find setter " + set + "(" + type + ") in " + cl));
+		return cl.method(set, type);
 	}
 
 	public static TypeModel getParamType(TypeModel type) {
@@ -358,23 +359,23 @@ public class JaxrsModel {
 	private <T extends WithName & WithAnnotation & WithType> JaxrsParam<?> buildParam(T p, AnnotationModel a) {
 		if (BeanParam.class.getName().equals(a.name())) {
 			ClassModel cl = p.type().asClass();
-			Map<FieldModel, JaxrsParam<?>> fields = new HashMap<>();
-			Map<MethodModel, JaxrsParam<?>> setter = new HashMap<>();
+			List<JaxrsBeanFieldParam> params = new ArrayList<>();
+			Set<MethodModel> setters = new HashSet<>();
 			for (FieldModel f : cl.fields()) {
 				List<AnnotationModel> l = f.annotations().stream().filter(v -> JARXS_PARAM.contains(v.name())).collect(Collectors.toList());
 				if (l.isEmpty())
 					continue;
 				if (l.size() > 1)
 					throw new RuntimeException("Duplicate parameter annotation on " + f.parent() + "." + f.name());
-				if (f.isPublic()) {
-					fields.put(f, buildParam(f, l.get(0)));
-					continue;
-				}
 
-				setter.put(getSetter(cl, f.name(), f.type()), buildParam(f, l.get(0)));
+				Optional<MethodModel> s = getSetter(cl, f.name(), f.type());
+				if (!f.isPublic() && s.isEmpty())
+					throw new RuntimeException("Can't find setter for " + f + " in " + cl);
+				params.add(new JaxrsBeanFieldParam(buildParam(f, l.get(0)), f, s.orElse(null)));
+				s.ifPresent(setters::add);
 			}
 			for (MethodModel m : cl.methods()) {
-				if (setter.containsKey(m))
+				if (setters.contains(m))
 					continue;
 				List<AnnotationModel> l = m.annotations().stream().filter(v -> JARXS_PARAM.contains(v.name())).collect(Collectors.toList());
 				if (l.isEmpty())
@@ -382,19 +383,19 @@ public class JaxrsModel {
 				if (l.size() > 1)
 					throw new RuntimeException("Duplicate parameter annotation on " + m.parent() + "." + m.name());
 				String n = m.name();
-				if (n.startsWith("get"))
-					m = getSetter(cl, n.substring(3), m.type());
-				else if (!n.startsWith("set"))
-					m = getSetter(cl, n, m.type());
+				if (n.startsWith("get")) {
+					m = getSetter(cl, n.substring(3), m.type()).orElseThrow(() -> new RuntimeException("Can't find setter for " + n + " in " + cl));
+				} else if (!n.startsWith("set")) {
+					m = getSetter(cl, n, m.type()).orElseThrow(() -> new RuntimeException("Can't find setter for " + n + " in " + cl));
+				}
 
-				setter.put(m, buildParam(m.parameter(0), l.get(0)));
+				setters.add(m);
+				params.add(new JaxrsBeanFieldParam(buildParam(m, l.get(0)), null, m));
 			}
-			for (JaxrsParam<?> i : setter.values())
-				processParamConvert(i.type);
-			for (JaxrsParam<?> i : fields.values())
-				processParamConvert(i.type);
+			for (JaxrsBeanFieldParam i : params)
+				processParamConvert(i.param.type);
 
-			return new JaxrsBeanParam<>(p, cl, fields, setter);
+			return new JaxrsBeanParam<>(p, cl, params);
 		}
 		processParamConvert(p.type());
 		if (PathParam.class.getName().equals(a.name()))

@@ -8,7 +8,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import org.apache.maven.plugin.MojoExecutionException;
 
@@ -36,9 +35,8 @@ import unknow.server.maven.Output;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam;
+import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam.JaxrsBeanFieldParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBodyParam;
-import unknow.server.maven.model.FieldModel;
-import unknow.server.maven.model.MethodModel;
 import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.model.TypeModel;
 
@@ -80,17 +78,18 @@ public class BeanParamBuilder {
 		beans.put(clazz, param);
 		beansVar.put(clazz, "build" + param.clazz.simpleName() + n);
 		int i = 0;
-		for (JaxrsParam<?> p : param.fields.values())
-			processBeanConverter(p, n + "$" + i++, init);
-		for (JaxrsParam<?> p : param.setters.values())
-			processBeanConverter(p, n + "$" + i++, init);
+		for (JaxrsBeanFieldParam p : param.params)
+			processBeanConverter(p.param, n + "$" + i++, init);
 
 		BlockStmt b = cl.addMethod(beansVar.get(clazz), Utils.PUBLIC_STATIC).addParameter(types.getClass(JaxrsReq.class), "r").setType(types.get(clazz)).getBody().get()
 				.addStatement(Utils.create(types.getClass(clazz), "b", Utils.list()));
-		for (Entry<FieldModel, JaxrsParam<?>> e : param.fields.entrySet())
-			b.addStatement(new AssignExpr(new FieldAccessExpr(new NameExpr("b"), e.getKey().name()), getParam(e.getValue()), AssignExpr.Operator.ASSIGN));
-		for (Entry<MethodModel, JaxrsParam<?>> e : param.setters.entrySet())
-			b.addStatement(new MethodCallExpr(new NameExpr("b"), e.getKey().name(), Utils.list(getParam(e.getValue()))));
+		for (JaxrsBeanFieldParam e : param.params) {
+			if (e.setter != null)
+				b.addStatement(new MethodCallExpr(new NameExpr("b"), e.setter.name(), Utils.list(getParam(e.param))));
+			else
+				b.addStatement(new AssignExpr(new FieldAccessExpr(new NameExpr("b"), e.field.name()), getParam(e.param), AssignExpr.Operator.ASSIGN));
+
+		}
 		b.addStatement(new ReturnStmt(new NameExpr("b")));
 	}
 
@@ -119,7 +118,10 @@ public class BeanParamBuilder {
 						new BlockStmt()
 								.addStatement(Utils.assign(types.getClass(Field.class), "f",
 										new MethodCallExpr(new ClassExpr(types.get(p.parent.name())), "getDeclaredField", Utils.list(Utils.text(p.name)))))
-								.addStatement(new AssignExpr(new NameExpr("t"), new MethodCallExpr(new TypeExpr(types.get(JaxrsContext.class)), "getParamType", Utils.list(new MethodCallExpr(new NameExpr("f"), "getGenericType"))), AssignExpr.Operator.ASSIGN))
+								.addStatement(new AssignExpr(new NameExpr("t"),
+										new MethodCallExpr(new TypeExpr(types.get(JaxrsContext.class)), "getParamType",
+												Utils.list(new MethodCallExpr(new NameExpr("f"), "getGenericType"))),
+										AssignExpr.Operator.ASSIGN))
 								.addStatement(new AssignExpr(new NameExpr("a"), new MethodCallExpr(new NameExpr("f"), "getAnnotations"), AssignExpr.Operator.ASSIGN)),
 						Utils.list(new CatchClause(new com.github.javaparser.ast.body.Parameter(types.getClass(Exception.class), "e"),
 								new BlockStmt().addStatement(new AssignExpr(new NameExpr("t"), new ClassExpr(types.get(t1.name())), AssignExpr.Operator.ASSIGN))

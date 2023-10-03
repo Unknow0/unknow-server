@@ -11,9 +11,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.apache.maven.plugin.MojoExecutionException;
@@ -38,11 +38,14 @@ import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.parameters.Parameter;
 import io.swagger.v3.oas.models.parameters.Parameter.StyleEnum;
 import io.swagger.v3.oas.models.parameters.RequestBody;
+import io.swagger.v3.oas.models.responses.ApiResponse;
+import io.swagger.v3.oas.models.responses.ApiResponses;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
 import io.swagger.v3.oas.models.tags.Tag;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam;
+import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam.JaxrsBeanFieldParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBodyParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsCookieParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsHeaderParam;
@@ -53,6 +56,7 @@ import unknow.server.maven.model.AnnotationModel;
 import unknow.server.maven.model.ClassModel;
 import unknow.server.maven.model.EnumModel;
 import unknow.server.maven.model.FieldModel;
+import unknow.server.maven.model.MethodModel;
 import unknow.server.maven.model.TypeModel;
 
 public class OpenApiBuilder {
@@ -143,9 +147,7 @@ public class OpenApiBuilder {
 	}
 
 	private OpenAPI build(MavenProject project, JaxrsModel model) {
-		OpenAPI spec = new OpenAPI();
-		if (info == null)
-			spec.setInfo(info = new Info());
+		OpenAPI spec = new OpenAPI().info(info == null ? info = new Info() : info);
 		if (info.getTitle() == null)
 			info.setTitle(project.getArtifactId());
 		if (info.getVersion() == null)
@@ -174,19 +176,34 @@ public class OpenApiBuilder {
 				logger.warn("can't map operation " + m.httpMethod + " " + m.path + " duplicate or unupported");
 				continue;
 			}
-			Optional<AnnotationModel> t = m.m.parent().annotation(Tags.class);
-			if (t.isPresent()) {
-				logger.error(">> {}", t.get().value().get());
+			AnnotationModel[] t = findTags(m.m);
+			if (t != null) {
+				List<String> tags = new ArrayList<>(t.length);
+				for (int i = 0; i < t.length; i++)
+					t[i].member("name").map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> tags.add(v));
+				o.setTags(tags);
 			}
 
+			ApiResponses responses = new ApiResponses();
+			o.setResponses(responses);
+
 			if (a != null) {
-				a.member("tags").ifPresent(v -> o.setTags(Arrays.asList(v.asArrayLiteral())));
-				a.member("summary").ifPresent(v -> o.setSummary(v.asLiteral()));
-				a.member("description").ifPresent(v -> o.setDescription(v.asLiteral()));
-				a.member("operationId").ifPresent(v -> o.setOperationId(v.asLiteral()));
+				a.member("tags").map(v -> v.asArrayLiteral()).filter(v -> v.length > 0).ifPresent(v -> o.setTags(Arrays.asList(v)));
+				a.member("summary").map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> o.setSummary(v));
+				a.member("description").map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> o.setDescription(v));
+				a.member("operationId").map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> o.setOperationId(v));
 				a.member("deprecated").ifPresent(v -> o.setDeprecated(v.asBoolean()));
 
+//				a.member("responses")
+
 				// TODO externalDocs, responses, security, servers, extensions
+			}
+
+			if (responses.isEmpty() && !m.m.type().isVoid()) {
+				Content c = new Content();
+				for (String s : m.produce)
+					c.addMediaType(s, new MediaType().schema(schema(m.m.type())));
+				responses.setDefault(new ApiResponse().content(c));
 			}
 
 			for (JaxrsParam<?> param : m.params)
@@ -203,10 +220,8 @@ public class OpenApiBuilder {
 	private void addParameters(Operation o, JaxrsParam<?> param) {
 		if (param instanceof JaxrsBeanParam) {
 			JaxrsBeanParam<?> b = (JaxrsBeanParam<?>) param;
-			for (JaxrsParam<?> p : b.fields.values())
-				addParameters(o, p);
-			for (JaxrsParam<?> p : b.setters.values())
-				addParameters(o, p);
+			for (JaxrsBeanFieldParam p : b.params)
+				addParameters(o, p.param);
 			return;
 		}
 
@@ -237,9 +252,9 @@ public class OpenApiBuilder {
 			if (a.member("hidden").map(v -> v.asBoolean()).orElse(false))
 				return;
 
-			a.member("name").ifPresent(v -> p.setName(v.asLiteral()));
-			a.member("in").map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> p.setIn(v));
-			a.member("description").ifPresent(v -> p.setDescription(v.asLiteral()));
+			a.member("name").map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> p.setName(v));
+			a.member("in").map(v -> v.asLiteral()).filter(v -> !"DEFAULT".equals(v)).ifPresent(v -> p.setIn(v));
+			a.member("description").map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> p.setDescription(v));
 			a.member("required").ifPresent(v -> p.setRequired(v.asBoolean()));
 			a.member("deprecated").ifPresent(v -> p.setDeprecated(v.asBoolean()));
 			// allowEmptyValue
@@ -266,7 +281,7 @@ public class OpenApiBuilder {
 		if (type.isWildCard())
 			type = type.asWildcard().bound();
 
-		String n = type.name();
+		String n = type.genericName();
 
 		if (schemas.containsKey(n))
 			return new Schema<>().$ref("#/components/schemas/" + n);
@@ -287,17 +302,17 @@ public class OpenApiBuilder {
 				return new Schema<>().type("object").additionalProperties(schema(c.parameter(1).type()));
 			}
 		}
-
+		schemas.put(n, s = new Schema<>());
 		if (type.isEnum()) {
 			EnumModel e = type.asEnum();
 			// TODO get enum format/value from jackson
 			// @JsonFormat on enum
 			// @JsonValue on method
 			// @JsonProperty on entries
-			s = new Schema<>().type("string")._enum(e.entries().stream().map(v -> v.name()).collect(Collectors.toList()));
+			s.type("string").setEnum(e.entries().stream().map(v -> v.name()).collect(Collectors.toList()));
 		} else {
 			List<String> requied = new ArrayList<>();
-			s = new Schema<>().type("object").required(requied);
+			s.type("object").setRequired(requied);
 			ClassModel c = type.asClass();
 
 			for (FieldModel f : c.fields()) {
@@ -306,7 +321,6 @@ public class OpenApiBuilder {
 			}
 			// TODO exemple
 		}
-		schemas.put(n, s);
 		return new Schema<>().$ref("#/components/schemas/" + n);
 	}
 
@@ -361,5 +375,29 @@ public class OpenApiBuilder {
 			default:
 				return null;
 		}
+	}
+
+	public static AnnotationModel[] findTags(MethodModel m) {
+		AnnotationModel[] t = m.annotation(Tags.class).flatMap(v -> v.value()).map(v -> v.asArrayAnnotation()).orElse(null);
+		if (t == null)
+			t = m.annotation(io.swagger.v3.oas.annotations.tags.Tag.class).map(v -> new AnnotationModel[] { v }).orElse(null);
+		if (t != null)
+			return t;
+		return findTags(m.parent());
+	}
+
+	public static AnnotationModel[] findTags(ClassModel m) {
+		if (m == null)
+			return null;
+
+		AnnotationModel[] t = m.annotation(Tags.class).flatMap(v -> v.value()).map(v -> v.asArrayAnnotation()).orElse(null);
+		if (t == null)
+			t = m.annotation(io.swagger.v3.oas.annotations.tags.Tag.class).map(v -> new AnnotationModel[] { v }).orElse(null);
+		if (t == null)
+			t = findTags(m.superType());
+		Iterator<ClassModel> it = m.interfaces().iterator();
+		while (t == null && it.hasNext())
+			t = findTags(it.next());
+		return t;
 	}
 }

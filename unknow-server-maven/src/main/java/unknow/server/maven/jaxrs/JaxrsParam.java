@@ -3,7 +3,7 @@
  */
 package unknow.server.maven.jaxrs;
 
-import java.util.Map;
+import java.util.List;
 import java.util.function.Consumer;
 
 import jakarta.ws.rs.DefaultValue;
@@ -37,11 +37,13 @@ public abstract class JaxrsParam<T extends WithName & WithAnnotation & WithType>
 			this.parent = ((ParamModel<?>) p).parent().parent();
 		else if (p instanceof FieldModel)
 			this.parent = ((FieldModel) p).parent();
+		else if (p instanceof MethodModel)
+			this.parent = ((MethodModel) p).parent();
 		else
 			throw new IllegalArgumentException("unsupported param type " + p);
 
 		this.name = p.name();
-		this.type = p.type();
+		this.type = p instanceof MethodModel ? ((MethodModel) p).parameter(0).type() : p.type();
 		this.value = value;
 
 		this.var = prefix + "$" + p.name();
@@ -61,23 +63,31 @@ public abstract class JaxrsParam<T extends WithName & WithAnnotation & WithType>
 
 	public static class JaxrsBeanParam<T extends WithName & WithAnnotation & WithType> extends JaxrsParam<T> {
 		public final ClassModel clazz;
-		public final Map<FieldModel, JaxrsParam<?>> fields;
-		public final Map<MethodModel, JaxrsParam<?>> setters;
+		public final List<JaxrsBeanFieldParam> params;
 
-		public JaxrsBeanParam(T p, ClassModel clazz, Map<FieldModel, JaxrsParam<?>> fields, Map<MethodModel, JaxrsParam<?>> setters) {
+		public JaxrsBeanParam(T p, ClassModel clazz, List<JaxrsBeanFieldParam> params) {
 			super(p, "o", null);
 			this.clazz = clazz;
-			this.fields = fields;
-			this.setters = setters;
+			this.params = params;
 		}
 
 		@Override
 		public void collect(Consumer<JaxrsParam<?>> c) {
-			for (JaxrsParam<?> p : fields.values())
-				p.collect(c);
-			for (JaxrsParam<?> p : setters.values())
-				p.collect(c);
+			for (JaxrsBeanFieldParam p : params)
+				p.param.collect(c);
 			c.accept(this);
+		}
+
+		public static class JaxrsBeanFieldParam {
+			public final JaxrsParam<?> param;
+			public final FieldModel field;
+			public final MethodModel setter;
+
+			public JaxrsBeanFieldParam(JaxrsParam<?> param, FieldModel field, MethodModel setter) {
+				this.param = param;
+				this.field = field;
+				this.setter = setter;
+			}
 		}
 	}
 
