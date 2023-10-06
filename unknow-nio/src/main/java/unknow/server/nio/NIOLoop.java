@@ -50,7 +50,8 @@ public class NIOLoop implements Runnable {
 	public final void await() {
 		try {
 			t.join();
-		} catch (InterruptedException e) { // ok
+		} catch (@SuppressWarnings("unused") InterruptedException e) {
+			Thread.currentThread().interrupt();
 		}
 	}
 
@@ -104,6 +105,7 @@ public class NIOLoop implements Runnable {
 			try {
 				selected(next);
 			} catch (IOException e) {
+				log.warn("{}", next, e);
 				next.cancel();
 			}
 		}

@@ -291,11 +291,11 @@ public class HttpHandler implements Handler, Runnable {
 			logger.error("processor error", e);
 			error(HttpError.SERVER_ERROR);
 		} finally {
-			cleanup();
 			if (close)
 				out.close();
 			else
 				out.flush();
+			cleanup();
 		}
 	}
 
