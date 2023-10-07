@@ -16,7 +16,7 @@
 					<execution>
 						<goals>
 							<goal>jaxb-generator</goal>
-							<!--goal>jaxws-generator</goal-->
+							<goal>jaxws-generator</goal>
 							<goal>jaxrs-generator</goal>
 							<goal>servlet-generator</goal>
 						</goals>
@@ -101,7 +101,7 @@
 		</dependency>
 		<dependency>
 			<groupId>${project.groupId}</groupId>
-			<artifactId>unknow-http-jaxws</artifactId>
+			<artifactId>unknow-server-jaxws</artifactId>
 			<version>${project.version}</version>
 		</dependency>
 		<dependency>

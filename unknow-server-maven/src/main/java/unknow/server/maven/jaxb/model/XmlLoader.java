@@ -33,6 +33,7 @@ import jakarta.xml.bind.annotation.XmlAccessOrder;
 import jakarta.xml.bind.annotation.XmlAccessType;
 import jakarta.xml.bind.annotation.XmlAccessorOrder;
 import jakarta.xml.bind.annotation.XmlAccessorType;
+import jakarta.xml.bind.annotation.XmlSchema;
 import jakarta.xml.bind.annotation.XmlTransient;
 import jakarta.xml.bind.annotation.XmlValue;
 import unknow.server.maven.jaxb.model.XmlElements.XmlGroup;
@@ -60,8 +61,10 @@ public class XmlLoader {
 	public static final XmlTypeSimple DOUBLE = new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "double"), PrimitiveModel.DOUBLE);
 	public static final XmlTypeSimple CHAR = new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "string"), PrimitiveModel.CHAR);
 	public static final XmlTypeSimple STRING = new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "string"), JvmModelLoader.GLOBAL.get(String.class.getName()));
-	public static final XmlTypeSimple BIGINT = new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "integer"), JvmModelLoader.GLOBAL.get(BigInteger.class.getName()));
-	public static final XmlTypeSimple BIGDEC = new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "decimal"), JvmModelLoader.GLOBAL.get(BigDecimal.class.getName()));
+	public static final XmlTypeSimple BIGINT = new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "integer"),
+			JvmModelLoader.GLOBAL.get(BigInteger.class.getName()));
+	public static final XmlTypeSimple BIGDEC = new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "decimal"),
+			JvmModelLoader.GLOBAL.get(BigDecimal.class.getName()));
 
 	private final Map<String, XmlType> types = new HashMap<>();
 
@@ -108,9 +111,10 @@ public class XmlLoader {
 		if (type.isPrimitive()) // should not happen
 			throw new RuntimeException("Unsupported primitive " + type);
 		if (type.isEnum()) {
-			// TODO get type
-//			type.annotation(jakarta.xml.bind.annotation.XmlEnum.class);
-			return new XmlEnum(qname(type), type.asEnum(), XmlLoader.STRING);
+			XmlType t = type.annotation(jakarta.xml.bind.annotation.XmlEnum.class).flatMap(v -> v.value()).map(v -> add(v.asClass())).orElse(XmlLoader.STRING);
+			if (!(t instanceof XmlTypeSimple))
+				throw new RuntimeException("Enum type should be a simple type " + type);
+			return new XmlEnum(qname(type), type.asEnum(), (XmlTypeSimple) t);
 		}
 		if (type.isArray())
 			return new XmlCollection(type, add(type.asArray().type()));
@@ -142,11 +146,17 @@ public class XmlLoader {
 
 		Map<String, FieldModel> fields = new HashMap<>();
 
+		String defaultNs = "";
+		Optional<AnnotationModel> o = c.parent().annotation(XmlSchema.class);
+		if (o.isPresent() && o.flatMap(v -> v.member("elementFormDefault")).map(v -> v.asLiteral().equals("QUALIFIED")).orElse(false))
+			defaultNs = o.flatMap(v -> v.member("namespace")).map(v -> v.asLiteral()).orElse("");
+
 		for (FieldModel f : c.fields()) {
 			if (f.isStatic() || f.isTransient() || f.annotation(XmlTransient.class).isPresent())
 				continue;
 
-			boolean annoted = f.annotation(jakarta.xml.bind.annotation.XmlElement.class).or(() -> f.annotation(jakarta.xml.bind.annotation.XmlAttribute.class)).or(() -> f.annotation(XmlValue.class)).isPresent();
+			boolean annoted = f.annotation(jakarta.xml.bind.annotation.XmlElement.class).or(() -> f.annotation(jakarta.xml.bind.annotation.XmlAttribute.class))
+					.or(() -> f.annotation(XmlValue.class)).isPresent();
 
 			if (annoted && type != XmlAccessType.FIELD && (type != XmlAccessType.PUBLIC_MEMBER || !f.isPublic()))
 				continue;
@@ -208,7 +218,7 @@ public class XmlLoader {
 					attrs.add(new XmlElement(this, new QName(ns, n), t, m.name(), setter));
 				} else {
 					n = elem.flatMap(a -> a.member("name")).map(a -> a.asLiteral()).map(i -> "##default".equals(i) ? null : i).orElse(n);
-					String ns = elem.flatMap(a -> a.member("namespace")).map(a -> a.asLiteral()).map(i -> "##default".equals(i) ? null : i).orElse("");
+					String ns = elem.flatMap(a -> a.member("namespace")).map(a -> a.asLiteral()).map(i -> "##default".equals(i) ? null : i).orElse(defaultNs);
 					elems.add(new XmlElement(this, new QName(ns, n), t, m.name(), setter));
 				}
 			}
@@ -218,15 +228,17 @@ public class XmlLoader {
 			throw new RuntimeException("Mixed content not supported in " + c);
 
 		XmlElements elements;
-		XmlAccessOrder defaultOrder = c.annotation(XmlAccessorOrder.class).flatMap(a -> a.value()).map(a -> a.asLiteral()).map(a -> XmlAccessOrder.valueOf(a)).orElse(XmlAccessOrder.UNDEFINED);
-		List<String> propOrder = c.annotation(jakarta.xml.bind.annotation.XmlType.class).flatMap(a -> a.member("propOrder")).map(a -> a.asArrayLiteral()).map(Arrays::asList).orElse(Collections.emptyList());
+		XmlAccessOrder defaultOrder = c.annotation(XmlAccessorOrder.class).flatMap(a -> a.value()).map(a -> a.asLiteral()).map(a -> XmlAccessOrder.valueOf(a))
+				.orElse(XmlAccessOrder.UNDEFINED);
+		List<String> propOrder = c.annotation(jakarta.xml.bind.annotation.XmlType.class).flatMap(a -> a.member("propOrder")).map(a -> a.asArrayLiteral()).map(Arrays::asList)
+				.orElse(Collections.emptyList());
 		if (propOrder.isEmpty()) {
 			if (defaultOrder == XmlAccessOrder.ALPHABETICAL)
 				Collections.sort(elems, (a, b) -> a.getter().compareTo(b.getter()));
 			elements = new XmlElements(XmlGroup.all, elems);
 		} else {
-			Collections.sort(elems, (o, b) -> {
-				String an = Character.toLowerCase(o.getter().charAt(3)) + o.getter().substring(4);
+			Collections.sort(elems, (a, b) -> {
+				String an = Character.toLowerCase(a.getter().charAt(3)) + a.getter().substring(4);
 				String bn = Character.toLowerCase(b.getter().charAt(3)) + b.getter().substring(4);
 				int ai = propOrder.indexOf(an);
 				int bi = propOrder.indexOf(bn);
@@ -243,7 +255,8 @@ public class XmlLoader {
 
 		Optional<AnnotationModel> a = c.annotation(jakarta.xml.bind.annotation.XmlType.class);
 		Factory f = new Factory(
-				a.flatMap(v -> v.member("factoryClass")).map(v -> v.asClass().asClass()).filter(v -> !v.isAssignableTo(jakarta.xml.bind.annotation.XmlType.DEFAULT.class.getName())).orElse(c),
+				a.flatMap(v -> v.member("factoryClass")).map(v -> v.asClass().asClass())
+						.filter(v -> !v.isAssignableTo(jakarta.xml.bind.annotation.XmlType.DEFAULT.class.getName())).orElse(c),
 				a.flatMap(v -> v.member("factoryMethod")).map(v -> v.asLiteral()).orElse(""));
 		return new XmlTypeComplex(qname(c), c, f, attrs, elements, value);
 	}
@@ -252,7 +265,7 @@ public class XmlLoader {
 		Optional<AnnotationModel> a = type.annotation(jakarta.xml.bind.annotation.XmlType.class);
 
 		String name = type.simpleName();
-		String ns = ""; // TODO get from package annotation
+		String ns = type.parent().annotation(XmlSchema.class).flatMap(v -> v.member("namespace")).map(v -> v.asLiteral()).orElse("");
 		if (a.isPresent()) {
 			name = a.flatMap(v -> v.member("name")).map(v -> v.asLiteral()).filter(v -> !v.equals("##default")).orElse(name);
 			ns = a.flatMap(v -> v.member("namespace")).map(v -> v.asLiteral()).filter(v -> !v.equals("##default")).orElse(ns);

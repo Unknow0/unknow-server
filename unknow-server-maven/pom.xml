@@ -51,7 +51,7 @@
 		</dependency>
 		<dependency>
 			<groupId>${project.groupId}</groupId>
-			<artifactId>unknow-http-jaxws</artifactId>
+			<artifactId>unknow-server-jaxws</artifactId>
 			<version>${project.version}</version>
 		</dependency>
 		<dependency>

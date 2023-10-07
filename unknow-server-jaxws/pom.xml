@@ -5,7 +5,7 @@
 		<artifactId>unknow-server</artifactId>
 		<version>0.0.1-SNAPSHOT</version>
 	</parent>
-	<artifactId>unknow-http-jaxws</artifactId>
+	<artifactId>unknow-server-jaxws</artifactId>
 
 	<dependencies>
 		<dependency>

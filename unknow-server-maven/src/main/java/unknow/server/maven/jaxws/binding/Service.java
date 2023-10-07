@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import javax.xml.namespace.QName;
+
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
 
@@ -20,7 +22,9 @@ import jakarta.jws.soap.SOAPBinding;
 import jakarta.jws.soap.SOAPBinding.ParameterStyle;
 import jakarta.jws.soap.SOAPBinding.Style;
 import unknow.server.jaxws.UrlMapping;
-import unknow.server.maven.jaxws.binding.XmlObject.XmlField;
+import unknow.server.maven.jaxb.model.XmlElement;
+import unknow.server.maven.jaxb.model.XmlLoader;
+import unknow.server.maven.jaxb.model.XmlType;
 import unknow.server.maven.model.AnnotationModel;
 import unknow.server.maven.model.ClassModel;
 import unknow.server.maven.model.MethodModel;
@@ -45,7 +49,7 @@ public class Service {
 	public String postConstruct;
 	public String preDestroy;
 
-	public final List<Op> operations = new ArrayList<>();
+	public final List<Operation> operations = new ArrayList<>();
 
 	private Service(String name, String ns, String[] urls, Style style, ParameterStyle paramStyle) {
 		this.name = name;
@@ -55,7 +59,7 @@ public class Service {
 		this.paramStyle = paramStyle;
 	}
 
-	public static Service build(TypeDeclaration<?> serviceClass, ModelLoader loader, XmlTypeLoader typeLoader) {
+	public static Service build(TypeDeclaration<?> serviceClass, ModelLoader loader, XmlLoader typeLoader) {
 		TypeModel clazz = loader.get(serviceClass.resolve().getQualifiedName());
 		AnnotationModel ws = clazz.annotation(WebService.class).get();
 		String name = ws.member("name").map(v -> v.asLiteral()).orElse(serviceClass.resolve().getClassName());
@@ -100,7 +104,7 @@ public class Service {
 	 * @param cl
 	 * @param typeLoader
 	 */
-	private void collectOp(ClassModel cl, XmlTypeLoader typeLoader) {
+	private void collectOp(ClassModel cl, XmlLoader typeLoader) {
 		for (MethodModel m : cl.methods()) {
 			Optional<AnnotationModel> o = m.annotation(WebMethod.class);
 			if (o.isEmpty())
@@ -126,82 +130,63 @@ public class Service {
 				if (rns.isEmpty() && (style != Style.DOCUMENT || paramStyle != ParameterStyle.WRAPPED || header))
 					rns = this.ns;
 
-				r = new Param(rns, rname, typeLoader.get(m.type()), type.name(), header);
+				r = new Param(rns, rname, typeLoader.add(m.type()), type.name(), header);
 			}
-			Op op = new Op(m.name(), name, ns, r, action, style, paramStyle);
-			for (ParamModel<?> p : m.parameters()) {
-				XmlType<?> t = typeLoader.get(p.type());
-				boolean header = p.annotation(WebParam.class).flatMap(a -> a.member("header")).map(v -> v.asBoolean()).orElse(false);
-				name = p.annotation(WebParam.class).flatMap(a -> a.member("name")).map(v -> v.asLiteral()).orElse("##default");
-				String ns = p.annotation(WebParam.class).flatMap(a -> a.member("targetNamespace")).map(v -> v.asLiteral()).orElse("##default");
-
-				if ("##default".equals(name))
-					name = paramStyle == ParameterStyle.BARE ? op.name : "arg" + op.params.size();
-				if ("##default".equals(ns))
-					ns = paramStyle == ParameterStyle.WRAPPED && !header ? "" : this.ns;
-
-				op.params.add(new Param(ns, name, t, p.type().name(), header));
-			}
-			operations.add(op);
+//			Operation op = new Operation(m.name(), name, ns, r, action, style, paramStyle);
+//			for (ParamModel<?> p : m.parameters()) {
+//				XmlType t = typeLoader.add(p.type());
+//				boolean header = p.annotation(WebParam.class).flatMap(a -> a.member("header")).map(v -> v.asBoolean()).orElse(false);
+//				name = p.annotation(WebParam.class).flatMap(a -> a.member("name")).map(v -> v.asLiteral()).orElse("##default");
+//				String ns = p.annotation(WebParam.class).flatMap(a -> a.member("targetNamespace")).map(v -> v.asLiteral()).orElse("##default");
+//
+//				if ("##default".equals(name))
+//					name = paramStyle == ParameterStyle.BARE ? op.name : "arg" + op.params.size();
+//				if ("##default".equals(ns))
+//					ns = paramStyle == ParameterStyle.WRAPPED && !header ? "" : this.ns;
+//
+//				op.params.add(new Param(ns, name, t, p.type().name(), header));
+//			}
+//			operations.add(op);
 		}
 	}
 
-	public static class Op {
-		public final String m;
-		public final String name;
-		public final String ns;
+	public static class Operation {
+		public final QName name;
 		public final String action;
-		public final Style style;
-		public final ParameterStyle paramStyle;
-		public final List<Param> params;
-		public final Param result;
+		public final List<XmlElement> headers;
+		public final List<XmlElement> body;
+		public final XmlElement result;
 
-		public Op(String m, String name, String ns, Param result, String action, Style style, ParameterStyle paramStyle) {
-			this.m = m;
+		public Operation(QName name, String action, List<XmlElement> headers, List<XmlElement> body, XmlElement result) {
 			this.name = name;
-			this.ns = ns;
-			this.params = new ArrayList<>();
 			this.result = result;
 			this.action = action;
-			this.style = style;
-			this.paramStyle = paramStyle;
-		}
-
-		public String sig() {
-			if (paramStyle == ParameterStyle.WRAPPED)
-				return (ns.isEmpty() ? "" : '{' + ns + '}') + name;
-			StringBuilder sb = new StringBuilder();
-			for (Param p : params) {
-				if (p.header)
-					sb.append(p.type().javaType().name()).append(';');
-			}
-			sb.append('#');
-			for (Param p : params) {
-				if (!p.header)
-					sb.append(p.type().javaType().name()).append(';');
-			}
-			return sb.toString();
+			this.headers = headers;
+			this.body = body;
 		}
 
 		@Override
 		public String toString() {
-			return "Operation: " + name + " " + params;
+			return "Operation: " + name;
 		}
 	}
 
-	public static class Param extends XmlField<XmlType<?>> {
+	public static class Param {
+		public final QName name;
+		public final XmlType type;
 		public final String clazz;
 		public final boolean header;
 
-		public Param(String ns, String name, XmlType<?> type, String clazz, boolean header) {
-			super(type, ns, name, "", "");
+		public Param(String ns, String name, XmlType type, String clazz, boolean header) {
+			this.name = new QName(ns, name);
+			this.type = type;
 			this.clazz = clazz;
 			this.header = header;
 		}
 
 		@Override
 		public String toString() {
-			return qname() + " " + type().name() + " " + header;
+			return name + " " + type.type() + " " + header;
 		}
 	}
 }
