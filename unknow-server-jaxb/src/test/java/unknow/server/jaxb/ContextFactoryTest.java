@@ -27,7 +27,7 @@ public class ContextFactoryTest {
 	@Test
 	public void test() throws JAXBException {
 		JAXBContext.newInstance(O.class);
-		assertThrows(JAXBException.class, () -> JAXBContext.newInstance(String.class));
+		assertThrows(JAXBException.class, () -> JAXBContext.newInstance(ContextFactoryTest.class));
 	}
 
 	@Test

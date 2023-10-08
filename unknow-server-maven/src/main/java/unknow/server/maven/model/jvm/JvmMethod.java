@@ -4,6 +4,8 @@
 package unknow.server.maven.model.jvm;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -67,11 +69,14 @@ public class JvmMethod implements MethodModel, JvmMod {
 		return loader.get(m.getGenericReturnType().getTypeName(), parent.parameters());
 	}
 
-	@SuppressWarnings("unused")
 	@Override
 	public List<ParamModel<MethodModel>> parameters() {
-		if (params == null)
-			params = Arrays.stream(m.getParameters()).map(p -> new JvmParam<MethodModel>(loader, this, p)).collect(Collectors.toList());
+		if (params == null) {
+			params = new ArrayList<>();
+			Parameter[] p = m.getParameters();
+			for (int i = 0; i < p.length; i++)
+				params.add(new JvmParam<>(loader, this, p[i], i));
+		}
 		return params;
 	}
 

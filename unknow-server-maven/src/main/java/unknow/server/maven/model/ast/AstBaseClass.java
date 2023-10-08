@@ -54,19 +54,23 @@ public abstract class AstBaseClass<T extends TypeDeclaration<?>> implements Clas
 
 	@Override
 	public String name() {
-		if (name == null) {
-			name = c.getNameAsString();
-			Node p = c.getParentNode().orElse(null);
-			while (p != null) {
-				if (p instanceof ClassOrInterfaceDeclaration || p instanceof EnumDeclaration)
-					name = ((NodeWithSimpleName<?>) p).getNameAsString() + "$" + name;
-				if (p instanceof CompilationUnit) {
-					Optional<PackageDeclaration> o = ((CompilationUnit) p).getPackageDeclaration();
-					if (o.isPresent())
-						name = o.get().getNameAsString() + "." + name;
-				}
-				p = p.getParentNode().orElse(null);
+		if (name == null)
+			name = getBinaryName(c);
+		return name;
+	}
+
+	protected static String getBinaryName(TypeDeclaration<?> c) {
+		String name = c.getNameAsString();
+		Node p = c.getParentNode().orElse(null);
+		while (p != null) {
+			if (p instanceof ClassOrInterfaceDeclaration || p instanceof EnumDeclaration)
+				name = ((NodeWithSimpleName<?>) p).getNameAsString() + "$" + name;
+			if (p instanceof CompilationUnit) {
+				Optional<PackageDeclaration> o = ((CompilationUnit) p).getPackageDeclaration();
+				if (o.isPresent())
+					name = o.get().getNameAsString() + "." + name;
 			}
+			p = p.getParentNode().orElse(null);
 		}
 		return name;
 	}

@@ -23,13 +23,6 @@ public interface TypeModel extends WithAnnotation, WithName, WithParent<PackageM
 	}
 
 	/**
-	 * @return java internalName
-	 */
-	default String internalName() {
-		return "L" + name() + ";";
-	}
-
-	/**
 	 * @return simpleName
 	 */
 	default String simpleName() {

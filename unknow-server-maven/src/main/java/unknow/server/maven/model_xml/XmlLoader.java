@@ -1,7 +1,7 @@
 /**
  * 
  */
-package unknow.server.maven.jaxb.model;
+package unknow.server.maven.model_xml;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -36,8 +36,6 @@ import jakarta.xml.bind.annotation.XmlAccessorType;
 import jakarta.xml.bind.annotation.XmlSchema;
 import jakarta.xml.bind.annotation.XmlTransient;
 import jakarta.xml.bind.annotation.XmlValue;
-import unknow.server.maven.jaxb.model.XmlElements.XmlGroup;
-import unknow.server.maven.jaxb.model.XmlTypeComplex.Factory;
 import unknow.server.maven.model.AnnotationModel;
 import unknow.server.maven.model.ClassModel;
 import unknow.server.maven.model.FieldModel;
@@ -45,6 +43,8 @@ import unknow.server.maven.model.MethodModel;
 import unknow.server.maven.model.PrimitiveModel;
 import unknow.server.maven.model.TypeModel;
 import unknow.server.maven.model.jvm.JvmModelLoader;
+import unknow.server.maven.model_xml.XmlElements.XmlGroup;
+import unknow.server.maven.model_xml.XmlTypeComplex.Factory;
 
 /**
  * @author unknow

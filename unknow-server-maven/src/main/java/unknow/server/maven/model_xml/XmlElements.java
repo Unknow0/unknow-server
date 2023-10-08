@@ -1,7 +1,7 @@
 /**
  * 
  */
-package unknow.server.maven.jaxb.model;
+package unknow.server.maven.model_xml;
 
 import java.util.Iterator;
 import java.util.List;

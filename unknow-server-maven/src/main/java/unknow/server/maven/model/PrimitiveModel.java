@@ -42,23 +42,18 @@ public class PrimitiveModel implements TypeModel {
 	public static final List<PrimitiveModel> PRIMITIVES = Arrays.asList(VOID, BOOLEAN, BYTE, CHAR, SHORT, INT, LONG, FLOAT, DOUBLE);
 
 	private final String name;
-	private final String internal;
+	private final String binary;
 	private final String boxed;
 
-	private PrimitiveModel(String name, String internal, String boxed) {
+	private PrimitiveModel(String name, String binary, String boxed) {
 		this.name = name;
-		this.internal = internal;
+		this.binary = binary;
 		this.boxed = boxed;
 	}
 
 	@Override
 	public String name() {
-		return name;
-	}
-
-	@Override
-	public String internalName() {
-		return internal;
+		return binary;
 	}
 
 	@Override
@@ -85,6 +80,6 @@ public class PrimitiveModel implements TypeModel {
 
 	@Override
 	public String toString() {
-		return name();
+		return name;
 	}
 }

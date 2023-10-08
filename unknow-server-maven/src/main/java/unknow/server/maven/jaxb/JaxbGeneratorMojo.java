@@ -97,14 +97,14 @@ import unknow.server.jaxb.handler.StringHandler;
 import unknow.server.maven.AbstractMojoUnk;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
-import unknow.server.maven.jaxb.model.XmlCollection;
-import unknow.server.maven.jaxb.model.XmlElement;
-import unknow.server.maven.jaxb.model.XmlEnum;
-import unknow.server.maven.jaxb.model.XmlLoader;
-import unknow.server.maven.jaxb.model.XmlType;
-import unknow.server.maven.jaxb.model.XmlTypeComplex;
 import unknow.server.maven.model.AnnotationModel;
 import unknow.server.maven.model.TypeModel;
+import unknow.server.maven.model_xml.XmlCollection;
+import unknow.server.maven.model_xml.XmlElement;
+import unknow.server.maven.model_xml.XmlEnum;
+import unknow.server.maven.model_xml.XmlLoader;
+import unknow.server.maven.model_xml.XmlType;
+import unknow.server.maven.model_xml.XmlTypeComplex;
 
 /**
  * @author unknow

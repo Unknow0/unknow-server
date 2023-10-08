@@ -12,7 +12,6 @@ import unknow.server.maven.model.util.WithType;
  * @author unknow
  */
 public class ArrayModel implements TypeModel, WithType {
-	private final String name;
 	private final TypeModel type;
 
 	/**
@@ -21,19 +20,13 @@ public class ArrayModel implements TypeModel, WithType {
 	 * @param name
 	 * @param type
 	 */
-	public ArrayModel(String name, TypeModel type) {
-		this.name = name;
+	public ArrayModel(TypeModel type) {
 		this.type = type;
 	}
 
 	@Override
 	public String name() {
-		return name;
-	}
-
-	@Override
-	public String internalName() {
-		return "[" + type().internalName();
+		return "[" + type.name();
 	}
 
 	@Override

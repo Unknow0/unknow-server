@@ -14,9 +14,7 @@ import unknow.server.maven.model.AnnotationValue;
 import unknow.server.maven.model.AnnotationValue.AnnotationValueAnnotation;
 import unknow.server.maven.model.AnnotationValue.AnnotationValueArray;
 import unknow.server.maven.model.AnnotationValue.AnnotationValueClass;
-import unknow.server.maven.model.AnnotationValue.AnnotationValueEnum;
 import unknow.server.maven.model.AnnotationValue.AnnotationValueLiteral;
-import unknow.server.maven.model.jvm.JvmEnum.JvmEnumConstant;
 
 /**
  * @author unknow
@@ -138,7 +136,7 @@ public class JvmAnnotation implements AnnotationModel {
 		if (o instanceof Class)
 			return new AnnotationValueClass(loader.get(((Class<?>) o).getName()));
 		if (o instanceof Enum)
-			return new AnnotationValueEnum(new JvmEnumConstant(loader, (Enum<?>) o));
+			return new AnnotationValueLiteral(((Enum<?>) o).name());
 		if (o instanceof Annotation)
 			return new AnnotationValueAnnotation(new JvmAnnotation(loader, (Annotation) o));
 		return new AnnotationValueLiteral(o.toString());

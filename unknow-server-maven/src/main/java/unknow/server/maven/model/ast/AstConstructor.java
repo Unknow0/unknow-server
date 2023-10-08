@@ -3,12 +3,14 @@
  */
 package unknow.server.maven.model.ast;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.ConstructorDeclaration;
+import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.nodeTypes.NodeWithModifiers;
 
 import unknow.server.maven.model.AnnotationModel;
@@ -58,11 +60,14 @@ public class AstConstructor implements ConstructorModel, AstMod {
 		return c;
 	}
 
-	@SuppressWarnings("unused")
 	@Override
 	public List<ParamModel<ConstructorModel>> parameters() {
-		if (params == null)
-			params = c.getParameters().stream().map(p -> new AstParam<ConstructorModel>(loader, this, p)).collect(Collectors.toList());
+		if (params == null) {
+			int i = 0;
+			params = new ArrayList<>();
+			for (Parameter p : c.getParameters())
+				params.add(new AstParam<>(loader, this, p, i++));
+		}
 		return params;
 	}
 

@@ -4,51 +4,28 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import javax.xml.namespace.QName;
+
 public final class OperationWrapper {
-	private final String ns;
-	private final String name;
-	private final String qname;
+	private final QName name;
 	private final List<Object> values;
 
-	public OperationWrapper(String ns, String name, Object... values) {
-		this.ns = ns;
+	public OperationWrapper(QName name, Object... values) {
 		this.name = name;
-		this.qname = ns == null ? name : '{' + ns + '}' + name;
 		this.values = Arrays.asList(values);
 	}
 
-	public OperationWrapper(String qname) {
-		if (qname.charAt(0) == '{') {
-			int i = qname.indexOf('}');
-			this.ns = qname.substring(0, i);
-			this.name = qname.substring(i + 1);
-		} else {
-			this.ns = null;
-			this.name = qname;
-		}
-		this.qname = qname;
+	public OperationWrapper(QName name) {
+		this.name = name;
 		this.values = new ArrayList<>();
 	}
 
 	/**
-	 * @return the name
+	 * @return operation name
 	 */
-	public String getName() {
+	public QName name() {
 		return name;
-	}
 
-	/**
-	 * @return the ns
-	 */
-	public String getNs() {
-		return ns;
-	}
-
-	/**
-	 * @return the qname
-	 */
-	public String getQName() {
-		return qname;
 	}
 
 	/**
@@ -75,7 +52,7 @@ public final class OperationWrapper {
 
 	@Override
 	public String toString() {
-		return "OperationWrapper [ns=" + ns + ", name=" + name + ", values=" + values + "]";
+		return "OperationWrapper [name=" + name + ", values=" + values + "]";
 	}
 
 }

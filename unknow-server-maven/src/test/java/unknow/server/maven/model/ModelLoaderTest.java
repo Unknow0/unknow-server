@@ -85,7 +85,7 @@ public class ModelLoaderTest {
 
 	}
 
-	@ParameterizedTest(name = "{0}")
+	@ParameterizedTest()
 	@MethodSource()
 	public void testClassName(ClassModel list) {
 

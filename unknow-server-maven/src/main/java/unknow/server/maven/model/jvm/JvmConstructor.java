@@ -4,6 +4,8 @@
 package unknow.server.maven.model.jvm;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Parameter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -54,11 +56,14 @@ public class JvmConstructor implements ConstructorModel, JvmMod {
 		return c.getModifiers();
 	}
 
-	@SuppressWarnings("unused")
 	@Override
 	public List<ParamModel<ConstructorModel>> parameters() {
-		if (params == null)
-			params = Arrays.stream(c.getParameters()).map(p -> new JvmParam<ConstructorModel>(loader, this, p)).collect(Collectors.toList());
+		if (params == null) {
+			params = new ArrayList<>();
+			Parameter[] p = c.getParameters();
+			for (int i = 0; i < p.length; i++)
+				params.add(new JvmParam<>(loader, this, p[i], i));
+		}
 		return params;
 	}
 

@@ -3,8 +3,6 @@ package unknow.server.maven.model;
 import java.util.Arrays;
 import java.util.function.Function;
 
-import unknow.server.maven.model.EnumModel.EnumConstant;
-
 /**
  * @author unknow
  */
@@ -15,9 +13,6 @@ public interface AnnotationValue {
 
 	/** @return value as class */
 	TypeModel asClass();
-
-	/** @return value as an enum */
-	EnumConstant asEnum();
 
 	/**
 	 * @return primitive, string and enum as string
@@ -35,6 +30,10 @@ public interface AnnotationValue {
 	/** @return value as int */
 	default int asInt() {
 		return Integer.parseInt(asLiteral());
+	}
+
+	default <T extends Enum<T>> T asEnum(Class<T> cl) {
+		return Enum.valueOf(cl, asLiteral());
 	}
 
 	/**
@@ -107,11 +106,6 @@ public interface AnnotationValue {
 		@Override
 		public AnnotationValue[] asArray() {
 			return this == NULL ? new AnnotationValue[0] : new AnnotationValue[] { this };
-		}
-
-		@Override
-		public EnumConstant asEnum() {
-			return null;
 		}
 
 		@Override
@@ -221,32 +215,6 @@ public interface AnnotationValue {
 		@Override
 		public AnnotationModel asAnnotation() {
 			return a;
-		}
-	}
-
-	/**
-	 * @author unknow
-	 */
-	public static class AnnotationValueEnum extends AnnotationValueNull {
-		private final EnumConstant e;
-
-		/**
-		 * create new AnnotationValueEnum
-		 * 
-		 * @param e
-		 */
-		public AnnotationValueEnum(EnumConstant e) {
-			this.e = e;
-		}
-
-		@Override
-		public String asLiteral() {
-			return e.name();
-		}
-
-		@Override
-		public EnumConstant asEnum() {
-			return e;
 		}
 	}
 }

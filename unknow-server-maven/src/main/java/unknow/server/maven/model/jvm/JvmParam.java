@@ -22,6 +22,7 @@ public class JvmParam<T extends WithParent<ClassModel>> implements ParamModel<T>
 	private final JvmModelLoader loader;
 	private final T m;
 	private final Parameter p;
+	private final int index;
 	private TypeModel type;
 	private Collection<AnnotationModel> annotations;
 
@@ -32,10 +33,16 @@ public class JvmParam<T extends WithParent<ClassModel>> implements ParamModel<T>
 	 * @param m
 	 * @param p
 	 */
-	public JvmParam(JvmModelLoader loader, T m, Parameter p) {
+	public JvmParam(JvmModelLoader loader, T m, Parameter p, int index) {
 		this.loader = loader;
 		this.m = m;
 		this.p = p;
+		this.index = index;
+	}
+
+	@Override
+	public int index() {
+		return index;
 	}
 
 	@Override

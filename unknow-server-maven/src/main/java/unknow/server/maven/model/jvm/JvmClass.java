@@ -57,7 +57,7 @@ public class JvmClass implements ClassModel, JvmMod {
 
 	@Override
 	public String name() {
-		return cl.getTypeName();
+		return cl.getName();
 	}
 
 	@Override
@@ -132,8 +132,8 @@ public class JvmClass implements ClassModel, JvmMod {
 	@Override
 	public String toString() {
 		if (parameters().isEmpty())
-			return cl.getTypeName();
-		StringBuilder sb = new StringBuilder(cl.getTypeName()).append('<');
+			return cl.getName();
+		StringBuilder sb = new StringBuilder(cl.getName()).append('<');
 		for (TypeParamModel p : parameters())
 			sb.append(p.type()).append(',');
 		sb.setCharAt(sb.length() - 1, '>');

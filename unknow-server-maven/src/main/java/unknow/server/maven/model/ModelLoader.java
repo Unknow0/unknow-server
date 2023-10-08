@@ -23,8 +23,10 @@ public abstract class ModelLoader {
 	protected static final Pattern CLAZZ_LIST = Pattern.compile("(.+?(?:<.*?>)?)(?:,|$)");
 
 	static {
-		for (TypeModel t : PrimitiveModel.PRIMITIVES)
+		for (TypeModel t : PrimitiveModel.PRIMITIVES) {
 			BUILTIN.put(t.name(), t);
+			BUILTIN.put(t.toString(), t);
+		}
 	}
 
 	private final Map<String, TypeModel> cache = new HashMap<>();
@@ -57,7 +59,7 @@ public abstract class ModelLoader {
 	 */
 	public TypeModel get(String cl, List<TypeParamModel> parameters) {
 		String key = cl + "#" + parameters;
-		TypeModel t = BUILTIN.get(cl);
+		TypeModel t = parameters.isEmpty() ? BUILTIN.get(cl) : null;
 		if (t != null)
 			return t;
 		t = cache.get(key);
@@ -73,7 +75,7 @@ public abstract class ModelLoader {
 
 	private final TypeModel create(String cl, List<TypeParamModel> parameters) {
 		if (cl.endsWith("[]"))
-			return new ArrayModel(cl, get(cl.substring(0, cl.length() - 2), parameters));
+			return new ArrayModel(get(cl.substring(0, cl.length() - 2), parameters));
 		if (cl.equals("?"))
 			return WildcardModel.EMPTY;
 		if (cl.startsWith("? extends "))

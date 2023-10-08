@@ -34,7 +34,7 @@ public interface ConstructorModel extends WithAnnotation, WithMod, WithParent<Cl
 		StringBuilder sb = new StringBuilder("<init>").append('(');
 		if (!parameters().isEmpty()) {
 			for (ParamModel<ConstructorModel> t : parameters())
-				sb.append(t.type().internalName()).append(',');
+				sb.append(t.type().name()).append(',');
 			sb.setLength(sb.length() - 1);
 		}
 		return sb.append(')').toString();

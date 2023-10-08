@@ -1,7 +1,7 @@
 /**
  * 
  */
-package unknow.server.maven.jaxb.model;
+package unknow.server.maven.model_xml;
 
 import javax.xml.namespace.QName;
 

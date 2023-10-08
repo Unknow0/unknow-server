@@ -82,6 +82,7 @@
 						</goals>
 						<configuration>
 							<warSourceDirectory>${basedir}/src/main/resources</warSourceDirectory>
+							<primaryArtifact>false</primaryArtifact>
 						</configuration>
 					</execution>
 				</executions>
