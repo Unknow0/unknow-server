@@ -28,12 +28,12 @@ public class Rest {
 
 	@GET
 	@Path("t")
-	public void t() {
+	public void t() { // ok
 	}
 
 	@GET
 	@Path("q/{v}")
-	public void q() {
+	public void q() { // ok
 	}
 
 	@GET
@@ -64,7 +64,7 @@ public class Rest {
 	}
 
 	public static enum E {
-		a, b, c, d, e;
+		A, B, C, D, E;
 	}
 
 	public static class Bean {

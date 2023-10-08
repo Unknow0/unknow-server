@@ -72,64 +72,63 @@ public class JvmAnnotation implements AnnotationModel {
 	public static AnnotationValue getValue(JvmModelLoader loader, Object o) {
 		if (o == null)
 			return AnnotationValue.NULL;
+		if (o instanceof boolean[]) {
+			boolean[] t = (boolean[]) o;
+			AnnotationValue[] a = new AnnotationValue[t.length];
+			for (int i = 0; i < t.length; i++)
+				a[i] = new AnnotationValueLiteral(Boolean.toString(t[i]));
+			return new AnnotationValueArray(a);
+		}
+		if (o instanceof byte[]) {
+			byte[] t = (byte[]) o;
+			AnnotationValue[] a = new AnnotationValue[t.length];
+			for (int i = 0; i < t.length; i++)
+				a[i] = new AnnotationValueLiteral(Byte.toString(t[i]));
+			return new AnnotationValueArray(a);
+		}
+		if (o instanceof char[]) {
+			char[] t = (char[]) o;
+			AnnotationValue[] a = new AnnotationValue[t.length];
+			for (int i = 0; i < t.length; i++)
+				a[i] = new AnnotationValueLiteral(Character.toString(t[i]));
+			return new AnnotationValueArray(a);
+		}
+		if (o instanceof short[]) {
+			short[] t = (short[]) o;
+			AnnotationValue[] a = new AnnotationValue[t.length];
+			for (int i = 0; i < t.length; i++)
+				a[i] = new AnnotationValueLiteral(Short.toString(t[i]));
+			return new AnnotationValueArray(a);
+		}
+		if (o instanceof int[]) {
+			int[] t = (int[]) o;
+			AnnotationValue[] a = new AnnotationValue[t.length];
+			for (int i = 0; i < t.length; i++)
+				a[i] = new AnnotationValueLiteral(Integer.toString(t[i]));
+			return new AnnotationValueArray(a);
+		}
+		if (o instanceof long[]) {
+			long[] t = (long[]) o;
+			AnnotationValue[] a = new AnnotationValue[t.length];
+			for (int i = 0; i < t.length; i++)
+				a[i] = new AnnotationValueLiteral(Long.toString(t[i]));
+			return new AnnotationValueArray(a);
+		}
+		if (o instanceof float[]) {
+			float[] t = (float[]) o;
+			AnnotationValue[] a = new AnnotationValue[t.length];
+			for (int i = 0; i < t.length; i++)
+				a[i] = new AnnotationValueLiteral(Float.toString(t[i]));
+			return new AnnotationValueArray(a);
+		}
+		if (o instanceof double[]) {
+			double[] t = (double[]) o;
+			AnnotationValue[] a = new AnnotationValue[t.length];
+			for (int i = 0; i < t.length; i++)
+				a[i] = new AnnotationValueLiteral(Double.toString(t[i]));
+			return new AnnotationValueArray(a);
+		}
 		if (o.getClass().isArray()) {
-			Class<?> cl = o.getClass().getComponentType();
-			if (cl == boolean.class) {
-				boolean[] t = (boolean[]) o;
-				AnnotationValue[] a = new AnnotationValue[t.length];
-				for (int i = 0; i < t.length; i++)
-					a[i] = new AnnotationValueLiteral(Boolean.toString(t[i]));
-				return new AnnotationValueArray(a);
-			}
-			if (cl == byte.class) {
-				byte[] t = (byte[]) o;
-				AnnotationValue[] a = new AnnotationValue[t.length];
-				for (int i = 0; i < t.length; i++)
-					a[i] = new AnnotationValueLiteral(Byte.toString(t[i]));
-				return new AnnotationValueArray(a);
-			}
-			if (cl == char.class) {
-				char[] t = (char[]) o;
-				AnnotationValue[] a = new AnnotationValue[t.length];
-				for (int i = 0; i < t.length; i++)
-					a[i] = new AnnotationValueLiteral(Character.toString(t[i]));
-				return new AnnotationValueArray(a);
-			}
-			if (cl == short.class) {
-				short[] t = (short[]) o;
-				AnnotationValue[] a = new AnnotationValue[t.length];
-				for (int i = 0; i < t.length; i++)
-					a[i] = new AnnotationValueLiteral(Short.toString(t[i]));
-				return new AnnotationValueArray(a);
-			}
-			if (cl == int.class) {
-				int[] t = (int[]) o;
-				AnnotationValue[] a = new AnnotationValue[t.length];
-				for (int i = 0; i < t.length; i++)
-					a[i] = new AnnotationValueLiteral(Integer.toString(t[i]));
-				return new AnnotationValueArray(a);
-			}
-			if (cl == long.class) {
-				long[] t = (long[]) o;
-				AnnotationValue[] a = new AnnotationValue[t.length];
-				for (int i = 0; i < t.length; i++)
-					a[i] = new AnnotationValueLiteral(Long.toString(t[i]));
-				return new AnnotationValueArray(a);
-			}
-			if (cl == float.class) {
-				float[] t = (float[]) o;
-				AnnotationValue[] a = new AnnotationValue[t.length];
-				for (int i = 0; i < t.length; i++)
-					a[i] = new AnnotationValueLiteral(Float.toString(t[i]));
-				return new AnnotationValueArray(a);
-			}
-			if (cl == double.class) {
-				double[] t = (double[]) o;
-				AnnotationValue[] a = new AnnotationValue[t.length];
-				for (int i = 0; i < t.length; i++)
-					a[i] = new AnnotationValueLiteral(Double.toString(t[i]));
-				return new AnnotationValueArray(a);
-			}
 			Object[] t = (Object[]) o;
 			AnnotationValue[] a = new AnnotationValue[t.length];
 			for (int i = 0; i < t.length; i++)

@@ -41,7 +41,7 @@ import unknow.server.nio.Connection.Out;
  * @author unknow
  */
 public class ServletResponseImpl implements HttpServletResponse {
-	private static final Logger log = LoggerFactory.getLogger(ServletResponseImpl.class);
+	private static final Logger logger = LoggerFactory.getLogger(ServletResponseImpl.class);
 	private static final byte[] CRLF = new byte[] { '\r', '\n' };
 	private static final byte[] QUOTE = new byte[] { '\\', '"' };
 	private static final byte[] CHUNKED = new byte[] { 't', 'r', 'a', 'n', 's', 'f', 'e', 'r', '-', 'e', 'n', 'c', 'o', 'd', 'i', 'n', 'g', ':', ' ', 'c', 'h', 'u', 'n', 'k',
@@ -219,7 +219,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 				f.doFilter(r, this);
 				return;
 			} catch (ServletException e) {
-				log.error("failed to send error", e);
+				logger.error("failed to send error", e);
 			}
 		}
 		commited = true;

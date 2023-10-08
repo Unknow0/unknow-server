@@ -20,7 +20,7 @@ import org.slf4j.LoggerFactory;
  * @author unknow
  */
 public final class NIOWorker extends NIOLoop implements NIOWorkers {
-	private static final Logger log = LoggerFactory.getLogger(NIOWorker.class);
+	private static final Logger logger = LoggerFactory.getLogger(NIOWorker.class);
 
 	/** this worker id */
 	private final int id;
@@ -81,7 +81,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			try {
 				h.writeInto(channel, buf);
 			} catch (IOException e) {
-				log.error("failed to write", h, e);
+				logger.error("failed to write", h, e);
 				channel.close();
 			}
 		}
@@ -91,7 +91,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			try {
 				h.readFrom(channel, buf);
 			} catch (IOException e) {
-				log.error("failed to read {}", h, e);
+				logger.error("failed to read {}", h, e);
 				channel.close();
 			}
 		}

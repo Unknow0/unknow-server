@@ -38,7 +38,7 @@ import unknow.server.http.AccessLogFilter;
 import unknow.server.http.servlet.ServletResource;
 import unknow.server.http.servlet.ServletResourceStatic;
 import unknow.server.http.utils.Resource;
-import unknow.server.maven.AbstractMojo;
+import unknow.server.maven.AbstractMojoUnk;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.servlet.Builder.BuilderContext;
@@ -57,7 +57,7 @@ import unknow.server.maven.servlet.sax.Context;
  * @author unknow
  */
 @Mojo(defaultPhase = LifecyclePhase.GENERATE_SOURCES, name = "servlet-generator", requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME, requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
-public class ServletGenMojo extends AbstractMojo implements BuilderContext {
+public class ServletGenMojo extends AbstractMojoUnk implements BuilderContext {
 	private static final Logger logger = LoggerFactory.getLogger(ServletGenMojo.class);
 
 	private static final List<Builder> BUILDER = Arrays.asList(new CreateEventManager(), new CreateServletManager(), new CreateContext(), new CreateServlets(),
@@ -108,39 +108,7 @@ public class ServletGenMojo extends AbstractMojo implements BuilderContext {
 			descriptor.filters.add(ACCESSLOG);
 
 		processSrc(descriptor);
-		processResources((full, file) -> {
-			if (file.equals(WEBXML)) {
-				try (InputStream r = Files.newInputStream(full)) {
-					SaxParser.parse(new Context(descriptor, loader), new InputSource(r));
-				} catch (ParserConfigurationException | SAXException | IOException e) {
-					logger.warn("Failed to parse web.xml {}", full, e);
-				}
-				return;
-			}
-			if (file.equals(INITIALIZER)) {
-				try (BufferedReader r = Files.newBufferedReader(full)) {
-					String l;
-					while ((l = r.readLine()) != null)
-						descriptor.initializer.add(l);
-				} catch (IOException e) {
-					logger.warn("Failed to parse {}", full, e);
-				}
-			}
-			if (file.startsWith("WEB-INF") || file.startsWith("META-INF"))
-				return;
-			String p = "/" + file.toString().replace('\\', '/');
-			try {
-				long size = Files.size(full);
-				descriptor.resources.put(p, new Resource(Files.getLastModifiedTime(full).to(TimeUnit.MILLISECONDS), size));
-				SD d = new SD(descriptor.servlets.size());
-				d.clazz = (size < staticResourceSize ? ServletResourceStatic.class : ServletResource.class).getName();
-				d.name = "Resource:" + p;
-				d.pattern.add(p);
-				descriptor.servlets.add(d);
-			} catch (IOException e) {
-				logger.error("Failed to process resources {}", full, e);
-			}
-		});
+		processResources(this::process);
 		if (graalvm && !descriptor.resources.isEmpty())
 			generateGraalvmResources();
 
@@ -157,6 +125,41 @@ public class ServletGenMojo extends AbstractMojo implements BuilderContext {
 			b.add(this);
 
 		out.save(cu);
+	}
+
+	private void process(Path full, Path file) {
+		if (file.equals(WEBXML)) {
+			try (InputStream r = Files.newInputStream(full)) {
+				SaxParser.parse(new Context(descriptor, loader), new InputSource(r));
+			} catch (ParserConfigurationException | SAXException | IOException e) {
+				logger.warn("Failed to parse web.xml {}", full, e);
+			}
+			return;
+		}
+		if (file.equals(INITIALIZER)) {
+			try (BufferedReader r = Files.newBufferedReader(full)) {
+				String l;
+				while ((l = r.readLine()) != null)
+					descriptor.initializer.add(l);
+			} catch (IOException e) {
+				logger.warn("Failed to parse {}", full, e);
+			}
+		}
+		if (file.startsWith("WEB-INF") || file.startsWith("META-INF"))
+			return;
+		String p = "/" + file.toString().replace('\\', '/');
+		try {
+			long size = Files.size(full);
+			descriptor.resources.put(p, new Resource(Files.getLastModifiedTime(full).to(TimeUnit.MILLISECONDS), size));
+			SD d = new SD(descriptor.servlets.size());
+			d.clazz = (size < staticResourceSize ? ServletResourceStatic.class : ServletResource.class).getName();
+			d.name = "Resource:" + p;
+			d.pattern.add(p);
+			descriptor.servlets.add(d);
+		} catch (IOException e) {
+			logger.error("Failed to process resources {}", full, e);
+		}
+
 	}
 
 	/**

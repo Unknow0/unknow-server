@@ -94,7 +94,7 @@ import unknow.server.jaxb.handler.IntHandler;
 import unknow.server.jaxb.handler.LongHandler;
 import unknow.server.jaxb.handler.ShortHandler;
 import unknow.server.jaxb.handler.StringHandler;
-import unknow.server.maven.AbstractMojo;
+import unknow.server.maven.AbstractMojoUnk;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
 import unknow.server.maven.jaxb.model.XmlCollection;
@@ -110,8 +110,10 @@ import unknow.server.maven.model.TypeModel;
  * @author unknow
  */
 @Mojo(defaultPhase = LifecyclePhase.GENERATE_SOURCES, name = "jaxb-generator", requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME, requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
-public class JaxbGeneratorMojo extends AbstractMojo {
+public class JaxbGeneratorMojo extends AbstractMojoUnk {
 	private static final Logger logger = LoggerFactory.getLogger(JaxbGeneratorMojo.class);
+
+	private static final String INSTANCE = "INSTANCE";
 
 	private final Map<XmlType, String> handlers = new HashMap<>();
 	private final XmlLoader xmlLoader = new XmlLoader();
@@ -148,13 +150,13 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 
 		int i = 0;
 		for (XmlType t : xmlLoader.types()) {
-			if (!"http://www.w3.org/2001/XMLSchema".equals(t.ns()))
+			if (!XmlLoader.XS.equals(t.ns()))
 				handlers.put(t, packageName + "." + t.type().simpleName() + "_" + i++);
 		}
 		// default handers
 
 		for (XmlType t : xmlLoader.types()) {
-			if ("http://www.w3.org/2001/XMLSchema".equals(t.ns()))
+			if (XmlLoader.XS.equals(t.ns()))
 				continue;
 
 			if (t instanceof XmlEnum)
@@ -181,7 +183,7 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 		TypeCache types = new TypeCache(cu, existingClass);
 		ClassOrInterfaceDeclaration cl = cu.addClass(n).addImplementedType(types.getClass(XmlSimpleHandler.class, types.get(t)));
 
-		cl.addFieldWithInitializer(new ClassOrInterfaceType(null, n), "INSTANCE", new ObjectCreationExpr(null, new ClassOrInterfaceType(null, n), Utils.list()),
+		cl.addFieldWithInitializer(new ClassOrInterfaceType(null, n), INSTANCE, new ObjectCreationExpr(null, new ClassOrInterfaceType(null, n), Utils.list()),
 				Utils.PUBLIC_STATIC);
 
 		BlockStmt b = cl.addConstructor(Modifier.Keyword.PRIVATE).getBody();
@@ -230,7 +232,7 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 		TypeCache types = new TypeCache(cu, existingClass);
 		ClassOrInterfaceDeclaration cl = cu.addClass(n).addImplementedType(types.getClass(XmlHandler.class, types.get(t)));
 
-		cl.addFieldWithInitializer(new ClassOrInterfaceType(null, n), "INSTANCE", new ObjectCreationExpr(null, new ClassOrInterfaceType(null, n), Utils.list()),
+		cl.addFieldWithInitializer(new ClassOrInterfaceType(null, n), INSTANCE, new ObjectCreationExpr(null, new ClassOrInterfaceType(null, n), Utils.list()),
 				Utils.PUBLIC_STATIC);
 
 		int i = 0;
@@ -284,7 +286,7 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 		if (!xml.getAttributes().isEmpty()) {
 			b.addStatement(new VariableDeclarationExpr(types.get(String.class), "s"));
 			for (XmlElement e : xml.getAttributes()) {
-				Expression v = new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(handlers.get(e.xmlType()))), "INSTANCE"), "toString",
+				Expression v = new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(handlers.get(e.xmlType()))), INSTANCE), "toString",
 						Utils.list(new MethodCallExpr(new NameExpr("t"), e.getter())));
 				v = new EnclosedExpr(new AssignExpr(new NameExpr("s"), v, AssignExpr.Operator.ASSIGN));
 				b.addStatement(new IfStmt(new BinaryExpr(v, new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS),
@@ -304,7 +306,7 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 				BlockStmt p = new BlockStmt()
 						.addStatement(new IfStmt(new BinaryExpr(new NameExpr("e"), new NullLiteralExpr(), BinaryExpr.Operator.EQUALS), new ContinueStmt(), null))
 						.addStatement(new MethodCallExpr(new NameExpr("w"), "writeStartElement", Utils.list(Utils.text(e.ns()), Utils.text(e.name()))))
-						.addStatement(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(handlers.get(c.component()))), "INSTANCE"), "write",
+						.addStatement(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(handlers.get(c.component()))), INSTANCE), "write",
 								Utils.list(new NameExpr("w"), new NameExpr("e"), new NameExpr("listener"))))
 						.addStatement(new MethodCallExpr(new NameExpr("w"), "writeEndElement", Utils.list()));
 
@@ -318,7 +320,7 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 				}
 			} else {
 				w = new BlockStmt().addStatement(new MethodCallExpr(new NameExpr("w"), "writeStartElement", Utils.list(Utils.text(e.ns()), Utils.text(e.name()))))
-						.addStatement(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(handlers.get(e.xmlType()))), "INSTANCE"), "write",
+						.addStatement(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(handlers.get(e.xmlType()))), INSTANCE), "write",
 								Utils.list(new NameExpr("w"), new NameExpr(n), new NameExpr("listener"))))
 						.addStatement(new MethodCallExpr(new NameExpr("w"), "writeEndElement", Utils.list()));
 			}
@@ -328,7 +330,7 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 		if (xml.getValue() != null) {
 			XmlElement value = xml.getValue();
 			b.addStatement(new MethodCallExpr(new NameExpr("w"), "writeCharacters",
-					Utils.list(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(handlers.get(value.xmlType()))), "INSTANCE"), "toString",
+					Utils.list(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(handlers.get(value.xmlType()))), INSTANCE), "toString",
 							Utils.list(new MethodCallExpr(new NameExpr("t"), value.getter()))))));
 		}
 
@@ -369,7 +371,7 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 			for (XmlElement e : xml.getAttributes()) {
 				i = new IfStmt(new MethodCallExpr(new NameExpr(e.name() + "$a" + c++), "equals", Utils.list(new NameExpr("n"))),
 						new ExpressionStmt(new MethodCallExpr(new NameExpr("o"), e.setter(),
-								Utils.list(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(handlers.get(e.xmlType()))), "INSTANCE"), "toObject",
+								Utils.list(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(handlers.get(e.xmlType()))), INSTANCE), "toObject",
 										Utils.list(new MethodCallExpr(new NameExpr("r"), "getAttributeValue", Utils.list(new NameExpr("i")))))))),
 						i);
 			}
@@ -417,11 +419,11 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 											AssignExpr.Operator.ASSIGN)),
 									null))
 							.addStatement(new MethodCallExpr(n, "add",
-									Utils.list(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(handlers.get(t.component()))), "INSTANCE"), "read",
+									Utils.list(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(handlers.get(t.component()))), INSTANCE), "read",
 											Utils.list(new NameExpr("r"), new NameExpr("o"), new NameExpr("listener"))))));
 				} else
 					s = new ExpressionStmt(new MethodCallExpr(new NameExpr("o"), e.setter(),
-							Utils.list(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(handlers.get(e.xmlType()))), "INSTANCE"), "read",
+							Utils.list(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(handlers.get(e.xmlType()))), INSTANCE), "read",
 									Utils.list(new NameExpr("r"), new NameExpr("o"), new NameExpr("listener"))))));
 
 				j = new IfStmt(new MethodCallExpr(new NameExpr(e.name() + "$e" + c++), "equals", Utils.list(new NameExpr("q"))), s, j);
@@ -439,7 +441,7 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 					new BinaryExpr(new NameExpr("n"), new FieldAccessExpr(new TypeExpr(types.get(XMLStreamConstants.class)), "CHARACTERS"), BinaryExpr.Operator.EQUALS),
 					new BlockStmt()
 							.addStatement(new MethodCallExpr(new NameExpr("o"), v.setter(),
-									Utils.list(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(handlers.get(v.xmlType()))), "INSTANCE"), "toObject",
+									Utils.list(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(handlers.get(v.xmlType()))), INSTANCE), "toObject",
 											Utils.list(new MethodCallExpr(new TypeExpr(types.get(StrReader.class)), "read", Utils.list(new NameExpr("r"))))))))
 							.addStatement(new AssignExpr(new NameExpr("n"), new MethodCallExpr(new NameExpr("r"), "getEventType"), AssignExpr.Operator.ASSIGN)),
 					null));
@@ -457,11 +459,10 @@ public class JaxbGeneratorMojo extends AbstractMojo {
 		BlockStmt b = new BlockStmt();
 		for (Entry<String, XmlType> t : xmlLoader.entries()) {
 			String h = handlers.get(t.getValue());
-			if (h == null || "http://www.w3.org/2001/XMLSchema".equals(t.getValue().ns()))
+			if (h == null || XmlLoader.XS.equals(t.getValue().ns()))
 				continue;
 			TypeModel type = loader.get(t.getKey());
-			b.addStatement(
-					new MethodCallExpr(null, "register", Utils.list(new ClassExpr(types.get(t.getKey())), new FieldAccessExpr(new TypeExpr(types.get(h)), "INSTANCE"))));
+			b.addStatement(new MethodCallExpr(null, "register", Utils.list(new ClassExpr(types.get(t.getKey())), new FieldAccessExpr(new TypeExpr(types.get(h)), INSTANCE))));
 			classes.computeIfAbsent(type.packageName(), k -> new ArrayList<>()).add(type);
 		}
 

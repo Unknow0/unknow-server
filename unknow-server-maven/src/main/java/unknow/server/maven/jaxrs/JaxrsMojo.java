@@ -63,7 +63,7 @@ import jakarta.ws.rs.ext.ParamConverterProvider;
 import jakarta.ws.rs.ext.RuntimeDelegate;
 import unknow.server.http.jaxrs.JaxrsContext;
 import unknow.server.http.jaxrs.JaxrsRuntime;
-import unknow.server.maven.AbstractMojo;
+import unknow.server.maven.AbstractMojoUnk;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
 import unknow.server.maven.model.ClassModel;
@@ -73,7 +73,7 @@ import unknow.server.maven.model.TypeModel;
  * @author unknow
  */
 @Mojo(defaultPhase = LifecyclePhase.GENERATE_SOURCES, name = "jaxrs-generator", requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME, requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
-public class JaxrsMojo extends AbstractMojo {
+public class JaxrsMojo extends AbstractMojoUnk {
 	private static final Logger logger = LoggerFactory.getLogger(JaxrsMojo.class);
 
 	private JaxrsModel model;
@@ -101,7 +101,7 @@ public class JaxrsMojo extends AbstractMojo {
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
 		init();
-		model = new JaxrsModel(loader, super.cl);
+		model = new JaxrsModel(loader, classLoader);
 		processSrc(cu -> cu.walk(ClassOrInterfaceDeclaration.class, t -> model.process(loader.get(t.getFullyQualifiedName().get()).asClass())));
 		model.implicitConstructor.remove("java.lang.String");
 

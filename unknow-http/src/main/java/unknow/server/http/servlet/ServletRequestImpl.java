@@ -54,7 +54,7 @@ import unknow.server.util.data.ArrayMap;
  * @author unknow
  */
 public class ServletRequestImpl implements HttpServletRequest {
-	private static final Logger log = LoggerFactory.getLogger(ServletRequestImpl.class);
+	private static final Logger logger = LoggerFactory.getLogger(ServletRequestImpl.class);
 
 	private static final Cookie[] EMPTY = new Cookie[0];
 
@@ -169,7 +169,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 			if ("POST".equals(getMethod()) && "application/x-www-form-urlencoded".equalsIgnoreCase(getContentType()))
 				parseContentParam(p);
 		} catch (IOException e) {
-			log.error("failed to parse params from content", e);
+			logger.error("failed to parse params from content", e);
 		}
 
 		String[] s = new String[0];

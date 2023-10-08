@@ -27,7 +27,7 @@ import jakarta.servlet.http.HttpSessionListener;
  * @author unknow
  */
 public class EventManager {
-	private static final Logger log = LoggerFactory.getLogger(EventManager.class);
+	private static final Logger logger = LoggerFactory.getLogger(EventManager.class);
 
 	private final List<ServletContextListener> contextListeners;
 	private final List<ServletContextAttributeListener> contextAttributeListeners;
@@ -67,7 +67,7 @@ public class EventManager {
 			try {
 				l.contextInitialized(e);
 			} catch (Exception ex) {
-				log.error("failed to notify {}", l, ex);
+				logger.error("failed to notify {}", l, ex);
 			}
 		}
 	}
@@ -81,7 +81,7 @@ public class EventManager {
 			try {
 				l.contextInitialized(e);
 			} catch (Exception ex) {
-				log.error("failed to notify {}", l, ex);
+				logger.error("failed to notify {}", l, ex);
 			}
 		}
 	}
@@ -102,7 +102,7 @@ public class EventManager {
 				try {
 					l.attributeRemoved(e);
 				} catch (Exception ex) {
-					log.error("failed to notify {}", l, ex);
+					logger.error("failed to notify {}", l, ex);
 				}
 			}
 		} else if (old == null) {
@@ -111,7 +111,7 @@ public class EventManager {
 				try {
 					l.attributeAdded(e);
 				} catch (Exception ex) {
-					log.error("failed to notify {}", l, ex);
+					logger.error("failed to notify {}", l, ex);
 
 				}
 			}
@@ -122,7 +122,7 @@ public class EventManager {
 				try {
 					l.attributeReplaced(e);
 				} catch (Exception ex) {
-					log.error("failed to notify {}", l, ex);
+					logger.error("failed to notify {}", l, ex);
 
 				}
 			}
@@ -140,7 +140,7 @@ public class EventManager {
 			try {
 				l.requestInitialized(e);
 			} catch (Exception ex) {
-				log.error("failed to notify {}", l, ex);
+				logger.error("failed to notify {}", l, ex);
 
 			}
 		}
@@ -157,7 +157,7 @@ public class EventManager {
 			try {
 				l.requestDestroyed(e);
 			} catch (Exception ex) {
-				log.error("failed to notify {}", l, ex);
+				logger.error("failed to notify {}", l, ex);
 
 			}
 		}
@@ -180,7 +180,7 @@ public class EventManager {
 				try {
 					l.attributeRemoved(e);
 				} catch (Exception ex) {
-					log.error("failed to notify {}", l, ex);
+					logger.error("failed to notify {}", l, ex);
 
 				}
 			}
@@ -190,7 +190,7 @@ public class EventManager {
 				try {
 					l.attributeAdded(e);
 				} catch (Exception ex) {
-					log.error("failed to notify {}", l, ex);
+					logger.error("failed to notify {}", l, ex);
 
 				}
 			}
@@ -201,7 +201,7 @@ public class EventManager {
 				try {
 					l.attributeReplaced(e);
 				} catch (Exception ex) {
-					log.error("failed to notify {}", l, ex);
+					logger.error("failed to notify {}", l, ex);
 
 				}
 			}

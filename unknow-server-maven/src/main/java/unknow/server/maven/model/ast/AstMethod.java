@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.nodeTypes.NodeWithModifiers;
 
@@ -57,7 +58,7 @@ public class AstMethod implements MethodModel, AstMod {
 	}
 
 	@Override
-	public NodeWithModifiers<?> object() {
+	public NodeWithModifiers<? extends Node> object() {
 		return m;
 	}
 

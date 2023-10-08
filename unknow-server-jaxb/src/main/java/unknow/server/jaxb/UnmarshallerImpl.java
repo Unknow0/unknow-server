@@ -205,6 +205,7 @@ public class UnmarshallerImpl implements Unmarshaller {
 
 	@Override
 	public <A extends XmlAdapter> void setAdapter(Class<A> type, A adapter) {
+		// TODO
 	}
 
 	@SuppressWarnings("unchecked")
@@ -215,6 +216,7 @@ public class UnmarshallerImpl implements Unmarshaller {
 
 	@Override
 	public void setAttachmentUnmarshaller(AttachmentUnmarshaller au) {
+		// TODO
 	}
 
 	@Override

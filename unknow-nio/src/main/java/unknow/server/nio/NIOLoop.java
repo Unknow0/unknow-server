@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
  * @author unknow
  */
 public class NIOLoop implements Runnable {
-	private static final Logger log = LoggerFactory.getLogger(NIOLoop.class);
+	private static final Logger logger = LoggerFactory.getLogger(NIOLoop.class);
 
 	/** the thread that will run the loop */
 	private final Thread t;
@@ -62,9 +62,9 @@ public class NIOLoop implements Runnable {
 				select(timeout);
 				onSelect(false);
 			} catch (IOException e) {
-				log.error("failed to execute", e);
+				logger.error("failed to execute", e);
 			} catch (InterruptedException e) {
-				log.info("Interrupted", e);
+				logger.info("Interrupted", e);
 				break;
 			}
 		}
@@ -78,17 +78,17 @@ public class NIOLoop implements Runnable {
 		// TODO add timeout ?
 		while (!selector.keys().isEmpty()) {
 			try {
-				log.info("wait {} connection before close", selector.keys().size());
+				logger.info("wait {} connection before close", selector.keys().size());
 				select(500);
 				onSelect(true);
 			} catch (Throwable e) {
-				log.error("failed to execute", e);
+				logger.error("failed to execute", e);
 			}
 		}
 		try {
 			selector.close();
 		} catch (Exception e) {
-			log.error("failed to close selector", e);
+			logger.error("failed to close selector", e);
 		}
 		afterStop();
 	}

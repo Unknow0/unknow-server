@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.ConstructorDeclaration;
 import com.github.javaparser.ast.nodeTypes.NodeWithModifiers;
 
@@ -53,7 +54,7 @@ public class AstConstructor implements ConstructorModel, AstMod {
 	}
 
 	@Override
-	public NodeWithModifiers<?> object() {
+	public NodeWithModifiers<? extends Node> object() {
 		return c;
 	}
 

@@ -20,6 +20,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import org.apache.maven.model.Resource;
+import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
@@ -47,8 +48,8 @@ import unknow.server.maven.model.jvm.JvmModelLoader;
 /**
  * @author unknow
  */
-public abstract class AbstractMojo extends org.apache.maven.plugin.AbstractMojo {
-	private static final Logger log = LoggerFactory.getLogger(AbstractMojo.class);
+public abstract class AbstractMojoUnk extends AbstractMojo {
+	private static final Logger logger = LoggerFactory.getLogger(AbstractMojoUnk.class);
 
 	@Parameter(defaultValue = "${project}", required = true, readonly = true)
 	protected MavenProject project;
@@ -90,19 +91,19 @@ public abstract class AbstractMojo extends org.apache.maven.plugin.AbstractMojo 
 
 	protected ModelLoader loader;
 
-	protected ClassLoader cl;
+	protected ClassLoader classLoader;
 
 	abstract protected String id();
 
 	protected void init() throws MojoFailureException {
-		cl = getClassLoader();
-		loader = ModelLoader.from(JvmModelLoader.GLOBAL, new JvmModelLoader(cl), new AstModelLoader(classes, packages));
+		classLoader = getClassLoader();
+		loader = ModelLoader.from(JvmModelLoader.GLOBAL, new JvmModelLoader(classLoader), new AstModelLoader(classes, packages));
 
 		List<String> compileSourceRoots = project.getCompileSourceRoots();
 
 		TypeSolver[] solver = new TypeSolver[compileSourceRoots.size() + 1];
 		int i = 0;
-		solver[i++] = new ClassLoaderTypeSolver(cl);
+		solver[i++] = new ClassLoaderTypeSolver(classLoader);
 		for (String s : compileSourceRoots)
 			solver[i++] = new JavaParserTypeSolver(s);
 		resolver = new CombinedTypeSolver(solver);
@@ -143,7 +144,7 @@ public abstract class AbstractMojo extends org.apache.maven.plugin.AbstractMojo 
 
 			return new URLClassLoader(urls, getClass().getClassLoader());
 		} catch (Exception e) {
-			log.error("Failed to get project classpath", e);
+			logger.error("Failed to get project classpath", e);
 			return getClass().getClassLoader();
 		}
 	}

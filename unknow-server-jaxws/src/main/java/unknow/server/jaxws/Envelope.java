@@ -4,10 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class Envelope {
-
-	private final List<Object> header = new ArrayList<>();
-
-	private final List<Object> body = new ArrayList<>();
+	private final List<Object> header = new ArrayList<>(0);
+	private final List<Object> body = new ArrayList<>(1);
 
 	public void addHeader(Object o) {
 		header.add(o);
@@ -39,7 +37,7 @@ public final class Envelope {
 	}
 
 	public String sig() {
-		if (body.size() == 1 & body.get(0) instanceof OperationWrapper)
+		if (body.size() == 1 && body.get(0) instanceof OperationWrapper)
 			return ((OperationWrapper) body.get(0)).getQName();
 		StringBuilder sb = new StringBuilder();
 		for (Object o : header)
@@ -51,10 +49,6 @@ public final class Envelope {
 	}
 
 	private static void name(StringBuilder sb, Class<?> cl) {
-		if (cl.isArray())
-			sb.append('[').append(cl.getComponentType().getCanonicalName());
-		else
-			sb.append(cl.getCanonicalName());
-		sb.append(';');
+		sb.append(cl.getCanonicalName()).append(';');
 	}
 }

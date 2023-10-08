@@ -6,6 +6,7 @@ package unknow.server.maven.model;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 import unknow.server.maven.model.util.AncestrorIterable;
 import unknow.server.maven.model.util.WithMod;
@@ -96,19 +97,20 @@ public interface ClassModel extends TypeModel, WithMod {
 	 */
 	default Optional<MethodModel> findMethod(String name, TypeModel... params) {
 		ClassModel c = this;
+		Predicate<MethodModel> f = m -> {
+			if (!name.equals(m.name()))
+				return false;
+			if (m.parameters().size() != params.length)
+				return false;
+			int i = 0;
+			for (ParamModel<MethodModel> p : m.parameters()) {
+				if (!p.type().equals(params[i++]))
+					return false;
+			}
+			return true;
+		};
 		do {
-			Optional<MethodModel> o = methods().stream().filter(m -> {
-				if (!name.equals(m.name()))
-					return false;
-				if (m.parameters().size() != params.length)
-					return false;
-				int i = 0;
-				for (ParamModel<MethodModel> p : m.parameters()) {
-					if (!p.type().equals(params[i++]))
-						return false;
-				}
-				return true;
-			}).findFirst();
+			Optional<MethodModel> o = methods().stream().filter(f).findFirst();
 			if (o.isPresent())
 				return o;
 			c = c.superType();

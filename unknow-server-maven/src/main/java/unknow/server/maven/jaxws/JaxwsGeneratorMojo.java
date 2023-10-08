@@ -17,7 +17,7 @@ import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.ast.expr.AnnotationExpr;
 
 import jakarta.jws.WebService;
-import unknow.server.maven.AbstractMojo;
+import unknow.server.maven.AbstractMojoUnk;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.jaxb.model.XmlLoader;
 
@@ -25,7 +25,7 @@ import unknow.server.maven.jaxb.model.XmlLoader;
  * @author unknow
  */
 @Mojo(defaultPhase = LifecyclePhase.GENERATE_SOURCES, name = "jaxws-generator", requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME, requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
-public class JaxwsGeneratorMojo extends AbstractMojo {
+public class JaxwsGeneratorMojo extends AbstractMojoUnk {
 
 	@org.apache.maven.plugins.annotations.Parameter(name = "publishUrl", defaultValue = "http://127.0.0.1:8080")
 	private String publishUrl;

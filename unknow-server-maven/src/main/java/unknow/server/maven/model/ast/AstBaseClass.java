@@ -83,7 +83,7 @@ public abstract class AstBaseClass<T extends TypeDeclaration<?>> implements Clas
 	}
 
 	@Override
-	public NodeWithModifiers<?> object() {
+	public NodeWithModifiers<? extends Node> object() {
 		return c;
 	}
 

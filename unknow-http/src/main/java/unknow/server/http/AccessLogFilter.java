@@ -210,13 +210,8 @@ public class AccessLogFilter implements Filter {
 		List<Part> parts = new ArrayList<>();
 		List<String> param = new ArrayList<>();
 		int last = 0;
-		for (;;) {
-			int i = template.indexOf("%{", last);
-			if (i < 0) {
-				parts.add(new StringPart(template.substring(last)));
-				break;
-			}
-
+		int i;
+		while ((i = template.indexOf("%{", last)) >= 0) {
 			int e = template.indexOf('}', i + 2);
 			if (e < 0) {
 				parts.add(new StringPart(template.substring(last, i + 2)));
@@ -226,20 +221,8 @@ public class AccessLogFilter implements Filter {
 
 			if (last != i)
 				parts.add(new StringPart(template.substring(last, i)));
-			last = i + 2;
 
-			String key;
-			i = template.indexOf(':', last);
-			if (i >= 0 && i < e) {
-				key = template.substring(last, i);
-				last = i + 1;
-				while ((i = template.indexOf(':', last)) < e && i > 0) {
-					param.add(template.substring(last, i));
-					last = i + 1;
-				}
-				param.add(template.substring(last, e));
-			} else
-				key = template.substring(last, e);
+			String key = parseFormat(template, i + 2, e, param);
 			Function<List<String>, Part> f = builders.get(key);
 			if (f == null)
 				throw new RuntimeException("no part named '" + key + "' in template:\n" + template);
@@ -247,7 +230,31 @@ public class AccessLogFilter implements Filter {
 			param.clear();
 			last = e + 1;
 		}
+		if (last < template.length())
+			parts.add(new StringPart(template.substring(last)));
 		return parts.toArray(EMPTY);
+	}
+
+	/**
+	 * parse a format
+	 * @param template the template
+	 * @param o start index for the format
+	 * @param e end index for the format
+	 * @param param output param
+	 * @return the format name
+	 */
+	private static final String parseFormat(String template, int o, int e, List<String> param) {
+		int i = template.indexOf(':', o);
+		if (i < 0 || i > e)
+			return template.substring(o, e);
+		String key = template.substring(o, i);
+		o = i + 1;
+		while ((i = template.indexOf(':', o)) < e && i > 0) {
+			param.add(template.substring(o, i));
+			o = i + 1;
+		}
+		param.add(template.substring(o, e));
+		return key;
 	}
 
 	public static interface Part {

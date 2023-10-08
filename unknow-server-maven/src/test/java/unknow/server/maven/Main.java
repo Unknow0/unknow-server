@@ -23,7 +23,7 @@ import unknow.server.maven.model.jvm.JvmModelLoader;
 /**
  * @author unknow
  */
-public class Test {
+public class Main {
 	public static void main(String[] arg) {
 		ModelLoader loader = JvmModelLoader.GLOBAL;
 

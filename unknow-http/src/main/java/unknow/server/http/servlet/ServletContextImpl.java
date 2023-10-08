@@ -36,7 +36,7 @@ import unknow.server.util.data.ArrayMap;
  * @author unknow
  */
 public class ServletContextImpl implements ServletContext {
-	private static final Logger log = LoggerFactory.getLogger(ServletContextImpl.class);
+	private static final Logger logger = LoggerFactory.getLogger(ServletContextImpl.class);
 
 	private static final String SERVER_INFO = "UnknowServer/" + ServletContextImpl.class.getPackage().getImplementationVersion();
 	private final String name;
@@ -203,12 +203,12 @@ public class ServletContextImpl implements ServletContext {
 
 	@Override
 	public void log(String msg) {
-		log.info("{}", msg);
+		logger.info("{}", msg);
 	}
 
 	@Override
 	public void log(String message, Throwable throwable) {
-		log.info("{}", message, throwable);
+		logger.info("{}", message, throwable);
 	}
 
 	@Override

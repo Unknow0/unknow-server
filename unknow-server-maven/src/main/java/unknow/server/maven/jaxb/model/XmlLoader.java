@@ -52,19 +52,19 @@ import unknow.server.maven.model.jvm.JvmModelLoader;
 public class XmlLoader {
 	private static final Logger logger = LoggerFactory.getLogger(XmlLoader.class);
 
-	public static final XmlTypeSimple BOOLEAN = new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "boolean"), PrimitiveModel.BOOLEAN);
-	public static final XmlTypeSimple BYTE = new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "byte"), PrimitiveModel.BYTE);
-	public static final XmlTypeSimple SHORT = new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "short"), PrimitiveModel.SHORT);
-	public static final XmlTypeSimple INT = new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "int"), PrimitiveModel.INT);
-	public static final XmlTypeSimple LONG = new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "long"), PrimitiveModel.LONG);
-	public static final XmlTypeSimple FLOAT = new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "float"), PrimitiveModel.FLOAT);
-	public static final XmlTypeSimple DOUBLE = new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "double"), PrimitiveModel.DOUBLE);
-	public static final XmlTypeSimple CHAR = new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "string"), PrimitiveModel.CHAR);
-	public static final XmlTypeSimple STRING = new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "string"), JvmModelLoader.GLOBAL.get(String.class.getName()));
-	public static final XmlTypeSimple BIGINT = new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "integer"),
-			JvmModelLoader.GLOBAL.get(BigInteger.class.getName()));
-	public static final XmlTypeSimple BIGDEC = new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "decimal"),
-			JvmModelLoader.GLOBAL.get(BigDecimal.class.getName()));
+	public static final String XS = "http://www.w3.org/2001/XMLSchema";
+
+	public static final XmlTypeSimple BOOLEAN = new XmlTypeSimple(new QName(XS, "boolean"), PrimitiveModel.BOOLEAN);
+	public static final XmlTypeSimple BYTE = new XmlTypeSimple(new QName(XS, "byte"), PrimitiveModel.BYTE);
+	public static final XmlTypeSimple SHORT = new XmlTypeSimple(new QName(XS, "short"), PrimitiveModel.SHORT);
+	public static final XmlTypeSimple INT = new XmlTypeSimple(new QName(XS, "int"), PrimitiveModel.INT);
+	public static final XmlTypeSimple LONG = new XmlTypeSimple(new QName(XS, "long"), PrimitiveModel.LONG);
+	public static final XmlTypeSimple FLOAT = new XmlTypeSimple(new QName(XS, "float"), PrimitiveModel.FLOAT);
+	public static final XmlTypeSimple DOUBLE = new XmlTypeSimple(new QName(XS, "double"), PrimitiveModel.DOUBLE);
+	public static final XmlTypeSimple CHAR = new XmlTypeSimple(new QName(XS, "string"), PrimitiveModel.CHAR);
+	public static final XmlTypeSimple STRING = new XmlTypeSimple(new QName(XS, "string"), JvmModelLoader.GLOBAL.get(String.class.getName()));
+	public static final XmlTypeSimple BIGINT = new XmlTypeSimple(new QName(XS, "integer"), JvmModelLoader.GLOBAL.get(BigInteger.class.getName()));
+	public static final XmlTypeSimple BIGDEC = new XmlTypeSimple(new QName(XS, "decimal"), JvmModelLoader.GLOBAL.get(BigDecimal.class.getName()));
 
 	private final Map<String, XmlType> types = new HashMap<>();
 
@@ -126,13 +126,13 @@ public class XmlLoader {
 			return STRING;
 
 		if (cl.isAssignableTo(Duration.class.getName()))
-			return new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "duration"), cl);
+			return new XmlTypeSimple(new QName(XS, "duration"), cl);
 		if (cl.isAssignableTo(LocalDate.class))
-			return new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "date"), cl);
+			return new XmlTypeSimple(new QName(XS, "date"), cl);
 		if (cl.isAssignableTo(LocalTime.class) || cl.isAssignableTo(OffsetTime.class))
-			return new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "time"), cl);
+			return new XmlTypeSimple(new QName(XS, "time"), cl);
 		if (cl.isAssignableTo(LocalDateTime.class) || cl.isAssignableTo(OffsetDateTime.class) || cl.isAssignableTo(ZonedDateTime.class))
-			return new XmlTypeSimple(new QName("http://www.w3.org/2001/XMLSchema", "dateTime"), cl);
+			return new XmlTypeSimple(new QName(XS, "dateTime"), cl);
 
 		ClassModel col = cl.ancestor(Collection.class.getName());
 		if (col != null)
@@ -235,7 +235,7 @@ public class XmlLoader {
 		if (propOrder.isEmpty()) {
 			if (defaultOrder == XmlAccessOrder.ALPHABETICAL)
 				Collections.sort(elems, (a, b) -> a.getter().compareTo(b.getter()));
-			elements = new XmlElements(XmlGroup.all, elems);
+			elements = new XmlElements(XmlGroup.ALL, elems);
 		} else {
 			Collections.sort(elems, (a, b) -> {
 				String an = Character.toLowerCase(a.getter().charAt(3)) + a.getter().substring(4);
@@ -250,7 +250,7 @@ public class XmlLoader {
 					return -1;
 				return 1;
 			});
-			elements = new XmlElements(XmlGroup.sequence, elems);
+			elements = new XmlElements(XmlGroup.SEQUENCE, elems);
 		}
 
 		Optional<AnnotationModel> a = c.annotation(jakarta.xml.bind.annotation.XmlType.class);

@@ -175,12 +175,8 @@ public class Buffers {
 	public int read(boolean wait) throws InterruptedException {
 		lock.lockInterruptibly();
 		try {
-			if (wait) {
-				while (len == 0) {
-					System.out.println("Wait " + Thread.currentThread());
-					cond.await();
-				}
-			}
+			if (wait)
+				awaitContent();
 			if (len == 0)
 				return -1;
 			int r = head.b[head.o++];
@@ -209,12 +205,8 @@ public class Buffers {
 			return 0;
 		lock.lockInterruptibly();
 		try {
-			if (wait) {
-				while (len == 0) {
-					System.out.println("Wait " + Thread.currentThread());
-					cond.await();
-				}
-			}
+			if (wait)
+				awaitContent();
 			if (len == 0)
 				return -1;
 			int v = 0;
@@ -250,12 +242,8 @@ public class Buffers {
 	public boolean read(ByteBuffer bb, boolean wait) throws InterruptedException {
 		lock.lockInterruptibly();
 		try {
-			if (wait) {
-				while (len == 0) {
-					System.out.println("Wait " + Thread.currentThread());
-					cond.await();
-				}
-			}
+			if (wait)
+				awaitContent();
 			int l = bb.remaining();
 			if (head == null || l == 0)
 				return false;
@@ -279,6 +267,11 @@ public class Buffers {
 		}
 	}
 
+	private void awaitContent() throws InterruptedException {
+		while (len == 0)
+			cond.await();
+	}
+
 	/**
 	 * read a number amount of byte into the buffers
 	 * 
@@ -290,12 +283,8 @@ public class Buffers {
 	public void read(Buffers buf, int l, boolean wait) throws InterruptedException {
 		lock.lockInterruptibly();
 		try {
-			if (wait) {
-				while (len == 0) {
-					System.out.println("Wait " + Thread.currentThread());
-					cond.await();
-				}
-			}
+			if (wait)
+				awaitContent();
 			if (l == 0 || head == null)
 				return;
 			Chunk h = head;

@@ -34,7 +34,7 @@ public class XmlElements implements Iterable<XmlElement> {
 	}
 
 	public static enum XmlGroup {
-		sequence, all, choice
+		SEQUENCE, ALL, CHOICE
 	}
 
 }
