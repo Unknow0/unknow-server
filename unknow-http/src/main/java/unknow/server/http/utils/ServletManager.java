@@ -130,6 +130,19 @@ public final class ServletManager {
 			f.getFilter().init(f);
 	}
 
+	private static FilterChain buildChain(FilterConfigImpl f, FilterChain chain, String path) {
+
+		for (String p : f.getUrlPatternMappings()) {
+			if ((p.equals("/") || p.equals("/*")
+					|| p.startsWith("*.") && path.endsWith(p.substring(1))
+					|| p.endsWith("/*") && path.startsWith(path, p.length() - 2))
+					|| p.equals("") && path.equals("/") || p.equals(path)) {
+				return new FilterChainImpl(f.getFilter(), chain);
+			}
+		}
+		return chain;
+	}
+
 	private FilterChain buildErrorChain(ServletConfigImpl s, String path) {
 		FilterChain chain = new ServletFilter(s.getServlet());
 		String name = s.getServletName();
@@ -142,15 +155,7 @@ public final class ServletManager {
 				chain = new FilterChainImpl(f.getFilter(), chain);
 				continue;
 			}
-			for (String p : f.getUrlPatternMappings()) {
-				if ((p.equals("/") || p.equals("/*")
-						|| p.startsWith("*.") && path.endsWith(p.substring(1))
-						|| p.endsWith("/*") && path.startsWith(path, p.length() - 2))
-						|| p.equals("") && path.equals("/") || p.equals(path)) {
-					chain = new FilterChainImpl(f.getFilter(), chain);
-					break;
-				}
-			}
+			chain = buildChain(f, chain, path);
 		}
 		return new ChangePath(path, chain);
 	}

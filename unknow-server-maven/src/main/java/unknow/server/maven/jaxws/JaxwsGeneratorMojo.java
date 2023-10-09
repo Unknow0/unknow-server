@@ -25,7 +25,7 @@ import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.ast.expr.AnnotationExpr;
 
 import jakarta.jws.WebService;
-import unknow.server.maven.AbstractMojoUnk;
+import unknow.server.maven.AbstractGeneratorMojo;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.model_xml.XmlLoader;
 
@@ -33,7 +33,7 @@ import unknow.server.maven.model_xml.XmlLoader;
  * @author unknow
  */
 @Mojo(defaultPhase = LifecyclePhase.GENERATE_SOURCES, name = "jaxws-generator", requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME, requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
-public class JaxwsGeneratorMojo extends AbstractMojoUnk {
+public class JaxwsGeneratorMojo extends AbstractGeneratorMojo {
 	private static final Logger logger = LoggerFactory.getLogger(JaxwsGeneratorMojo.class);
 
 	@org.apache.maven.plugins.annotations.Parameter(name = "publishUrl", defaultValue = "http://127.0.0.1:8080")

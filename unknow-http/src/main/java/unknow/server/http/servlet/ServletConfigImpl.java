@@ -21,6 +21,8 @@ import unknow.server.util.data.ArrayMap;
  * @author unknow
  */
 public class ServletConfigImpl implements ServletConfig, ServletRegistration {
+	private static final String ALREADY_INITIALIZED = "already initialized";
+
 	private final String name;
 	private final Servlet servlet;
 	private final ServletContext context;
@@ -78,12 +80,12 @@ public class ServletConfigImpl implements ServletConfig, ServletRegistration {
 
 	@Override
 	public boolean setInitParameter(String name, String value) {
-		throw new IllegalStateException("already initialized");
+		throw new IllegalStateException(ALREADY_INITIALIZED);
 	}
 
 	@Override
 	public Set<String> setInitParameters(Map<String, String> initParameters) {
-		throw new IllegalStateException("already initialized");
+		throw new IllegalStateException(ALREADY_INITIALIZED);
 	}
 
 	@Override
@@ -103,7 +105,7 @@ public class ServletConfigImpl implements ServletConfig, ServletRegistration {
 
 	@Override
 	public Set<String> addMapping(String... urlPatterns) {
-		throw new IllegalStateException("already initialized");
+		throw new IllegalStateException(ALREADY_INITIALIZED);
 	}
 
 	@Override

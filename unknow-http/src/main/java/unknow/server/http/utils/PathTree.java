@@ -55,6 +55,7 @@ public class PathTree {
 			}
 			last = n;
 		}
+
 		if (last.ends != null) {
 			Node n = ends(last.ends, part.get(part.size() - 1));
 			if (n != null) {
