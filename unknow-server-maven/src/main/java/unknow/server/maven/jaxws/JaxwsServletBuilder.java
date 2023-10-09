@@ -3,6 +3,7 @@
  */
 package unknow.server.maven.jaxws;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -10,6 +11,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import javax.xml.namespace.QName;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +41,9 @@ import com.github.javaparser.ast.expr.TypeExpr;
 import com.github.javaparser.ast.expr.VariableDeclarationExpr;
 import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.stmt.CatchClause;
+import com.github.javaparser.ast.stmt.IfStmt;
 import com.github.javaparser.ast.stmt.ReturnStmt;
+import com.github.javaparser.ast.stmt.Statement;
 import com.github.javaparser.ast.stmt.SwitchEntry;
 import com.github.javaparser.ast.stmt.SwitchStmt;
 import com.github.javaparser.ast.stmt.ThrowStmt;
@@ -47,9 +52,10 @@ import com.github.javaparser.ast.type.UnknownType;
 
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.xml.bind.JAXBContext;
+import jakarta.xml.bind.JAXBElement;
 import jakarta.xml.bind.JAXBException;
+import jakarta.xml.bind.Unmarshaller;
 import unknow.server.jaxws.AbstractWs;
-import unknow.server.jaxws.Element;
 import unknow.server.jaxws.Envelope;
 import unknow.server.jaxws.OperationWrapper;
 import unknow.server.jaxws.WSMethod;
@@ -57,7 +63,6 @@ import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
 import unknow.server.maven.jaxws.binding.Operation;
 import unknow.server.maven.jaxws.binding.Service;
-import unknow.server.maven.model.ClassModel;
 import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.model.TypeModel;
 import unknow.server.maven.model_xml.XmlLoader;
@@ -83,7 +88,7 @@ public class JaxwsServletBuilder {
 		String name = service.name;
 		NodeList<Expression> list = Utils.list();
 		for (String s : service.urls)
-			list.add(Utils.text(baseUrl + s));
+			list.add(Utils.text(s));
 
 		servlet = cu.addClass(Character.toUpperCase(name.charAt(0)) + name.substring(1) + "Servlet", Utils.PUBLIC).addExtendedType(types.getClass(AbstractWs.class));
 		servlet.addAndGetAnnotation(WebServlet.class).addPair("urlPatterns", new ArrayInitializerExpr(list)).addPair("name", Utils.text(name));
@@ -108,7 +113,7 @@ public class JaxwsServletBuilder {
 						new CastExpr(types.getClass(OperationWrapper.class), new MethodCallExpr(new NameExpr("e"), "getBody", Utils.list(new IntegerLiteralExpr("0")))),
 						Operator.ASSIGN));
 
-				String n = "N$" + w++;
+				String n = "N$" + w;
 				servlet.addFieldWithInitializer(types.getClass(QName.class), n,
 						new ObjectCreationExpr(null, types.getClass(QName.class), Utils.list(Utils.text(o.name.getNamespaceURI()), Utils.text(o.name.getLocalPart()))),
 						Utils.PSF);
@@ -124,6 +129,9 @@ public class JaxwsServletBuilder {
 			int h = 0;
 			int bi = 0;
 			for (unknow.server.maven.jaxws.binding.Parameter p : o.params) {
+				servlet.addFieldWithInitializer(types.getClass(QName.class), "P$" + w + "$" + (bi + h),
+						new ObjectCreationExpr(null, types.getClass(QName.class), Utils.list(Utils.text(p.name.getNamespaceURI()), Utils.text(p.name.getLocalPart()))),
+						Utils.PSF);
 				clazz.add(p.type);
 				Expression v;
 				if (p.header)
@@ -140,16 +148,22 @@ public class JaxwsServletBuilder {
 				b.addStatement(new MethodCallExpr(new NameExpr("WS"), o.m, param));
 			else {
 				b.addStatement(
-						new AssignExpr(new VariableDeclarationExpr(types.getClass(Object.class), "ro"), new MethodCallExpr(new NameExpr("WS"), o.m, param), Operator.ASSIGN));
-				e = new ObjectCreationExpr(null, types.getClass(Element.class),
-						Utils.list(Utils.text(o.result.name.getNamespaceURI()), Utils.text(o.result.name.getLocalPart()), new NameExpr("ro")));
+						new AssignExpr(new VariableDeclarationExpr(types.getClass(o.result.type), "ro"), new MethodCallExpr(new NameExpr("WS"), o.m, param), Operator.ASSIGN));
+				e = new ObjectCreationExpr(null, types.getClass(JAXBElement.class),
+						Utils.list(
+								new ObjectCreationExpr(null, types.getClass(QName.class),
+										Utils.list(Utils.text(o.result.name.getNamespaceURI()), Utils.text(o.result.name.getLocalPart()))),
+								new ClassExpr(types.get(o.result.type)), new NameExpr("ro")));
 			}
 			NodeList<Expression> header = Utils.list();
 			NodeList<Expression> body = Utils.list();
 			if (o.wrapped) {
 				// TODO out param
-				e = new ObjectCreationExpr(null, types.getClass(Element.class),
-						Utils.list(Utils.text(o.name.getNamespaceURI()), Utils.text(o.name.getLocalPart() + "Response"), e == null ? new NullLiteralExpr() : e));
+				Expression c = new ClassExpr(types.get(e == null ? Object.class : JAXBElement.class));
+				if (e == null)
+					e = new NullLiteralExpr();
+				e = new ObjectCreationExpr(null, types.getClass(JAXBElement.class), Utils.list(new ObjectCreationExpr(null, types.getClass(QName.class),
+						Utils.list(Utils.text(o.name.getNamespaceURI()), Utils.text(o.name.getLocalPart() + "Response"))), c, e));
 			} else {
 				// TODO out param
 			}
@@ -161,6 +175,7 @@ public class JaxwsServletBuilder {
 			String n = "CALL$" + entries.size();
 			entries.add(new SwitchEntry().setLabels(Utils.list(new StringLiteralExpr(o.sig()))).addStatement(new ReturnStmt(new NameExpr(n))));
 			servlet.addFieldWithInitializer(types.get(WSMethod.class), n, new LambdaExpr(Utils.list(new Parameter(new UnknownType(), "e")), b), Utils.PSF);
+			w++;
 		}
 
 		servlet.addConstructor(Modifier.Keyword.PUBLIC).getBody().addStatement(new MethodCallExpr(null, "super", Utils.list(new NullLiteralExpr()))); // TODO generated wsdl
@@ -177,7 +192,25 @@ public class JaxwsServletBuilder {
 		servlet.addMethod("getCall", Utils.PROTECT).addMarkerAnnotation(Override.class).setType(types.get(WSMethod.class))
 				.addParameter(new Parameter(types.get(String.class), "sig")).getBody().get().addStatement(new SwitchStmt(new NameExpr("sig"), entries));
 
-		servlet.addMethod("isWrappedOp", Utils.PROTECT).addMarkerAnnotation(Override.class).setType(types.get(boolean.class))
-				.addParameter(new Parameter(types.get(QName.class), "n")).getBody().get().addStatement(new ReturnStmt(wrapped));
+		Statement s = new IfStmt(wrapped,
+				new ReturnStmt(new MethodCallExpr(null, "read",
+						Utils.list(new NameExpr("r"), new NameExpr("u"),
+								new ObjectCreationExpr(null, types.getClass(OperationWrapper.class), Utils.list(new NameExpr("n")))))),
+				new ThrowStmt(new ObjectCreationExpr(null, types.getClass(IOException.class), Utils.list(Utils.text("Invalid request")))));
+		w = 0;
+		for (Operation o : service.operations) {
+			int i = 0;
+			for (unknow.server.maven.jaxws.binding.Parameter p : o.params)
+				s = new IfStmt(new MethodCallExpr(new NameExpr("P$" + w + "$" + i++), "equals", Utils.list(new NameExpr("n"))), new ReturnStmt(
+						new MethodCallExpr(new MethodCallExpr(new NameExpr("u"), "unmarshal", Utils.list(new NameExpr("r"), new ClassExpr(types.get(p.type)))), "getValue")),
+						s);
+			w++;
+		}
+
+		servlet.addMethod("read", Utils.PROTECT).addMarkerAnnotation(Override.class).setType(types.get(Object.class))
+				.addParameter(new Parameter(types.get(XMLStreamReader.class), "r")).addParameter(new Parameter(types.get(Unmarshaller.class), "u"))
+				.addThrownException(types.getClass(XMLStreamException.class)).addThrownException(types.getClass(JAXBException.class))
+				.addThrownException(types.getClass(IOException.class)).getBody().get()
+				.addStatement(Utils.assign(types.get(QName.class), "n", new MethodCallExpr(new NameExpr("r"), "getName"))).addStatement(s);
 	}
 }

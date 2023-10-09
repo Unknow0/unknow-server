@@ -140,7 +140,7 @@ public class Service {
 			for (ParamModel<?> p : m.parameters()) {
 				a = p.annotation(WebParam.class);
 				boolean h = a.flatMap(v -> v.member("header")).map(v -> v.asBoolean()).orElse(false);
-				String name = a.flatMap(v -> v.member("name")).map(v -> v.asLiteral()).filter(v -> "##default".equals(v))
+				String name = a.flatMap(v -> v.member("name")).map(v -> v.asLiteral()).filter(v -> !"##default".equals(v))
 						.orElse(paramStyle == ParameterStyle.BARE ? opName : "arg" + p.index());
 				String ns = a.flatMap(v -> v.member("targetNamespace")).map(v -> v.asLiteral()).filter(v -> !"##default".equals(v))
 						.orElse(paramStyle == ParameterStyle.WRAPPED && !h ? "" : this.ns);

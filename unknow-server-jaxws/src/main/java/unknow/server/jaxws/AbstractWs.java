@@ -48,6 +48,8 @@ public abstract class AbstractWs extends HttpServlet {
 
 	@Override
 	public final void init() throws ServletException {
+		XML_OUT.setProperty("javax.xml.stream.isRepairingNamespaces", true);
+		XML_OUT.setProperty("javax.xml.stream.isRepairingNamespaces", true);
 		if (wsdl == null)
 			return;
 		try (InputStream is = getServletContext().getResourceAsStream(wsdl)) {
@@ -101,10 +103,12 @@ public abstract class AbstractWs extends HttpServlet {
 			fault(res, ex.getMessage());
 		}
 
-		String sig = req.getHeader("soapaction");
-		if (sig == null)
-			sig = e.sig();
-		WSMethod m = getCall(sig);
+		String action = req.getHeader("soapaction");
+		StringBuilder sig = new StringBuilder();
+		if (action != null)
+			sig.append(action);
+		e.sig(sig.append('/'));
+		WSMethod m = getCall(sig.toString());
 		if (m != null) {
 			try (OutputStream out = res.getOutputStream()) {
 				XMLStreamWriter w = XML_OUT.createXMLStreamWriter(out);
@@ -115,14 +119,14 @@ public abstract class AbstractWs extends HttpServlet {
 				fault(res, ex.getMessage());
 			}
 		} else
-			fault(res, "No operation fouund");
+			fault(res, "No operation found '" + sig + "'");
 	}
 
 	protected abstract WSMethod getCall(String sig);
 
-	protected abstract boolean isWrappedOp(QName n);
+	protected abstract Object read(XMLStreamReader r, Unmarshaller u) throws XMLStreamException, JAXBException, IOException;
 
-	private final void readEnvelope(XMLStreamReader r, Envelope e) throws XMLStreamException, IOException, JAXBException {
+	private final void readEnvelope(XMLStreamReader r, Envelope e) throws XMLStreamException, IOException, JAXBException, IOException {
 		Unmarshaller u = CTX.createUnmarshaller();
 		while (r.hasNext()) {
 			int n = r.next();
@@ -134,11 +138,13 @@ public abstract class AbstractWs extends HttpServlet {
 					readBody(r, u, e);
 				else
 					throw new IOException("expected " + HEADER + ", " + BODY + " instead of " + q);
-			}
+			} else if (n == XMLStreamConstants.END_ELEMENT)
+				return;
 		}
+		throw new IOException("EOF");
 	}
 
-	private final void readHeader(XMLStreamReader r, Unmarshaller u, Envelope e) throws XMLStreamException, JAXBException {
+	private final void readHeader(XMLStreamReader r, Unmarshaller u, Envelope e) throws XMLStreamException, JAXBException, IOException {
 		while (r.hasNext()) {
 			int n = r.next();
 			if (n == XMLStreamConstants.START_ELEMENT)
@@ -146,59 +152,47 @@ public abstract class AbstractWs extends HttpServlet {
 			else if (n == XMLStreamConstants.END_ELEMENT)
 				return;
 		}
+		throw new IOException("EOF");
 	}
 
-	private final void readBody(XMLStreamReader r, Unmarshaller u, Envelope e) throws XMLStreamException, JAXBException {
+	private final void readBody(XMLStreamReader r, Unmarshaller u, Envelope e) throws XMLStreamException, JAXBException, IOException {
 		while (r.hasNext()) {
 			int n = r.next();
 			if (n == XMLStreamConstants.START_ELEMENT) {
-				QName name = r.getName();
-				if (isWrappedOp(name)) {
-					OperationWrapper o = new OperationWrapper(name);
-					e.addBody(o);
-					readBody(r, u, o);
-				} else
-					e.addBody(u.unmarshal(r));
+				e.addBody(read(r, u));
 			} else if (n == XMLStreamConstants.END_ELEMENT)
 				return;
 		}
+		throw new IOException("EOF");
 	}
 
-	private final void readBody(XMLStreamReader r, Unmarshaller u, OperationWrapper e) throws XMLStreamException, JAXBException {
+	protected final OperationWrapper read(XMLStreamReader r, Unmarshaller u, OperationWrapper o) throws XMLStreamException, JAXBException, IOException {
 		while (r.hasNext()) {
 			int n = r.next();
-			if (n == XMLStreamConstants.START_ELEMENT)
-				e.add(u.unmarshal(r));
-			else if (n == XMLStreamConstants.END_ELEMENT)
-				return;
+			if (n == XMLStreamConstants.START_ELEMENT) {
+				o.add(read(r, u));
+			} else if (n == XMLStreamConstants.END_ELEMENT)
+				return o;
 		}
+		throw new IOException("EOF");
 	}
 
 	private final void writeEnvelope(XMLStreamWriter w, Envelope e) throws XMLStreamException, JAXBException {
 		Marshaller m = CTX.createMarshaller();
+		m.setProperty("jaxb.fragment", true);
 		// TODO get ns
 		w.writeStartElement(ENVELOPE.getNamespaceURI(), ENVELOPE.getLocalPart());
 		if (e.getHeaderSize() > 0) {
 			w.writeStartElement(HEADER.getNamespaceURI(), HEADER.getLocalPart());
 			for (int i = 0; i < e.getHeaderSize(); i++)
-				writeElement(w, m, e.getHeader(i));
+				m.marshal(e.getHeader(i), w);
 			w.writeEndElement();
 		}
 		w.writeStartElement(BODY.getNamespaceURI(), BODY.getLocalPart());
 		for (int i = 0; i < e.getBodySize(); i++)
-			writeElement(w, m, e.getBody(i));
+			m.marshal(e.getBody(i), w);
 		w.writeEndElement();
 		w.writeEndElement();
-	}
-
-	private final void writeElement(XMLStreamWriter w, Marshaller m, Object o) throws XMLStreamException, JAXBException {
-		while (o instanceof Element) {
-			Element e = (Element) o;
-			w.writeStartElement(e.ns, e.name);
-			o = e.value;
-			w.writeEndElement();
-		}
-		m.marshal(o, w);
 	}
 
 	private static final void fault(HttpServletResponse res, String err) {

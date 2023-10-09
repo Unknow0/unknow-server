@@ -35,7 +35,7 @@ public class Context extends JAXBContext {
 
 	@Override
 	public Marshaller createMarshaller() throws JAXBException {
-		return new MarshallerImpl(rootHandlers);
+		return new MarshallerImpl(rootHandlers, handlers);
 	}
 
 	@Override

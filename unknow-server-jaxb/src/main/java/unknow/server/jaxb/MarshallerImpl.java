@@ -22,6 +22,7 @@ import javax.xml.validation.Schema;
 import org.w3c.dom.Node;
 import org.xml.sax.ContentHandler;
 
+import jakarta.xml.bind.JAXBElement;
 import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Marshaller;
 import jakarta.xml.bind.PropertyException;
@@ -36,14 +37,16 @@ public class MarshallerImpl implements Marshaller {
 	private static final XMLOutputFactory f = XMLOutputFactory.newInstance();
 
 	private final Map<Class<?>, XmlRootHandler<?>> rootHandlers;
+	private final Map<Class<?>, XmlHandler<?>> handlers;
 
 	private String encoding = "utf8";
 	private boolean indented = false;
 	private boolean fragment = false;
 	private Listener listener;
 
-	public MarshallerImpl(Map<Class<?>, XmlRootHandler<?>> rootHandlers) {
+	public MarshallerImpl(Map<Class<?>, XmlRootHandler<?>> rootHandlers, Map<Class<?>, XmlHandler<?>> handlers) {
 		this.rootHandlers = rootHandlers;
+		this.handlers = handlers;
 	}
 
 	@Override
@@ -103,19 +106,36 @@ public class MarshallerImpl implements Marshaller {
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
 	public void marshal(Object jaxbElement, XMLStreamWriter writer) throws JAXBException {
-		XmlRootHandler h = rootHandlers.get(jaxbElement.getClass());
-		if (h == null)
-			throw new JAXBException("Unknown class '" + jaxbElement.getClass());
 		try {
 			if (!fragment)
 				writer.writeStartDocument(encoding, "1.0");
-			h.writeRoot(writer, jaxbElement, this);
+			if (jaxbElement instanceof JAXBElement) {
+				write((JAXBElement) jaxbElement, writer);
+			} else {
+				XmlRootHandler h = rootHandlers.get(jaxbElement.getClass());
+				if (h == null)
+					throw new JAXBException("Unknown class '" + jaxbElement.getClass());
+				h.writeRoot(writer, jaxbElement, this);
+			}
 			if (!fragment)
 				writer.writeEndDocument();
 		} catch (XMLStreamException e) {
 			throw new JAXBException(e);
 		}
+	}
 
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private final void write(JAXBElement e, XMLStreamWriter writer) throws JAXBException, XMLStreamException {
+		writer.writeStartElement(e.getName().getNamespaceURI(), e.getName().getLocalPart());
+		if (e.getDeclaredType() == JAXBElement.class) {
+			write((JAXBElement) e.getValue(), writer);
+		} else {
+			XmlHandler h = handlers.get(e.getDeclaredType());
+			if (h == null)
+				throw new JAXBException("Unknown class '" + e.getDeclaredType());
+			h.write(writer, e.getValue(), this);
+		}
+		writer.writeEndElement();
 	}
 
 	@Override
@@ -131,23 +151,23 @@ public class MarshallerImpl implements Marshaller {
 
 	@Override
 	public void setProperty(String name, Object value) throws PropertyException {
-		// TODO Auto-generated method stub
-
-//jaxb.encoding
-//output character encoding. If the property is not specified, it defaults to "UTF-8".
-//
-//jaxb.formatted.output
-//true - human readable indented xml data
-//false - unformatted xml data
-//If the property is not specified, it defaults to false.
-//
-//jaxb.schemaLocation
-//This property allows the client application to specify an xsi:schemaLocation attribute in the generated XML data.
-//
-//jaxb.noNamespaceSchemaLocation
-//This property allows the client application to specify an xsi:noNamespaceSchemaLocation attribute in the generated XML data.
-//
-//jaxb.fragment
+		switch (name) {
+			case "jaxb.encoding":
+				encoding = (String) value;
+				break;
+			case "jaxb.formatted.output":
+				indented = (boolean) value;
+				break;
+			case "jaxb.schemaLocation":
+				//This property allows the client application to specify an xsi:schemaLocation attribute in the generated XML data.
+				break;
+			case "jaxb.noNamespaceSchemaLocation":
+				//This property allows the client application to specify an xsi:noNamespaceSchemaLocation attribute in the generated XML data.
+				break;
+			case "jaxb.fragment":
+				fragment = (boolean) value;
+				break;
+		}
 	}
 
 	@Override

@@ -130,13 +130,10 @@
 			<artifactId>cxf-rt-rs-service-description-openapi-v3</artifactId>
 			<version>${cxf.version}</version>
 		</dependency>
-
-		<!--dependency>
-			<groupId>org.apache.xmlbeans</groupId>
-			<artifactId>xmlbeans</artifactId>
-			<version>5.1.0</version>
-			<scope>test</scope>
-		</dependency-->
+		<dependency>
+			<groupId>com.fasterxml</groupId>
+			<artifactId>aalto-xml</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.jakarta.rs</groupId>
 			<artifactId>jackson-jakarta-rs-json-provider</artifactId>
