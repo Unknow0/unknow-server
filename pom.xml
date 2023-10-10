@@ -64,6 +64,7 @@
 							</path>
 						</annotationProcessorPaths>
 						<compilerArgs>
+							<arg>-Xss1m</arg>
 							<arg>-Aproject=${project.groupId}/${project.artifactId}</arg>
 						</compilerArgs>
 					</configuration>
