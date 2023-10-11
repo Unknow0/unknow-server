@@ -67,9 +67,9 @@
 			<version>4.0.3</version>
 		</dependency>
 		<dependency>
-			<groupId>org.apache.xmlbeans</groupId>
-			<artifactId>xmlbeans</artifactId>
+			<groupId>org.eclipse.persistence</groupId>
+			<artifactId>org.eclipse.persistence.moxy</artifactId>
+			<version>4.0.2</version>
 		</dependency>
-
 	</dependencies>
 </project>

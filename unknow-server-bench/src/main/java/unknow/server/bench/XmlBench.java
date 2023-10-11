@@ -7,8 +7,6 @@ import java.io.OutputStream;
 import java.io.Reader;
 import java.io.StringReader;
 
-import org.apache.xmlbeans.XmlException;
-import org.apache.xmlbeans.XmlObject;
 import org.openjdk.jmh.annotations.Benchmark;
 
 import jakarta.xml.bind.JAXBContext;
@@ -18,13 +16,15 @@ import unknow.server.http.test.xml.Complex;
 public class XmlBench {
 	private static final ClassLoader cl = XmlBench.class.getClassLoader();
 	private static final Class<?>[] CLASS = { Complex.class };
-	static final JAXBContext JAXB;
 	static final JAXBContext UNKNOW;
+	static final JAXBContext JAXB;
+	static final JAXBContext MOXY;
 	static final String XML;
 	static {
 		try {
-			JAXB = new org.glassfish.jaxb.runtime.v2.JAXBContextFactory().createContext(CLASS, null);
 			UNKNOW = new unknow.server.http.test.generated.JaxbContextFactory().createContext(CLASS, null);
+			JAXB = new org.glassfish.jaxb.runtime.v2.JAXBContextFactory().createContext(CLASS, null);
+			MOXY = new org.eclipse.persistence.jaxb.XMLBindingContextFactory().createContext(CLASS, null);
 		} catch (JAXBException e) {
 			throw new RuntimeException(e);
 		}
@@ -40,35 +40,29 @@ public class XmlBench {
 		}
 	}
 
-	@Benchmark
-	public void jaxb() throws JAXBException, IOException {
+	private static void bench(JAXBContext c) throws JAXBException, IOException {
 		Object o;
 		try (Reader r = new StringReader(XML)) {
-			o = JAXB.createUnmarshaller().unmarshal(r);
+			o = c.createUnmarshaller().unmarshal(r);
 		}
 		if (!(o instanceof Complex))
 			throw new RuntimeException(o.getClass().getName());
-		JAXB.createMarshaller().marshal(o, DUMP);
+		c.createMarshaller().marshal(o, DUMP);
 	}
 
 	@Benchmark
 	public void unknow() throws JAXBException, IOException {
-		Object o;
-		try (Reader r = new StringReader(XML)) {
-			o = UNKNOW.createUnmarshaller().unmarshal(r);
-		}
-		if (!(o instanceof Complex))
-			throw new RuntimeException(o.getClass().getName());
-		UNKNOW.createMarshaller().marshal(o, DUMP);
+		bench(UNKNOW);
 	}
 
 	@Benchmark
-	public void xmlbeans() throws IOException, XmlException {
-		XmlObject o;
-		try (Reader r = new StringReader(XML)) {
-			o = XmlObject.Factory.parse(r);
-		}
-		o.save(DUMP);
+	public void reference() throws JAXBException, IOException {
+		bench(JAXB);
+	}
+
+	@Benchmark
+	public void moxy() throws JAXBException, IOException {
+		bench(MOXY);
 	}
 
 	private static final OutputStream DUMP = new OutputStream() {
