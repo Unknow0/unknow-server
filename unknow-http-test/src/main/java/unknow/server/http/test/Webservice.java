@@ -18,7 +18,7 @@ import unknow.server.http.test.xml.Root;
  * @author unknow
  */
 @SuppressWarnings("unused")
-@WebService(targetNamespace = "http://test.unknow", name = "ws")
+@WebService(targetNamespace = "http://test.unknow", serviceName = "ws")
 public class Webservice {
 
 	@WebMethod

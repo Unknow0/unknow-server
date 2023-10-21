@@ -34,7 +34,20 @@ public class XmlElements implements Iterable<XmlElement> {
 	}
 
 	public static enum XmlGroup {
-		SEQUENCE, ALL, CHOICE
+		SEQUENCE, ALL, CHOICE;
+
+		@Override
+		public String toString() {
+			switch (this) {
+				case SEQUENCE:
+					return "sequence";
+				case ALL:
+					return "all";
+				case CHOICE:
+					return "choice";
+			}
+			return "ERROR";
+		}
 	}
 
 }

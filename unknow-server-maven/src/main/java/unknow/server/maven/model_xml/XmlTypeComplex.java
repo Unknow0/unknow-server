@@ -37,7 +37,7 @@ public class XmlTypeComplex implements XmlType {
 	}
 
 	@Override
-	public QName qname() {
+	public QName name() {
 		return qname;
 	}
 

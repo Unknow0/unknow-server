@@ -270,6 +270,6 @@ public class XmlLoader {
 			name = a.flatMap(v -> v.member("name")).map(v -> v.asLiteral()).filter(v -> !v.equals("##default")).orElse(name);
 			ns = a.flatMap(v -> v.member("namespace")).map(v -> v.asLiteral()).filter(v -> !v.equals("##default")).orElse(ns);
 		}
-		return new QName(name, ns);
+		return new QName(ns, name);
 	}
 }

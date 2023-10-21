@@ -37,6 +37,9 @@ import unknow.server.maven.model_xml.XmlLoader;
 public class Service {
 	/** target name */
 	public final String name;
+
+	public final String portType;
+	public final String portName;
 	/** target namespace */
 	public final String ns;
 
@@ -49,20 +52,24 @@ public class Service {
 
 	public final List<Operation> operations = new ArrayList<>();
 
-	private Service(String name, String ns, String[] urls, ParameterStyle paramStyle) {
+	private Service(String name, String portType, String portName, String ns, String[] urls, ParameterStyle paramStyle) {
 		this.name = name;
+		this.portType = portType;
+		this.portName = portName;
 		this.ns = ns;
 		this.urls = urls;
 		this.paramStyle = paramStyle;
 	}
 
-	public static Service build(TypeDeclaration<?> serviceClass, ModelLoader loader, XmlLoader xmlLoader) {
+	public static Service build(TypeDeclaration<?> serviceClass, String basePath, ModelLoader loader, XmlLoader xmlLoader) {
 		TypeModel clazz = loader.get(serviceClass.resolve().getQualifiedName());
 		AnnotationModel ws = clazz.annotation(WebService.class).get();
-		String name = ws.member("name").map(v -> v.asLiteral()).orElse(serviceClass.resolve().getClassName());
+		String name = ws.member("serviceName").map(v -> v.asLiteral()).orElse(serviceClass.getNameAsString() + "Service");
+		String portType = ws.member("name").map(v -> v.asLiteral()).orElse(serviceClass.resolve().getClassName());
+		String portName = ws.member("portName").map(v -> v.asLiteral()).orElse(portType + "Port");
 		String ns = ws.member("targetNamespace").map(v -> v.asLiteral()).orElse(serviceClass.resolve().getPackageName());
 
-		String[] url = clazz.annotation(UrlMapping.class).flatMap(a -> a.value()).map(v -> v.asArrayLiteral()).orElse(new String[] { "/" + name });
+		String[] url = clazz.annotation(UrlMapping.class).flatMap(a -> a.value()).map(v -> v.asArrayLiteral()).orElse(new String[] { basePath + name });
 
 		Optional<AnnotationModel> a = clazz.annotation(SOAPBinding.class);
 		Style style = a.flatMap(v -> v.member("style")).map(v -> v.asEnum(Style.class)).orElse(Style.DOCUMENT);
@@ -74,7 +81,7 @@ public class Service {
 
 		ParameterStyle paramStyle = a.flatMap(v -> v.member("parameterStyle")).map(s -> s.asEnum(ParameterStyle.class)).orElse(ParameterStyle.WRAPPED);
 
-		Service service = new Service(name, ns, url, paramStyle);
+		Service service = new Service(name, portType, portName, ns, url, paramStyle);
 
 		String inter = ws.member("endpointInterface").map(v -> v.asLiteral()).orElse("");
 		if (!inter.isEmpty()) {
@@ -140,9 +147,9 @@ public class Service {
 			for (ParamModel<?> p : m.parameters()) {
 				a = p.annotation(WebParam.class);
 				boolean h = a.flatMap(v -> v.member("header")).map(v -> v.asBoolean()).orElse(false);
-				String name = a.flatMap(v -> v.member("name")).map(v -> v.asLiteral()).filter(v -> !"##default".equals(v))
+				String name = a.flatMap(v -> v.member("name")).map(v -> v.asLiteral()).filter(v -> !v.isEmpty())
 						.orElse(paramStyle == ParameterStyle.BARE ? opName : "arg" + p.index());
-				String ns = a.flatMap(v -> v.member("targetNamespace")).map(v -> v.asLiteral()).filter(v -> !"##default".equals(v))
+				String ns = a.flatMap(v -> v.member("targetNamespace")).map(v -> v.asLiteral()).filter(v -> !v.isEmpty())
 						.orElse(paramStyle == ParameterStyle.WRAPPED && !h ? "" : this.ns);
 				params.add(new Parameter(new QName(ns, name), p.type(), xmlLoader.add(p.type()), h));
 			}

@@ -4,9 +4,28 @@
 package unknow.server.maven.jaxws;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
+import javax.xml.namespace.QName;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamWriter;
+
+import unknow.server.jaxws.XMLNsCollector;
+import unknow.server.maven.jaxws.binding.Operation;
+import unknow.server.maven.jaxws.binding.Parameter;
 import unknow.server.maven.jaxws.binding.Service;
+import unknow.server.maven.model_xml.XmlCollection;
+import unknow.server.maven.model_xml.XmlElement;
+import unknow.server.maven.model_xml.XmlElements;
+import unknow.server.maven.model_xml.XmlEnum;
+import unknow.server.maven.model_xml.XmlEnum.XmlEnumEntry;
 import unknow.server.maven.model_xml.XmlType;
+import unknow.server.maven.model_xml.XmlTypeComplex;
 
 /**
  * @author unknow
@@ -16,456 +35,327 @@ public class WsdlBuilder {
 	private static final String WS = "http://schemas.xmlsoap.org/wsdl/";
 	private static final String WP = "http://schemas.xmlsoap.org/wsdl/soap/";
 
-//	private final Service service;
-//	private final String address;
-//	private final ByteArrayOutputStream out;
-//	private final XMLOutput x;
-//	private final Map<String, String> nsPrefix;
-//
-//	private final Map<String, Collection<XmlElem<?>>> elems;
-//	private final Map<String, Collection<XmlType<?>>> types;
+	private final Service service;
+	private final String address;
+
+	private final Map<String, Set<XmlType>> types;
+
+	private final Map<String, String> nsPrefix;
 
 	public WsdlBuilder(Service service, String address) {
-//		this.types = new HashMap<>();
-//		this.elems = new HashMap<>();
-//		collectElems(service, t -> {
-//			Collection<XmlType<?>> c = types.get(t.ns());
-//			if (c == null)
-//				types.put(t.ns(), c = new ArrayList<>());
-//			c.add(t);
-//		}, e -> {
-//			Collection<XmlElem<?>> c = elems.get(e.ns());
-//			if (c == null)
-//				elems.put(e.ns(), c = new ArrayList<>());
-//			c.add(e);
-//		});
-//		Map<String, Integer> collectNs = new HashMap<>();
-//		for (Entry<String, Collection<XmlElem<?>>> e : elems.entrySet())
-//			collectNs.merge(e.getKey(), e.getValue().size(), Integer::sum);
-//		for (Entry<String, Collection<XmlType<?>>> e : types.entrySet())
-//			collectNs.merge(e.getKey(), e.getValue().size(), Integer::sum);
-//		collectNs.merge(XS, 1, Integer::sum);
-//		collectNs.merge(WS, 1, Integer::sum);
-//		collectNs.merge(WP, 1, Integer::sum);
-//		this.nsPrefix = XMLNsCollector.buildNsMapping(collectNs);
-//
-//		this.service = service;
-//		this.address = address;
-//		this.out = new ByteArrayOutputStream();
-//		this.x = new XMLOutput(new OutputStreamWriter(out, StandardCharsets.UTF_8), nsPrefix);
+		this.service = service;
+		this.address = address;
+
+		this.types = new HashMap<>();
+
+		Map<String, Integer> ns = new HashMap<>();
+		ns.put(WS, 6);
+		// message: op * (warpped * 4 || param+1 + result*2)
+		// port:  op * (wapped*2 || result? + param?)
+		// binding op * (param? + result?)
+		ns.put(WP, 2);
+		// binding  op * (param? + result?)
+
+		for (Operation o : service.operations) {
+			ns.merge(WS, 1, Integer::sum);
+			ns.merge(WP, 1, Integer::sum);
+
+			if (o.wrapped)
+				ns.merge(o.name.getNamespaceURI(), 1, Integer::sum);
+			for (Parameter p : o.params) {
+				if (!o.wrapped)
+					ns.merge(p.name.getNamespaceURI(), 1, Integer::sum);
+				collectType(p.xml, ns);
+			}
+
+			if (o.result != null) {
+				if (!o.wrapped)
+					ns.merge(o.result.name.getNamespaceURI(), 1, Integer::sum);
+				collectType(o.result.xml, ns);
+			}
+		}
+		ns.merge(XS, ns.size() - 3, Integer::sum);
+		this.nsPrefix = XMLNsCollector.buildNsMapping(ns);
 	}
 
-	public byte[] build() {
-//		try {
-//			x.startElement("definitions", WS);
-//			x.attribute("targetNamespace", "", service.ns);
-//			x.startElement("types", WS);
-//
-//			for (String ns : nsPrefix.keySet()) {
-//				if (XS.equals(ns) || WS.equals(ns) || WP.equals(ns))
-//					continue;
-//				x.startElement("schema", XS);
-//				x.attribute("targetNamespace", "", ns);
-//				x.attribute("elementFormDefault", "", "qualified");
-//
-//				for (XmlType<?> t : types.getOrDefault(ns, Collections.emptyList()))
-//					appendType(t);
-//				for (XmlElem<?> e : elems.getOrDefault(ns, Collections.emptyList()))
-//					appendElem(e, ns);
-//
-//				x.endElement("schema", XS);
-//			}
-//			x.endElement("types", WS);
-//
-//			for (Op o : service.operations)
-//				appendMessage(o);
-//
-//			appendPortType();
-//			appendBinding();
-//
-//			x.startElement("service", WS);
-//			x.attribute("name", "", service.name);
-//
-//			x.startElement("port", WS);
-//			x.attribute("name", "", service.name + "PortType");
-//			x.attribute("binding", "", name(service.ns, service.name + "Binding"));
-//
-//			x.startElement("address", WP);
-//			x.attribute("location", "", address + service.urls[0]);
-//			x.endElement("address", WP);
-//
-//			x.endElement("port", WS);
-//			x.endElement("service", WS);
-//			x.endElement("definitions", WS);
-//			x.close();
-//		} catch (IOException e) {
-//			throw new RuntimeException(e);
-//		}
-//		return out.toByteArray();
-		return null;
+	private void collectType(XmlType t, Map<String, Integer> ns) {
+		ns.merge(t.name().getNamespaceURI(), 1, Integer::sum);
+		if (!types.computeIfAbsent(t.name().getNamespaceURI(), k -> new HashSet<>()).add(t))
+			return;
+
+		if (t instanceof XmlTypeComplex) {
+			XmlTypeComplex x = (XmlTypeComplex) t;
+			for (XmlElement e : x.getAttributes())
+				collectType(e.xmlType(), ns);
+			for (XmlElement e : x.getElements())
+				collectType(e.xmlType(), ns);
+			if (x.getValue() != null)
+				collectType(x.getValue().xmlType(), ns);
+		}
 	}
 
-	/**
-	 * @param sb
-	 * @param service
-	 * @param s
-	 * @throws IOException
-	 */
-//	private void appendSchema(String ns) throws IOException {
-//		if (XS.equals(ns) || WS.equals(ns) || WP.equals(ns))
-//			return;
-//		x.startElement("schema", XS);
-//		x.attribute("targetNamespace", "", ns);
-//		x.attribute("elementFormDefault", "", "qualified");
-//
-//		Set<XmlType<?>> set = new HashSet<>();
-//		for (Service.Op o : service.operations) {
-//			if (o.result != null)
-//				appendType(o.result.type(), ns, set);
-//			for (Service.Param p : o.params)
-//				appendType(p.type(), ns, set);
-//
-//			if (o.paramStyle == ParameterStyle.WRAPPED) {
-//				if (!ns.equals(o.ns))
-//					continue;
-//				x.startElement("element", XS);
-//				x.attribute("name", "", o.name);
-//				x.startElement("complexType", XS);
-//				x.startElement("sequence", XS);
-//				for (Param p : o.params) {
-//					x.startElement("element", XS);
-//					x.attribute("name", "", p.name());
-//					x.attribute("type", "", name(p.type()));
-//					x.endElement("element", XS);
-//				}
-//				x.endElement("sequence", XS);
-//				x.endElement("complexType", XS);
-//				x.endElement("element", XS);
-//
-//				x.startElement("element", XS);
-//				x.attribute("name", "", o.name + "Response");
-//				x.startElement("complexType", XS);
-//				x.startElement("sequence", XS);
-//				if (o.result != null) {
-//					x.startElement("element", ns);
-//					x.attribute("name", "", o.result.name());
-//					x.attribute("type", "", name(o.result.type()));
-//					x.endElement("element", XS);
-//				}
-//				// TODO out param
-//				x.endElement("sequence", XS);
-//				x.endElement("complexType", XS);
-//				x.endElement("element", XS);
-//			} else {
-//				for (Service.Param p : o.params) {
-//					if (!ns.equals(p.ns))
-//						continue;
-//					x.startElement("element", XS);
-//					x.attribute("name", "", p.name());
-//					x.attribute("type", "", name(p.ns, p.name()));
-//					x.endElement("element", XS);
-//				}
-//				if (o.result != null && ns.equals(o.result.ns)) {
-//					x.startElement("element", XS);
-//					x.attribute("name", "", o.result.name());
-//					x.attribute("type", "", name(o.result.type()));
-//					x.endElement("element", XS);
-//				}
-//			}
-//		}
-//		x.endElement("schema", XS);
-//	}
+	public void write(XMLStreamWriter out) throws XMLStreamException {
+		for (Entry<String, String> e : nsPrefix.entrySet())
+			out.setPrefix(e.getValue(), e.getKey());
+		out.writeStartElement(WS, "definitions");
+		for (Entry<String, String> e : nsPrefix.entrySet())
+			out.writeNamespace(e.getValue(), e.getKey());
+		out.writeAttribute("targetNamespace", service.ns);
+		out.writeAttribute("name", service.name);
+		out.writeStartElement(WS, "types");
 
-	/**
-	 * @param type
-	 * @param nsPrefix
-	 * @param ns
-	 * @throws IOException
-	 */
-//	private void appendType(XmlType<?> type, String ns, Set<XmlType<?>> processed) throws IOException {
-//		if (processed.contains(type))
-//			return;
-//		processed.add(type);
-//		if (type instanceof XmlObject)
-//			appendType((XmlObject) type, ns, processed);
-//		if (!ns.equals(type.ns()))
-//			return;
-//
-//		if (type instanceof XmlEnum) {
-//			x.startElement("simpleType", XS);
-//			x.attribute("name", "", type.name());
-//			x.startElement("restriction", XS);
-//			x.attribute("base", "", name(XS, "string"));
-//			for (XmlEnumEntry e : ((XmlEnum) type).entries) {
-//				x.startElement("enumeration", XS);
-//				x.attribute("value", "", e.value);
-//				x.endElement("enumeration", XS);
-//			}
-//			x.endElement("restriction", XS);
-//			x.endElement("simpleType", XS);
-//		} else if (type instanceof XmlObject) {
-//		}
-//	}
+		for (String ns : nsPrefix.keySet()) {
+			if (XS.equals(ns) || WS.equals(ns) || WP.equals(ns))
+				continue;
+			appendSchema(out, ns);
+		}
 
-//	private void appendType(XmlObject o, String ns, Set<XmlType<?>> processed) throws IOException {
-//		String tns = o.ns();
-//		if (o.value() != null)
-//			appendType(o.value().type(), ns, processed);
-//		for (XmlField<?> e : o.elems())
-//			appendType(e.type(), ns, processed);
-//		for (XmlField<?> e : o.attrs())
-//			appendType(e.type(), ns, processed);
-//
-//		if (!ns.equals(tns))
-//			return;
-//		x.startElement("complexType", XS);
-//		x.attribute("name", "", o.name());
-//		if (o.elems().isEmpty() && o.value() != null) {
-//			x.startElement("simpleContent", XS);
-//			x.startElement("extension", XS);
-//			x.attribute("base", "", name(o.value().type()));
-//			for (XmlField<?> e : o.attrs()) { // TODO list ?
-//				x.startElement("attribute", XS);
-//				x.attribute("name", "", e.name());
-//				x.attribute("type", "", name(e.type()));
-//				x.endElement("attribute", XS);
-//			}
-//			x.endElement("extension", XS);
-//			x.endElement("simpleType", XS);
-//		} else {
-//			x.startElement("sequence", XS);
-//			for (XmlField<?> e : o.elems()) { // TODO list
-//				appendElem(e, tns);
-//			}
-//			x.endElement("sequence", XS);
-//			for (XmlField<?> e : o.attrs()) {// TODO list ?
-//				x.startElement("attribute", XS);
-//				x.attribute("name", "", e.name());
-//				x.attribute("type", "", name(e.type()));
-//				x.endElement("attribute", XS);
-//			}
-//		}
-//		x.endElement("complexType", XS);
-//
-//	}
+		out.writeEndElement();
+		for (Operation o : service.operations)
+			appendMessage(out, o);
 
-	private void appendType(XmlType t) throws IOException {
-//		if (t instanceof XmlEnum) {
-//			x.startElement("simpleType", XS);
-//			x.attribute("name", "", t.name());
-//			x.startElement("restriction", XS);
-//			x.attribute("base", "", name(XS, "string"));
-//			for (XmlEnumEntry e : ((XmlEnum) t).entries) {
-//				x.startElement("enumeration", XS);
-//				x.attribute("value", "", e.value);
-//				x.endElement("enumeration", XS);
-//			}
-//			x.endElement("restriction", XS);
-//			x.endElement("simpleType", XS);
-//			return;
-//		}
-//		if (!(t instanceof XmlObject))
-//			return;
-//
-//		XmlObject o = (XmlObject) t;
-//
-//		x.startElement("complexType", XS);
-//		x.attribute("name", "", o.name());
-//		if (o.elems().isEmpty() && o.value() != null) {
-//			x.startElement("simpleContent", XS);
-//			x.startElement("extension", XS);
-//			x.attribute("base", "", name(o.value().type()));
-//			for (XmlField<?> e : o.attrs()) { // TODO list ?
-//				x.startElement("attribute", XS);
-//				x.attribute("name", "", e.name());
-//				x.attribute("type", "", name(e.type()));
-//				x.endElement("attribute", XS);
-//			}
-//			x.endElement("extension", XS);
-//			x.endElement("simpleType", XS);
-//		} else {
-//			x.startElement("sequence", XS);
-//			for (XmlField<?> e : o.elems()) // TODO list
-//				appendElem(e, o.ns());
-//			x.endElement("sequence", XS);
-//			for (XmlField<?> e : o.attrs()) {// TODO list ?
-//				x.startElement("attribute", XS);
-//				x.attribute("name", "", e.name());
-//				x.attribute("type", "", name(e.type()));
-//				x.endElement("attribute", XS);
-//			}
-//		}
-//		x.endElement("complexType", XS);
+		appendPortType(out);
+		appendBinding(out);
+		appendService(out);
+
+		out.writeEndElement();
+		out.close();
 	}
 
-//	private void appendElem(XmlElement e, String ns) throws IOException {
-//		x.startElement("element", XS);
-//		if (e.ns().equals(ns)) {
-//			x.attribute("name", "", e.name());
-//			x.attribute("type", "", name(e.type()));
-//		} else
-//			x.attribute("ref", "", name(e.ns(), e.name()));
-//		x.endElement("element", XS);
-//	}
+	private void appendSchema(XMLStreamWriter out, String ns) throws XMLStreamException {
+		out.writeStartElement(XS, "schema");
+		out.writeAttribute("targetNamespace", ns);
+		out.writeAttribute("elementFormDefault", "qualified");
+
+		for (Operation o : service.operations) {
+			if (o.wrapped) {
+				if (!ns.equals(o.name.getNamespaceURI()))
+					continue;
+				out.writeStartElement(XS, "element");
+				out.writeAttribute("name", o.name.getLocalPart());
+				out.writeStartElement(XS, "complexType");
+				for (Parameter p : o.params) {
+					out.writeStartElement(XS, "element");
+					out.writeAttribute("name", p.name.getLocalPart());
+					out.writeAttribute("type", name(p.xml.name()));
+					out.writeEndElement();
+				}
+				out.writeEndElement();
+				out.writeEndElement();
+
+				out.writeStartElement(XS, "element");
+				out.writeAttribute("name", o.name.getLocalPart() + "Response");
+				out.writeStartElement(XS, "complexType");
+				if (o.result != null) {
+					out.writeStartElement(XS, "element");
+					out.writeAttribute("name", o.result.name.getLocalPart());
+					out.writeAttribute("type", name(o.result.xml.name()));
+					out.writeEndElement();
+				}
+				// TODO result
+				out.writeEndElement();
+				out.writeEndElement();
+				continue;
+			}
+
+			for (Parameter p : o.params) {
+				if (!ns.equals(p.name.getNamespaceURI()))
+					continue;
+				out.writeStartElement(XS, "element");
+				out.writeAttribute("name", p.name.getLocalPart());
+				out.writeAttribute("type", name(p.xml.name()));
+				out.writeEndElement();
+			}
+			if (o.result != null && ns.equals(o.result.name.getNamespaceURI())) {
+				out.writeStartElement(XS, "elementR");
+				out.writeAttribute("name", o.result.name.getLocalPart());
+				out.writeAttribute("type", name(o.result.xml.name()));
+				out.writeEndElement();
+			}
+		}
+
+		for (XmlType t : types.getOrDefault(ns, Collections.emptySet()))
+			appendType(out, t);
+		out.writeEndElement();
+	}
+
+	private void appendType(XMLStreamWriter out, XmlType t) throws XMLStreamException {
+		if (t instanceof XmlCollection)
+			t = ((XmlCollection) t).component();
+
+		if (t instanceof XmlEnum) {
+			out.writeStartElement(XS, "simpleType");
+			out.writeAttribute("name", t.name().getLocalPart());
+			out.writeStartElement(XS, "restriction");
+			out.writeAttribute("base", name(XS, "string"));
+			for (XmlEnumEntry e : ((XmlEnum) t).entries()) {
+				out.writeStartElement(XS, "enumeration");
+				out.writeAttribute("value", e.value());
+				out.writeEndElement();
+			}
+			out.writeEndElement();
+			out.writeEndElement();
+			return;
+		}
+		if (!(t instanceof XmlTypeComplex))
+			return;
+
+		XmlTypeComplex o = (XmlTypeComplex) t;
+
+		out.writeStartElement(XS, "complexType");
+		out.writeAttribute("name", o.name().getLocalPart());
+
+		if (o.getElements() == null && o.getValue() != null) {
+			out.writeStartElement(XS, "simpleContent");
+			out.writeStartElement(XS, "extension");
+			out.writeAttribute("base", name(o.getValue().qname()));
+		}
+		appendElements(out, o.getElements());
+		for (XmlElement e : o.getAttributes()) { // TODO list ?
+			out.writeStartElement(XS, "attribute");
+			out.writeAttribute("name", e.name());
+			out.writeAttribute("type", name(e.xmlType().name()));
+			out.writeEndElement();
+		}
+		if (o.getElements() == null && o.getValue() != null) {
+			out.writeEndElement();
+			out.writeEndElement();
+		}
+		out.writeEndElement();
+	}
+
+	private void appendElements(XMLStreamWriter out, XmlElements elements) throws XMLStreamException {
+		if (elements == null)
+			return;
+		out.writeStartElement(XS, elements.group().toString());
+		for (XmlElement e : elements) {
+			out.writeStartElement(XS, "element");
+			out.writeAttribute("name", e.name());
+			out.writeAttribute("type", name(e.xmlType().name()));
+			out.writeEndElement();
+		}
+		out.writeEndElement();
+	}
 
 	/**
 	 * @param sb
 	 * @param o
+	 * @throws XMLStreamException 
 	 * @throws IOException
 	 */
-//	private void appendMessage(Op o) throws IOException {
-//		if (o.paramStyle == ParameterStyle.WRAPPED || o.params.size() > 0) {
-//			x.startElement("message", WS);
-//			x.attribute("name", "", o.name);
-//			x.startElement("part", WS);
-//			x.attribute("name", "", "param");
-//			x.attribute("element", "", name(o.ns, o.name));
-//			x.endElement("part", WS);
-//			x.endElement("message", WS);
-//			x.startElement("message", WS);
-//			x.attribute("name", "", o.name + "Response");
-//			x.startElement("part", WS);
-//			x.attribute("name", "", "param");
-//			x.attribute("element", "", name(o.ns, o.name + "Response"));
-//			x.endElement("part", WS);
-//			x.endElement("message", WS);
-//		} else {
-//			for (Param p : o.params) {
-//				x.startElement("part", WS);
-//				x.attribute("name", "", p.name());
-//				x.attribute("element", "", name(p.type()));
-//				x.endElement("part", WS);
-//			}
-//			x.endElement("message", WS);
-//			if (o.result != null) {
-//				x.startElement("message", WS);
-//				x.attribute("name", "", o.name + "Response");
-//				x.startElement("part", WS);
-//				x.attribute("name", "", "param");
-//				x.attribute("element", "", name(o.result.ns(), o.result.name()));
-//				x.endElement("part", WS);
-//				x.endElement("message", WS);
-//			}
-//		}
-//	}
-
-	private void appendPortType() throws IOException {
-//		x.startElement("portType", WS);
-//		x.attribute("name", "", service.name + "PortType");
-//		for (Op o : service.operations) {
-//			x.startElement("operation", WS);
-//			x.attribute("name", "", o.name);
-//			if (o.paramStyle == ParameterStyle.WRAPPED || !o.params.isEmpty()) {
-//				x.startElement("input", WS);
-//				x.attribute("name", "", o.name);
-//				x.attribute("message", "", name(service.ns, o.name));
-//				x.endElement("input", WS);
-//			}
-//			if (o.paramStyle == ParameterStyle.WRAPPED || o.result != null) {
-//				x.startElement("output", WS);
-//				x.attribute("name", "", o.name + "Response");
-//				x.attribute("message", "", name(service.ns, o.name) + "Response");
-//				x.endElement("output", WS);
-//			}
-//			x.endElement("operation", WS);
-//		}
-//		x.endElement("portType", WS);
+	private void appendMessage(XMLStreamWriter out, Operation o) throws XMLStreamException {
+		if (o.wrapped || o.params.size() > 0) {
+			out.writeStartElement(WS, "message");
+			out.writeAttribute("name", o.name.getLocalPart());
+			if (o.wrapped) {
+				out.writeStartElement(WS, "part");
+				out.writeAttribute("name", "param");
+				out.writeAttribute("element", name(o.name));
+				out.writeEndElement();
+			} else {
+				for (Parameter p : o.params) {
+					out.writeStartElement(WS, "part");
+					out.writeAttribute("name", p.name.getLocalPart());
+					out.writeAttribute("element", name(p.name));
+					out.writeEndElement();
+				}
+			}
+			out.writeEndElement();
+		}
+		if (o.wrapped || o.result != null) {
+			out.writeStartElement(WS, "message");
+			out.writeAttribute("name", o.name.getLocalPart() + "Response");
+			out.writeStartElement(WS, "part");
+			out.writeAttribute("name", "result");
+			out.writeAttribute("element", name(o.wrapped ? o.name : o.result.name));
+			out.writeEndElement();
+			out.writeEndElement();
+		}
 	}
 
-	private void appendBinding() throws IOException {
-//		x.startElement("binding", WS);
-//		x.attribute("name", "", service.name + "Binding");
-//		x.attribute("type", "", name(service.ns, service.name + "PortType"));
-//
-//		x.startElement("binding", WP);
-//		x.attribute("style", "", "document");
-//		x.attribute("transport", "", "http://schemas.xmlsoap.org/soap/http");
-//		x.endElement("binding", WP);
-//
-//		for (Op o : service.operations) {
-//			x.startElement("operation", WS);
-//			x.attribute("name", "", o.name);
-//			x.startElement("operation", WP);
-//			x.attribute("soapAction", "", o.action);
-//			x.endElement("operation", WP);
-//			if (o.paramStyle == ParameterStyle.WRAPPED || !o.params.isEmpty()) {
-//				x.startElement("input", WS);
-//				x.attribute("name", "", o.name);
-//				x.startElement("body", WP);
-//				x.attribute("use", "", "literal");
-//				x.endElement("body", WP);
-//				x.endElement("input", WS);
-//			}
-//			if (o.paramStyle == ParameterStyle.WRAPPED || o.result != null) {
-//				x.startElement("output", WS);
-//				x.attribute("name", "", o.name + "Response");
-//				x.startElement("body", WP);
-//				x.attribute("use", "", "literal");
-//				x.endElement("body", WP);
-//				x.endElement("output", WS);
-//			}
-//			x.endElement("operation", WS);
-//		}
-//		x.endElement("binding", WS);
+	private void appendPortType(XMLStreamWriter out) throws XMLStreamException {
+		out.writeStartElement(WS, "portType");
+		out.writeAttribute("name", service.portType);
+		for (Operation o : service.operations) {
+			out.writeStartElement(WS, "operation");
+			out.writeAttribute("name", o.name.getLocalPart());
+			if (o.wrapped || !o.params.isEmpty()) {
+				out.writeStartElement(WS, "input");
+				out.writeAttribute("name", o.name.getLocalPart());
+				out.writeAttribute("message", name(service.ns, o.name.getLocalPart()));
+				out.writeEndElement();
+			}
+			if (o.wrapped || o.result != null) {
+				out.writeStartElement(WS, "output");
+				out.writeAttribute("name", o.name.getLocalPart() + "Response");
+				out.writeAttribute("message", name(service.ns, o.name.getLocalPart()) + "Response");
+				out.writeEndElement();
+			}
+			out.writeEndElement();
+		}
+		out.writeEndElement();
 	}
 
-//	private String name(String ns, String name) {
-//		String n = nsPrefix.get(ns);
-//		if (n == null || n.isEmpty())
-//			return name;
-//		return n + ':' + name;
-//	}
+	private void appendBinding(XMLStreamWriter out) throws XMLStreamException {
+		out.writeStartElement(WS, "binding");
+		out.writeAttribute("name", service.name + "SoapBinding");
+		out.writeAttribute("type", name(service.ns, service.portType));
 
-//	private String name(XmlType<?> type) {
-//		return name(type.ns(), type.name());
-//	}
+		out.writeStartElement(WP, "binding");
+		out.writeAttribute("style", "document");
+		out.writeAttribute("transport", "http://schemas.xmlsoap.org/soap/http");
+		out.writeEndElement();
 
-//	private static void collectElems(Service service, Consumer<XmlType<?>> types, Consumer<XmlElem<?>> elems) {
-//		Set<XmlType<?>> collected = new HashSet<>();
-//		for (Service.Op o : service.operations) {
-//			if (o.paramStyle == ParameterStyle.WRAPPED) {
-//				XmlElem<?> e = new XmlElem<>(new XmlOp(o.ns, o.name, o.params), o.ns, o.name);
-//				collectElems(e, types, elems, collected);
-//
-//				List<Param> r = o.result == null ? Collections.emptyList() : Arrays.asList(o.result);
-//				e = new XmlElem<>(new XmlOp(o.ns, o.name + "Response", r), o.ns, o.name + "Response");
-//				collectElems(e, types, elems, collected);
-//			} else {
-//				if (o.result != null)
-//					collectElems(o.result, types, elems, collected);
-//				for (Service.Param p : o.params)
-//					collectElems(p, types, elems, collected);
-//			}
-//		}
-//	}
+		for (Operation o : service.operations) {
+			out.writeStartElement(WS, "operation");
+			out.writeAttribute("name", o.name.getLocalPart());
+			out.writeStartElement(WP, "operation");
+			out.writeAttribute("soapAction", o.action);
+			out.writeEndElement();
+			if (o.wrapped || !o.params.isEmpty()) {
+				out.writeStartElement(WS, "input");
+				out.writeAttribute("name", o.name.getLocalPart());
+				out.writeStartElement(WP, "body");
+				out.writeAttribute("use", "literal");
+				out.writeEndElement();
+				out.writeEndElement();
+			}
+			if (o.wrapped || o.result != null) {
+				out.writeStartElement(WS, "output");
+				out.writeAttribute("name", o.name.getLocalPart() + "Response");
+				out.writeStartElement(WP, "body");
+				out.writeAttribute("use", "literal");
+				out.writeEndElement();
+				out.writeEndElement();
+			}
+			out.writeEndElement();
+		}
+		out.writeEndElement();
+	}
 
-//	private static void collectElems(XmlElem<?> e, Consumer<XmlType<?>> types, Consumer<XmlElem<?>> elems,
-//			Set<XmlType<?>> collected) {
-//		elems.accept(e);
-//		collectElems(e.type(), types, elems, collected);
-//	}
+	private void appendService(XMLStreamWriter out) throws XMLStreamException {
+		out.writeStartElement(WS, "service");
+		out.writeAttribute("name", service.name);
 
-//	private static void collectElems(XmlType<?> type, Consumer<XmlType<?>> types, Consumer<XmlElem<?>> elems,
-//			Set<XmlType<?>> collected) {
-//		if (!collected.add(type))
-//			return;
-//		types.accept(type);
-//		if (!(type instanceof XmlObject))
-//			return;
-//		XmlObject o = (XmlObject) type;
-//		for (XmlField<?> e : o.elems()) {
-//			collectElems(e.type(), types, elems, collected);
-//			if (!e.ns().equals(o.ns()))
-//				elems.accept(e);
-//		}
-//	}
-//
-//	private static final class XmlOp extends XmlObject {
-//		@SuppressWarnings("unchecked")
-//		public XmlOp(String ns, String name, List<? extends XmlField<?>> elems) {
-//			super(null, ns, name, null, null);
-//			this.elems = (List<XmlField<?>>) elems;
-//			this.attrs = Collections.emptyList();
-//		}
-//	}
+		out.writeStartElement(WS, "port");
+		out.writeAttribute("name", service.portName);
+		out.writeAttribute("binding", name(service.ns, service.name + "Binding"));
+
+		out.writeStartElement(WP, "address");
+		out.writeAttribute("location", address + service.urls[0]);
+		out.writeEndElement();
+		out.writeEndElement();
+		out.writeEndElement();
+	}
+
+	private String name(QName n) {
+		return name(n.getNamespaceURI(), n.getLocalPart());
+	}
+
+	private String name(String ns, String n) {
+		String p = nsPrefix.get(ns);
+		if (p == null || p.isEmpty())
+			return n;
+		return p + ':' + n;
+	}
 }

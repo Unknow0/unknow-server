@@ -24,8 +24,8 @@ public class XmlCollection implements XmlType {
 	}
 
 	@Override
-	public QName qname() {
-		return component.qname();
+	public QName name() {
+		return component.name();
 	}
 
 	@Override

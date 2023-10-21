@@ -26,10 +26,10 @@ public class XmlTypeSimple implements XmlType {
 	}
 
 	@Override
-	public QName qname() {
+	public QName name() {
 		return qname;
 	}
-	
+
 	@Override
 	public TypeModel type() {
 		return type;

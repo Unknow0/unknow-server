@@ -94,6 +94,9 @@ public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderCont
 	@Parameter(defaultValue = "false")
 	private boolean addAccessLog;
 
+	@Parameter(defaultValue = "WEB-INF,META-INF,generated")
+	private List<String> ignoredResources;
+
 	@Override
 	protected String id() {
 		return "servlet-generator";
@@ -145,8 +148,12 @@ public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderCont
 				logger.warn("Failed to parse {}", full, e);
 			}
 		}
-		if (file.startsWith("WEB-INF") || file.startsWith("META-INF"))
-			return;
+
+		for (String p : ignoredResources) {
+			if (file.startsWith(p))
+				return;
+		}
+
 		String p = "/" + file.toString().replace('\\', '/');
 		try {
 			long size = Files.size(full);

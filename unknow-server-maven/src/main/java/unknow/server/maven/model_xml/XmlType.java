@@ -12,15 +12,7 @@ import unknow.server.maven.model.TypeModel;
  */
 public interface XmlType {
 
-	default String ns() {
-		return qname().getNamespaceURI();
-	}
-
-	default String name() {
-		return qname().getLocalPart();
-	}
-
-	QName qname();
+	QName name();
 
 	TypeModel type();
 }

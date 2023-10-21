@@ -63,9 +63,7 @@ import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
 import unknow.server.maven.jaxws.binding.Operation;
 import unknow.server.maven.jaxws.binding.Service;
-import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.model.TypeModel;
-import unknow.server.maven.model_xml.XmlLoader;
 
 /**
  * @author unknow
@@ -79,12 +77,12 @@ public class JaxwsServletBuilder {
 
 	private ClassOrInterfaceDeclaration servlet;
 
-	public JaxwsServletBuilder(ClassOrInterfaceDeclaration serviceClass, ModelLoader loader, XmlLoader xmlLoader) {
+	public JaxwsServletBuilder(ClassOrInterfaceDeclaration serviceClass, Service service) {
 		this.serviceClass = serviceClass;
-		this.service = Service.build(serviceClass, loader, xmlLoader);
+		this.service = service;
 	}
 
-	public void generate(CompilationUnit cu, TypeCache types, String baseUrl, String factory) {
+	public void generate(CompilationUnit cu, TypeCache types, String factory, String wsdl) {
 		String name = service.name;
 		NodeList<Expression> list = Utils.list();
 		for (String s : service.urls)
@@ -178,7 +176,7 @@ public class JaxwsServletBuilder {
 			w++;
 		}
 
-		servlet.addConstructor(Modifier.Keyword.PUBLIC).getBody().addStatement(new MethodCallExpr(null, "super", Utils.list(new NullLiteralExpr()))); // TODO generated wsdl
+		servlet.addConstructor(Modifier.Keyword.PUBLIC).getBody().addStatement(new MethodCallExpr(null, "super", Utils.list(new StringLiteralExpr("/" + wsdl))));
 
 		NodeList<Expression> l = clazz.stream().map(v -> new ClassExpr(types.get(v))).collect(Collectors.toCollection(() -> new NodeList<>()));
 		servlet.addMethod("getCtx", Utils.PROTECT).addMarkerAnnotation(Override.class).setType(types.get(JAXBContext.class)).getBody().get().addStatement(new TryStmt(

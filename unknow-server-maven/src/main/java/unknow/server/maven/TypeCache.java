@@ -120,7 +120,6 @@ public class TypeCache {
 		if (i > 0 && p.equals(cl.substring(0, i)))
 			existingClass.put(last, cl);
 		else if (split.length > 1 && string == null) {
-			System.out.println("import " + cl);
 			cu.addImport(cl.replace('$', '.'));
 			existingClass.put(last, cl);
 		}

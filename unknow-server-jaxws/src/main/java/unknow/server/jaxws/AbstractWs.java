@@ -32,18 +32,17 @@ public abstract class AbstractWs extends HttpServlet {
 	private static final XMLInputFactory XML_IN = XMLInputFactory.newInstance();
 	private static final XMLOutputFactory XML_OUT = XMLOutputFactory.newInstance();
 
-	private final JAXBContext CTX;
-
 	private static final QName ENVELOPE = new QName("http://schemas.xmlsoap.org/soap/envelope/", "Envelope");
 	private static final QName HEADER = new QName("http://schemas.xmlsoap.org/soap/envelope/", "Header");
 	private static final QName BODY = new QName("http://schemas.xmlsoap.org/soap/envelope/", "Body");
 
 	private final String wsdl;
+	private final JAXBContext ctx;
 	private int size;
 
 	protected AbstractWs(String wsdl) {
 		this.wsdl = wsdl;
-		this.CTX = getCtx();
+		this.ctx = getCtx();
 	}
 
 	@Override
@@ -53,6 +52,8 @@ public abstract class AbstractWs extends HttpServlet {
 		if (wsdl == null)
 			return;
 		try (InputStream is = getServletContext().getResourceAsStream(wsdl)) {
+			if (is == null)
+				throw new ServletException("WSDL not found '" + wsdl + "'");
 			int l;
 			byte[] b = new byte[4096];
 			while ((l = is.read(b)) > 0)
@@ -127,7 +128,7 @@ public abstract class AbstractWs extends HttpServlet {
 	protected abstract Object read(XMLStreamReader r, Unmarshaller u) throws XMLStreamException, JAXBException, IOException;
 
 	private final void readEnvelope(XMLStreamReader r, Envelope e) throws XMLStreamException, IOException, JAXBException, IOException {
-		Unmarshaller u = CTX.createUnmarshaller();
+		Unmarshaller u = ctx.createUnmarshaller();
 		while (r.hasNext()) {
 			int n = r.next();
 			if (n == XMLStreamConstants.START_ELEMENT) {
@@ -178,7 +179,7 @@ public abstract class AbstractWs extends HttpServlet {
 	}
 
 	private final void writeEnvelope(XMLStreamWriter w, Envelope e) throws XMLStreamException, JAXBException {
-		Marshaller m = CTX.createMarshaller();
+		Marshaller m = ctx.createMarshaller();
 		m.setProperty("jaxb.fragment", true);
 		// TODO get ns
 		w.writeStartElement(ENVELOPE.getNamespaceURI(), ENVELOPE.getLocalPart());

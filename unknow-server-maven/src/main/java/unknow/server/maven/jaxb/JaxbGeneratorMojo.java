@@ -150,13 +150,13 @@ public class JaxbGeneratorMojo extends AbstractMojoUnk {
 
 		int i = 0;
 		for (XmlType t : xmlLoader.types()) {
-			if (!XmlLoader.XS.equals(t.ns()))
+			if (!XmlLoader.XS.equals(t.name().getNamespaceURI()))
 				handlers.put(t, packageName + "." + t.type().simpleName() + "_" + i++);
 		}
 		// default handers
 
 		for (XmlType t : xmlLoader.types()) {
-			if (XmlLoader.XS.equals(t.ns()))
+			if (XmlLoader.XS.equals(t.name().getNamespaceURI()))
 				continue;
 
 			if (t instanceof XmlEnum)
@@ -459,7 +459,7 @@ public class JaxbGeneratorMojo extends AbstractMojoUnk {
 		BlockStmt b = new BlockStmt();
 		for (Entry<String, XmlType> t : xmlLoader.entries()) {
 			String h = handlers.get(t.getValue());
-			if (h == null || XmlLoader.XS.equals(t.getValue().ns()))
+			if (h == null || XmlLoader.XS.equals(t.getValue().name().getNamespaceURI()))
 				continue;
 			TypeModel type = loader.get(t.getKey());
 			b.addStatement(new MethodCallExpr(null, "register", Utils.list(new ClassExpr(types.get(t.getKey())), new FieldAccessExpr(new TypeExpr(types.get(h)), INSTANCE))));
