@@ -20,7 +20,7 @@ public class FC implements FilterChain {
 	}
 
 	public PartNode part() {
-		return new PartNode(name, null, null,  this, this);
+		return new PartNode(name, null, null, this, this);
 	}
 
 	public Node node() {
@@ -33,6 +33,6 @@ public class FC implements FilterChain {
 	}
 
 	@Override
-	public void doFilter(ServletRequest request, ServletResponse response) throws IOException, ServletException {
+	public void doFilter(ServletRequest request, ServletResponse response) throws IOException, ServletException { // OK
 	}
 }

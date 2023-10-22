@@ -39,7 +39,7 @@ public final class Envelope {
 	}
 
 	public String sig() {
-		if (body.size() == 1 & body.get(0) instanceof OperationWrapper)
+		if (body.size() == 1 && body.get(0) instanceof OperationWrapper)
 			return ((OperationWrapper) body.get(0)).getQName();
 		StringBuilder sb = new StringBuilder();
 		for (Object o : header)

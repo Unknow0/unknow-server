@@ -75,26 +75,26 @@ public interface NIOServerListener {
 	 * Listener that log all event
 	 */
 	public static final NIOServerListener LOG = new NIOServerListener() {
-		private final Logger log = LoggerFactory.getLogger(NIOServerListener.class);
+		private final Logger logger = LoggerFactory.getLogger(NIOServerListener.class);
 
 		@Override
 		public void starting(NIOServer server) {
-			log.info("starting {}", server);
+			logger.info("starting {}", server);
 		}
 
 		@Override
 		public void accepted(int id, Connection h) {
-			log.info("Worker-{} accepted {}", id, h);
+			logger.info("Worker-{} accepted {}", id, h);
 		}
 
 		@Override
 		public void closed(int id, Connection h) {
-			log.info("Worker-{} closed {}", id, h);
+			logger.info("Worker-{} closed {}", id, h);
 		}
 
 		@Override
 		public void closing(NIOServer server, Exception e) {
-			log.info("closing {}", server, e);
+			logger.info("closing {}", server, e);
 		}
 
 		@Override

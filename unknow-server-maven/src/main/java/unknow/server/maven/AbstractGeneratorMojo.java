@@ -44,8 +44,8 @@ import unknow.server.maven.model.ModelLoader;
 /**
  * @author unknow
  */
-public abstract class AbstractMojo extends org.apache.maven.plugin.AbstractMojo {
-	private static final Logger log = LoggerFactory.getLogger(AbstractMojo.class);
+public abstract class AbstractGeneratorMojo extends org.apache.maven.plugin.AbstractMojo {
+	private static final Logger logger = LoggerFactory.getLogger(AbstractGeneratorMojo.class);
 
 	@Parameter(defaultValue = "${project}", required = true, readonly = true)
 	protected MavenProject project;
@@ -133,7 +133,7 @@ public abstract class AbstractMojo extends org.apache.maven.plugin.AbstractMojo 
 
 			return new URLClassLoader(urls, getClass().getClassLoader());
 		} catch (Exception e) {
-			log.error("Failed to get project classpath", e);
+			logger.error("Failed to get project classpath", e);
 			return getClass().getClassLoader();
 		}
 	}

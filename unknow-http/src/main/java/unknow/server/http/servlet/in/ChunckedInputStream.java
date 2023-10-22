@@ -15,6 +15,8 @@ import jakarta.servlet.ServletInputStream;
  * @author unknow
  */
 public class ChunckedInputStream extends ServletInputStream {
+	private static final String MALFORMED_CHUNKED_STREAM = "malformed chunked stream";
+
 	private static final int START = 0;
 	private static final int CHUNK = 1;
 	private static final int DONE = 2;
@@ -57,9 +59,9 @@ public class ChunckedInputStream extends ServletInputStream {
 		if (chunkLen == 0) {
 			step = START;
 			if (in.read() != '\r')
-				throw new IOException("malformed chunked stream");
+				throw new IOException(MALFORMED_CHUNKED_STREAM);
 			if (in.read() != '\n')
-				throw new IOException("malformed chunked stream");
+				throw new IOException(MALFORMED_CHUNKED_STREAM);
 		}
 	}
 
@@ -77,7 +79,7 @@ public class ChunckedInputStream extends ServletInputStream {
 			if (c == '\r') {
 				c = in.read();
 				if (c != '\n')
-					throw new IOException("malformed chunked stream");
+					throw new IOException(MALFORMED_CHUNKED_STREAM);
 				break;
 			}
 			sb.append((char) c);

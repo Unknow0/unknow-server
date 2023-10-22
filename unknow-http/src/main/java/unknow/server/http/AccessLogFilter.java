@@ -226,28 +226,32 @@ public class AccessLogFilter implements Filter {
 
 			if (last != i)
 				parts.add(new StringPart(template.substring(last, i)));
-			last = i + 2;
 
-			String key;
-			i = template.indexOf(':', last);
-			if (i >= 0 && i < e) {
-				key = template.substring(last, i);
-				last = i + 1;
-				while ((i = template.indexOf(':', last)) < e && i > 0) {
-					param.add(template.substring(last, i));
-					last = i + 1;
-				}
-				param.add(template.substring(last, e));
-			} else
-				key = template.substring(last, e);
-			Function<List<String>, Part> f = builders.get(key);
-			if (f == null)
-				throw new RuntimeException("no part named '" + key + "' in template:\n" + template);
-			parts.add(f.apply(param));
-			param.clear();
+			parts.add(parse(template, last + 2, e, param));
 			last = e + 1;
 		}
 		return parts.toArray(EMPTY);
+	}
+
+	private static final Part parse(String template, int off, int e, List<String> param) {
+		String key;
+		int i = template.indexOf(':', off);
+		if (i >= 0 && i < e) {
+			key = template.substring(off, i);
+			off = i + 1;
+			while ((i = template.indexOf(':', off)) < e && i > 0) {
+				param.add(template.substring(off, i));
+				off = i + 1;
+			}
+			param.add(template.substring(off, e));
+		} else
+			key = template.substring(off, e);
+		Function<List<String>, Part> f = builders.get(key);
+		if (f == null)
+			throw new RuntimeException("no part named '" + key + "' in template:\n" + template);
+		Part p = f.apply(param);
+		param.clear();
+		return p;
 	}
 
 	public static interface Part {
