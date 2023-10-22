@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Writer;
+import java.util.HashSet;
+import java.util.Set;
 
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLInputFactory;
@@ -182,14 +184,22 @@ public abstract class AbstractWs extends HttpServlet {
 
 		w.writeStartElement("e", ENVELOPE.getLocalPart(), ENVELOPE.getNamespaceURI());
 		w.writeNamespace("e", ENVELOPE.getNamespaceURI());
+
+		Set<String> ns = new HashSet<>();
+		e.collectNs(ns);
+		int i = 0;
+		ns.remove("");
+		for (String n : ns)
+			w.writeNamespace("n" + Integer.toString(i++, 36), n);
+
 		if (e.getHeaderSize() > 0) {
 			w.writeStartElement(HEADER.getNamespaceURI(), HEADER.getLocalPart());
-			for (int i = 0; i < e.getHeaderSize(); i++)
+			for (i = 0; i < e.getHeaderSize(); i++)
 				m.marshal(e.getHeader(i), w);
 			w.writeEndElement();
 		}
 		w.writeStartElement(BODY.getNamespaceURI(), BODY.getLocalPart());
-		for (int i = 0; i < e.getBodySize(); i++)
+		for (i = 0; i < e.getBodySize(); i++)
 			m.marshal(e.getBody(i), w);
 		w.writeEndElement();
 		w.writeEndElement();

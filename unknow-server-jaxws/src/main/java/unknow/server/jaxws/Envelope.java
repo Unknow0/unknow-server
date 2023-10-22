@@ -2,6 +2,9 @@ package unknow.server.jaxws;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+
+import jakarta.xml.bind.JAXBElement;
 
 public final class Envelope {
 	private final List<Object> header;
@@ -44,6 +47,21 @@ public final class Envelope {
 	@Override
 	public String toString() {
 		return "Envelope [header=" + header + ", body=" + body + "]";
+	}
+
+	public final void collectNs(Set<String> ns) {
+		for (Object o : header)
+			collectNs(ns, o);
+		for (Object o : body)
+			collectNs(ns, o);
+	}
+
+	private final void collectNs(Set<String> ns, Object o) {
+		while (o instanceof JAXBElement) {
+			JAXBElement<?> j = (JAXBElement<?>) o;
+			ns.add(j.getName().getNamespaceURI());
+			o = j.getValue();
+		}
 	}
 
 	public void sig(StringBuilder sb) {
