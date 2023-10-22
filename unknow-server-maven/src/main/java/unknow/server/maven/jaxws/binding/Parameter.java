@@ -9,7 +9,7 @@ public class Parameter {
 	public final QName name;
 	public final TypeModel type;
 	public final XmlType xml;
-	public boolean header;
+	public final boolean header;
 
 	public Parameter(QName name, TypeModel type, XmlType xml, boolean header) {
 		this.name = name;

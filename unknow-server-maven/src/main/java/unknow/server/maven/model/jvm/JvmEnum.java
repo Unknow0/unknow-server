@@ -26,7 +26,7 @@ public class JvmEnum extends JvmClass implements EnumModel {
 	 * @param loader
 	 * @param params
 	 */
-	public JvmEnum(JvmModelLoader loader, Class<?> cl, TypeModel params[]) {
+	public JvmEnum(JvmModelLoader loader, Class<?> cl, TypeModel[] params) {
 		super(loader, cl, params);
 	}
 
@@ -68,8 +68,8 @@ public class JvmEnum extends JvmClass implements EnumModel {
 			if (annotations == null) {
 				try {
 					annotations = Arrays.stream(e.getClass().getField(name()).getAnnotations()).map(a -> new JvmAnnotation(loader, a)).collect(Collectors.toList());
-				} catch (NoSuchFieldException e) {
-					throw new RuntimeException(e);
+				} catch (NoSuchFieldException x) {
+					throw new IllegalStateException(x);
 				}
 			}
 			return annotations;

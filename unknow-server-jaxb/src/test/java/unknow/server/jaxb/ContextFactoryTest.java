@@ -25,17 +25,17 @@ public class ContextFactoryTest {
 	private static final XMLInputFactory f = XMLInputFactory.newInstance();
 
 	@Test
-	public void test() throws JAXBException {
+	void test() throws JAXBException {
 		JAXBContext.newInstance(O.class);
 		assertThrows(JAXBException.class, () -> JAXBContext.newInstance(ContextFactoryTest.class));
 	}
 
 	@Test
-	public void h() throws XMLStreamException {
+	void h() throws XMLStreamException {
 		XMLStreamReader r = f.createXMLStreamReader(new StringReader("<o a='4'>test</o>"));
 		r.nextTag();
 		O o = new OHandler().read(r, null, null);
-		assertEquals(o.a, 4);
-		assertEquals(o.v, "test");
+		assertEquals(4, o.a);
+		assertEquals("test", o.v);
 	}
 }

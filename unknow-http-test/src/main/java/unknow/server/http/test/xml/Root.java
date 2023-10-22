@@ -14,8 +14,9 @@ import jakarta.xml.bind.annotation.XmlType;
 
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlRootElement
-@XmlType(namespace = "http://webservice.unknow", name = "Root")
+@XmlType(namespace = Root.NS, name = "Root")
 public class Root {
+	public static final String NS = "http://webservice.unknow";
 	@XmlAttribute
 	private int value;
 

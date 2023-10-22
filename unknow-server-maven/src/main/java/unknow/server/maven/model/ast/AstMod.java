@@ -4,7 +4,6 @@
 package unknow.server.maven.model.ast;
 
 import com.github.javaparser.ast.Modifier;
-import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.nodeTypes.NodeWithModifiers;
 
 import unknow.server.maven.model.util.WithMod;
@@ -12,11 +11,11 @@ import unknow.server.maven.model.util.WithMod;
 /**
  * @author unknow
  */
-public interface AstMod extends WithMod {
+public interface AstMod<T extends NodeWithModifiers<?>> extends WithMod {
 	/**
 	 * @return the object with modifier
 	 */
-	NodeWithModifiers<? extends Node> object();
+	T object();
 
 	@Override
 	default boolean isTransient() {

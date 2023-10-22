@@ -171,6 +171,8 @@ public class MarshallerImpl implements Marshaller {
 			case "jaxb.fragment":
 				fragment = (boolean) value;
 				break;
+			default:
+				throw new PropertyException(name);
 		}
 	}
 

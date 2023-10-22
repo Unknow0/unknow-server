@@ -16,7 +16,6 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
 import unknow.server.jaxb.NsCollector;
-import unknow.server.jaxb.XmlRootHandler;
 import unknow.server.maven.jaxws.binding.Operation;
 import unknow.server.maven.jaxws.binding.Parameter;
 import unknow.server.maven.jaxws.binding.Service;
@@ -35,6 +34,9 @@ public class WsdlBuilder {
 	private static final String XS = "http://www.w3.org/2001/XMLSchema";
 	private static final String WS = "http://schemas.xmlsoap.org/wsdl/";
 	private static final String WP = "http://schemas.xmlsoap.org/wsdl/soap/";
+
+	private static final String ELEMENT = "element";
+	private static final String RESPONSE = "Response";
 
 	private final Service service;
 	private final String address;
@@ -130,11 +132,11 @@ public class WsdlBuilder {
 			if (o.wrapped) {
 				if (!ns.equals(o.name.getNamespaceURI()))
 					continue;
-				out.writeStartElement(XS, "element");
+				out.writeStartElement(XS, ELEMENT);
 				out.writeAttribute("name", o.name.getLocalPart());
 				out.writeStartElement(XS, "complexType");
 				for (Parameter p : o.params) {
-					out.writeStartElement(XS, "element");
+					out.writeStartElement(XS, ELEMENT);
 					out.writeAttribute("name", p.name.getLocalPart());
 					out.writeAttribute("type", name(p.xml.name()));
 					out.writeEndElement();
@@ -142,11 +144,11 @@ public class WsdlBuilder {
 				out.writeEndElement();
 				out.writeEndElement();
 
-				out.writeStartElement(XS, "element");
-				out.writeAttribute("name", o.name.getLocalPart() + "Response");
+				out.writeStartElement(XS, ELEMENT);
+				out.writeAttribute("name", o.name.getLocalPart() + RESPONSE);
 				out.writeStartElement(XS, "complexType");
 				if (o.result != null) {
-					out.writeStartElement(XS, "element");
+					out.writeStartElement(XS, ELEMENT);
 					out.writeAttribute("name", o.result.name.getLocalPart());
 					out.writeAttribute("type", name(o.result.xml.name()));
 					out.writeEndElement();
@@ -160,7 +162,7 @@ public class WsdlBuilder {
 			for (Parameter p : o.params) {
 				if (!ns.equals(p.name.getNamespaceURI()))
 					continue;
-				out.writeStartElement(XS, "element");
+				out.writeStartElement(XS, ELEMENT);
 				out.writeAttribute("name", p.name.getLocalPart());
 				out.writeAttribute("type", name(p.xml.name()));
 				out.writeEndElement();
@@ -228,7 +230,7 @@ public class WsdlBuilder {
 			return;
 		out.writeStartElement(XS, elements.group().toString());
 		for (XmlElement e : elements) {
-			out.writeStartElement(XS, "element");
+			out.writeStartElement(XS, ELEMENT);
 			out.writeAttribute("name", e.name());
 			out.writeAttribute("type", name(e.xmlType().name()));
 			out.writeEndElement();
@@ -243,19 +245,19 @@ public class WsdlBuilder {
 	 * @throws IOException
 	 */
 	private void appendMessage(XMLStreamWriter out, Operation o) throws XMLStreamException {
-		if (o.wrapped || o.params.size() > 0) {
+		if (o.wrapped || !o.params.isEmpty()) {
 			out.writeStartElement(WS, "message");
 			out.writeAttribute("name", o.name.getLocalPart());
 			if (o.wrapped) {
 				out.writeStartElement(WS, "part");
 				out.writeAttribute("name", "param");
-				out.writeAttribute("element", name(o.name));
+				out.writeAttribute(ELEMENT, name(o.name));
 				out.writeEndElement();
 			} else {
 				for (Parameter p : o.params) {
 					out.writeStartElement(WS, "part");
 					out.writeAttribute("name", p.name.getLocalPart());
-					out.writeAttribute("element", name(p.name));
+					out.writeAttribute(ELEMENT, name(p.name));
 					out.writeEndElement();
 				}
 			}
@@ -263,10 +265,10 @@ public class WsdlBuilder {
 		}
 		if (o.wrapped || o.result != null) {
 			out.writeStartElement(WS, "message");
-			out.writeAttribute("name", o.name.getLocalPart() + "Response");
+			out.writeAttribute("name", o.name.getLocalPart() + RESPONSE);
 			out.writeStartElement(WS, "part");
 			out.writeAttribute("name", "result");
-			out.writeAttribute("element", name(o.wrapped ? o.name : o.result.name));
+			out.writeAttribute(ELEMENT, name(o.wrapped ? o.name : o.result.name));
 			out.writeEndElement();
 			out.writeEndElement();
 		}
@@ -286,8 +288,8 @@ public class WsdlBuilder {
 			}
 			if (o.wrapped || o.result != null) {
 				out.writeStartElement(WS, "output");
-				out.writeAttribute("name", o.name.getLocalPart() + "Response");
-				out.writeAttribute("message", name(service.ns, o.name.getLocalPart()) + "Response");
+				out.writeAttribute("name", o.name.getLocalPart() + RESPONSE);
+				out.writeAttribute("message", name(service.ns, o.name.getLocalPart()) + RESPONSE);
 				out.writeEndElement();
 			}
 			out.writeEndElement();
@@ -321,7 +323,7 @@ public class WsdlBuilder {
 			}
 			if (o.wrapped || o.result != null) {
 				out.writeStartElement(WS, "output");
-				out.writeAttribute("name", o.name.getLocalPart() + "Response");
+				out.writeAttribute("name", o.name.getLocalPart() + RESPONSE);
 				out.writeStartElement(WP, "body");
 				out.writeAttribute("use", "literal");
 				out.writeEndElement();

@@ -94,7 +94,7 @@ public class JaxwsGeneratorMojo extends AbstractGeneratorMojo {
 			}
 		}
 
-		if (graalvm && wsdl.size() > 0) {
+		if (graalvm && !wsdl.isEmpty()) {
 			try {
 				Path path = Paths.get(resources + "/META-INF/native-image/" + id() + "/resource-config.json");
 				Files.createDirectories(path.getParent());

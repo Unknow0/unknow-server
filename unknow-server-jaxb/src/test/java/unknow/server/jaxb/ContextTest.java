@@ -6,8 +6,6 @@ package unknow.server.jaxb;
 import java.util.Collection;
 import java.util.Collections;
 
-import unknow.server.jaxb.ContextFactory;
-
 /**
  * @author unknow
  */

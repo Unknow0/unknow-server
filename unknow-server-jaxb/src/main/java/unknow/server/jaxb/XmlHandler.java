@@ -40,14 +40,11 @@ public interface XmlHandler<T> {
 	public static void skipTag(XMLStreamReader r) throws XMLStreamException {
 		int i = 1;
 		while (r.hasNext()) {
-			switch (r.next()) {
-				case XMLStreamConstants.START_ELEMENT:
-					i++;
-					break;
-				case XMLStreamConstants.END_ELEMENT:
-					if (--i == 0)
-						return;
-			}
+			int n = r.next();
+			if (n == XMLStreamConstants.START_ELEMENT)
+				i++;
+			else if (n == XMLStreamConstants.END_ELEMENT && --i == 0)
+				return;
 		}
 	}
 }

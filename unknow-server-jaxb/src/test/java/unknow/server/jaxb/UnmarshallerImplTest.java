@@ -10,10 +10,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.io.StringReader;
 import java.util.Collections;
 
-import javax.xml.namespace.NamespaceContext;
 import javax.xml.namespace.QName;
 import javax.xml.stream.FactoryConfigurationError;
-import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
@@ -21,30 +19,29 @@ import javax.xml.stream.XMLStreamWriter;
 import org.junit.jupiter.api.Test;
 
 import jakarta.xml.bind.JAXBException;
-import unknow.server.jaxb.UnmarshallerImpl;
 
 /**
  * @author unknow
  */
 public class UnmarshallerImplTest {
 	@Test
-	public void test() throws JAXBException {
+	void test() throws JAXBException {
 		UnmarshallerImpl m = new UnmarshallerImpl(Collections.singletonMap(new QName("", "o"), new OHandler()), Collections.emptyMap());
 		Object r = m.unmarshal(new StringReader("<o a='4'>test</o>"));
 		assertInstanceOf(O.class, r);
 		O o = (O) r;
-		assertEquals(o.a, 4);
-		assertEquals(o.v, "test");
+		assertEquals(4, o.a);
+		assertEquals("test", o.v);
 
 		r = m.unmarshal(new StringReader("<o a='4'/>"));
 		assertInstanceOf(O.class, r);
 		o = (O) r;
-		assertEquals(o.a, 4);
-		assertEquals(o.v, null);
+		assertEquals(4, o.a);
+		assertEquals(null, o.v);
 	}
 
 	@Test
-	public void testError() {
+	void testError() {
 		UnmarshallerImpl m = new UnmarshallerImpl(Collections.singletonMap(new QName("", "o"), new OHandler()), Collections.emptyMap());
 		assertThrows(JAXBException.class, () -> m.unmarshal(new StringReader("<b a='4'>test</b>")));
 		assertThrows(JAXBException.class, () -> m.unmarshal(new StringReader("<o a='4'><t/>test</o>")));

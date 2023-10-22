@@ -47,10 +47,9 @@ public class AncestrorIterator implements Iterator<ClassModel> {
 			throw new NoSuchElementException();
 		ClassModel poll = queue.poll();
 		ClassModel s = poll.superType();
-		if (s != null && !"java.lang.Object".equals(s.name())) {
-			if (saw.add(s.toString()))
-				queue.add(s);
-		}
+		if (s != null && !"java.lang.Object".equals(s.name()) && saw.add(s.toString()))
+			queue.add(s);
+
 		for (ClassModel i : poll.interfaces()) {
 			if (saw.add(i.toString()))
 				queue.add(i);

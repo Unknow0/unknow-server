@@ -34,8 +34,6 @@ public interface XmlSimpleHandler<T> extends XmlHandler<T> {
 				listener.beforeUnmarshal(o, parent);
 				n = r.getEventType();
 			}
-//			if (n == XMLStreamConstants.START_ELEMENT)
-//				throw new XMLStreamException("Extra element " + r.getName() + " in " + O.class);
 			if (n == XMLStreamConstants.END_ELEMENT) {
 				listener.afterUnmarshal(o, parent);
 				return o;

@@ -46,6 +46,6 @@ public class AstModelLoader extends ModelLoader {
 			return new AstEnum(loader, p, t.asEnumDeclaration());
 		else if (t.isClassOrInterfaceDeclaration())
 			return new AstClass(loader, p, t.asClassOrInterfaceDeclaration(), params);
-		throw new RuntimeException("unsuported type " + t);
+		throw new IllegalArgumentException("unsuported type " + t);
 	}
 }

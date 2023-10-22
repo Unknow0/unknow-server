@@ -53,7 +53,7 @@ public interface TypeModel extends WithAnnotation, WithName, WithParent<PackageM
 	default PrimitiveModel asPrimitive() {
 		if (this instanceof PrimitiveModel)
 			return (PrimitiveModel) this;
-		throw new RuntimeException(name() + " isn't a primitive");
+		throw new IllegalStateException(name() + " isn't a primitive");
 	}
 
 	/**
@@ -69,7 +69,7 @@ public interface TypeModel extends WithAnnotation, WithName, WithParent<PackageM
 	default ClassModel asClass() {
 		if (this instanceof ClassModel)
 			return (ClassModel) this;
-		throw new RuntimeException(name() + " isn't a class");
+		throw new IllegalStateException(name() + " isn't a class");
 	}
 
 	/**
@@ -115,7 +115,7 @@ public interface TypeModel extends WithAnnotation, WithName, WithParent<PackageM
 	default ArrayModel asArray() {
 		if (this instanceof ArrayModel)
 			return (ArrayModel) this;
-		throw new RuntimeException(name() + " isn't an array");
+		throw new IllegalStateException(name() + " isn't an array");
 	}
 
 	/**
@@ -131,7 +131,7 @@ public interface TypeModel extends WithAnnotation, WithName, WithParent<PackageM
 	default EnumModel asEnum() {
 		if (this instanceof EnumModel)
 			return (EnumModel) this;
-		throw new RuntimeException(name() + " isn't an enum");
+		throw new IllegalStateException(name() + " isn't an enum");
 	}
 
 	/**
@@ -147,7 +147,7 @@ public interface TypeModel extends WithAnnotation, WithName, WithParent<PackageM
 	default WildcardModel asWildcard() {
 		if (this instanceof WildcardModel)
 			return (WildcardModel) this;
-		throw new RuntimeException(name() + " isn't a wildcard");
+		throw new IllegalStateException(name() + " isn't a wildcard");
 	}
 
 	/**

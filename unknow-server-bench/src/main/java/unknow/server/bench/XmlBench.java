@@ -26,7 +26,7 @@ public class XmlBench {
 			JAXB = new org.glassfish.jaxb.runtime.v2.JAXBContextFactory().createContext(CLASS, null);
 			MOXY = new org.eclipse.persistence.jaxb.XMLBindingContextFactory().createContext(CLASS, null);
 		} catch (JAXBException e) {
-			throw new RuntimeException(e);
+			throw new ExceptionInInitializerError(e);
 		}
 
 		try (ByteArrayOutputStream out = new ByteArrayOutputStream(); InputStream is = cl.getResourceAsStream("complex.xml")) {
@@ -36,7 +36,7 @@ public class XmlBench {
 				out.write(b, 0, l);
 			XML = out.toString("utf8");
 		} catch (IOException e) {
-			throw new RuntimeException(e);
+			throw new ExceptionInInitializerError(e);
 		}
 	}
 
@@ -46,7 +46,7 @@ public class XmlBench {
 			o = c.createUnmarshaller().unmarshal(r);
 		}
 		if (!(o instanceof Complex))
-			throw new RuntimeException(o.getClass().getName());
+			throw new JAXBException(o.getClass().getName());
 		c.createMarshaller().marshal(o, DUMP);
 	}
 

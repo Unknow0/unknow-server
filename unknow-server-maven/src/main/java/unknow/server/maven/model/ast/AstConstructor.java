@@ -8,10 +8,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.ConstructorDeclaration;
 import com.github.javaparser.ast.body.Parameter;
-import com.github.javaparser.ast.nodeTypes.NodeWithModifiers;
 
 import unknow.server.maven.model.AnnotationModel;
 import unknow.server.maven.model.ClassModel;
@@ -22,7 +20,7 @@ import unknow.server.maven.model.ParamModel;
 /**
  * @author unknow
  */
-public class AstConstructor implements ConstructorModel, AstMod {
+public class AstConstructor implements ConstructorModel, AstMod<ConstructorDeclaration> {
 	private final ClassModel parent;
 	private final ModelLoader loader;
 	private final ConstructorDeclaration c;
@@ -56,7 +54,7 @@ public class AstConstructor implements ConstructorModel, AstMod {
 	}
 
 	@Override
-	public NodeWithModifiers<? extends Node> object() {
+	public ConstructorDeclaration object() {
 		return c;
 	}
 

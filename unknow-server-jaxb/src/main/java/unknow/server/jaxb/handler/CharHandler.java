@@ -21,7 +21,7 @@ public class CharHandler implements XmlSimpleHandler<Character> {
 	}
 
 	@Override
-	public Character toObject(String s) { // TODO validation
+	public Character toObject(String s) {
 		return s.charAt(0);
 	}
 }

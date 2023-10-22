@@ -33,7 +33,7 @@ public class XmlElements implements Iterable<XmlElement> {
 		return elements.iterator();
 	}
 
-	public static enum XmlGroup {
+	public enum XmlGroup {
 		SEQUENCE, ALL, CHOICE;
 
 		@Override

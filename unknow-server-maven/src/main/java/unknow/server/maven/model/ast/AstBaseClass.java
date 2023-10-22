@@ -15,7 +15,6 @@ import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.EnumDeclaration;
 import com.github.javaparser.ast.body.FieldDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
-import com.github.javaparser.ast.nodeTypes.NodeWithModifiers;
 import com.github.javaparser.ast.nodeTypes.NodeWithSimpleName;
 
 import unknow.server.maven.model.AnnotationModel;
@@ -31,7 +30,7 @@ import unknow.server.maven.model.TypeParamModel;
  * @author unknow
  * @param <T>
  */
-public abstract class AstBaseClass<T extends TypeDeclaration<?>> implements ClassModel, AstMod {
+public abstract class AstBaseClass<T extends TypeDeclaration<?>> implements ClassModel, AstMod<T> {
 	protected final ModelLoader loader;
 	protected final PackageModel p;
 	protected final T c;
@@ -60,19 +59,19 @@ public abstract class AstBaseClass<T extends TypeDeclaration<?>> implements Clas
 	}
 
 	protected static String getBinaryName(TypeDeclaration<?> c) {
-		String name = c.getNameAsString();
-		Node p = c.getParentNode().orElse(null);
-		while (p != null) {
-			if (p instanceof ClassOrInterfaceDeclaration || p instanceof EnumDeclaration)
-				name = ((NodeWithSimpleName<?>) p).getNameAsString() + "$" + name;
-			if (p instanceof CompilationUnit) {
-				Optional<PackageDeclaration> o = ((CompilationUnit) p).getPackageDeclaration();
+		StringBuilder name = new StringBuilder(c.getNameAsString());
+		Node n = c.getParentNode().orElse(null);
+		while (n != null) {
+			if (n instanceof ClassOrInterfaceDeclaration || n instanceof EnumDeclaration)
+				name.insert(0, '$').insert(0, ((NodeWithSimpleName<?>) n).getNameAsString());
+			if (n instanceof CompilationUnit) {
+				Optional<PackageDeclaration> o = ((CompilationUnit) n).getPackageDeclaration();
 				if (o.isPresent())
-					name = o.get().getNameAsString() + "." + name;
+					name.insert(0, '.').insert(0, o.get().getNameAsString());
 			}
-			p = p.getParentNode().orElse(null);
+			n = n.getParentNode().orElse(null);
 		}
-		return name;
+		return name.toString();
 	}
 
 	@Override
@@ -87,7 +86,7 @@ public abstract class AstBaseClass<T extends TypeDeclaration<?>> implements Clas
 	}
 
 	@Override
-	public NodeWithModifiers<? extends Node> object() {
+	public T object() {
 		return c;
 	}
 
@@ -101,7 +100,7 @@ public abstract class AstBaseClass<T extends TypeDeclaration<?>> implements Clas
 	@Override
 	public Collection<ConstructorModel> constructors() {
 		if (constructors == null)
-			constructors = c.getConstructors().stream().map(c -> new AstConstructor(this, loader, c)).collect(Collectors.toList());
+			constructors = c.getConstructors().stream().map(v -> new AstConstructor(this, loader, v)).collect(Collectors.toList());
 		return constructors;
 	}
 

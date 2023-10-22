@@ -39,7 +39,7 @@ public abstract class AbstractWs extends HttpServlet {
 	private static final QName BODY = new QName("http://schemas.xmlsoap.org/soap/envelope/", "Body");
 
 	private final String wsdl;
-	private final JAXBContext ctx;
+	private final transient JAXBContext ctx;
 	private int size;
 
 	protected AbstractWs(String wsdl) {
@@ -127,7 +127,7 @@ public abstract class AbstractWs extends HttpServlet {
 
 	protected abstract Object read(XMLStreamReader r, Unmarshaller u) throws XMLStreamException, JAXBException, IOException;
 
-	private final void readEnvelope(XMLStreamReader r, Envelope e) throws XMLStreamException, IOException, JAXBException, IOException {
+	private final void readEnvelope(XMLStreamReader r, Envelope e) throws XMLStreamException, IOException, JAXBException {
 		Unmarshaller u = ctx.createUnmarshaller();
 		while (r.hasNext()) {
 			int n = r.next();

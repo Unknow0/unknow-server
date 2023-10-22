@@ -8,10 +8,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.Parameter;
-import com.github.javaparser.ast.nodeTypes.NodeWithModifiers;
 
 import unknow.server.maven.model.AnnotationModel;
 import unknow.server.maven.model.AnnotationValue;
@@ -24,7 +22,7 @@ import unknow.server.maven.model.TypeModel;
 /**
  * @author unknow
  */
-public class AstMethod implements MethodModel, AstMod {
+public class AstMethod implements MethodModel, AstMod<MethodDeclaration> {
 	private final ClassModel parent;
 	private final ModelLoader loader;
 	private final MethodDeclaration m;
@@ -60,7 +58,7 @@ public class AstMethod implements MethodModel, AstMod {
 	}
 
 	@Override
-	public NodeWithModifiers<? extends Node> object() {
+	public MethodDeclaration object() {
 		return m;
 	}
 

@@ -68,7 +68,7 @@ public abstract class ModelLoader {
 
 		t = create(cl, parameters);
 		if (t == null)
-			throw new RuntimeException(this.getClass().getName() + ": Type not found " + cl);
+			throw new IllegalArgumentException(this.getClass().getName() + ": Type not found " + cl);
 		cache.put(key, t);
 		return t;
 	}
@@ -119,7 +119,7 @@ public abstract class ModelLoader {
 	public static List<String> parse(String cl) {
 		Matcher m = CLAZZ.matcher(cl);
 		if (!m.matches())
-			throw new RuntimeException("malformed class " + cl);
+			throw new IllegalArgumentException("malformed class " + cl);
 		if (m.group(2) == null)
 			return Arrays.asList(m.group(1).trim());
 		if (m.group(2).trim().isEmpty())

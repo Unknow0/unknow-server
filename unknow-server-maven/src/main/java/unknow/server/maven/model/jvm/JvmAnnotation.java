@@ -15,6 +15,7 @@ import unknow.server.maven.model.AnnotationValue.AnnotationValueAnnotation;
 import unknow.server.maven.model.AnnotationValue.AnnotationValueArray;
 import unknow.server.maven.model.AnnotationValue.AnnotationValueClass;
 import unknow.server.maven.model.AnnotationValue.AnnotationValueLiteral;
+import unknow.server.maven.model.ModelLoader;
 
 /**
  * @author unknow
@@ -29,7 +30,7 @@ public class JvmAnnotation implements AnnotationModel {
 	 * @param loader
 	 * @param a
 	 */
-	public JvmAnnotation(JvmModelLoader loader, Annotation a) {
+	public JvmAnnotation(ModelLoader loader, Annotation a) {
 		this.a = a;
 		this.members = new ArrayList<>();
 
@@ -42,7 +43,7 @@ public class JvmAnnotation implements AnnotationModel {
 
 				members.add(new AnnotationMemberModel(m.getName(), value, def));
 			} catch (Exception e) {
-				throw new RuntimeException(e);
+				throw new IllegalArgumentException(e);
 			}
 		}
 	}
@@ -67,7 +68,7 @@ public class JvmAnnotation implements AnnotationModel {
 	 * @param o
 	 * @return object as annotation value
 	 */
-	public static AnnotationValue getValue(JvmModelLoader loader, Object o) {
+	public static AnnotationValue getValue(ModelLoader loader, Object o) {
 		if (o == null)
 			return AnnotationValue.NULL;
 		if (o instanceof boolean[]) {

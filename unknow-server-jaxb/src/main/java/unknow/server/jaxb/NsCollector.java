@@ -157,7 +157,7 @@ public final class NsCollector implements XMLStreamWriter {
 		return null;
 	}
 
-	public final static Map<String, String> buildNsMapping(Map<String, Integer> ns) {
+	public static final Map<String, String> buildNsMapping(Map<String, Integer> ns) {
 		if (ns.isEmpty())
 			return Collections.emptyMap();
 		Map<String, String> map = new HashMap<>();
@@ -189,7 +189,7 @@ public final class NsCollector implements XMLStreamWriter {
 	 * @param t the value to encode
 	 * @return the prefix
 	 */
-	public final static String prefix(int t) {
+	public static final String prefix(int t) {
 		if (t < PREFIX_FIRST.length)
 			return new String(PREFIX_FIRST, t, 1);
 		StringBuilder sb = new StringBuilder();

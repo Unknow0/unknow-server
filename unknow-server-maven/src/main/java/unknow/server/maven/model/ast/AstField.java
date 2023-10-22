@@ -7,10 +7,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.FieldDeclaration;
 import com.github.javaparser.ast.body.VariableDeclarator;
-import com.github.javaparser.ast.nodeTypes.NodeWithModifiers;
 
 import unknow.server.maven.model.AnnotationModel;
 import unknow.server.maven.model.ClassModel;
@@ -21,7 +19,7 @@ import unknow.server.maven.model.TypeModel;
 /**
  * @author unknow
  */
-public class AstField implements FieldModel, AstMod {
+public class AstField implements FieldModel, AstMod<FieldDeclaration> {
 	private final ModelLoader loader;
 	private final ClassModel cl;
 	private final FieldDeclaration f;
@@ -52,7 +50,7 @@ public class AstField implements FieldModel, AstMod {
 	}
 
 	@Override
-	public NodeWithModifiers<? extends Node> object() {
+	public FieldDeclaration object() {
 		return f;
 	}
 

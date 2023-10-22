@@ -43,12 +43,12 @@ public class ModelLoaderTest {
 
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("input")
-	public void testParse(String clazz, List<String> result) {
+	void testParse(String clazz, List<String> result) {
 		assertEquals(result, ModelLoader.parse(clazz));
 	}
 
 	@Test
-	public void testCollection() {
+	void testCollection() {
 		ModelLoader loader = JvmModelLoader.GLOBAL;
 
 		TypeModel col = loader.get(G.class.getName());
@@ -71,11 +71,8 @@ public class ModelLoaderTest {
 		TypeSolver resolver = new ReflectionTypeSolver(false);
 		JavaSymbolSolver javaSymbolSolver = new JavaSymbolSolver(resolver);
 		JavaParser parser = new JavaParser(new ParserConfiguration().setStoreTokens(true).setSymbolResolver(javaSymbolSolver));
-		CompilationUnit cu = parser.parse("package " + cl.getPackageName() + ";"
-				+ " public class " + cl.getSimpleName() + "{"
-				+ " public static class G<A> {}"
-				+ " public static class StringList extends G<String> {}"
-				+ "}").getResult().orElse(null);
+		CompilationUnit cu = parser.parse("package " + cl.getPackageName() + ";" + " public class " + cl.getSimpleName() + "{" + " public static class G<A> {}"
+				+ " public static class StringList extends G<String> {}" + "}").getResult().orElse(null);
 
 		ClassOrInterfaceDeclaration ast = cu.findFirst(ClassOrInterfaceDeclaration.class, c -> "StringList".equals(c.getNameAsString())).orElse(null);
 		AstClass astList = new AstClass(JvmModelLoader.GLOBAL, null, ast, new TypeModel[0]);
@@ -87,7 +84,7 @@ public class ModelLoaderTest {
 
 	@ParameterizedTest()
 	@MethodSource()
-	public void testClassName(ClassModel list) {
+	void testClassName(ClassModel list) {
 
 		assertEquals(this.getClass().getName() + "$StringList", list.name());
 		assertEquals(this.getClass().getName() + "$G", list.superType().name());

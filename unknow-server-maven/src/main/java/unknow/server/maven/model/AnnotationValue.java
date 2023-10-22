@@ -45,7 +45,7 @@ public interface AnnotationValue {
 	default <T> T[] asArray(T[] t, Function<AnnotationValue, T> f) {
 		AnnotationValue[] a = asArray();
 		if (a == null)
-			return null;
+			return t;
 		t = Arrays.copyOf(t, a.length);
 		for (int i = 0; i < a.length; i++)
 			t[i] = f.apply(a[i]);
@@ -70,7 +70,7 @@ public interface AnnotationValue {
 	default boolean[] asArrayBoolean() {
 		AnnotationValue[] a = asArray();
 		if (a == null)
-			return null;
+			return new boolean[0];
 		boolean[] t = new boolean[a.length];
 		for (int i = 0; i < a.length; i++)
 			t[i] = a[i].asBoolean();
@@ -81,7 +81,7 @@ public interface AnnotationValue {
 	default int[] asArrayInt() {
 		AnnotationValue[] a = asArray();
 		if (a == null)
-			return null;
+			return new int[0];
 		int[] t = new int[a.length];
 		for (int i = 0; i < a.length; i++)
 			t[i] = a[i].asInt();

@@ -35,6 +35,10 @@ public class JvmField implements FieldModel, JvmMod {
 		this.f = f;
 	}
 
+	public Field field() {
+		return f;
+	}
+
 	@Override
 	public Collection<AnnotationModel> annotations() {
 		if (annotations == null)

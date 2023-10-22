@@ -50,6 +50,8 @@ import unknow.server.maven.model_xml.XmlTypeComplex.Factory;
  * @author unknow
  */
 public class XmlLoader {
+	private static final String NAMESPACE = "namespace";
+
 	private static final Logger logger = LoggerFactory.getLogger(XmlLoader.class);
 
 	public static final String XS = "http://www.w3.org/2001/XMLSchema";
@@ -109,11 +111,11 @@ public class XmlLoader {
 
 	private XmlType create(TypeModel type) {
 		if (type.isPrimitive()) // should not happen
-			throw new RuntimeException("Unsupported primitive " + type);
+			throw new IllegalArgumentException("Unsupported primitive " + type);
 		if (type.isEnum()) {
 			XmlType t = type.annotation(jakarta.xml.bind.annotation.XmlEnum.class).flatMap(v -> v.value()).map(v -> add(v.asClass())).orElse(XmlLoader.STRING);
 			if (!(t instanceof XmlTypeSimple))
-				throw new RuntimeException("Enum type should be a simple type " + type);
+				throw new IllegalArgumentException("Enum type should be a simple type " + type);
 			return new XmlEnum(qname(type), type.asEnum(), (XmlTypeSimple) t);
 		}
 		if (type.isArray())
@@ -121,7 +123,7 @@ public class XmlLoader {
 
 		ClassModel cl = type.asClass();
 		if (cl.isBoxedPrimitive()) // should not happen
-			throw new RuntimeException("Unsupported boxed primitive " + type);
+			throw new IllegalArgumentException("Unsupported boxed primitive " + type);
 		if (cl.isAssignableTo(String.class))
 			return STRING;
 
@@ -149,7 +151,7 @@ public class XmlLoader {
 		String defaultNs = "";
 		Optional<AnnotationModel> o = c.parent().annotation(XmlSchema.class);
 		if (o.isPresent() && o.flatMap(v -> v.member("elementFormDefault")).map(v -> v.asLiteral().equals("QUALIFIED")).orElse(false))
-			defaultNs = o.flatMap(v -> v.member("namespace")).map(v -> v.asLiteral()).orElse("");
+			defaultNs = o.flatMap(v -> v.member(NAMESPACE)).map(v -> v.asLiteral()).orElse("");
 
 		for (FieldModel f : c.fields()) {
 			if (f.isStatic() || f.isTransient() || f.annotation(XmlTransient.class).isPresent())
@@ -166,13 +168,13 @@ public class XmlLoader {
 			Optional<MethodModel> s = c.method(setter, f.type());
 			Optional<MethodModel> g = c.method(getter);
 			if (!s.isPresent())
-				throw new RuntimeException("missing setter for '" + f.name() + "' field in '" + c.name() + "' class");
+				throw new IllegalArgumentException("missing setter for '" + f.name() + "' field in '" + c.name() + "' class");
 			if (!g.isPresent() && (f.type() == PrimitiveModel.BOOLEAN || f.type().name().equals("java.lang.Boolean"))) {
 				String is = "is" + Character.toUpperCase(f.name().charAt(0)) + f.name().substring(1);
 				g = c.method(is);
 			}
 			if (!g.isPresent())
-				throw new RuntimeException("missing setter for '" + f.name() + "' field in '" + c.name() + "' class");
+				throw new IllegalArgumentException("missing setter for '" + f.name() + "' field in '" + c.name() + "' class");
 
 			fields.put(f.name(), f);
 		}
@@ -182,7 +184,7 @@ public class XmlLoader {
 		XmlElement value = null;
 		for (MethodModel m : c.methods()) {
 			// skip non getter
-			if (m.parameters().size() > 0 || !m.name().startsWith("get"))
+			if (!m.parameters().isEmpty() || !m.name().startsWith("get"))
 				continue;
 			String n = Character.toLowerCase(m.name().charAt(3)) + m.name().substring(4);
 
@@ -203,29 +205,29 @@ public class XmlLoader {
 				TypeModel t = m.type();
 				Optional<MethodModel> s = c.method(setter, t);
 				if (!s.isPresent())
-					throw new RuntimeException("missing setter for '" + n + "' field in '" + c.name() + "' class");
+					throw new IllegalArgumentException("missing setter for '" + n + "' field in '" + c.name() + "' class");
 				if (v.isPresent()) {
 					if (value != null)
-						throw new RuntimeException("multiple value for '" + c.name() + "'");
+						throw new IllegalArgumentException("multiple value for '" + c.name() + "'");
 					if (!(add(t) instanceof XmlTypeSimple))
-						throw new RuntimeException("only simple type allowed in value '" + c.name() + "'");
+						throw new IllegalArgumentException("only simple type allowed in value '" + c.name() + "'");
 					value = new XmlElement(this, null, t, m.name(), setter);
 				} else if (attr.isPresent()) {
 					if (!(add(t) instanceof XmlTypeSimple))
-						throw new RuntimeException("only simple type allowed in attribute in '" + c.name() + "'");
+						throw new IllegalArgumentException("only simple type allowed in attribute in '" + c.name() + "'");
 					n = attr.flatMap(a -> a.member("name")).map(a -> a.asLiteral()).map(i -> "##default".equals(i) ? null : i).orElse(n);
-					String ns = attr.flatMap(a -> a.member("namespace")).map(a -> a.asLiteral()).map(i -> "##default".equals(i) ? null : i).orElse("");
+					String ns = attr.flatMap(a -> a.member(NAMESPACE)).map(a -> a.asLiteral()).map(i -> "##default".equals(i) ? null : i).orElse("");
 					attrs.add(new XmlElement(this, new QName(ns, n), t, m.name(), setter));
 				} else {
 					n = elem.flatMap(a -> a.member("name")).map(a -> a.asLiteral()).map(i -> "##default".equals(i) ? null : i).orElse(n);
-					String ns = elem.flatMap(a -> a.member("namespace")).map(a -> a.asLiteral()).map(i -> "##default".equals(i) ? null : i).orElse(defaultNs);
+					String ns = elem.flatMap(a -> a.member(NAMESPACE)).map(a -> a.asLiteral()).map(i -> "##default".equals(i) ? null : i).orElse(defaultNs);
 					elems.add(new XmlElement(this, new QName(ns, n), t, m.name(), setter));
 				}
 			}
 		}
 
 		if (value != null && !elems.isEmpty())
-			throw new RuntimeException("Mixed content not supported in " + c);
+			throw new IllegalArgumentException("Mixed content not supported in " + c);
 
 		XmlElements elements;
 		XmlAccessOrder defaultOrder = c.annotation(XmlAccessorOrder.class).flatMap(a -> a.value()).map(a -> a.asLiteral()).map(a -> XmlAccessOrder.valueOf(a))
@@ -265,10 +267,10 @@ public class XmlLoader {
 		Optional<AnnotationModel> a = type.annotation(jakarta.xml.bind.annotation.XmlType.class);
 
 		String name = type.simpleName();
-		String ns = type.parent().annotation(XmlSchema.class).flatMap(v -> v.member("namespace")).map(v -> v.asLiteral()).orElse("");
+		String ns = type.parent().annotation(XmlSchema.class).flatMap(v -> v.member(NAMESPACE)).map(v -> v.asLiteral()).orElse("");
 		if (a.isPresent()) {
 			name = a.flatMap(v -> v.member("name")).map(v -> v.asLiteral()).filter(v -> !v.equals("##default")).orElse(name);
-			ns = a.flatMap(v -> v.member("namespace")).map(v -> v.asLiteral()).filter(v -> !v.equals("##default")).orElse(ns);
+			ns = a.flatMap(v -> v.member(NAMESPACE)).map(v -> v.asLiteral()).filter(v -> !v.equals("##default")).orElse(ns);
 		}
 		return new QName(ns, name);
 	}

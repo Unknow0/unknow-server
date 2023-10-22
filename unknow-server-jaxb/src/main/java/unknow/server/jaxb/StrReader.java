@@ -11,11 +11,7 @@ import javax.xml.stream.XMLStreamReader;
  * @author unknow
  */
 public class StrReader {
-	private static final ThreadLocal<StrReader> txt = new ThreadLocal<>() {
-		protected StrReader initialValue() {
-			return new StrReader();
-		};
-	};
+	private static final ThreadLocal<StrReader> txt = ThreadLocal.withInitial(() -> new StrReader());
 
 	private final char[] buf = new char[1024];
 	private final StringBuilder sb = new StringBuilder();
