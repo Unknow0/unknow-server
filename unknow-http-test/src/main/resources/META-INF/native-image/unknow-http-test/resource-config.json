@@ -2,7 +2,7 @@
   "resources":{
   "includes":[
     { "pattern":"\\QMETA-INF/services/\\E.*" },
-    { "pattern":"a\\QMETA-INF/cxf/bus-extensions.txt\\E" }, 
+    { "pattern":"\\QMETA-INF/cxf/bus-extensions.txt\\E" }, 
     { "pattern":"a\\QMETA-INF/mailcap.default\\E" }, 
     { "pattern":"a\\QMETA-INF/mailcap\\E" },
     { "pattern":"\\Qorg/apache/cxf/version/version.properties\\E" }, 
@@ -11,7 +11,7 @@
     { "pattern":"a\\Qschemas/wsdl/wsrm.xsd\\E" }
   ]},
   "bundles":[
-    { "name":"org.apache.cxf.Messages" }, 
+    { "name":"org.apache.cxf.Messages", "locales":[""] }, 
     { "name":"org.apache.cxf.binding.soap.interceptor.Messages", "locales":[""] }, 
     { "name":"org.apache.cxf.binding.soap.saaj.Messages","locales":[""] }, 
     { "name":"org.apache.cxf.bus.extension.Messages", "locales":[""] }, 
