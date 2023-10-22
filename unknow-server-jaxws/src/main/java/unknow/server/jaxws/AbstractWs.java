@@ -47,8 +47,6 @@ public abstract class AbstractWs extends HttpServlet {
 
 	@Override
 	public final void init() throws ServletException {
-		XML_OUT.setProperty("javax.xml.stream.isRepairingNamespaces", true);
-		XML_OUT.setProperty("javax.xml.stream.isRepairingNamespaces", true);
 		if (wsdl == null)
 			return;
 		try (InputStream is = getServletContext().getResourceAsStream(wsdl)) {
@@ -181,8 +179,9 @@ public abstract class AbstractWs extends HttpServlet {
 	private final void writeEnvelope(XMLStreamWriter w, Envelope e) throws XMLStreamException, JAXBException {
 		Marshaller m = ctx.createMarshaller();
 		m.setProperty("jaxb.fragment", true);
-		// TODO get ns
-		w.writeStartElement(ENVELOPE.getNamespaceURI(), ENVELOPE.getLocalPart());
+
+		w.writeStartElement("e", ENVELOPE.getLocalPart(), ENVELOPE.getNamespaceURI());
+		w.writeNamespace("e", ENVELOPE.getNamespaceURI());
 		if (e.getHeaderSize() > 0) {
 			w.writeStartElement(HEADER.getNamespaceURI(), HEADER.getLocalPart());
 			for (int i = 0; i < e.getHeaderSize(); i++)

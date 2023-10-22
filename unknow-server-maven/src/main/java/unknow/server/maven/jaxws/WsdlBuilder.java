@@ -15,7 +15,8 @@ import javax.xml.namespace.QName;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
-import unknow.server.jaxws.XMLNsCollector;
+import unknow.server.jaxb.NsCollector;
+import unknow.server.jaxb.XmlRootHandler;
 import unknow.server.maven.jaxws.binding.Operation;
 import unknow.server.maven.jaxws.binding.Parameter;
 import unknow.server.maven.jaxws.binding.Service;
@@ -75,7 +76,7 @@ public class WsdlBuilder {
 			}
 		}
 		ns.merge(XS, ns.size() - 3, Integer::sum);
-		this.nsPrefix = XMLNsCollector.buildNsMapping(ns);
+		this.nsPrefix = NsCollector.buildNsMapping(ns);
 	}
 
 	private void collectType(XmlType t, Map<String, Integer> ns) {
@@ -95,9 +96,7 @@ public class WsdlBuilder {
 	}
 
 	public void write(XMLStreamWriter out) throws XMLStreamException {
-		for (Entry<String, String> e : nsPrefix.entrySet())
-			out.setPrefix(e.getValue(), e.getKey());
-		out.writeStartElement(WS, "definitions");
+		out.writeStartElement(nsPrefix.get(WS), "definitions", WS);
 		for (Entry<String, String> e : nsPrefix.entrySet())
 			out.writeNamespace(e.getValue(), e.getKey());
 		out.writeAttribute("targetNamespace", service.ns);

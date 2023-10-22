@@ -3,12 +3,12 @@
  */
 package unknow.server.jaxb;
 
-import java.util.function.Consumer;
-
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
+
+import jakarta.xml.bind.Marshaller;
 
 /**
  * @author unknow
@@ -16,15 +16,12 @@ import javax.xml.stream.XMLStreamWriter;
 public interface XmlSimpleHandler<T> extends XmlHandler<T> {
 
 	@Override
-	default void collectNS(Consumer<String> c) {
-		c.accept("http://www.w3.org/2001/XMLSchema");
-	}
-
-	@Override
-	default void write(XMLStreamWriter w, T t, MarshallerImpl listener) throws XMLStreamException {
-		listener.beforeMarshal(t);
+	default void write(XMLStreamWriter w, T t, Marshaller.Listener listener) throws XMLStreamException {
+		if (listener != null)
+			listener.beforeMarshal(t);
 		w.writeCharacters(toString(t));
-		listener.afterMarshal(t);
+		if (listener != null)
+			listener.afterMarshal(t);
 	}
 
 	@Override

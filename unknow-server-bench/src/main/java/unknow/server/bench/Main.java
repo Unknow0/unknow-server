@@ -13,12 +13,13 @@ import org.openjdk.jmh.runner.options.VerboseMode;
 
 public class Main {
 	public static void main(String[] args) throws Exception {
-		Options o = new OptionsBuilder().forks(1).measurementIterations(1).verbosity(VerboseMode.SILENT).warmupIterations(1).build();
+		Options o = new OptionsBuilder().forks(1).measurementIterations(10).verbosity(VerboseMode.SILENT).warmupIterations(5).build();
 
 		for (Class<?> c : Arrays.asList(XmlBench.class)) {
-			System.out.println();
+			System.out.println(c.getSimpleName());
 			Collection<RunResult> result = new Runner(new OptionsBuilder().parent(o).include(c.getName()).build()).run();
 			ResultFormatFactory.getInstance(ResultFormatType.TEXT, System.out).writeOut(result);
+			System.out.println();
 		}
 	}
 }

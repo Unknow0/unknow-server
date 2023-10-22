@@ -9,6 +9,7 @@ import java.io.OutputStream;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.xml.stream.XMLEventWriter;
 import javax.xml.stream.XMLOutputFactory;
@@ -115,7 +116,8 @@ public class MarshallerImpl implements Marshaller {
 				XmlRootHandler h = rootHandlers.get(jaxbElement.getClass());
 				if (h == null)
 					throw new JAXBException("Unknown class '" + jaxbElement.getClass());
-				h.writeRoot(writer, jaxbElement, this);
+
+				h.writeRoot(writer, jaxbElement, listener);
 			}
 			if (!fragment)
 				writer.writeEndDocument();
@@ -131,9 +133,11 @@ public class MarshallerImpl implements Marshaller {
 			write((JAXBElement) e.getValue(), writer);
 		} else {
 			XmlHandler h = handlers.get(e.getDeclaredType());
+			// TODO get ns
 			if (h == null)
 				throw new JAXBException("Unknown class '" + e.getDeclaredType());
-			h.write(writer, e.getValue(), this);
+
+			h.write(writer, e.getValue(), listener);
 		}
 		writer.writeEndElement();
 	}

@@ -3,23 +3,18 @@
  */
 package unknow.server.jaxb;
 
-import java.util.function.Consumer;
-
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
+
+import jakarta.xml.bind.Marshaller;
 
 /**
  * @author unknow
  * @param <T> xmlElement
  */
 public interface XmlHandler<T> {
-
-	/**
-	 * @param c
-	 */
-	void collectNS(Consumer<String> c);
 
 	/**
 	 * write object content
@@ -29,7 +24,7 @@ public interface XmlHandler<T> {
 	 * @param listener
 	 * @throws XMLStreamException in case of error
 	 */
-	void write(XMLStreamWriter w, T t, MarshallerImpl listener) throws XMLStreamException;
+	void write(XMLStreamWriter w, T t, Marshaller.Listener listener) throws XMLStreamException;
 
 	/**
 	 * read object content

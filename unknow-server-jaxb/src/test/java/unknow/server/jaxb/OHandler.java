@@ -3,13 +3,13 @@
  */
 package unknow.server.jaxb;
 
-import java.util.function.Consumer;
-
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
+
+import jakarta.xml.bind.Marshaller;
 
 /**
  * @author unknow
@@ -27,7 +27,7 @@ public class OHandler extends XmlRootHandler<O> {
 	}
 
 	@Override
-	public void write(XMLStreamWriter w, O t, MarshallerImpl listener) throws XMLStreamException {
+	public void write(XMLStreamWriter w, O t, Marshaller.Listener listener) throws XMLStreamException {
 		w.writeAttribute("a", Integer.toString(t.a));
 		// or write CDATA
 		w.writeCharacters(t.v);
@@ -57,11 +57,5 @@ public class OHandler extends XmlRootHandler<O> {
 				return o;
 		}
 		throw new XMLStreamException("EOF");
-	}
-
-	@Override
-	public void collectNS(Consumer<String> c) {
-		c.accept("");
-		c.accept("");
 	}
 }

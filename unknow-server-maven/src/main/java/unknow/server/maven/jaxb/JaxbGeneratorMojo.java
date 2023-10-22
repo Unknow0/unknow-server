@@ -77,7 +77,6 @@ import jakarta.xml.bind.Marshaller;
 import jakarta.xml.bind.Unmarshaller;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import unknow.server.jaxb.ContextFactory;
-import unknow.server.jaxb.MarshallerImpl;
 import unknow.server.jaxb.StrReader;
 import unknow.server.jaxb.UnmarshallerImpl;
 import unknow.server.jaxb.XmlHandler;
@@ -259,16 +258,6 @@ public class JaxbGeneratorMojo extends AbstractMojoUnk {
 					Utils.list(new StringLiteralExpr(qname.getNamespaceURI()), new StringLiteralExpr(qname.getLocalPart()))))));
 		}
 
-		b = cl.addMethod("collectNS", Utils.PUBLIC).addMarkerAnnotation(Override.class).addParameter(types.getClass(Consumer.class, types.get(String.class)), "c").getBody()
-				.get();
-
-		for (XmlElement a : xml.getAttributes()) {
-			if (!a.ns().isEmpty())
-				b.addStatement(new MethodCallExpr(new NameExpr("c"), "accept", Utils.list(new StringLiteralExpr(a.ns()))));
-		}
-		for (XmlElement a : xml.getElements())
-			b.addStatement(new MethodCallExpr(new NameExpr("c"), "accept", Utils.list(new StringLiteralExpr(a.ns()))));
-
 		buildWriter(cl, types, xml);
 		buildReader(cl, types, xml, emptyArray);
 
@@ -277,11 +266,12 @@ public class JaxbGeneratorMojo extends AbstractMojoUnk {
 
 	private void buildWriter(ClassOrInterfaceDeclaration cl, TypeCache types, XmlTypeComplex xml) {
 		BlockStmt b = cl.addMethod("write", Utils.PUBLIC).addMarkerAnnotation(Override.class).addThrownException(types.get(XMLStreamException.class).asClassOrInterfaceType())
-				.addParameter(types.get(XMLStreamWriter.class), "w").addParameter(types.get(xml.type()), "t").addParameter(types.get(MarshallerImpl.class), "listener")
+				.addParameter(types.get(XMLStreamWriter.class), "w").addParameter(types.get(xml.type()), "t").addParameter(types.get(Marshaller.Listener.class), "listener")
 				.createBody();
 		xml.type().asClass().method("beforeMarshal", loader.get(Marshaller.class.getName()))
 				.ifPresent(m -> b.addStatement(new MethodCallExpr(new NameExpr("o"), "beforeMarshal", Utils.list(new NameExpr("listener")))));
-		b.addStatement(new MethodCallExpr(new NameExpr("listener"), "beforeMarshal", Utils.list(new NameExpr("t"))));
+		b.addStatement(new IfStmt(new BinaryExpr(new NameExpr("listener"), new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS),
+				new ExpressionStmt(new MethodCallExpr(new NameExpr("listener"), "beforeMarshal", Utils.list(new NameExpr("t")))), null));
 
 		if (!xml.getAttributes().isEmpty()) {
 			b.addStatement(new VariableDeclarationExpr(types.get(String.class), "s"));
@@ -336,7 +326,8 @@ public class JaxbGeneratorMojo extends AbstractMojoUnk {
 
 		xml.type().asClass().method("afterMarshal", loader.get(Marshaller.class.getName()))
 				.ifPresent(m -> b.addStatement(new MethodCallExpr(new NameExpr("o"), "afterMarshal", Utils.list(new NameExpr("listener")))));
-		b.addStatement(new MethodCallExpr(new NameExpr("listener"), "afterMarshal", Utils.list(new NameExpr("t"))));
+		b.addStatement(new IfStmt(new BinaryExpr(new NameExpr("listener"), new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS),
+				new ExpressionStmt(new MethodCallExpr(new NameExpr("listener"), "afterMarshal", Utils.list(new NameExpr("t")))), null));
 	}
 
 	/**
