@@ -93,9 +93,6 @@ public class JaxwsServletBuilder {
 
 		servlet.addFieldWithInitializer(types.getClass(long.class), "serialVersionUID", new LongLiteralExpr("1"), Utils.PSF);
 
-		servlet.addFieldWithInitializer(types.getClass(Logger.class), "logger",
-				new MethodCallExpr(new TypeExpr(types.getClass(LoggerFactory.class)), "getLogger", Utils.list(new ClassExpr(types.getClass(servlet)))), Utils.PSF);
-
 		servlet.addFieldWithInitializer(types.getClass(serviceClass), "WS", new ObjectCreationExpr(null, types.getClass(serviceClass), Utils.list()), Utils.PSF);
 
 		Collections.sort(service.operations, (o1, o2) -> o1.sig().compareTo(o2.sig()));
@@ -147,7 +144,7 @@ public class JaxwsServletBuilder {
 			else {
 				b.addStatement(
 						new AssignExpr(new VariableDeclarationExpr(types.getClass(o.result.type), "ro"), new MethodCallExpr(new NameExpr("WS"), o.m, param), Operator.ASSIGN));
-				e = new ObjectCreationExpr(null, types.getClass(JAXBElement.class),
+				e = new ObjectCreationExpr(null, types.getClass(JAXBElement.class, TypeCache.EMPTY),
 						Utils.list(
 								new ObjectCreationExpr(null, types.getClass(QName.class),
 										Utils.list(Utils.text(o.result.name.getNamespaceURI()), Utils.text(o.result.name.getLocalPart()))),
@@ -160,7 +157,7 @@ public class JaxwsServletBuilder {
 				Expression c = new ClassExpr(types.get(e == null ? Object.class : JAXBElement.class));
 				if (e == null)
 					e = new NullLiteralExpr();
-				e = new ObjectCreationExpr(null, types.getClass(JAXBElement.class), Utils.list(new ObjectCreationExpr(null, types.getClass(QName.class),
+				e = new ObjectCreationExpr(null, types.getClass(JAXBElement.class, TypeCache.EMPTY), Utils.list(new ObjectCreationExpr(null, types.getClass(QName.class),
 						Utils.list(Utils.text(o.name.getNamespaceURI()), Utils.text(o.name.getLocalPart() + "Response"))), c, e));
 			} else {
 				// TODO out param

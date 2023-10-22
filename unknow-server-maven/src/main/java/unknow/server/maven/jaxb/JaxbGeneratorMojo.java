@@ -278,9 +278,13 @@ public class JaxbGeneratorMojo extends AbstractMojoUnk {
 				Expression v = new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(handlers.get(e.xmlType()))), INSTANCE), "toString",
 						Utils.list(new MethodCallExpr(new NameExpr("t"), e.getter())));
 				v = new EnclosedExpr(new AssignExpr(new NameExpr("s"), v, AssignExpr.Operator.ASSIGN));
+				NodeList<Expression> l = Utils.list();
+				if (!e.ns().isEmpty())
+					l.add(Utils.text(e.ns()));
+				l.add(Utils.text(e.name()));
+				l.add(new NameExpr("s"));
 				b.addStatement(new IfStmt(new BinaryExpr(v, new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS),
-						new ExpressionStmt(new MethodCallExpr(new NameExpr("w"), "writeAttribute", Utils.list(Utils.text(e.ns()), Utils.text(e.name()), new NameExpr("s")))),
-						null));
+						new ExpressionStmt(new MethodCallExpr(new NameExpr("w"), "writeAttribute", l)), null));
 			}
 		}
 

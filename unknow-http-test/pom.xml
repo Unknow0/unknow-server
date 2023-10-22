@@ -74,6 +74,21 @@
 				</executions>
 			</plugin>
 			<plugin>
+				<artifactId>maven-resources-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>war</id>
+						<phase>process-resources</phase>
+						<goals>
+							<goal>resources</goal>
+						</goals>
+						<configuration>
+							<outputDirectory>${project.build.directory}/webapp</outputDirectory>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
 				<artifactId>maven-war-plugin</artifactId>
 				<executions>
 					<execution>
@@ -81,7 +96,7 @@
 							<goal>war</goal>
 						</goals>
 						<configuration>
-							<warSourceDirectory>${basedir}/src/main/resources</warSourceDirectory>
+							<warSourceDirectory>${project.build.directory}/webapp</warSourceDirectory>
 							<primaryArtifact>false</primaryArtifact>
 						</configuration>
 					</execution>
@@ -114,12 +129,6 @@
 			<groupId>org.apache.cxf</groupId>
 			<artifactId>cxf-rt-frontend-jaxws</artifactId>
 			<version>${cxf.version}</version>
-			<exclusions>
-				<exclusion>
-					<groupId>com.fasterxml.woodstox</groupId>
-					<artifactId>woodstox-core</artifactId>
-				</exclusion>
-			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.cxf</groupId>
@@ -135,10 +144,6 @@
 			<groupId>org.apache.cxf</groupId>
 			<artifactId>cxf-rt-rs-service-description-openapi-v3</artifactId>
 			<version>${cxf.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>com.fasterxml</groupId>
-			<artifactId>aalto-xml</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.jakarta.rs</groupId>
