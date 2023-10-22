@@ -40,13 +40,9 @@ import unknow.server.util.io.BuffersUtils;
 
 public class HttpHandler implements Handler, Runnable {
 	private static final Logger logger = LoggerFactory.getLogger(HttpHandler.class);
-//	private static final Cookie[] COOKIE = new Cookie[0];
 
 	private static final byte[] CRLF = { '\r', '\n' };
 	private static final byte[] CRLF2 = { '\r', '\n', '\r', '\n' };
-//	private static final byte[] WS = new byte[] { ' ', '\t' };
-//	private static final byte[] SEP = new byte[] { ' ', '\t', '"', ',' };
-//	private static final byte[] COOKIE_SEP = new byte[] { ';', ' ' };
 	private static final byte[] PARAM_SEP = { '&', '=' };
 	private static final byte[] SPACE_SLASH = { ' ', '/' };
 	private static final byte SPACE = ' ';
@@ -56,8 +52,6 @@ public class HttpHandler implements Handler, Runnable {
 	private static final byte SLASH = '/';
 	private static final byte AMPERSAMP = '&';
 	private static final byte PERCENT = '%';
-//	private static final byte QUOTE = '"';
-//	private static final byte COMA = ',';
 	private static final byte EQUAL = '=';
 
 	private static final int MAX_METHOD_SIZE = 10; // max size for method
@@ -276,7 +270,7 @@ public class HttpHandler implements Handler, Runnable {
 			} catch (UnavailableException e) {
 				// TODO add page with retry-after
 				res.sendError(503, e, null);
-			} catch (Throwable e) {
+			} catch (Exception e) {
 				logger.error("failed to service '{}'", s, e);
 				if (!res.isCommited())
 					res.sendError(500);

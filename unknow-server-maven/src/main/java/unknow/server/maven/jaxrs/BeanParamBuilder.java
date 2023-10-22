@@ -81,7 +81,7 @@ public class BeanParamBuilder {
 		for (JaxrsBeanFieldParam p : param.params)
 			processBeanConverter(p.param, n + "$" + i++, init);
 
-		BlockStmt b = cl.addMethod(beansVar.get(clazz), Utils.PUBLIC_STATIC).addParameter(types.getClass(JaxrsReq.class), "r").setType(types.get(clazz)).getBody().get()
+		BlockStmt b = cl.addMethod(beansVar.get(clazz), Utils.PUBLIC_STATIC).addParameter(types.getClass(JaxrsReq.class), "r").setType(types.get(clazz)).createBody()
 				.addStatement(Utils.create(types.getClass(clazz), "b", Utils.list()));
 		for (JaxrsBeanFieldParam e : param.params) {
 			if (e.setter != null)

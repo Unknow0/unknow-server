@@ -33,12 +33,4 @@ public interface PathPattern {
 			return list;
 		}
 	}
-
-	public static class PathSimple {
-	}
-
-//	public static class Part {
-//		private final int start;
-//		private final String name;
-//	}
 }

@@ -56,9 +56,7 @@ public class JaxrsEntityReader<T> {
 		if (contentType == null)
 			contentType = "*/*";
 		MediaType mediaType = MediaTypeDelegate.INSTANCE.fromString(contentType);
-		MessageBodyReader<T> reader = readers.get(mediaType);
-		if (reader == null)
-			readers.put(mediaType, reader = JaxrsContext.reader(clazz, genericType, annotations, mediaType));
+		MessageBodyReader<T> reader = readers.computeIfAbsent(mediaType, k -> JaxrsContext.reader(clazz, genericType, annotations, mediaType));
 
 		MultivaluedMap<String, String> httpHeaders = r.getHeaders();
 		return reader.readFrom(clazz, genericType, annotations, mediaType, httpHeaders, req.getInputStream());

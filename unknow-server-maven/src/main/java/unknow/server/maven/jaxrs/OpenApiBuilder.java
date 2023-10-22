@@ -17,7 +17,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.project.MavenProject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,12 +25,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
 import io.swagger.v3.oas.annotations.tags.Tags;
-import io.swagger.v3.oas.models.Components;
-import io.swagger.v3.oas.models.ExternalDocumentation;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.PathItem;
-import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.media.Content;
 import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.media.Schema;
@@ -40,10 +36,6 @@ import io.swagger.v3.oas.models.parameters.Parameter.StyleEnum;
 import io.swagger.v3.oas.models.parameters.RequestBody;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
-import io.swagger.v3.oas.models.security.SecurityRequirement;
-import io.swagger.v3.oas.models.security.SecurityScheme;
-import io.swagger.v3.oas.models.servers.Server;
-import io.swagger.v3.oas.models.tags.Tag;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam.JaxrsBeanFieldParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBodyParam;
@@ -62,6 +54,10 @@ import unknow.server.maven.model.TypeModel;
 public class OpenApiBuilder {
 	private static final Logger logger = LoggerFactory.getLogger(OpenApiBuilder.class);
 
+	private static final String INTEGER = "integer";
+	private static final String NUMBER = "number";
+	private static final String STRING = "string";
+
 	private static Schema<?> getDefault(String n) {
 		switch (n) {
 			case "boolean":
@@ -70,97 +66,76 @@ public class OpenApiBuilder {
 				return new Schema<>().type("boolean");
 
 			case "byte":
-				return new Schema<>().type("integer").minimum(BigDecimal.valueOf(Byte.MIN_VALUE)).maximum(BigDecimal.valueOf(Byte.MAX_VALUE)).nullable(false);
+				return new Schema<>().type(INTEGER).minimum(BigDecimal.valueOf(Byte.MIN_VALUE)).maximum(BigDecimal.valueOf(Byte.MAX_VALUE)).nullable(false);
 			case "java.lang.Byte":
-				return new Schema<>().type("integer").minimum(BigDecimal.valueOf(Byte.MIN_VALUE)).maximum(BigDecimal.valueOf(Byte.MAX_VALUE));
+				return new Schema<>().type(INTEGER).minimum(BigDecimal.valueOf(Byte.MIN_VALUE)).maximum(BigDecimal.valueOf(Byte.MAX_VALUE));
 			case "char":
-				return new Schema<>().type("integer").minimum(BigDecimal.valueOf(Character.MIN_VALUE)).maximum(BigDecimal.valueOf(Character.MAX_VALUE)).nullable(false);
+				return new Schema<>().type(INTEGER).minimum(BigDecimal.valueOf(Character.MIN_VALUE)).maximum(BigDecimal.valueOf(Character.MAX_VALUE)).nullable(false);
 			case "java.lang.Character":
-				return new Schema<>().type("integer").minimum(BigDecimal.valueOf(Character.MIN_VALUE)).maximum(BigDecimal.valueOf(Character.MAX_VALUE));
+				return new Schema<>().type(INTEGER).minimum(BigDecimal.valueOf(Character.MIN_VALUE)).maximum(BigDecimal.valueOf(Character.MAX_VALUE));
 			case "short":
-				return new Schema<>().type("integer").minimum(BigDecimal.valueOf(Short.MIN_VALUE)).maximum(BigDecimal.valueOf(Short.MAX_VALUE)).nullable(false);
+				return new Schema<>().type(INTEGER).minimum(BigDecimal.valueOf(Short.MIN_VALUE)).maximum(BigDecimal.valueOf(Short.MAX_VALUE)).nullable(false);
 			case "java.lang.Short":
-				return new Schema<>().type("integer").minimum(BigDecimal.valueOf(Short.MIN_VALUE)).maximum(BigDecimal.valueOf(Short.MAX_VALUE));
+				return new Schema<>().type(INTEGER).minimum(BigDecimal.valueOf(Short.MIN_VALUE)).maximum(BigDecimal.valueOf(Short.MAX_VALUE));
 			case "int":
-				return new Schema<>().type("integer").format("int32").nullable(false);
+				return new Schema<>().type(INTEGER).format("int32").nullable(false);
 			case "java.lang.Integer":
-				return new Schema<>().type("integer").format("int32");
+				return new Schema<>().type(INTEGER).format("int32");
 			case "long":
-				return new Schema<>().type("integer").format("int64").nullable(false);
+				return new Schema<>().type(INTEGER).format("int64").nullable(false);
 			case "java.lang.Long":
-				return new Schema<>().type("integer").format("int64");
+				return new Schema<>().type(INTEGER).format("int64");
 			case "java.math.BigInteger":
-				return new Schema<>().type("integer");
+				return new Schema<>().type(INTEGER);
 
 			case "float":
-				return new Schema<>().type("number").format("float");
+				return new Schema<>().type(NUMBER).format("float");
 			case "java.lang.Float":
-				return new Schema<>().type("number").format("float").nullable(false);
+				return new Schema<>().type(NUMBER).format("float").nullable(false);
 			case "double":
-				return new Schema<>().type("number").format("double").nullable(false);
+				return new Schema<>().type(NUMBER).format("double").nullable(false);
 			case "java.lang.Double":
-				return new Schema<>().type("number").format("double");
+				return new Schema<>().type(NUMBER).format("double");
 			case "java.math.BigDecimal":
-				return new Schema<>().type("number");
+				return new Schema<>().type(NUMBER);
 
 			case "java.lang.String":
-				return new Schema<>().type("string");
+				return new Schema<>().type(STRING);
 
 			case "java.time.LocalDate":
-				return new Schema<>().type("string").format("date");
+				return new Schema<>().type(STRING).format("date");
 			case "java.time.LocalTime":
-				return new Schema<>().type("string").format("time");
+				return new Schema<>().type(STRING).format("time");
 			case "java.time.LocalDateTime":
-				return new Schema<>().type("string").format("date-time");
+				return new Schema<>().type(STRING).format("date-time");
 			case "java.time.ZonedDateTime":
-				return new Schema<>().type("string").format("date-time");
+				return new Schema<>().type(STRING).format("date-time");
 			case "java.time.OffsetDateTime":
-				return new Schema<>().type("string").format("date-time");
+				return new Schema<>().type(STRING).format("date-time");
 			case "java.time.Duration":
-				return new Schema<>().type("string").format("duration");
+				return new Schema<>().type(STRING).format("duration");
 			case "java.time.Period":
-				return new Schema<>().type("string").format("period");
+				return new Schema<>().type(STRING).format("period");
 			default:
 				return null;
 		}
 	}
 
-	public Info info;
-	public List<Server> servers;
-	public List<SecurityRequirement> security;
-	public Map<String, SecurityScheme> securityScheme;
-	public List<Tag> tags;
-	public ExternalDocumentation externalDocs;
-
 	@SuppressWarnings("rawtypes")
 	private final Map<String, Schema> schemas = new HashMap<>();
 
-	public void build(MavenProject project, JaxrsModel model, String file) throws MojoExecutionException {
+	public void build(OpenAPI spec, JaxrsModel model, String file) throws MojoExecutionException {
 
 		ObjectMapper m = new ObjectMapper().enable(SerializationFeature.WRITE_ENUMS_USING_TO_STRING).disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
 				.setDefaultPropertyInclusion(Include.NON_EMPTY);
 		try (OutputStream out = Files.newOutputStream(java.nio.file.Paths.get(file))) {
-			m.writeValue(out, build(project, model));
+			m.writeValue(out, build(spec, model));
 		} catch (IOException e) {
 			throw new MojoExecutionException(e);
 		}
 	}
 
-	private OpenAPI build(MavenProject project, JaxrsModel model) {
-		OpenAPI spec = new OpenAPI().info(info == null ? info = new Info() : info);
-		if (info.getTitle() == null)
-			info.setTitle(project.getArtifactId());
-		if (info.getVersion() == null)
-			info.setVersion(project.getVersion());
-
-		if (servers != null)
-			spec.setServers(servers);
-		if (security != null)
-			spec.setSecurity(security);
-		if (tags != null)
-			spec.setTags(tags);
-		if (externalDocs != null)
-			spec.setExternalDocs(externalDocs);
+	private OpenAPI build(OpenAPI spec, JaxrsModel model) {
 
 		io.swagger.v3.oas.models.Paths paths = new io.swagger.v3.oas.models.Paths();
 
@@ -173,7 +148,7 @@ public class OpenApiBuilder {
 
 			Operation o = createOp(p, m.httpMethod);
 			if (o == null) {
-				logger.warn("can't map operation " + m.httpMethod + " " + m.path + " duplicate or unupported");
+				logger.warn("can't map operation {} {} duplicate or unupported", m.httpMethod, m.path);
 				continue;
 			}
 			AnnotationModel[] t = findTags(m.m);
@@ -210,7 +185,8 @@ public class OpenApiBuilder {
 				addParameters(o, param);
 
 		}
-		return spec.components(new Components().securitySchemes(securityScheme).schemas(schemas)).paths(paths);
+		spec.getComponents().setSchemas(schemas);
+		return spec.paths(paths);
 	}
 
 	/**
@@ -309,7 +285,7 @@ public class OpenApiBuilder {
 			// @JsonFormat on enum
 			// @JsonValue on method
 			// @JsonProperty on entries
-			s.type("string").setEnum(e.entries().stream().map(v -> v.name()).collect(Collectors.toList()));
+			s.type(STRING).setEnum(e.entries().stream().map(v -> v.name()).collect(Collectors.toList()));
 		} else {
 			List<String> requied = new ArrayList<>();
 			s.type("object").setRequired(requied);
@@ -399,5 +375,10 @@ public class OpenApiBuilder {
 		while (t == null && it.hasNext())
 			t = findTags(it.next());
 		return t;
+	}
+
+	@SuppressWarnings("rawtypes")
+	public Map<String, Schema> getSchemas() {
+		return schemas;
 	}
 }

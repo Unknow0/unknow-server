@@ -36,7 +36,7 @@ public class JaxrsContextTest {
 
 	@ParameterizedTest
 	@MethodSource
-	public void params(Type expected, Type t) {
+	 void params(Type expected, Type t) {
 		assertEquals(expected, JaxrsContext.getParamType(t));
 	}
 

@@ -24,9 +24,7 @@ import unknow.server.http.jaxrs.impl.DefaultConvert;
  */
 public class JaxrsReqTest {
 	public static final Stream<Arguments> path() {
-		return Stream.of(
-				Arguments.of("path", "/path"),
-				Arguments.of("path", "/path/toto"));
+		return Stream.of(Arguments.of("path", "/path"), Arguments.of("path", "/path/toto"));
 	}
 
 //	@ParameterizedTest(name = "path {1}")
@@ -40,14 +38,8 @@ public class JaxrsReqTest {
 //	}
 
 	public static final Stream<Arguments> query() {
-		return Stream.of(
-				Arguments.of(null, null, null),
-				Arguments.of("d", null, "d"),
-				Arguments.of("d", "a=a", "d"),
-				Arguments.of("n", "n=n", "d"),
-				Arguments.of("n", "a=a&n=n", "d"),
-				Arguments.of("n", "a=a&n=n&b=b", "d"),
-				Arguments.of("n", "a=a&n=n&n=b", "d"));
+		return Stream.of(Arguments.of(null, null, null), Arguments.of("d", null, "d"), Arguments.of("d", "a=a", "d"), Arguments.of("n", "n=n", "d"),
+				Arguments.of("n", "a=a&n=n", "d"), Arguments.of("n", "a=a&n=n&b=b", "d"), Arguments.of("n", "a=a&n=n&n=b", "d"));
 	}
 
 	@ParameterizedTest(name = "query {1}")
@@ -60,19 +52,13 @@ public class JaxrsReqTest {
 	}
 
 	public static final Stream<Arguments> matrix() {
-		return Stream.of(
-				Arguments.of(null, "", null),
-				Arguments.of("d", "/test", "d"),
-				Arguments.of("d", "/test;a=a", "d"),
-				Arguments.of("n", "/test;n=n", "d"),
-				Arguments.of("n", "/test;a=a;n=n", "d"),
-				Arguments.of("n", "/test;a=a;n=n;b=b", "d"),
-				Arguments.of("n", "/test;a=a;n=n;n=b", "d"));
+		return Stream.of(Arguments.of(null, "", null), Arguments.of("d", "/test", "d"), Arguments.of("d", "/test;a=a", "d"), Arguments.of("n", "/test;n=n", "d"),
+				Arguments.of("n", "/test;a=a;n=n", "d"), Arguments.of("n", "/test;a=a;n=n;b=b", "d"), Arguments.of("n", "/test;a=a;n=n;n=b", "d"));
 	}
 
 	@ParameterizedTest(name = "matrix {1}")
 	@MethodSource
-	public void matrix(String expected, String path, String def) {
+	void matrix(String expected, String path, String def) {
 		HttpServletRequest r = Mockito.mock(HttpServletRequest.class);
 		Mockito.when(r.getRequestURI()).thenReturn(path);
 		JaxrsReq req = new JaxrsReq(r, Collections.emptyList());
@@ -80,16 +66,14 @@ public class JaxrsReqTest {
 	}
 
 	public static final Stream<Arguments> accept() {
-		return Stream.of(
-				Arguments.of(null, "*/*", (Predicate<MediaType>) m -> false),
-				Arguments.of(new MediaType(), "*/*", (Predicate<MediaType>) m -> true),
+		return Stream.of(Arguments.of(null, "*/*", (Predicate<MediaType>) m -> false), Arguments.of(new MediaType(), "*/*", (Predicate<MediaType>) m -> true),
 				Arguments.of(new MediaType("text", "xml"), "text/plain,text/xml", (Predicate<MediaType>) m -> m.getSubtype().equals("xml")),
 				Arguments.of(new MediaType("text", "json"), "text/xml;q=.5,text/json", (Predicate<MediaType>) m -> true));
 	}
 
 	@ParameterizedTest(name = "accept {1}")
 	@MethodSource
-	public void accept(MediaType expected, String accept, Predicate<MediaType> allowed) {
+	void accept(MediaType expected, String accept, Predicate<MediaType> allowed) {
 		RuntimeDelegate.setInstance(new JaxrsRuntime());
 		HttpServletRequest r = Mockito.mock(HttpServletRequest.class);
 		Mockito.when(r.getHeader("accept")).thenReturn(accept);

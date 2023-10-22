@@ -83,19 +83,19 @@ public abstract class AbstractGeneratorMojo extends org.apache.maven.plugin.Abst
 
 	protected ModelLoader loader;
 
-	protected ClassLoader cl;
+	protected ClassLoader classLoader;
 
 	abstract protected String id();
 
 	protected void init() throws MojoFailureException {
-		cl = getClassLoader();
-		loader = new ModelLoader(cl, classes);
+		classLoader = getClassLoader();
+		loader = new ModelLoader(classLoader, classes);
 
 		List<String> compileSourceRoots = project.getCompileSourceRoots();
 
 		TypeSolver[] solver = new TypeSolver[compileSourceRoots.size() + 1];
 		int i = 0;
-		solver[i++] = new ClassLoaderTypeSolver(cl);
+		solver[i++] = new ClassLoaderTypeSolver(classLoader);
 		for (String s : compileSourceRoots)
 			solver[i++] = new JavaParserTypeSolver(s);
 		resolver = new CombinedTypeSolver(solver);

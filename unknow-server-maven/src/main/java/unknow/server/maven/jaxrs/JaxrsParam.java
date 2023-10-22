@@ -27,7 +27,7 @@ public abstract class JaxrsParam<T extends WithName & WithAnnotation & WithType>
 	public final TypeModel parent;
 	public final String name;
 	public final String value;
-	public final String var;
+	public final String v;
 	public final String def;
 	public final boolean encoded;
 
@@ -46,7 +46,7 @@ public abstract class JaxrsParam<T extends WithName & WithAnnotation & WithType>
 		this.type = p instanceof MethodModel ? ((MethodModel) p).parameter(0).type() : p.type();
 		this.value = value;
 
-		this.var = prefix + "$" + p.name();
+		this.v = prefix + "$" + p.name();
 		this.def = p.annotation(DefaultValue.class).flatMap(a -> a.value()).map(v -> v.asLiteral()).orElseGet(() -> {
 			if (!type.isPrimitive())
 				return null;

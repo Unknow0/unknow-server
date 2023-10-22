@@ -50,7 +50,7 @@ public class JaxrsContext {
 	private static final List<ParamConverterProvider> params = new ArrayList<>(Arrays.asList(new DefaultConvert()));
 	private static final Map<Class, ExceptionMapper> exceptions = new HashMap<>();
 
-	private static final Map<String, List<MessageBodyWriter>> writers = new HashMap<>();
+	private static final Map<String, List<MessageBodyWriter<Object>>> writers = new HashMap<>();
 	private static final Map<String, List<MessageBodyReader>> readers = new HashMap<>();
 	private static final Map<Object, Integer> priorities = new HashMap<>();
 
@@ -75,9 +75,12 @@ public class JaxrsContext {
 		// TODO PathSegment for param
 	}
 
+	private JaxrsContext() {
+	}
+
 	public static <T extends Throwable> void registerException(Class<T> clazz, ExceptionMapper<T> e) {
 		if (exceptions.containsKey(clazz))
-			logger.warn("Duplicate ExceptionMapper for exception '" + clazz + "'");
+			logger.warn("Duplicate ExceptionMapper for exception '{}'", clazz);
 		exceptions.put(clazz, e);
 	}
 
@@ -89,24 +92,17 @@ public class JaxrsContext {
 		if (mimes.length == 0)
 			mimes = ALL;
 		priorities.put(reader, prio);
-		for (String mime : mimes) {
-			List<MessageBodyReader> list = readers.get(mime);
-			if (list == null)
-				readers.put(mime, list = new ArrayList<>(1));
-			list.add(reader);
-		}
+		for (String mime : mimes)
+			readers.computeIfAbsent(mime, k -> new ArrayList<>(1)).add(reader);
 	}
 
+	@SuppressWarnings("unchecked")
 	public static void registerWriter(MessageBodyWriter writer, int prio, String... mimes) {
 		if (mimes.length == 0)
 			mimes = ALL;
 		priorities.put(writer, prio);
-		for (String mime : mimes) {
-			List<MessageBodyWriter> list = writers.get(mime);
-			if (list == null)
-				writers.put(mime, list = new ArrayList<>(1));
-			list.add(writer);
-		}
+		for (String mime : mimes)
+			writers.computeIfAbsent(mime, k -> new ArrayList<>(1)).add(writer);
 	}
 
 	public static <T> ParamConverter<T> converter(Class<T> clazz, Type type, Annotation[] a) {
@@ -133,72 +129,45 @@ public class JaxrsContext {
 	}
 
 	@SuppressWarnings("unchecked")
+	private static <T> MessageBodyReader<T> reader(Class<T> clazz, Type genericType, Annotation[] annotations, MediaType t, String mime, MessageBodyReader<T> r, int prio) {
+		for (MessageBodyReader<?> m : readers.getOrDefault(mime, Collections.emptyList())) {
+			if (!m.isReadable(clazz, genericType, annotations, t))
+				continue;
+			int p = priorities.get(m);
+			if (prio > p) {
+				prio = p;
+				r = (MessageBodyReader<T>) m;
+			}
+		}
+		return r;
+	}
+
 	public static <T> MessageBodyReader<T> reader(Class<T> clazz, Type genericType, Annotation[] annotations, MediaType t) {
-		int prio = Integer.MAX_VALUE;
-		MessageBodyReader<T> r = null;
-		for (MessageBodyReader<?> m : readers.getOrDefault(t.getType() + "/" + t.getSubtype(), Collections.emptyList())) {
-			if (!m.isReadable(clazz, genericType, annotations, t))
-				continue;
-			int p = priorities.get(m);
-			if (prio > p) {
-				prio = p;
-				r = (MessageBodyReader<T>) m;
-			}
-		}
-		for (MessageBodyReader<?> m : readers.getOrDefault(t.getType() + "/*", Collections.emptyList())) {
-			if (!m.isReadable(clazz, genericType, annotations, t))
-				continue;
-			int p = priorities.get(m);
-			if (prio > p) {
-				prio = p;
-				r = (MessageBodyReader<T>) m;
-			}
-		}
-		for (MessageBodyReader<?> m : readers.getOrDefault("*/*", Collections.emptyList())) {
-			if (!m.isReadable(clazz, genericType, annotations, t))
-				continue;
-			int p = priorities.get(m);
-			if (prio > p) {
-				prio = p;
-				r = (MessageBodyReader<T>) m;
-			}
-		}
+		MessageBodyReader<T> r = reader(clazz, genericType, annotations, t, t.getType() + "/" + t.getSubtype(), null, Integer.MAX_VALUE);
+		r = reader(clazz, genericType, annotations, t, t.getType() + "/*", r, priorities.getOrDefault(r, Integer.MAX_VALUE));
+		r = reader(clazz, genericType, annotations, t, "*/*", r, priorities.getOrDefault(r, Integer.MAX_VALUE));
 		if (r == null)
 			throw new NotSupportedException("No reader for " + clazz + " " + t);
 		return r;
 	}
 
-	@SuppressWarnings("unchecked")
+	private static MessageBodyWriter<Object> writer(Class clazz, Type genericType, Annotation[] annotations, MediaType t, String mime, MessageBodyWriter<Object> r, int prio) {
+		for (MessageBodyWriter<Object> m : writers.getOrDefault(mime, Collections.emptyList())) {
+			if (!m.isWriteable(clazz, genericType, annotations, t))
+				continue;
+			int p = priorities.get(m);
+			if (prio > p) {
+				prio = p;
+				r = m;
+			}
+		}
+		return r;
+	}
+
 	public static MessageBodyWriter<Object> writer(Class clazz, Type genericType, Annotation[] annotations, MediaType t) {
-		int prio = Integer.MAX_VALUE;
-		MessageBodyWriter<Object> r = null;
-		for (MessageBodyWriter m : writers.getOrDefault(t.getType() + "/" + t.getSubtype(), Collections.emptyList())) {
-			if (!m.isWriteable(clazz, genericType, annotations, t))
-				continue;
-			int p = priorities.get(m);
-			if (prio > p) {
-				prio = p;
-				r = m;
-			}
-		}
-		for (MessageBodyWriter m : writers.getOrDefault(t.getType() + "/*", Collections.emptyList())) {
-			if (!m.isWriteable(clazz, genericType, annotations, t))
-				continue;
-			int p = priorities.get(m);
-			if (prio > p) {
-				prio = p;
-				r = m;
-			}
-		}
-		for (MessageBodyWriter m : writers.getOrDefault("*/*", Collections.emptyList())) {
-			if (!m.isWriteable(clazz, genericType, annotations, t))
-				continue;
-			int p = priorities.get(m);
-			if (prio > p) {
-				prio = p;
-				r = m;
-			}
-		}
+		MessageBodyWriter<Object> r = writer(clazz, genericType, annotations, t, t.getType() + "/" + t.getSubtype(), null, Integer.MAX_VALUE);
+		r = writer(clazz, genericType, annotations, t, t.getType() + "/*", r, priorities.getOrDefault(r, Integer.MAX_VALUE));
+		r = writer(clazz, genericType, annotations, t, "*/*", r, priorities.getOrDefault(r, Integer.MAX_VALUE));
 		if (r == null)
 			throw new InternalServerErrorException("No writer for " + clazz + " " + t);
 		return r;

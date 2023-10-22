@@ -26,6 +26,7 @@ import java.util.TreeSet;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import org.apache.maven.api.plugin.MojoException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -88,7 +89,7 @@ import unknow.server.maven.model.util.WithType;
  * @author unknow
  */
 public class JaxrsModel {
-	private static final Logger log = LoggerFactory.getLogger(JaxrsModel.class);
+	private static final Logger logger = LoggerFactory.getLogger(JaxrsModel.class);
 	private static final String[] ALL = { "*/*" };
 
 	private static final Set<String> JAXRS_ANNOTATIONS = new HashSet<>(Arrays.asList(GET.class.getName(), POST.class.getName(), PUT.class.getName(), DELETE.class.getName(),
@@ -151,7 +152,6 @@ public class JaxrsModel {
 			Enumeration<URL> e = loader.getResources("META-INF/services/" + clazz.getName());
 			while (e.hasMoreElements()) {
 				URL u = e.nextElement();
-				log.debug("	found {}", u);
 				try {
 					URLConnection uc = u.openConnection();
 					uc.setUseCaches(false);
@@ -159,21 +159,16 @@ public class JaxrsModel {
 						String l;
 						while ((l = r.readLine()) != null) {
 							String c = parseLine(u, l);
-							if (c == null)
-								continue;
-							try {
+							if (c != null)
 								v.accept(c);
-							} catch (Exception e2) {
-								log.warn("Failed to process service {}", clazz.getName(), e2);
-							}
 						}
 					}
 				} catch (IOException x) {
-					log.error("Failed to read service {}", u, e);
+					logger.error("Failed to read service {}", u, x);
 				}
 			}
 		} catch (IOException e) {
-			log.error("Failed to load service {}", clazz.getName(), e);
+			logger.error("Failed to load service {}", clazz.getName(), e);
 		}
 	}
 
@@ -186,19 +181,19 @@ public class JaxrsModel {
 		if (n == 0)
 			return null;
 		if ((ln.indexOf(' ') >= 0) || (ln.indexOf('\t') >= 0)) {
-			log.warn("Ignoring invalid line '{}' in {}", ln, url);
+			logger.warn("Ignoring invalid line '{}' in {}", ln, url);
 			return null;
 		}
 		int cp = ln.codePointAt(0);
 		if (!Character.isJavaIdentifierStart(cp)) {
-			log.warn("Ignoring invalid class name {} in {}", ln, url);
+			logger.warn("Ignoring invalid class name {} in {}", ln, url);
 			return null;
 		}
 		int start = Character.charCount(cp);
 		for (int i = start; i < n; i += Character.charCount(cp)) {
 			cp = ln.codePointAt(i);
 			if (!Character.isJavaIdentifierPart(cp) && (cp != '.')) {
-				log.warn("Ignoring invalid class name {} in {}", ln, url);
+				logger.warn("Ignoring invalid class name {} in {}", ln, url);
 				return null;
 			}
 		}
@@ -218,7 +213,7 @@ public class JaxrsModel {
 			ClassModel e = clazz.ancestor(exceptionMapper);
 			if (e != null) {
 				if (exceptions.containsKey(e))
-					log.error("Duplicate exception mapping for '" + e + "'");
+					logger.error("Duplicate exception mapping for '{}'", e);
 				else
 					exceptions.put(e.parameter(0).type(), clazz);
 			}
@@ -283,7 +278,7 @@ public class JaxrsModel {
 	private void process(String defaultMethod, String path, String[] consume, String[] produce, ClassModel clazz, MethodModel m) {
 		Optional<AnnotationModel> a = m.annotation(Path.class);
 		if (path == null && a.isEmpty())
-			throw new RuntimeException("no path mapping found on " + clazz.name() + " " + m.signature());
+			throw new MojoException("no path mapping found on " + clazz.name() + " " + m.signature());
 
 		if (a.isPresent()) {
 			String s = a.flatMap(v -> v.value()).map(v -> v.asLiteral()).orElse("");
@@ -297,12 +292,12 @@ public class JaxrsModel {
 		if (method == null)
 			method = defaultMethod;
 		if (method == null)
-			throw new RuntimeException("no method mapped on " + errorName);
+			throw new MojoException("no method mapped on " + errorName);
 		List<JaxrsParam<?>> params = new ArrayList<>();
 		for (ParamModel<MethodModel> p : m.parameters()) {
 			List<AnnotationModel> l = p.annotations().stream().filter(v -> JARXS_PARAM.contains(v.name())).collect(Collectors.toList());
 			if (l.size() > 1)
-				throw new RuntimeException("Duplicate parameter annotation on " + errorName + " " + p.name());
+				throw new MojoException("Duplicate parameter annotation on " + errorName + " " + p.name());
 			JaxrsParam<?> param = l.isEmpty() ? new JaxrsBodyParam<>(p) : buildParam(p, l.get(0));
 			params.add(param);
 		}
@@ -366,11 +361,11 @@ public class JaxrsModel {
 				if (l.isEmpty())
 					continue;
 				if (l.size() > 1)
-					throw new RuntimeException("Duplicate parameter annotation on " + f.parent() + "." + f.name());
+					throw new MojoException("Duplicate parameter annotation on " + f.parent() + "." + f.name());
 
 				Optional<MethodModel> s = getSetter(cl, f.name(), f.type());
 				if (!f.isPublic() && s.isEmpty())
-					throw new RuntimeException("Can't find setter for " + f + " in " + cl);
+					throw new MojoException("Can't find setter for " + f + " in " + cl);
 				params.add(new JaxrsBeanFieldParam(buildParam(f, l.get(0)), f, s.orElse(null)));
 				s.ifPresent(setters::add);
 			}
@@ -381,12 +376,12 @@ public class JaxrsModel {
 				if (l.isEmpty())
 					continue;
 				if (l.size() > 1)
-					throw new RuntimeException("Duplicate parameter annotation on " + m.parent() + "." + m.name());
+					throw new MojoException("Duplicate parameter annotation on " + m.parent() + "." + m.name());
 				String n = m.name();
 				if (n.startsWith("get")) {
-					m = getSetter(cl, n.substring(3), m.type()).orElseThrow(() -> new RuntimeException("Can't find setter for " + n + " in " + cl));
+					m = getSetter(cl, n.substring(3), m.type()).orElseThrow(() -> new MojoException("Can't find setter for " + n + " in " + cl));
 				} else if (!n.startsWith("set")) {
-					m = getSetter(cl, n, m.type()).orElseThrow(() -> new RuntimeException("Can't find setter for " + n + " in " + cl));
+					m = getSetter(cl, n, m.type()).orElseThrow(() -> new MojoException("Can't find setter for " + n + " in " + cl));
 				}
 
 				setters.add(m);
@@ -411,7 +406,7 @@ public class JaxrsModel {
 		if (MatrixParam.class.getName().equals(a.name()))
 			return new JaxrsMatrixParam<>(p, a.value().map(v -> v.asLiteral()).orElse(""));
 
-		throw new RuntimeException("Unknow annotation " + a);
+		throw new MojoException("Unknow annotation " + a);
 	}
 
 	private void processParamConvert(TypeModel t) {
@@ -442,14 +437,14 @@ public class JaxrsModel {
 		for (AnnotationModel a : v.annotations()) {
 			if (HttpMethod.class.getName().equals(a.name())) {
 				if (m != null)
-					throw new RuntimeException("Duplicate mapping on " + name);
+					throw new MojoException("Duplicate mapping on " + name);
 				m = a.value().map(n -> n.asLiteral()).orElse(null);
 				continue;
 			}
 			Optional<AnnotationModel> o = loader.get(a.name()).asClass().annotation(HttpMethod.class);
 			if (o.isPresent()) {
 				if (m != null)
-					throw new RuntimeException("Duplicate mapping on " + name);
+					throw new MojoException("Duplicate mapping on " + name);
 				m = o.flatMap(n -> n.value()).map(n -> n.asLiteral()).orElse(null);
 			}
 		}

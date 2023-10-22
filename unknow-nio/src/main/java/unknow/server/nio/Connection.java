@@ -82,7 +82,7 @@ public final class Connection {
 			buf.mark();
 			byte[] bytes = new byte[buf.remaining()];
 			buf.get(bytes);
-			logger.trace("read " + new String(bytes));
+			logger.trace("read {}", new String(bytes));
 			buf.reset();
 		}
 
@@ -107,7 +107,7 @@ public final class Connection {
 				buf.mark();
 				byte[] bytes = new byte[buf.remaining()];
 				buf.get(bytes);
-				logger.trace("writ " + new String(bytes));
+				logger.trace("writ {}", new String(bytes));
 				buf.reset();
 			}
 

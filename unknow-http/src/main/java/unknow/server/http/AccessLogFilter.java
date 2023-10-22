@@ -193,7 +193,7 @@ public class AccessLogFilter implements Filter {
 			StringBuilder sb = new StringBuilder();
 			for (int i = 0; i < parts.length; i++)
 				parts[i].append(sb, start, end, (HttpServletRequest) request, (HttpServletResponse) response);
-			logger.info(sb.toString());
+			logger.info("{}", sb);
 		}
 	}
 
