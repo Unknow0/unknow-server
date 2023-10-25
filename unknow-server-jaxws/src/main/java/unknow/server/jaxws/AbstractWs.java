@@ -34,9 +34,13 @@ public abstract class AbstractWs extends HttpServlet {
 	private static final XMLInputFactory XML_IN = XMLInputFactory.newInstance();
 	private static final XMLOutputFactory XML_OUT = XMLOutputFactory.newInstance();
 
-	private static final QName ENVELOPE = new QName("http://schemas.xmlsoap.org/soap/envelope/", "Envelope");
-	private static final QName HEADER = new QName("http://schemas.xmlsoap.org/soap/envelope/", "Header");
-	private static final QName BODY = new QName("http://schemas.xmlsoap.org/soap/envelope/", "Body");
+	private static final QName ENVELOPE11 = new QName("http://schemas.xmlsoap.org/soap/envelope/", "Envelope");
+	private static final QName HEADER11 = new QName("http://schemas.xmlsoap.org/soap/envelope/", "Header");
+	private static final QName BODY11 = new QName("http://schemas.xmlsoap.org/soap/envelope/", "Body");
+
+	private static final QName ENVELOPE12 = new QName("http://www.w3.org/2003/05/soap-envelope", "Envelope");
+	private static final QName HEADER12 = new QName("http://www.w3.org/2003/05/soap-envelope", "Header");
+	private static final QName BODY12 = new QName("http://www.w3.org/2003/05/soap-envelope", "Body");
 
 	private final String wsdl;
 	private final transient JAXBContext ctx;
@@ -86,6 +90,7 @@ public abstract class AbstractWs extends HttpServlet {
 	public final void doPost(HttpServletRequest req, HttpServletResponse res) {
 		Envelope e = new Envelope();
 
+		String ns = ENVELOPE11.getNamespaceURI();
 		try (InputStream is = req.getInputStream()) {
 			XMLStreamReader r = XML_IN.createXMLStreamReader(is);
 
@@ -93,15 +98,18 @@ public abstract class AbstractWs extends HttpServlet {
 				int n = r.next();
 				if (n == XMLStreamConstants.START_ELEMENT) {
 					QName q = r.getName();
-					if (ENVELOPE.equals(q))
-						readEnvelope(r, e);
-					else
-						throw new IOException("expected " + HEADER + ", " + BODY + " instead of " + q);
+					if (ENVELOPE11.equals(q))
+						readEnvelope11(r, e);
+					else if (ENVELOPE12.equals(q)) {
+						readEnvelope12(r, e);
+						ns = ENVELOPE12.getNamespaceURI();
+					} else
+						throw new IOException("expected " + HEADER11 + ", " + BODY11 + " instead of " + q);
 				}
 			}
 			r.close();
 		} catch (IOException | XMLStreamException | JAXBException ex) {
-			fault(res, ex.getMessage());
+			fault(res, ns, ex.getMessage());
 		}
 
 		String action = req.getHeader("soapaction");
@@ -113,32 +121,50 @@ public abstract class AbstractWs extends HttpServlet {
 		if (m != null) {
 			try (OutputStream out = res.getOutputStream()) {
 				XMLStreamWriter w = XML_OUT.createXMLStreamWriter(out);
-				writeEnvelope(w, m.call(e));
+				writeEnvelope(w, ns, m.call(e));
 				w.close();
 			} catch (Exception ex) {
 				logger.error("Failed to call operation " + sig, ex);
-				fault(res, ex.getMessage());
+				fault(res, ns, ex.getMessage());
 			}
 		} else
-			fault(res, "No operation found '" + sig + "'");
+			fault(res, ns, "No operation found '" + sig + "'");
 	}
 
 	protected abstract WSMethod getCall(String sig);
 
 	protected abstract Object read(XMLStreamReader r, Unmarshaller u) throws XMLStreamException, JAXBException, IOException;
 
-	private final void readEnvelope(XMLStreamReader r, Envelope e) throws XMLStreamException, IOException, JAXBException {
+	private final void readEnvelope11(XMLStreamReader r, Envelope e) throws XMLStreamException, IOException, JAXBException {
 		Unmarshaller u = ctx.createUnmarshaller();
 		while (r.hasNext()) {
 			int n = r.next();
 			if (n == XMLStreamConstants.START_ELEMENT) {
 				QName q = r.getName();
-				if (HEADER.equals(q))
+				if (HEADER11.equals(q))
 					readHeader(r, u, e);
-				else if (BODY.equals(q))
+				else if (BODY11.equals(q))
 					readBody(r, u, e);
 				else
-					throw new IOException("expected " + HEADER + ", " + BODY + " instead of " + q);
+					throw new IOException("expected " + HEADER11 + ", " + BODY11 + " instead of " + q);
+			} else if (n == XMLStreamConstants.END_ELEMENT)
+				return;
+		}
+		throw new IOException("EOF");
+	}
+
+	private final void readEnvelope12(XMLStreamReader r, Envelope e) throws XMLStreamException, IOException, JAXBException {
+		Unmarshaller u = ctx.createUnmarshaller();
+		while (r.hasNext()) {
+			int n = r.next();
+			if (n == XMLStreamConstants.START_ELEMENT) {
+				QName q = r.getName();
+				if (HEADER12.equals(q))
+					readHeader(r, u, e);
+				else if (BODY12.equals(q))
+					readBody(r, u, e);
+				else
+					throw new IOException("expected " + HEADER11 + ", " + BODY11 + " instead of " + q);
 			} else if (n == XMLStreamConstants.END_ELEMENT)
 				return;
 		}
@@ -178,12 +204,12 @@ public abstract class AbstractWs extends HttpServlet {
 		throw new IOException("EOF");
 	}
 
-	private final void writeEnvelope(XMLStreamWriter w, Envelope e) throws XMLStreamException, JAXBException {
+	private final void writeEnvelope(XMLStreamWriter w, String soapns, Envelope e) throws XMLStreamException, JAXBException {
 		Marshaller m = ctx.createMarshaller();
 		m.setProperty("jaxb.fragment", true);
 
-		w.writeStartElement("e", ENVELOPE.getLocalPart(), ENVELOPE.getNamespaceURI());
-		w.writeNamespace("e", ENVELOPE.getNamespaceURI());
+		w.writeStartElement("e", ENVELOPE11.getLocalPart(), soapns);
+		w.writeNamespace("e", soapns);
 
 		Set<String> ns = new HashSet<>();
 		e.collectNs(ns);
@@ -193,23 +219,22 @@ public abstract class AbstractWs extends HttpServlet {
 			w.writeNamespace("n" + Integer.toString(i++, 36), n);
 
 		if (e.getHeaderSize() > 0) {
-			w.writeStartElement(HEADER.getNamespaceURI(), HEADER.getLocalPart());
+			w.writeStartElement(soapns, HEADER11.getLocalPart());
 			for (i = 0; i < e.getHeaderSize(); i++)
 				m.marshal(e.getHeader(i), w);
 			w.writeEndElement();
 		}
-		w.writeStartElement(BODY.getNamespaceURI(), BODY.getLocalPart());
+		w.writeStartElement(soapns, BODY11.getLocalPart());
 		for (i = 0; i < e.getBodySize(); i++)
 			m.marshal(e.getBody(i), w);
 		w.writeEndElement();
 		w.writeEndElement();
 	}
 
-	private static final void fault(HttpServletResponse res, String err) {
+	private static final void fault(HttpServletResponse res, String soapns, String err) {
 		res.setStatus(500);
-		try (Writer w = res.getWriter()) {
-			w.append(
-					"<e:Envelope xmlns:e=\"http://schemas.xmlsoap.org/soap/envelope/\">" //@formatter:off
+		try (Writer w = res.getWriter()) { //@formatter:off
+			w.append("<e:Envelope xmlns:e=\"").append(soapns).append("\">" 
 					+  "<e:Body>"
 					+   "<e:Fault>"
 					+    "<faultcode>Server</faultcode>"
