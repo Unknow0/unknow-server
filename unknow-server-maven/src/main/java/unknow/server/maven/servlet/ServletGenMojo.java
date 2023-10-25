@@ -1,18 +1,18 @@
 package unknow.server.maven.servlet;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+
+import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -20,8 +20,10 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
-import org.apache.maven.project.MavenProject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Modifier;
@@ -29,6 +31,7 @@ import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 
 import jakarta.servlet.DispatcherType;
+import jakarta.servlet.ServletContainerInitializer;
 import unknow.sax.SaxParser;
 import unknow.server.http.AbstractHttpServer;
 import unknow.server.http.AccessLogFilter;
@@ -37,12 +40,14 @@ import unknow.server.http.servlet.ServletResourceStatic;
 import unknow.server.http.utils.Resource;
 import unknow.server.maven.AbstractGeneratorMojo;
 import unknow.server.maven.TypeCache;
+import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.servlet.Builder.BuilderContext;
 import unknow.server.maven.servlet.builder.CreateContext;
 import unknow.server.maven.servlet.builder.CreateEventManager;
 import unknow.server.maven.servlet.builder.CreateFilters;
 import unknow.server.maven.servlet.builder.CreateServletManager;
 import unknow.server.maven.servlet.builder.CreateServlets;
+import unknow.server.maven.servlet.builder.LoadInitializer;
 import unknow.server.maven.servlet.builder.Main;
 import unknow.server.maven.servlet.descriptor.Descriptor;
 import unknow.server.maven.servlet.descriptor.SD;
@@ -51,9 +56,15 @@ import unknow.server.maven.servlet.sax.Context;
 /**
  * @author unknow
  */
-@Mojo(defaultPhase = LifecyclePhase.GENERATE_SOURCES, name = "servlet-generator", requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
+@Mojo(defaultPhase = LifecyclePhase.GENERATE_SOURCES, name = "servlet-generator", requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME, requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
 public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderContext {
-	private static final List<Builder> BUILDER = Arrays.asList(new CreateEventManager(), new CreateServletManager(), new CreateContext(), new CreateServlets(), new CreateFilters(), new Main());
+	private static final Logger logger = LoggerFactory.getLogger(ServletGenMojo.class);
+
+	private static final List<Builder> BUILDER = Arrays.asList(new CreateEventManager(), new CreateServletManager(), new CreateContext(), new CreateServlets(),
+			new CreateFilters(), new LoadInitializer(), new Main());
+
+	private static final Path WEBXML = Paths.get("WEB-INF", "web.xml");
+	private static final Path INITIALIZER = Paths.get("META-INF", "services", ServletContainerInitializer.class.getName());
 
 	private static final SD ACCESSLOG = new SD(0);
 	static {
@@ -71,17 +82,8 @@ public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderCont
 
 	private final Descriptor descriptor = new Descriptor();
 
-	@Parameter(defaultValue = "${project}", readonly = true, required = true)
-	private MavenProject project;
-
 	@Parameter(defaultValue = "Server")
 	private String className;
-
-	@Parameter(defaultValue = "${project.basedir}/src/main/resources/WEB-INF/web.xml")
-	private String webXml;
-
-	@Parameter(defaultValue = "${project.basedir}/src/main/resources")
-	private String resources;
 
 	@Parameter(defaultValue = "4096")
 	private int staticResourceSize;
@@ -89,14 +91,13 @@ public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderCont
 	@Parameter(defaultValue = "unknow.server.http.servlet.session.NoSessionFactory")
 	private String sessionFactory;
 
-	@Parameter(defaultValue = "true")
-	private boolean graalvm;
-
-	@Parameter(defaultValue = "${project.build.outputDirectory}/META-INF/native-image/servletgen/resource-config.json")
-	private String graalvmResouceConfig;
-
-	@Parameter(defaultValue = "true")
+	@Parameter(defaultValue = "false")
 	private boolean addAccessLog;
+
+	@Override
+	protected String id() {
+		return "servlet-generator";
+	}
 
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
@@ -106,24 +107,44 @@ public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderCont
 		if (addAccessLog)
 			descriptor.filters.add(ACCESSLOG);
 
-		if (webXml != null) {
-			Path path = Paths.get(webXml);
-			if (Files.exists(path)) {
-				try (InputStream r = Files.newInputStream(path)) {
-					SaxParser.parse(new Context(descriptor, resolver), new InputSource(r));
-				} catch (Exception e) {
-					getLog().error("failed to parse '" + webXml + "'", e);
-				}
-			} else
-				getLog().warn("missing '" + webXml + "'");
-		}
-
 		processSrc(descriptor);
-		generateResources();
+		processResources((full, file) -> {
+			if (file.equals(WEBXML)) {
+				try (InputStream r = Files.newInputStream(full)) {
+					SaxParser.parse(new Context(descriptor, loader), new InputSource(r));
+				} catch (ParserConfigurationException | SAXException | IOException e) {
+					logger.warn("Failed to parse web.xml {}", full, e);
+				}
+				return;
+			}
+			if (file.equals(INITIALIZER)) {
+				try (BufferedReader r = Files.newBufferedReader(full)) {
+					String l;
+					while ((l = r.readLine()) != null)
+						descriptor.initializer.add(l);
+				} catch (IOException e) {
+					logger.warn("Failed to parse {}", full, e);
+				}
+			}
+			if (file.startsWith("WEB-INF") || file.startsWith("META-INF"))
+				return;
+			String p = "/" + file.toString().replace('\\', '/');
+			try {
+				long size = Files.size(full);
+				descriptor.resources.put(p, new Resource(Files.getLastModifiedTime(full).to(TimeUnit.MILLISECONDS), size));
+				SD d = new SD(descriptor.servlets.size());
+				d.clazz = (size < staticResourceSize ? ServletResourceStatic.class : ServletResource.class).getName();
+				d.name = "Resource:" + p;
+				d.pattern.add(p);
+				descriptor.servlets.add(d);
+			} catch (IOException e) {
+				logger.error("Failed to process resources {}", full, e);
+			}
+		});
 		if (graalvm && !descriptor.resources.isEmpty())
 			generateGraalvmResources();
 
-		getLog().info("descriptor:\n" + descriptor);
+		logger.info("descriptor:\n{}", descriptor);
 
 		// generate class
 		types = new TypeCache(cu, existingClass);
@@ -135,11 +156,7 @@ public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderCont
 		for (Builder b : BUILDER)
 			b.add(this);
 
-		try {
-			out.save(cu);
-		} catch (IOException e) {
-			throw new MojoFailureException("failed to save output class", e);
-		}
+		out.save(cu);
 	}
 
 	/**
@@ -148,54 +165,18 @@ public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderCont
 	 */
 	private void generateGraalvmResources() throws MojoFailureException {
 		try {
-			Path path = Paths.get(graalvmResouceConfig);
+			Path path = Paths.get(resources + "/META-INF/native-image/" + id() + "/resource-config.json");
 			Files.createDirectories(path.getParent());
 			try (BufferedWriter w = Files.newBufferedWriter(path)) {
 				w.write("{\"resources\":{\"includes\":[");
 				Iterator<String> it = descriptor.resources.keySet().iterator();
-				w.append("{\"pattern\":\"").append(it.next().substring(1)).write("\"}");
+				w.append("{\"pattern\":\"\\\\Q").append(it.next().substring(1)).write("\\\\E\"}");
 				while (it.hasNext())
 					w.append(",{\"pattern\":\"").append(it.next().substring(1)).write("\"}");
 				w.write("]}}");
 			}
 		} catch (IOException e) {
 			throw new MojoFailureException("failed generate graalvm resources", e);
-		}
-	}
-
-	/**
-	 * @throws MojoFailureException
-	 * 
-	 */
-	private void generateResources() throws MojoFailureException {
-		try { // collecting resources files
-			Path path = Paths.get(resources);
-			if (Files.isDirectory(path)) {
-				Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
-					@Override
-					public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-						dir = path.relativize(dir);
-						String path = dir.getName(0).toString().toUpperCase();
-						return "WEB-INF".equals(path) || "META-INF".equals(path) ? FileVisitResult.SKIP_SUBTREE : FileVisitResult.CONTINUE;
-					}
-
-					@Override
-					public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-						String p = "/" + path.relativize(file).toString().replace('\\', '/');
-						long size = Files.size(file);
-						descriptor.resources.put(p, new Resource(Files.getLastModifiedTime(file).to(TimeUnit.MILLISECONDS), size));
-						SD d = new SD(descriptor.servlets.size());
-						d.clazz = (size < staticResourceSize ? ServletResourceStatic.class : ServletResource.class).getName();
-						d.name = "Resource:" + p;
-						d.pattern.add(p);
-						descriptor.servlets.add(d);
-						return FileVisitResult.CONTINUE;
-					}
-				});
-			} else
-				getLog().warn("Missing resource folder '" + resources + "'");
-		} catch (IOException e) {
-			throw new MojoFailureException("failed to get resources", e);
 		}
 	}
 
@@ -212,6 +193,11 @@ public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderCont
 	@Override
 	public TypeCache type() {
 		return types;
+	}
+
+	@Override
+	public ModelLoader loader() {
+		return loader;
 	}
 
 	@Override

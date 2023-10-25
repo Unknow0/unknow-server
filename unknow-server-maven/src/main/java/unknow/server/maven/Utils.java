@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.github.javaparser.ast.ArrayCreationLevel;
+import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.expr.ArrayCreationExpr;
@@ -26,15 +27,24 @@ import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.PrimitiveType;
 import com.github.javaparser.ast.type.Type;
 
-import unknow.server.http.data.ArrayMap;
-import unknow.server.http.data.ArraySet;
+import unknow.server.util.data.ArrayMap;
+import unknow.server.util.data.ArraySet;
 
 /**
  * @author unknow
  */
 public class Utils {
+	public static final Modifier.Keyword[] PUBLIC = { Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL };
+	public static final Modifier.Keyword[] PUBLIC_STATIC = { Modifier.Keyword.PUBLIC, Modifier.Keyword.STATIC, Modifier.Keyword.FINAL };
+	public static final Modifier.Keyword[] PROTECT = { Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL };
+	public static final Modifier.Keyword[] PSF = { Modifier.Keyword.PRIVATE, Modifier.Keyword.STATIC, Modifier.Keyword.FINAL };
+	public static final Modifier.Keyword[] PRIVATE = { Modifier.Keyword.PRIVATE, Modifier.Keyword.FINAL };
 
 	private Utils() {
+	}
+
+	public static StringLiteralExpr text(String s) {
+		return new StringLiteralExpr(s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\u0000", "\\u0000"));
 	}
 
 	/**
@@ -70,7 +80,7 @@ public class Utils {
 	public static ArrayCreationExpr stringArray(String[] values) {
 		NodeList<Expression> nodeList = new NodeList<>();
 		for (int i = 0; i < values.length; i++)
-			nodeList.add(new StringLiteralExpr(values[i]));
+			nodeList.add(text(values[i]));
 
 		return array(new ClassOrInterfaceType(null, "String"), nodeList);
 	}
@@ -116,23 +126,44 @@ public class Utils {
 	 * @param types the typeCahe
 	 * @return the array map creation
 	 */
+	public static ObjectCreationExpr mapInteger(Map<String, Integer> map, TypeCache types) {
+		List<String> list = new ArrayList<>(map.keySet());
+		Collections.sort(list);
+		NodeList<Expression> k = new NodeList<>();
+		NodeList<Expression> v = new NodeList<>();
+		for (String key : list) {
+			k.add(text(key));
+			v.add(new IntegerLiteralExpr(map.get(key).toString()));
+		}
+		return new ObjectCreationExpr(null, types.getClass(ArrayMap.class, TypeCache.EMPTY),
+				list(array(types.getClass(String.class), k), array(types.getClass(Integer.class), v)));
+	}
+
+	/**
+	 * create a new ArrayMap
+	 * 
+	 * @param map   the map content
+	 * @param types the typeCahe
+	 * @return the array map creation
+	 */
 	public static ObjectCreationExpr mapString(Map<String, String> map, TypeCache types) {
 		List<String> list = new ArrayList<>(map.keySet());
 		Collections.sort(list);
 		NodeList<Expression> k = new NodeList<>();
 		NodeList<Expression> v = new NodeList<>();
 		for (String key : list) {
-			k.add(new StringLiteralExpr(key));
-			v.add(new StringLiteralExpr(map.get(key)));
+			k.add(text(key));
+			v.add(text(map.get(key)));
 		}
-		return new ObjectCreationExpr(null, types.get(ArrayMap.class, TypeCache.EMPTY), list(array(types.get(String.class), k), array(types.get(String.class), v)));
+		return new ObjectCreationExpr(null, types.getClass(ArrayMap.class, TypeCache.EMPTY),
+				list(array(types.getClass(String.class), k), array(types.getClass(String.class), v)));
 	}
 
 	public static ObjectCreationExpr arraySet(Collection<String> list, TypeCache types) {
 		NodeList<Expression> n = new NodeList<>();
 		for (String p : list)
-			n.add(new StringLiteralExpr(p));
-		return new ObjectCreationExpr(null, types.get(ArraySet.class, TypeCache.EMPTY), Utils.list(Utils.array(types.get(String.class), n)));
+			n.add(text(p));
+		return new ObjectCreationExpr(null, types.getClass(ArraySet.class, TypeCache.EMPTY), Utils.list(Utils.array(types.getClass(String.class), n)));
 	}
 
 	/**

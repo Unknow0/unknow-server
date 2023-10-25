@@ -74,6 +74,7 @@ public class ChunckedOutputStream extends ServletOutputStream implements Output 
 	public void close() throws IOException {
 		if (closed)
 			return;
+		res.commit();
 		flush();
 		out.write(END);
 		out.flush();
@@ -85,10 +86,14 @@ public class ChunckedOutputStream extends ServletOutputStream implements Output 
 		if (o == 0)
 			return;
 		res.commit();
-		out.write(Integer.toString(o, 16).getBytes());
-		out.write(CRLF);
-		out.write(buf, 0, o);
+		writeBlock(buf, 0, o);
 		o = 0;
+	}
+
+	private void writeBlock(byte[] b, int o, int l) throws IOException {
+		out.write(Integer.toString(l, 16).getBytes());
+		out.write(CRLF);
+		out.write(b, o, l);
 		out.write(CRLF);
 	}
 
@@ -125,6 +130,8 @@ public class ChunckedOutputStream extends ServletOutputStream implements Output 
 
 	@Override
 	public void write(byte[] b, int off, int len) throws IOException {
+		if (len == 0)
+			return;
 		ensureOpen();
 		if (o != 0) {
 			int l = Math.min(len, buf.length - o);
@@ -136,7 +143,8 @@ public class ChunckedOutputStream extends ServletOutputStream implements Output 
 			return;
 		if (len > buf.length) {
 			res.commit();
-			out.write(b, off, len);
+			flush();
+			writeBlock(b, off, len);
 		} else {
 			System.arraycopy(b, off, buf, o, len);
 			writed(len);

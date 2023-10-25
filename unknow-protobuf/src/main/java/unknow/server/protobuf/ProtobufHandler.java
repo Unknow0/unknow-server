@@ -57,7 +57,7 @@ public abstract class ProtobufHandler<T> implements Handler {
 	}
 
 	@Override
-	public void onWrite() {
+	public void onWrite() { // OK
 	}
 
 	@Override
@@ -66,6 +66,6 @@ public abstract class ProtobufHandler<T> implements Handler {
 	}
 
 	@Override
-	public void free() {
+	public void free() { // OK
 	}
 }

@@ -4,6 +4,7 @@
 package unknow.server.maven.model.util;
 
 import java.util.Collection;
+import java.util.Optional;
 
 import unknow.server.maven.model.AnnotationModel;
 
@@ -20,7 +21,7 @@ public interface WithAnnotation {
 	 * @param cl annotation to get
 	 * @return the annotation or null if missing
 	 */
-	default AnnotationModel annotation(Class<?> cl) {
+	default Optional<AnnotationModel> annotation(Class<?> cl) {
 		return annotation(cl.getName());
 	}
 
@@ -28,7 +29,7 @@ public interface WithAnnotation {
 	 * @param name fqn of the annotation
 	 * @return the annotation or null if missing
 	 */
-	default AnnotationModel annotation(String name) {
-		return annotations().stream().filter(a -> name.equals(a.name())).findFirst().orElse(null);
+	default Optional<AnnotationModel> annotation(String name) {
+		return annotations().stream().filter(a -> name.equals(a.name())).findFirst();
 	}
 }

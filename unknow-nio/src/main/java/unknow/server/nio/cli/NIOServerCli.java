@@ -3,7 +3,6 @@
  */
 package unknow.server.nio.cli;
 
-import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Callable;
@@ -11,8 +10,6 @@ import java.util.concurrent.Callable;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
-import unknow.server.nio.Connection;
-import unknow.server.nio.Handler;
 import unknow.server.nio.HandlerFactory;
 import unknow.server.nio.NIOServer;
 import unknow.server.nio.NIOServerListener;
@@ -79,26 +76,34 @@ public class NIOServerCli implements Callable<Integer> {
 
 	@Override
 	public final Integer call() throws Exception {
-		init();
-		if (selectTime < 0)
-			throw new IllegalArgumentException("selectTime should not be <0");
+		NIOServer nioServer = null;
+		try {
+			init();
+			if (selectTime < 0)
+				throw new IllegalArgumentException("selectTime should not be <0");
 
-		NIOWorkers workers;
-		if (iothread == 1)
-			workers = new NIOWorker(0, listener, selectTime);
-		else {
-			NIOWorker[] w = new NIOWorker[iothread];
-			for (int i = 0; i < iothread; i++)
-				w[i] = new NIOWorker(i, listener, selectTime);
-			workers = new RoundRobin(w);
+			NIOWorkers workers;
+			if (iothread == 1)
+				workers = new NIOWorker(0, listener, selectTime);
+			else {
+				NIOWorker[] w = new NIOWorker[iothread];
+				for (int i = 0; i < iothread; i++)
+					w[i] = new NIOWorker(i, listener, selectTime);
+				workers = new RoundRobin(w);
+			}
+			nioServer = new NIOServer(workers, listener);
+			nioServer.bind(getInetAddress(), handler);
+			if (shutdownPort > 0)
+				nioServer.bind(new InetSocketAddress(InetAddress.getLoopbackAddress(), shutdownPort), new ShutdownHandler(nioServer));
+			nioServer.start();
+			nioServer.await();
+		} finally {
+			if (nioServer != null) {
+				nioServer.stop();
+				nioServer.await();
+			}
+			destroy();
 		}
-		NIOServer nioServer = new NIOServer(workers, listener);
-		nioServer.bind(getInetAddress(), handler);
-		if (shutdownPort > 0)
-			nioServer.bind(new InetSocketAddress(InetAddress.getLocalHost(), shutdownPort), new ShutdownHandler(nioServer));
-		nioServer.start();
-		nioServer.await();
-		destroy();
 		return 0;
 	}
 
@@ -109,40 +114,5 @@ public class NIOServerCli implements Callable<Integer> {
 	 */
 	public static void main(String[] arg) {
 		System.exit(new CommandLine(new NIOServerCli()).execute(arg));
-	}
-
-	private static class ShutdownHandler implements Handler, HandlerFactory {
-		private final NIOServer server;
-
-		public ShutdownHandler(NIOServer server) {
-			this.server = server;
-		}
-
-		@Override
-		public Handler create(Connection c) {
-			return this;
-		}
-
-		@Override
-		public void init() {
-			server.stop();
-		}
-
-		@Override
-		public void onRead() throws InterruptedException, IOException { // OK
-		}
-
-		@Override
-		public void onWrite() throws InterruptedException, IOException { // OK
-		}
-
-		@Override
-		public boolean closed(long now, boolean close) {
-			return true;
-		}
-
-		@Override
-		public void free() { // OK
-		}
 	}
 }

@@ -30,24 +30,24 @@ public class XmlTypePrimitive extends XmlType<PrimitiveModel> {
 	@Override
 	public Expression fromString(TypeCache types, Expression v) {
 		if (PrimitiveModel.BYTE == javaType())
-			return new MethodCallExpr(new TypeExpr(types.get(Byte.class)), "parseByte", new NodeList<>(v));
+			return new MethodCallExpr(new TypeExpr(types.getClass(Byte.class)), "parseByte", new NodeList<>(v));
 		if (PrimitiveModel.SHORT == javaType())
-			return new MethodCallExpr(new TypeExpr(types.get(Short.class)), "parseShort", new NodeList<>(v));
+			return new MethodCallExpr(new TypeExpr(types.getClass(Short.class)), "parseShort", new NodeList<>(v));
 		if (PrimitiveModel.CHAR == javaType())
 			return new MethodCallExpr(v, "charAt", Utils.list(new IntegerLiteralExpr("0")));
 		if (PrimitiveModel.INT == javaType())
-			return new MethodCallExpr(new TypeExpr(types.get(Integer.class)), "parseInt", new NodeList<>(v));
+			return new MethodCallExpr(new TypeExpr(types.getClass(Integer.class)), "parseInt", new NodeList<>(v));
 		if (PrimitiveModel.LONG == javaType())
-			return new MethodCallExpr(new TypeExpr(types.get(Long.class)), "parseLong", new NodeList<>(v));
+			return new MethodCallExpr(new TypeExpr(types.getClass(Long.class)), "parseLong", new NodeList<>(v));
 		if (PrimitiveModel.FLOAT == javaType())
-			return new MethodCallExpr(new TypeExpr(types.get(Float.class)), "parseFLoat", new NodeList<>(v));
+			return new MethodCallExpr(new TypeExpr(types.getClass(Float.class)), "parseFLoat", new NodeList<>(v));
 		if (PrimitiveModel.DOUBLE == javaType())
-			return new MethodCallExpr(new TypeExpr(types.get(Double.class)), "parseDouble", new NodeList<>(v));
+			return new MethodCallExpr(new TypeExpr(types.getClass(Double.class)), "parseDouble", new NodeList<>(v));
 		throw new RuntimeException("unknown primitive type " + javaType());
 	}
 
 	@Override
 	public Expression toString(TypeCache types, Expression v) {
-		return new MethodCallExpr(new TypeExpr(types.get(String.class)), "valueOf", new NodeList<>(v));
+		return new MethodCallExpr(new TypeExpr(types.getClass(String.class)), "valueOf", new NodeList<>(v));
 	}
 }

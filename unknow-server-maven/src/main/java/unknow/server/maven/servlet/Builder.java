@@ -6,6 +6,7 @@ package unknow.server.maven.servlet;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 
 import unknow.server.maven.TypeCache;
+import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.servlet.descriptor.Descriptor;
 
 /**
@@ -21,7 +22,8 @@ public abstract class Builder {
 
 		TypeCache type();
 
-		String sessionFactory();
+		ModelLoader loader();
 
+		String sessionFactory();
 	}
 }

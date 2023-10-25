@@ -10,8 +10,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import org.apache.maven.plugin.MojoExecutionException;
+
 import com.github.javaparser.ast.CompilationUnit;
-import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
+import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.printer.configuration.DefaultConfigurationOption;
 import com.github.javaparser.printer.configuration.DefaultPrinterConfiguration;
 import com.github.javaparser.printer.configuration.DefaultPrinterConfiguration.ConfigOption;
@@ -39,10 +41,16 @@ public class Output {
 		Files.createDirectories(out);
 	}
 
-	public void save(CompilationUnit cu) throws IOException {
-		ClassOrInterfaceDeclaration cl = cu.findFirst(ClassOrInterfaceDeclaration.class, c -> c.isPublic()).orElse(cu.findFirst(ClassOrInterfaceDeclaration.class).orElse(null));
-		try (BufferedWriter w = Files.newBufferedWriter(out.resolve(cl.getNameAsString() + ".java"), StandardCharsets.UTF_8)) {
+	public void save(CompilationUnit cu) throws MojoExecutionException {
+		String name = cu.findFirst(TypeDeclaration.class, c -> c.isPublic()).map(c -> c.getNameAsString()).orElse(null);
+		if (name == null)
+			name = cu.findFirst(TypeDeclaration.class).map(c -> c.getNameAsString()).orElse(null);
+		if (name == null)
+			throw new MojoExecutionException("not type in unit" + cu);
+		try (BufferedWriter w = Files.newBufferedWriter(out.resolve(name + ".java"), StandardCharsets.UTF_8)) {
 			w.write(cu.toString(pp));
+		} catch (IOException e) {
+			throw new MojoExecutionException(e);
 		}
 	}
 }

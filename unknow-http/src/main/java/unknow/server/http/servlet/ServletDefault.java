@@ -16,11 +16,20 @@ import jakarta.servlet.http.HttpServletResponse;
 public class ServletDefault extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 
+	/**
+	 * singleton instance
+	 */
 	public static final ServletDefault INSTANCE = new ServletDefault();
 
 	@Override
 	protected void service(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
-		res.sendError(404);
+		String method = req.getMethod();
+		if ("OPTIONS".equals(method))
+			res.setHeader("Allow", "GET,HEAD,OPTIONS,TRACE");
+		else if ("TRACE".equals(method))
+			doTrace(req, res);
+		else
+			res.sendError(404);
 	}
 
 	@Override

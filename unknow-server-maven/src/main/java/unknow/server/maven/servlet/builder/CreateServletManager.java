@@ -16,12 +16,9 @@ import com.github.javaparser.ast.expr.IntegerLiteralExpr;
 import com.github.javaparser.ast.expr.LambdaExpr;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
-import com.github.javaparser.ast.expr.StringLiteralExpr;
 import com.github.javaparser.ast.stmt.ReturnStmt;
 import com.github.javaparser.ast.type.PrimitiveType;
 
-import unknow.server.http.data.IntArrayMap;
-import unknow.server.http.data.ObjectArrayMap;
 import unknow.server.http.utils.ServletManager;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
@@ -29,6 +26,8 @@ import unknow.server.maven.servlet.Builder;
 import unknow.server.maven.servlet.Names;
 import unknow.server.maven.servlet.descriptor.Descriptor;
 import unknow.server.maven.servlet.descriptor.SD;
+import unknow.server.util.data.IntArrayMap;
+import unknow.server.util.data.ObjectArrayMap;
 
 /**
  * @author unknow
@@ -38,11 +37,9 @@ public class CreateServletManager extends Builder {
 	public void add(BuilderContext ctx) {
 		Descriptor descriptor = ctx.descriptor();
 		TypeCache types = ctx.type();
-		ctx.self().addMethod("createServletManager", Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL).setType(types.get(ServletManager.class))
-				.addMarkerAnnotation(Override.class)
-				.getBody().get()
-				.addStatement(new ReturnStmt(new ObjectCreationExpr(null, types.get(ServletManager.class),
-						Utils.list(errorCode(descriptor, types), errorClass(descriptor, types)))));
+		ctx.self().addMethod("createServletManager", Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL).setType(types.getClass(ServletManager.class))
+				.addMarkerAnnotation(Override.class).getBody().get().addStatement(new ReturnStmt(
+						new ObjectCreationExpr(null, types.getClass(ServletManager.class), Utils.list(errorCode(descriptor, types), errorClass(descriptor, types)))));
 	}
 
 	private static ObjectCreationExpr errorCode(Descriptor descriptor, TypeCache t) {
@@ -56,10 +53,10 @@ public class CreateServletManager extends Builder {
 			if (s == null)
 				continue;
 			k.add(new IntegerLiteralExpr(e.toString()));
-			v.add(new StringLiteralExpr(path));
+			v.add(Utils.text(path));
 		}
-		return new ObjectCreationExpr(null, t.get(IntArrayMap.class, TypeCache.EMPTY),
-				Utils.list(Utils.array(PrimitiveType.intType(), k), Utils.array(t.get(String.class), v)));
+		return new ObjectCreationExpr(null, t.getClass(IntArrayMap.class, TypeCache.EMPTY),
+				Utils.list(Utils.array(PrimitiveType.intType(), k), Utils.array(t.getClass(String.class), v)));
 	}
 
 	private static ObjectCreationExpr errorClass(Descriptor descriptor, TypeCache t) {
@@ -73,11 +70,11 @@ public class CreateServletManager extends Builder {
 			if (s == null || e.isEmpty())
 				continue;
 			k.add(new ClassExpr(t.get(e.toString())));
-			k.add(new StringLiteralExpr(path));
+			k.add(Utils.text(path));
 		}
 		LambdaExpr cmp = new LambdaExpr(Utils.list(new Parameter(TypeCache.EMPTY, "a"), new Parameter(TypeCache.EMPTY, "b")),
 				new MethodCallExpr(new MethodCallExpr(Names.a, "getName"), "compareTo", Utils.list(new MethodCallExpr(Names.b, "getName"))));
-		return new ObjectCreationExpr(null, t.get(ObjectArrayMap.class, TypeCache.EMPTY),
-				Utils.list(Utils.array(t.get(Class.class), k), Utils.array(t.get(String.class), v), cmp));
+		return new ObjectCreationExpr(null, t.getClass(ObjectArrayMap.class, TypeCache.EMPTY),
+				Utils.list(Utils.array(t.getClass(Class.class), k), Utils.array(t.getClass(String.class), v), cmp));
 	}
 }

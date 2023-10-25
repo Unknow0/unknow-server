@@ -1,12 +1,11 @@
 {
 	"bundles": [
-		{"name": "jakarta.servlet.http.LocalStrings"},
-		{"name": "jakarta.servlet.LocalStrings"},
-		{"name": "org.apache.cxf.transport.servlet.Messages"}
+		{"name": "jakarta.servlet.http.LocalStrings", "locales":[""]},
+		{"name": "jakarta.servlet.LocalStrings", "locales":[""]}
 	],
 	"resources": {
 		"includes": [
-			{"pattern": "META-INF/nioserver.properties"}
+			{"pattern": "\\QMETA-INF/nioserver.properties\\E"}
 		]
 	}
 }

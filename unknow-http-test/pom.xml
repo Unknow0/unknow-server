@@ -6,11 +6,6 @@
 		<version>0.0.1-SNAPSHOT</version>
 	</parent>
 	<artifactId>unknow-http-test</artifactId>
-
-	<properties>
-		<cxf.version>3.5.3</cxf.version>
-	</properties>
-
 	<build>
 		<plugins>
 			<plugin>
@@ -36,6 +31,7 @@
 					<execution>
 						<goals>
 							<goal>jaxws-generator</goal>
+							<goal>jaxrs-generator</goal>
 							<goal>servlet-generator</goal>
 						</goals>
 						<phase>generate-sources</phase>
@@ -58,6 +54,17 @@
 						</goals>
 						<configuration>
 							<finalName>server</finalName>
+							<filters>
+								<filter>
+									<artifact>*</artifact>
+									<excludes>
+										<exclude>META-INF/MANIFEST.MF</exclude>
+										<exclude>META-INF/LICENSE.md</exclude>
+										<exclude>META-INF/NOTICE.md</exclude>
+										<exclude>**/module-info.class</exclude>
+									</excludes>
+								</filter>
+							</filters>
 							<transformers>
 								<transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
 									<resource>META-INF/spring.handlers</resource>
@@ -95,7 +102,6 @@
 			</plugin>
 		</plugins>
 	</build>
-
 	<dependencies>
 		<dependency>
 			<groupId>${project.groupId}</groupId>
@@ -107,33 +113,57 @@
 			<artifactId>unknow-http-jaxws</artifactId>
 			<version>${project.version}</version>
 		</dependency>
-
-		<!--dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>unknow-http-jaxrs</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
 			<groupId>org.apache.cxf</groupId>
 			<artifactId>cxf-rt-frontend-jaxws</artifactId>
 			<version>${cxf.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.cxf</groupId>
+			<artifactId>cxf-rt-frontend-jaxrs</artifactId>
+			<version>${cxf.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.cxf</groupId>
 			<artifactId>cxf-rt-transports-http</artifactId>
 			<version>${cxf.version}</version>
-		</dependency-->
-
+		</dependency>
 		<dependency>
+			<groupId>org.apache.cxf</groupId>
+			<artifactId>cxf-rt-rs-service-description-openapi-v3</artifactId>
+			<version>${cxf.version}</version>
+		</dependency>
+
+		<!--dependency>
 			<groupId>org.apache.xmlbeans</groupId>
 			<artifactId>xmlbeans</artifactId>
 			<version>5.1.0</version>
 			<scope>test</scope>
+		</dependency-->
+		<dependency>
+			<groupId>com.fasterxml.jackson.jakarta.rs</groupId>
+			<artifactId>jackson-jakarta-rs-json-provider</artifactId>
 		</dependency>
-
 		<dependency>
 			<groupId>jakarta.annotation</groupId>
 			<artifactId>jakarta.annotation-api</artifactId>
 		</dependency>
-
 		<dependency>
 			<groupId>jakarta.jws</groupId>
 			<artifactId>jakarta.jws-api</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>jakarta.ws.rs</groupId>
+			<artifactId>jakarta.ws.rs-api</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>jakarta.xml.bind</groupId>
+			<artifactId>jakarta.xml.bind-api</artifactId>
 		</dependency>
 	</dependencies>
 </project>

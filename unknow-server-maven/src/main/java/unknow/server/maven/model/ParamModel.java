@@ -4,18 +4,13 @@
 package unknow.server.maven.model;
 
 import unknow.server.maven.model.util.WithAnnotation;
+import unknow.server.maven.model.util.WithName;
+import unknow.server.maven.model.util.WithParent;
+import unknow.server.maven.model.util.WithType;
 
 /**
  * @author unknow
+ * @param <T> owner model
  */
-public interface ParamModel extends WithAnnotation {
-	/**
-	 * @return parameter name
-	 */
-	String name();
-
-	/**
-	 * @return parameter type
-	 */
-	TypeModel type();
+public interface ParamModel<T extends WithParent<ClassModel>> extends WithAnnotation, WithType, WithName, WithParent<T> { //ok
 }

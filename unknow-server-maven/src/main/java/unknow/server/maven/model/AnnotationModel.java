@@ -3,26 +3,23 @@
  */
 package unknow.server.maven.model;
 
+import java.util.Collection;
 import java.util.Optional;
+
+import unknow.server.maven.model.util.WithName;
 
 /**
  * @author unknow
  */
-public interface AnnotationModel {
-	/**
-	 * @return annotation class
-	 */
-	String name();
+public interface AnnotationModel extends WithName {
 
-	/**
-	 * @param name value to get
-	 * @return the value as String
-	 */
-	Optional<String> value(String name);
+	Collection<AnnotationMemberModel> members();
 
-	/**
-	 * @param name value to get
-	 * @return the value as String array
-	 */
-	Optional<String[]> values(String name);
+	default Optional<AnnotationMemberModel> value() {
+		return member("value");
+	}
+
+	default Optional<AnnotationMemberModel> member(String name) {
+		return members().stream().filter(m -> name.equals(m.name())).findAny();
+	}
 }

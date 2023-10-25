@@ -8,7 +8,7 @@ import java.util.List;
 
 import jakarta.servlet.FilterChain;
 import unknow.server.http.servlet.ServletRequestImpl;
-import unknow.server.nio.util.Buffers;
+import unknow.server.util.io.Buffers;
 
 /**
  * the calculated path tree to FilterChains
@@ -49,12 +49,11 @@ public class PathTree {
 			PartNode n = next(last.nexts, part.get(i));
 			if (n == null)
 				break;
-			if (i + 1 == part.size()) {
+			if (++i == part.size()) {
 				req.setPathInfo(i);
 				return n.exact;
 			}
 			last = n;
-			i++;
 		}
 
 		if (last.ends != null) {

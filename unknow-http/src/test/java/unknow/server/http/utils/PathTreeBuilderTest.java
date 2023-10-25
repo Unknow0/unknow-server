@@ -65,7 +65,7 @@ public class PathTreeBuilderTest {
 		Set<String> urls = new HashSet<>(Arrays.asList("/test/*"));
 		ServletConfigImpl[] servlets = { new ServletConfigImpl("name", new S("s"), null, null, urls) };
 		PathTree build = new PathTreeBuilder(null, servlets, new FilterConfigImpl[0], DispatcherType.REQUEST).build();
-		System.out.println("exact:\n" + build);
+		System.out.println("default:\n" + build);
 		PartNode tree = build.root;
 		assertNode(tree, "ServletDefault", "ServletDefault");
 		assertEquals(1, tree.nexts.length);

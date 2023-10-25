@@ -25,6 +25,6 @@ public class Main extends Builder {
 		ctx.self().addMethod("main", Modifier.Keyword.PUBLIC, Modifier.Keyword.STATIC)
 				.addParameter(String[].class, "arg")
 				.getBody().get()
-				.addStatement(new MethodCallExpr(new TypeExpr(t.get(System.class)), "exit").addArgument(new MethodCallExpr(new ObjectCreationExpr(null, t.get(CommandLine.class), Utils.list(new ObjectCreationExpr(null, t.get(ctx.self()), Utils.list()))), "execute").addArgument(new NameExpr("arg"))));
+				.addStatement(new MethodCallExpr(new TypeExpr(t.getClass(System.class)), "exit").addArgument(new MethodCallExpr(new ObjectCreationExpr(null, t.getClass(CommandLine.class), Utils.list(new ObjectCreationExpr(null, t.getClass(ctx.self()), Utils.list()))), "execute").addArgument(new NameExpr("arg"))));
 	}
 }

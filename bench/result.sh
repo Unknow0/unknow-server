@@ -11,7 +11,7 @@ parse()
 	while read -ra l
 	do
 		n="${l[2]}"
-		[[ $n = "warmup" ]] && continue
+		[[ "${n:0:6}" = "warmup" ]] && continue
 		tests[$n]=""
 
 		k="$s:$n"

@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,11 +44,11 @@ import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.HttpUpgradeHandler;
 import jakarta.servlet.http.Part;
 import unknow.server.http.HttpHandler;
-import unknow.server.http.data.ArrayMap;
 import unknow.server.http.servlet.in.ChunckedInputStream;
 import unknow.server.http.servlet.in.EmptyInputStream;
 import unknow.server.http.servlet.in.LengthInputStream;
 import unknow.server.http.servlet.session.SessionFactory;
+import unknow.server.util.data.ArrayMap;
 
 /**
  * @author unknow
@@ -66,6 +65,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 	private final DispatcherType type;
 	private final ServletResponseImpl res;
 
+	private String requestUri;
 	private final List<String> path;
 	private int pathInfoIndex;
 
@@ -141,6 +141,10 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	public void setHeaders(Map<String, List<String>> headers) {
 		this.headers = headers;
+	}
+
+	public void setRequestUri(String path) {
+		this.requestUri = path;
 	}
 
 	public List<String> getPaths() {
@@ -442,7 +446,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 	@Override
 	public String getRemoteHost() {
 		if (remoteHost == null)
-			remoteHost = remote.getHostName();
+			remoteHost = remote.getHostString();
 		return remoteHost;
 	}
 
@@ -507,16 +511,24 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public String getServletPath() {
-		if (servletPath == null)
-			servletPath = path.stream().limit(pathInfoIndex).collect(Collectors.joining("/", "/", ""));
+		if (servletPath == null) {
+			StringBuilder sb = new StringBuilder();
+			for (int i = 0; i < pathInfoIndex; i++)
+				sb.append('/').append(path.get(i));
+			servletPath = sb.length() == 0 ? "/" : sb.toString();
+		}
 		return servletPath;
 	}
 
 	@Override
 	public String getPathInfo() {
-		if (pathInfo == null)
-			pathInfo = pathInfoIndex == path.size() ? "" : path.stream().skip(pathInfoIndex).collect(Collectors.joining("/", "/", ""));
-		return pathInfo == "" ? null : pathInfo;
+		if (pathInfo == null) {
+			StringBuilder sb = new StringBuilder();
+			for (int i = pathInfoIndex; i < path.size(); i++)
+				sb.append('/').append(path.get(i));
+			pathInfo = sb.toString();
+		}
+		return pathInfo.isEmpty() ? null : pathInfo;
 	}
 
 	@Override
@@ -531,16 +543,12 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public String getRequestURI() {
-		String s = getServletPath();
-		return getPathInfo() == null ? s : s + getPathInfo();
+		return requestUri;
 	}
 
 	@Override
 	public StringBuffer getRequestURL() {
-		StringBuffer append = new StringBuffer(getScheme()).append("://").append(getServerName()).append(':').append(getServerPort()).append(getServletPath());
-		if (getPathInfo() != null)
-			append.append(getPathInfo());
-		return append;
+		return new StringBuffer(getScheme()).append("://").append(getServerName()).append(':').append(getServerPort()).append(getRequestURI());
 	}
 
 	@Override

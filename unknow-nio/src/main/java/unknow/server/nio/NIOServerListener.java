@@ -111,7 +111,7 @@ public interface NIOServerListener {
 		private final NIOServerListener[] listeners;
 
 		/**
-		 * create new Handlermposite
+		 * create new Handler composite
 		 * 
 		 * @param listeners list of listeners
 		 */

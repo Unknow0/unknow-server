@@ -12,7 +12,6 @@ import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.LongLiteralExpr;
 import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
-import com.github.javaparser.ast.expr.StringLiteralExpr;
 import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.stmt.ReturnStmt;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
@@ -34,10 +33,9 @@ public class CreateServlets extends Builder {
 	public void add(BuilderContext ctx) {
 		Descriptor descriptor = ctx.descriptor();
 		TypeCache types = ctx.type();
-		ClassOrInterfaceType t = types.get(ServletConfigImpl.class);
+		ClassOrInterfaceType t = types.getClass(ServletConfigImpl.class);
 		BlockStmt b = ctx.self().addMethod("createServlets", Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL).setType(types.array(ServletConfigImpl.class))
-				.addMarkerAnnotation(Override.class)
-				.getBody().get();
+				.addMarkerAnnotation(Override.class).getBody().get();
 
 		NodeList<Expression> servlets = new NodeList<>();
 
@@ -49,9 +47,10 @@ public class CreateServlets extends Builder {
 			NodeList<Expression> params = new NodeList<>();
 			if (s.name.startsWith("Resource:")) {
 				Resource r = descriptor.resources.get(s.pattern.get(0));
-				params = Utils.list(new StringLiteralExpr(s.pattern.get(0)), new LongLiteralExpr(r.getLastModified() + "L"), new LongLiteralExpr(r.getSize() + "L"));
+				params = Utils.list(Utils.text(s.pattern.get(0)), new LongLiteralExpr(r.getLastModified() + "L"), new LongLiteralExpr(r.getSize() + "L"));
 			}
-			b.addStatement(Utils.assign(t, n, new ObjectCreationExpr(null, t, Utils.list(new StringLiteralExpr(s.name), new ObjectCreationExpr(null, types.get(s.clazz), params), Names.CTX, Utils.mapString(s.param, types), Utils.arraySet(s.pattern, types)))));
+			b.addStatement(Utils.assign(t, n, new ObjectCreationExpr(null, t, Utils.list(Utils.text(s.name), new ObjectCreationExpr(null, types.getClass(s.clazz), params),
+					Names.CTX, Utils.mapString(s.param, types), Utils.arraySet(s.pattern, types)))));
 			for (String p : s.pattern) {
 				if (saw.contains(p))
 					System.err.println("duplicate servlet pattern '" + p + "'");

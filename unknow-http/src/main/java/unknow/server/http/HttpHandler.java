@@ -26,7 +26,6 @@ import org.slf4j.LoggerFactory;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.UnavailableException;
-import jakarta.servlet.http.Cookie;
 import unknow.server.http.servlet.ServletContextImpl;
 import unknow.server.http.servlet.ServletRequestImpl;
 import unknow.server.http.servlet.ServletResponseImpl;
@@ -35,29 +34,24 @@ import unknow.server.http.utils.ServletManager;
 import unknow.server.nio.Connection;
 import unknow.server.nio.Connection.Out;
 import unknow.server.nio.Handler;
-import unknow.server.nio.util.Buffers;
-import unknow.server.nio.util.Buffers.Walker;
-import unknow.server.nio.util.BuffersUtils;
+import unknow.server.util.io.Buffers;
+import unknow.server.util.io.Buffers.Walker;
+import unknow.server.util.io.BuffersUtils;
 
 public class HttpHandler implements Handler, Runnable {
-	private static final Logger log = LoggerFactory.getLogger(HttpHandler.class);
-	private static final Cookie[] COOKIE = new Cookie[0];
+	private static final Logger logger = LoggerFactory.getLogger(HttpHandler.class);
 
 	private static final byte[] CRLF = { '\r', '\n' };
 	private static final byte[] CRLF2 = { '\r', '\n', '\r', '\n' };
-	private static final byte[] WS = new byte[] { ' ', '\t' };
-	private static final byte[] SEP = new byte[] { ' ', '\t', '"', ',' };
-	private static final byte[] COOKIE_SEP = new byte[] { ';', ' ' };
 	private static final byte[] PARAM_SEP = { '&', '=' };
 	private static final byte[] SPACE_SLASH = { ' ', '/' };
 	private static final byte SPACE = ' ';
 	private static final byte QUESTION = '?';
 	private static final byte COLON = ':';
+	private static final byte SEMICOLON = ';';
 	private static final byte SLASH = '/';
 	private static final byte AMPERSAMP = '&';
 	private static final byte PERCENT = '%';
-	private static final byte QUOTE = '"';
-	private static final byte COMA = ',';
 	private static final byte EQUAL = '=';
 
 	private static final int MAX_METHOD_SIZE = 10; // max size for method
@@ -121,7 +115,7 @@ public class HttpHandler implements Handler, Runnable {
 	}
 
 	private final void error(HttpError e) {
-		log.error("{}: {}", co.getRemote(), e);
+		logger.error("{}: {}", co.getRemote(), e);
 		try {
 			OutputStream out = co.getOut();
 			out.write(e.empty());
@@ -150,9 +144,16 @@ public class HttpHandler implements Handler, Runnable {
 		if (q < 0)
 			q = i;
 
-		int s = last;
-		while ((s = BuffersUtils.indexOf(meta, SLASH, s + 1, q - s - 1)) > 0) {
-			meta.walk(decode, last + 1, s - last - 1);
+		meta.walk(decode, last, q - last);
+		if (!decode.done())
+			return false;
+		req.setRequestUri(sb.toString());
+		sb.setLength(0);
+
+		int s;
+		while ((s = BuffersUtils.indexOf(meta, SLASH, last + 1, q - last - 1)) > 0) {
+			int c = BuffersUtils.indexOf(meta, SEMICOLON, last + 1, s - last - 1);
+			meta.walk(decode, last + 1, (c < 0 ? s : c) - last - 1);
 			if (!decode.done())
 				return false;
 			req.addPath(sb.toString());
@@ -160,14 +161,18 @@ public class HttpHandler implements Handler, Runnable {
 			last = s;
 		}
 		if (s == -2 && last + 1 < q) {
-			BuffersUtils.toString(sb, meta, last + 1, q - last - 1);
+			int c = BuffersUtils.indexOf(meta, SEMICOLON, last + 1, q - last - 1);
+			BuffersUtils.toString(sb, meta, last + 1, c < 0 ? q - last - 1 : c);
 			req.addPath(sb.toString());
 			sb.setLength(0);
 		}
 
-		BuffersUtils.toString(sb, meta, q, i - q);
-		req.setQuery(sb.toString());
-		sb.setLength(0);
+		if (q < i) {
+			BuffersUtils.toString(sb, meta, q + 1, i - q - 1);
+			req.setQuery(sb.toString());
+			sb.setLength(0);
+		} else
+			req.setQuery("");
 
 		Map<String, List<String>> map = new HashMap<>();
 		parseParam(map, meta, q + 1, i);
@@ -260,28 +265,28 @@ public class HttpHandler implements Handler, Runnable {
 				res.setHeader("connection", "keep-alive");
 			events.fireRequestInitialized(req);
 			FilterChain s = servlets.find(req);
-			if (s != null)
-				try {
-					s.doFilter(req, res);
-				} catch (UnavailableException e) {
-					// TODO add page with retry-after
-					res.sendError(503, e, null);
-				} catch (Exception e) {
-					log.error("failed to service '{}'", s, e);
-					if (!res.isCommited())
-						res.sendError(500, null);
-				}
+			try {
+				s.doFilter(req, res);
+			} catch (UnavailableException e) {
+				// TODO add page with retry-after
+				res.sendError(503, e, null);
+			} catch (Exception e) {
+				logger.error("failed to service '{}'", s, e);
+				if (!res.isCommited())
+					res.sendError(500);
+			}
+
 			events.fireRequestDestroyed(req);
 			res.close();
 		} catch (Exception e) {
-			log.error("processor error", e);
+			logger.error("processor error", e);
 			error(HttpError.SERVER_ERROR);
 		} finally {
-			cleanup();
 			if (close)
 				out.close();
 			else
 				out.flush();
+			cleanup();
 		}
 	}
 
@@ -304,13 +309,6 @@ public class HttpHandler implements Handler, Runnable {
 			long e = now - keepAliveIdle;
 			if (co.lastRead() <= e && co.lastWrite() <= e)
 				return true;
-		}
-		try {
-			if (!co.pendingRead.isEmpty()) {
-				onRead();
-				return false;
-			}
-		} catch (InterruptedException e) {
 		}
 
 		// TODO check request timeout

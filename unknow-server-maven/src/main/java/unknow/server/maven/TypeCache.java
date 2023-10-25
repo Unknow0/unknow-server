@@ -4,130 +4,119 @@
 package unknow.server.maven;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
+import com.github.javaparser.ast.expr.SimpleName;
 import com.github.javaparser.ast.type.ArrayType;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.Type;
 import com.github.javaparser.ast.type.UnknownType;
-import com.github.javaparser.resolution.declarations.ResolvedReferenceTypeDeclaration;
+import com.github.javaparser.ast.type.WildcardType;
+
+import unknow.server.maven.model.ModelLoader;
+import unknow.server.maven.model.TypeModel;
 
 /**
  * @author unknow
  */
 public class TypeCache {
 	public static final Type EMPTY = new UnknownType();
+	public static final Type ANY = new WildcardType();
 
-	private final Map<String, ClassOrInterfaceType> types;
+	private final Map<String, Type> types;
 
 	private final CompilationUnit cu;
 	private final Map<String, String> existingClass;
-
-	private final StringBuilder sb;
 
 	public TypeCache(CompilationUnit cu, Map<String, String> existingClass) {
 		this.cu = cu;
 		this.existingClass = new HashMap<>(existingClass);
 
 		this.types = new HashMap<>();
-		this.sb = new StringBuilder();
+		types.put("", EMPTY);
+		types.put("?", ANY);
 	}
 
-	public ArrayType array(Class<?> cl, Type... param) {
-		return new ArrayType(get(cl, param));
+	public ClassOrInterfaceType getClass(String cl) {
+		return get(cl).asClassOrInterfaceType();
 	}
 
-	public ClassOrInterfaceType get(ClassOrInterfaceDeclaration decl) {
-		ResolvedReferenceTypeDeclaration resolve = decl.resolve();
-		String n = resolve.getQualifiedName();
-		ClassOrInterfaceType t = types.get(n);
-		if (t == null) {
-			String string = existingClass.get(decl.getNameAsString());
-			if (string == null || string.equals(n)) {
-				if (string == null) {
-					cu.addImport(n);
-					existingClass.put(decl.getNameAsString(), n);
-				}
-				t = new ClassOrInterfaceType(null, decl.getName(), null);
-			} else {
-				for (String s : n.split("[.$]"))
-					t = new ClassOrInterfaceType(t, s);
-			}
-			types.put(n, t);
+	public ClassOrInterfaceType getClass(TypeModel c) {
+		return get(c.name()).asClassOrInterfaceType();
+	}
+
+	public ClassOrInterfaceType getClass(Class<?> c, Type... param) {
+		String cl = c.getCanonicalName();
+		if (param.length > 0) {
+			StringBuilder sb = new StringBuilder(cl).append('<');
+			for (int i = 0; i < param.length; i++)
+				sb.append(param[i]).append(',');
+			sb.setCharAt(sb.length() - 1, '>');
+			cl = sb.toString();
 		}
+		return get(cl).asClassOrInterfaceType();
+	}
+
+	public ArrayType array(Class<?> cl) {
+		return get(cl.getCanonicalName() + "[]").asArrayType();
+	}
+
+	public Type get(TypeModel c) {
+		return get(c.toString());
+	}
+
+	public Type get(Class<?> c) {
+		return get(c.getCanonicalName());
+	}
+
+	public ClassOrInterfaceType getClass(ClassOrInterfaceDeclaration decl) {
+		return get(decl.resolve().getQualifiedName()).asClassOrInterfaceType();
+	}
+
+	public Type get(String cl) {
+		Type t = types.get(cl);
+		if (t == null)
+			types.put(cl, t = create(cl));
 		return t;
 	}
 
-	public ClassOrInterfaceType get(Class<?> cl, Type... param) {
-		sb.append(cl.getCanonicalName());
-		if (param.length > 0) {
-			sb.append('<');
-			for (int i = 0; i < param.length; i++) {
-				Type t = param[i];
-				if (t != EMPTY)
-					sb.append(t.asString());
-			}
-			sb.append('>');
+	private Type create(String cl) {
+		if (cl.endsWith("[]"))
+			return new ArrayType(get(cl.substring(0, cl.length() - 2)));
+		if (cl.equals("?"))
+			return new WildcardType();
+		if (cl.startsWith("? extends "))
+			return new WildcardType(getClass(cl.substring(10)));
+		if (cl.startsWith("? super "))
+			return new WildcardType().setSuperType(getClass(cl.substring(8)));
+
+		List<String> parse = ModelLoader.parse(cl);
+
+		NodeList<Type> params = null;
+		if (parse.size() > 1) {
+			params = new NodeList<>();
+			for (int i = 1; i < parse.size(); i++)
+				params.add(get(parse.get(i)));
 		}
-		ClassOrInterfaceType c = types.get(sb.toString());
-		if (c == null)
-			types.put(sb.toString(), c = create(cl, param));
-		sb.setLength(0);
-		return c;
-	}
 
-	public ClassOrInterfaceType get(String cl) {
-		int indexOf = cl.indexOf('<');
-		if (indexOf >= 0)
-			cl = cl.substring(0, indexOf);
-		ClassOrInterfaceType t = types.get(cl);
-		if (t != null)
-			return t;
-
+		cl = parse.get(0);
 		String[] split = cl.split("[.$]");
 		String last = split[split.length - 1];
 		String string = existingClass.get(last);
 		if (string != null && !cl.equals(string)) {
-			for (int i = 0; i < split.length; i++)
+			ClassOrInterfaceType t = new ClassOrInterfaceType(null, split[0]);
+			for (int i = 1; i < split.length; i++)
 				t = new ClassOrInterfaceType(t, split[i]);
-		} else {
-			if (split.length > 1 && string == null) {
-				cu.addImport(cl.replace('$', '.'));
-				existingClass.put(last, cl);
-			}
-			t = new ClassOrInterfaceType(null, last);
+			return t.setTypeArguments(params);
 		}
-		types.put(cl, t);
-		return t;
-	}
-
-	@SuppressWarnings("null")
-	private ClassOrInterfaceType create(Class<?> cl, Type... param) {
-		ClassOrInterfaceType r = null;
-		String string = existingClass.get(cl.getSimpleName());
-		if (string == null || string.equals(cl.getName())) {
-			if (string == null) {
-				cu.addImport(cl);
-				existingClass.put(cl.getSimpleName(), cl.getName());
-			}
-			r = new ClassOrInterfaceType(null, cl.getSimpleName());
-		} else {
-			for (String s : cl.getName().split("[.$]")) {
-				r = new ClassOrInterfaceType(r, s);
-			}
+		if (split.length > 1 && string == null) {
+			cu.addImport(cl.replace('$', '.'));
+			existingClass.put(last, cl);
 		}
-		NodeList<Type> p = null;
-		if (param.length > 0) {
-			p = new NodeList<>();
-			for (int i = 0; i < param.length; i++) {
-				Type t = param[i];
-				if (t != EMPTY)
-					p.add(t);
-			}
-		}
-		return r.setTypeArguments(p);
+		return new ClassOrInterfaceType(null, new SimpleName(last), params);
 	}
 }
