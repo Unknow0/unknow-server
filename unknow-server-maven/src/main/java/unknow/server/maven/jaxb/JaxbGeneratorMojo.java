@@ -92,7 +92,7 @@ import unknow.server.jaxb.handler.IntHandler;
 import unknow.server.jaxb.handler.LongHandler;
 import unknow.server.jaxb.handler.ShortHandler;
 import unknow.server.jaxb.handler.StringHandler;
-import unknow.server.maven.AbstractMojoUnk;
+import unknow.server.maven.AbstractGeneratorMojo;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
 import unknow.server.maven.model.AnnotationModel;
@@ -108,7 +108,7 @@ import unknow.server.maven.model_xml.XmlTypeComplex;
  * @author unknow
  */
 @Mojo(defaultPhase = LifecyclePhase.GENERATE_SOURCES, name = "jaxb-generator", requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME, requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
-public class JaxbGeneratorMojo extends AbstractMojoUnk {
+public class JaxbGeneratorMojo extends AbstractGeneratorMojo {
 	private static final Logger logger = LoggerFactory.getLogger(JaxbGeneratorMojo.class);
 
 	private static final String INSTANCE = "INSTANCE";

@@ -6,6 +6,9 @@ package unknow.server.http.test;
 import java.util.Arrays;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import jakarta.ws.rs.BeanParam;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.CookieParam;
@@ -25,6 +28,7 @@ import jakarta.ws.rs.core.Response;
 @Path("/rest/{q}")
 @Produces("application/json")
 public class Rest {
+	private static final Logger logger = LoggerFactory.getLogger(Rest.class);
 
 	@GET
 	@Path("t")
@@ -38,19 +42,19 @@ public class Rest {
 
 	@GET
 	public void oneWay(@PathParam("q") String q, @BeanParam Bean bean) {
-		System.out.println("oneWay>> q: '" + q + "' bean: " + bean);
+		logger.info("oneWay>> q: '{}' bean: {}", q, bean);
 	}
 
 	@GET
 	@Consumes({ "application/json", "application/x-ndjson" })
 	public Response response(@PathParam("q") String q, @BeanParam Bean bean) {
-		System.out.println("response>> q: '" + q + "' bean: " + bean);
+		logger.info("response>> q: '{}' bean: {}", q, bean);
 		return Response.status(200).entity("echo").build();
 	}
 
 	@POST
 	public Truc call(Truc truc, @QueryParam("debug") String debug) {
-		System.out.println("call>> truc: " + truc + ", debug: " + debug);
+		logger.info("call>> truc: {}, debug: {}", truc, debug);
 		return truc;
 	}
 
@@ -63,7 +67,7 @@ public class Rest {
 		}
 	}
 
-	public static enum E {
+	public enum E {
 		A, B, C, D, E;
 	}
 
@@ -78,7 +82,7 @@ public class Rest {
 		public String[] p;
 
 		@QueryParam("d")
-		public List<? extends E> d;
+		public List<? super E> d;
 
 		public Truc truc;
 

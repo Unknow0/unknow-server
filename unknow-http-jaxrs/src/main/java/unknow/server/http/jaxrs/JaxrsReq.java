@@ -79,7 +79,8 @@ public class JaxrsReq {
 				return accept = MediaType.WILDCARD_TYPE;
 			return null;
 		}
-		int i, l = 0;
+		int i;
+		int l = 0;
 		double lq = -1;
 		do {
 			i = a.indexOf(',', l);
@@ -214,7 +215,8 @@ public class JaxrsReq {
 	private void initQueries() {
 		if (queries != null)
 			return;
-		parseQueryString(r.getQueryString(), queries = new MultivaluedHashMap<>());
+		queries = new MultivaluedHashMap<>();
+		parseQueryString(r.getQueryString(), queries);
 	}
 
 	private void initForms() throws IOException {
@@ -224,11 +226,12 @@ public class JaxrsReq {
 		StringBuilder sb = new StringBuilder();
 		char[] cbuf = new char[2048];
 		int l = 0;
-		try (BufferedReader r = this.r.getReader()) {
-			while ((l = r.read(cbuf)) != -1)
+		try (BufferedReader br = this.r.getReader()) {
+			while ((l = br.read(cbuf)) != -1)
 				sb.append(cbuf, 0, l);
 		}
-		parseQueryString(sb.toString(), forms = new MultivaluedHashMap<>());
+		forms = new MultivaluedHashMap<>();
+		parseQueryString(sb.toString(), forms);
 	}
 
 	private void initCookies() {
@@ -236,12 +239,12 @@ public class JaxrsReq {
 			return;
 		cookies = new MultivaluedHashMap<>();
 
-		Cookie[] cookies = r.getCookies();
-		if (cookies == null)
+		Cookie[] rc = r.getCookies();
+		if (rc == null)
 			return;
-		for (int c$ = 0; c$ < cookies.length; c$++) {
-			Cookie c = cookies[c$];
-			this.cookies.add(URLDecoder.decode(c.getName(), StandardCharsets.UTF_8), c.getValue());
+		for (int c$ = 0; c$ < rc.length; c$++) {
+			Cookie c = rc[c$];
+			cookies.add(URLDecoder.decode(c.getName(), StandardCharsets.UTF_8), c.getValue());
 		}
 	}
 

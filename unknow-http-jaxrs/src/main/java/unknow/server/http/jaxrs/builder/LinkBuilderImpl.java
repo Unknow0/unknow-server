@@ -33,8 +33,7 @@ public class LinkBuilderImpl implements Link.Builder {
 		if (link.length() > 1 && link.startsWith("<")) {
 			int index = link.lastIndexOf('>', link.length());
 			if (index != -1) {
-				String uri = link.substring(1, index);
-				ub = UriBuilder.fromUri(uri);
+				ub = UriBuilder.fromUri(link.substring(1, index));
 				if (index + 1 == link.length()) {
 					link = "";
 				} else {
@@ -128,13 +127,13 @@ public class LinkBuilderImpl implements Link.Builder {
 			if (uri != null)
 				ub.uri(uri);
 		}
-		URI uri = ub.build(values);
+		URI u = ub.build(values);
 
-		if (!uri.isAbsolute() && this.uri != null && this.uri.isAbsolute()) {
-			UriBuilder linkUriBuilder = UriBuilder.fromUri(this.uri);
-			return resolve(linkUriBuilder, uri);
+		if (!u.isAbsolute() && uri != null && uri.isAbsolute()) {
+			UriBuilder linkUriBuilder = UriBuilder.fromUri(uri);
+			return resolve(linkUriBuilder, u);
 		}
-		return uri;
+		return u;
 	}
 
 	public static URI resolve(UriBuilder baseBuilder, URI uri) {

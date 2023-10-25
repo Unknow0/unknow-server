@@ -71,8 +71,8 @@ public final class Connection {
 	 */
 	protected final void readFrom(SocketChannel channel, ByteBuffer buf) throws IOException, InterruptedException {
 		lastRead = System.currentTimeMillis();
-		buf.clear();
 		if (channel.read(buf) == -1) {
+			logger.error("read end");
 			channel.close();
 			return;
 		}
@@ -82,7 +82,7 @@ public final class Connection {
 			buf.mark();
 			byte[] bytes = new byte[buf.remaining()];
 			buf.get(bytes);
-			logger.trace("read " + new String(bytes));
+			logger.trace("read {}", new String(bytes));
 			buf.reset();
 		}
 
@@ -100,7 +100,6 @@ public final class Connection {
 	 */
 	protected final void writeInto(SocketChannel channel, ByteBuffer buf) throws IOException, InterruptedException {
 		lastWrite = System.currentTimeMillis();
-		buf.clear();
 		while (pendingWrite.read(buf, false)) {
 			buf.flip();
 
@@ -108,7 +107,7 @@ public final class Connection {
 				buf.mark();
 				byte[] bytes = new byte[buf.remaining()];
 				buf.get(bytes);
-				logger.trace("writ " + new String(bytes));
+				logger.trace("writ {}", new String(bytes));
 				buf.reset();
 			}
 

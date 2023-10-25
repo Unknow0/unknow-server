@@ -61,9 +61,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	 */
 	@Override
 	public final void register(SocketChannel socket, Connection handler) throws IOException {
-		socket.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.TRUE);
-		socket.setOption(StandardSocketOptions.SO_REUSEADDR, Boolean.TRUE);
-		socket.configureBlocking(false);
+		socket.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.TRUE).setOption(StandardSocketOptions.SO_REUSEADDR, Boolean.TRUE).configureBlocking(false);
 		synchronized (mutex) {
 			selector.wakeup();
 			init.add(handler);
@@ -83,6 +81,8 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			} catch (IOException e) {
 				logger.error("failed to write", h, e);
 				channel.close();
+			} finally {
+				buf.clear();
 			}
 		}
 
@@ -93,6 +93,8 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			} catch (IOException e) {
 				logger.error("failed to read {}", h, e);
 				channel.close();
+			} finally {
+				buf.clear();
 			}
 		}
 	}
@@ -113,7 +115,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 					try {
 						key.channel().close();
 						co.free();
-					} catch (IOException e) { // ignore
+					} catch (@SuppressWarnings("unused") IOException e) { // ignore
 					}
 				}
 			}

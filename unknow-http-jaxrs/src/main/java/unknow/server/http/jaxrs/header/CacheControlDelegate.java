@@ -6,6 +6,7 @@ package unknow.server.http.jaxrs.header;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -161,6 +162,8 @@ public class CacheControlDelegate implements HeaderDelegate<CacheControl> {
 
 		@Override
 		public T next() {
+			if (!hasNext())
+				throw new NoSuchElementException();
 			return a[i++];
 		}
 	}
@@ -181,6 +184,8 @@ public class CacheControlDelegate implements HeaderDelegate<CacheControl> {
 
 		@Override
 		public String next() {
+			if (!next)
+				throw new NoSuchElementException();
 			String s = m.group();
 			next = m.find();
 			return s;

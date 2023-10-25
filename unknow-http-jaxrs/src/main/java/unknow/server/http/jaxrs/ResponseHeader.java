@@ -52,7 +52,9 @@ public class ResponseHeader implements MultivaluedMap<String, Object> {
 	@Override
 	public List<Object> get(Object key) {
 		Collection<?> headers = res.getHeaders(String.valueOf(key));
-		return headers == null ? null : headers instanceof List ? (List<Object>) headers : new ArrayList<>(headers);
+		if (headers == null)
+			return null;
+		return headers instanceof List ? (List<Object>) headers : new ArrayList<>(headers);
 	}
 
 	@Override

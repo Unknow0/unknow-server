@@ -63,7 +63,7 @@ import jakarta.ws.rs.ext.ParamConverterProvider;
 import jakarta.ws.rs.ext.RuntimeDelegate;
 import unknow.server.http.jaxrs.JaxrsContext;
 import unknow.server.http.jaxrs.JaxrsRuntime;
-import unknow.server.maven.AbstractMojoUnk;
+import unknow.server.maven.AbstractGeneratorMojo;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
 import unknow.server.maven.model.ClassModel;
@@ -73,8 +73,10 @@ import unknow.server.maven.model.TypeModel;
  * @author unknow
  */
 @Mojo(defaultPhase = LifecyclePhase.GENERATE_SOURCES, name = "jaxrs-generator", requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME, requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
-public class JaxrsMojo extends AbstractMojoUnk {
+public class JaxrsMojo extends AbstractGeneratorMojo {
 	private static final Logger logger = LoggerFactory.getLogger(JaxrsMojo.class);
+
+	private static final String VALUE = "value";
 
 	private JaxrsModel model;
 
@@ -82,7 +84,7 @@ public class JaxrsMojo extends AbstractMojoUnk {
 	private ClassOrInterfaceDeclaration cl;
 
 	@Parameter(name = "openapi")
-	private OpenApiBuilder openapi = new OpenApiBuilder();
+	private OpenApiConfig openapi = new OpenApiConfig();
 
 	@Parameter(name = "basePath", defaultValue = "/")
 	private String basePath;
@@ -128,7 +130,7 @@ public class JaxrsMojo extends AbstractMojoUnk {
 		for (Entry<String, List<JaxrsMapping>> e : map.entrySet())
 			out.save(new JaxRsServletBuilder(newCu(), existingClass, e.getKey(), e.getValue(), beans, mt).build());
 
-		openapi.build(project, model, resources + basePath + "/openapi.json");
+		new OpenApiBuilder().build(openapi.getSpec(project), model, resources + basePath + "/openapi.json");
 		beans.save(out);
 		mt.save(out);
 	}
@@ -151,8 +153,8 @@ public class JaxrsMojo extends AbstractMojoUnk {
 
 		cl = cu.addClass("JaxrsInit", Utils.PUBLIC).addImplementedType(ServletContainerInitializer.class);
 		BlockStmt b = cl.addMethod("onStartup", Utils.PUBLIC).addMarkerAnnotation(Override.class)
-				.addParameter(types.getClass(Set.class, types.getClass(Class.class, TypeCache.ANY)), "c").addParameter(types.getClass(ServletContext.class), "ctx").getBody()
-				.get().addStatement(new MethodCallExpr(new TypeExpr(types.getClass(RuntimeDelegate.class)), "setInstance",
+				.addParameter(types.getClass(Set.class, types.getClass(Class.class, TypeCache.ANY)), "c").addParameter(types.getClass(ServletContext.class), "ctx")
+				.createBody().addStatement(new MethodCallExpr(new TypeExpr(types.getClass(RuntimeDelegate.class)), "setInstance",
 						Utils.list(new ObjectCreationExpr(null, types.getClass(JaxrsRuntime.class), Utils.list()))));
 		for (String s : model.converter)
 			b.addStatement(new MethodCallExpr(ctx, "registerConverter", Utils.list(new ObjectCreationExpr(null, types.getClass(s), Utils.list()))));
@@ -240,17 +242,17 @@ public class JaxrsMojo extends AbstractMojoUnk {
 		ClassOrInterfaceType type = types.getClass(cl);
 		Expression e;
 		if (m == null)
-			e = new ObjectCreationExpr(null, type, Utils.list(new NameExpr("value")));
+			e = new ObjectCreationExpr(null, type, Utils.list(new NameExpr(VALUE)));
 		else
-			e = new MethodCallExpr(new TypeExpr(type), m, Utils.list(new NameExpr("value")));
+			e = new MethodCallExpr(new TypeExpr(type), m, Utils.list(new NameExpr(VALUE)));
 
 		NodeList<BodyDeclaration<?>> methods = Utils.list(
 				new MethodDeclaration(Modifier.createModifierList(Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL), Utils.list(new MarkerAnnotationExpr("Override")),
-						Utils.list(), type, new SimpleName("fromString"), Utils.list(new com.github.javaparser.ast.body.Parameter(types.getClass(String.class), "value")),
+						Utils.list(), type, new SimpleName("fromString"), Utils.list(new com.github.javaparser.ast.body.Parameter(types.getClass(String.class), VALUE)),
 						Utils.list(), new BlockStmt().addStatement(new ReturnStmt(e))),
 				new MethodDeclaration(Modifier.createModifierList(Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL), Utils.list(new MarkerAnnotationExpr("Override")),
-						Utils.list(), types.getClass(String.class), new SimpleName("toString"), Utils.list(new com.github.javaparser.ast.body.Parameter(type, "value")),
-						Utils.list(), new BlockStmt().addStatement(new ReturnStmt(new MethodCallExpr(new NameExpr("value"), "toString")))));
+						Utils.list(), types.getClass(String.class), new SimpleName("toString"), Utils.list(new com.github.javaparser.ast.body.Parameter(type, VALUE)),
+						Utils.list(), new BlockStmt().addStatement(new ReturnStmt(new MethodCallExpr(new NameExpr(VALUE), "toString")))));
 		clazz.addFieldWithInitializer(types.getClass(ParamConverter.class, type), name,
 				new ObjectCreationExpr(null, types.getClass(ParamConverter.class, TypeCache.EMPTY), null, Utils.list(), methods), Utils.PSF);
 	}

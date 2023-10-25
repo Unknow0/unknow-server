@@ -56,6 +56,8 @@ public class NewCookieDelegate implements HeaderDelegate<NewCookie> {
 				case "Secure":
 					b.secure(true);
 					break;
+				default:
+					break;
 			}
 		}
 

@@ -79,9 +79,9 @@ public abstract class ModelLoader {
 		if (cl.equals("?"))
 			return WildcardModel.EMPTY;
 		if (cl.startsWith("? extends "))
-			return new WildcardModel(get(cl.substring(10)), true);
+			return new WildcardModel(get(cl.substring(10), parameters), true);
 		if (cl.startsWith("? super "))
-			return new WildcardModel(get(cl.substring(8)), false);
+			return new WildcardModel(get(cl.substring(8), parameters), false);
 
 		List<String> parse = parse(cl);
 		Map<String, TypeModel> map = new HashMap<>();

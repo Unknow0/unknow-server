@@ -17,6 +17,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import jakarta.ws.rs.ProcessingException;
 import jakarta.ws.rs.core.EntityTag;
 import jakarta.ws.rs.core.GenericType;
 import jakarta.ws.rs.core.Link;
@@ -27,6 +28,7 @@ import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.NewCookie;
 import jakarta.ws.rs.core.Response;
 import unknow.server.http.jaxrs.JaxrsRuntime;
+import unknow.server.util.io.Buffers;
 
 /**
  * @author unknow
@@ -36,6 +38,8 @@ public class ResponseImpl extends Response {
 	private final Object entity;
 	private final Annotation[] annotations;
 	private final MultivaluedMap<String, Object> headers;
+
+	private Buffers buffers;
 
 	/**
 	 * create new ResponseBuilderImpl.ResponseImpl
@@ -105,13 +109,22 @@ public class ResponseImpl extends Response {
 
 	@Override
 	public boolean bufferEntity() {
+		if (buffers != null)
+			return true;
+
 		if (!(entity instanceof InputStream))
 			return false;
-		InputStream is = (InputStream) entity;
+		try (InputStream is = (InputStream) entity) {
 
-//		new Buffers()
-		// TODO
-		return false;
+			buffers = new Buffers();
+			byte[] b = new byte[4096];
+			int l;
+			while ((l = is.read(b)) != -1)
+				buffers.write(b, 0, l);
+			return true;
+		} catch (InterruptedException | IOException e) {
+			throw new ProcessingException(e);
+		}
 	}
 
 	@Override
@@ -119,9 +132,12 @@ public class ResponseImpl extends Response {
 		if (!(entity instanceof InputStream))
 			try {
 				((InputStream) entity).close();
-			} catch (IOException e) {
+			} catch (@SuppressWarnings("unused") IOException e) { // OK
 			}
-		// TODO remove buffer
+		if (buffers != null) {
+			buffers.clear();
+			buffers = null;
+		}
 	}
 
 	@Override

@@ -49,7 +49,7 @@ import unknow.server.maven.model.jvm.JvmModelLoader;
  * @author unknow
  */
 public abstract class AbstractGeneratorMojo extends AbstractMojo {
-	private static final Logger logger = LoggerFactory.getLogger(AbstractMojoUnk.class);
+	private static final Logger logger = LoggerFactory.getLogger(AbstractGeneratorMojo.class);
 
 	@Parameter(defaultValue = "${project}", required = true, readonly = true)
 	protected MavenProject project;
@@ -213,7 +213,7 @@ public abstract class AbstractGeneratorMojo extends AbstractMojo {
 
 		try {
 			Files.createDirectories(Paths.get(resources));
-		} catch (IOException e) { // ignore
+		} catch (@SuppressWarnings("unused") IOException e) { // ignore
 		}
 	}
 

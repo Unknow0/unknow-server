@@ -16,7 +16,7 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.BiFunction;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 import jakarta.ws.rs.core.MultivaluedHashMap;
 import jakarta.ws.rs.core.MultivaluedMap;
@@ -42,10 +42,7 @@ public class UriBuilderImpl extends UriBuilder {
 		dontNeedEncoding.set('*');
 		dontNeedEncoding.set('/');
 	}
-	private static final char[] digits = {
-			'0', '1', '2', '3', '4', '5',
-			'6', '7', '8', '9', 'a', 'b',
-			'c', 'd', 'e', 'f' };
+	private static final char[] digits = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
 
 	private String scheme;
 	private String ssp;
@@ -240,7 +237,7 @@ public class UriBuilderImpl extends UriBuilder {
 		if (templateValues.isEmpty())
 			return this;
 
-		Function<String, String> f = n -> {
+		UnaryOperator<String> f = n -> {
 			Object o = templateValues.get(n);
 			return o == null ? null : o.toString();
 		};
@@ -252,7 +249,7 @@ public class UriBuilderImpl extends UriBuilder {
 		if (templateValues.isEmpty())
 			return this;
 
-		Function<String, String> f = n -> {
+		UnaryOperator<String> f = n -> {
 			Object o = templateValues.get(n);
 			return o == null ? null : o.toString();
 		};
@@ -288,7 +285,7 @@ public class UriBuilderImpl extends UriBuilder {
 			return URI.create(toTemplate());
 
 		List<String> list = new ArrayList<>();
-		Function<String, String> f = n -> {
+		UnaryOperator<String> f = n -> {
 			int i = list.indexOf(n);
 			if (i < 0) {
 				i = list.size();
@@ -305,7 +302,7 @@ public class UriBuilderImpl extends UriBuilder {
 			return URI.create(toTemplate());
 
 		List<String> list = new ArrayList<>();
-		Function<String, String> f = n -> {
+		UnaryOperator<String> f = n -> {
 			int i = list.indexOf(n);
 			if (i < 0) {
 				i = list.size();
@@ -362,7 +359,7 @@ public class UriBuilderImpl extends UriBuilder {
 		uri.host = host;
 		uri.port = port;
 		uri.paths.addAll(paths);
-		uri.paths.set(paths.size() - 1, paths.get(paths.size() - 1).clone());
+		uri.paths.set(paths.size() - 1, new PathPart(paths.get(paths.size() - 1)));
 		uri.query.putAll(query);
 		uri.fragment = fragment;
 		return uri;
@@ -447,7 +444,7 @@ public class UriBuilderImpl extends UriBuilder {
 		return l == 0 ? value : sb.append(value.substring(l)).toString();
 	}
 
-	private static String replace(String value, Function<String, String> r) {
+	private static String replace(String value, UnaryOperator<String> r) {
 		int i = value.indexOf('{');
 		if (i < 0)
 			return value;
@@ -475,17 +472,16 @@ public class UriBuilderImpl extends UriBuilder {
 			this.matrix = matrix;
 		}
 
+		public PathPart(PathPart p) {
+			this(p.path, new MultivaluedHashMap<>(p.matrix));
+		}
+
 		public static PathPart parse(String path) {
 			int i = path.indexOf(';');
 			MultivaluedMap<String, String> matrix = new MultivaluedHashMap<>();
 			if (i > 0)
 				JaxrsReq.parseMatrix(path, i, matrix);
 			return new PathPart(i < 0 ? path : path.substring(i), matrix);
-		}
-
-		@Override
-		public PathPart clone() {
-			return new PathPart(path, new MultivaluedHashMap<>(matrix));
 		}
 
 		public StringBuilder append(StringBuilder sb) {
