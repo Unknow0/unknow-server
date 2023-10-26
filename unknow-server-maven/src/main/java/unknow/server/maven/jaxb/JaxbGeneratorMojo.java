@@ -87,11 +87,18 @@ import unknow.server.jaxb.handler.BooleanHandler;
 import unknow.server.jaxb.handler.ByteHandler;
 import unknow.server.jaxb.handler.CharHandler;
 import unknow.server.jaxb.handler.DoubleHandler;
+import unknow.server.jaxb.handler.DurationHandler;
 import unknow.server.jaxb.handler.FloatHandler;
 import unknow.server.jaxb.handler.IntHandler;
+import unknow.server.jaxb.handler.LocalDateHandler;
+import unknow.server.jaxb.handler.LocalDateTimeHandler;
+import unknow.server.jaxb.handler.LocalTimeHandler;
 import unknow.server.jaxb.handler.LongHandler;
+import unknow.server.jaxb.handler.OffsetDateTimeHandler;
+import unknow.server.jaxb.handler.PeriodHandler;
 import unknow.server.jaxb.handler.ShortHandler;
 import unknow.server.jaxb.handler.StringHandler;
+import unknow.server.jaxb.handler.ZonedDateTimeHandler;
 import unknow.server.maven.AbstractGeneratorMojo;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
@@ -128,6 +135,16 @@ public class JaxbGeneratorMojo extends AbstractGeneratorMojo {
 		handlers.put(XmlLoader.STRING, StringHandler.class.getName());
 		handlers.put(XmlLoader.BIGINT, BigIntegerHandler.class.getName());
 		handlers.put(XmlLoader.BIGDEC, BigDecimalHandler.class.getName());
+		handlers.put(XmlLoader.BIGDEC, BigDecimalHandler.class.getName());
+
+		handlers.put(XmlLoader.LOCALDATE, LocalDateHandler.class.getName());
+		handlers.put(XmlLoader.LOCALDATETIME, LocalDateTimeHandler.class.getName());
+		handlers.put(XmlLoader.LOCALTIME, LocalTimeHandler.class.getName());
+		handlers.put(XmlLoader.OFFSETDATETIME, OffsetDateTimeHandler.class.getName());
+		handlers.put(XmlLoader.ZONEDDATETIME, ZonedDateTimeHandler.class.getName());
+		handlers.put(XmlLoader.DURATION, DurationHandler.class.getName());
+		handlers.put(XmlLoader.PERIOD, PeriodHandler.class.getName());
+
 	}
 
 	@Override

@@ -5,7 +5,7 @@
 		<artifactId>unknow-server</artifactId>
 		<version>0.0.1-SNAPSHOT</version>
 	</parent>
-	<artifactId>unknow-http-test</artifactId>
+	<artifactId>unknow-server-test</artifactId>
 	<build>
 		<plugins>
 			<plugin>

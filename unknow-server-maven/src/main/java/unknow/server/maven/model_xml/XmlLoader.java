@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.OffsetTime;
+import java.time.Period;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -68,28 +69,22 @@ public class XmlLoader {
 	public static final XmlTypeSimple BIGINT = new XmlTypeSimple(new QName(XS, "integer"), JvmModelLoader.GLOBAL.get(BigInteger.class.getName()));
 	public static final XmlTypeSimple BIGDEC = new XmlTypeSimple(new QName(XS, "decimal"), JvmModelLoader.GLOBAL.get(BigDecimal.class.getName()));
 
+	public static final XmlTypeSimple LOCALDATE = new XmlTypeSimple(new QName(XS, "date"), JvmModelLoader.GLOBAL.get(LocalDate.class.getName()));
+	public static final XmlTypeSimple LOCALDATETIME = new XmlTypeSimple(new QName(XS, "dateTime"), JvmModelLoader.GLOBAL.get(LocalDateTime.class.getName()));
+	public static final XmlTypeSimple LOCALTIME = new XmlTypeSimple(new QName(XS, "time"), JvmModelLoader.GLOBAL.get(LocalTime.class.getName()));
+	public static final XmlTypeSimple OFFSETDATETIME = new XmlTypeSimple(new QName(XS, "dateTime"), JvmModelLoader.GLOBAL.get(OffsetDateTime.class.getName()));
+	public static final XmlTypeSimple ZONEDDATETIME = new XmlTypeSimple(new QName(XS, "dateTime"), JvmModelLoader.GLOBAL.get(ZonedDateTime.class.getName()));
+	public static final XmlTypeSimple DURATION = new XmlTypeSimple(new QName(XS, "duration"), JvmModelLoader.GLOBAL.get(Duration.class.getName()));
+	public static final XmlTypeSimple PERIOD = new XmlTypeSimple(new QName(XS, "duration"), JvmModelLoader.GLOBAL.get(Period.class.getName()));
+
+	private static final List<XmlType> BUILTIN = Arrays.asList(BOOLEAN, BOOLEAN, BYTE, BYTE, SHORT, SHORT, INT, INT, LONG, LONG, FLOAT, FLOAT, DOUBLE, DOUBLE, CHAR, CHAR,
+			STRING, BIGINT, BIGDEC, LOCALDATE, LOCALDATETIME, LOCALTIME, OFFSETDATETIME, ZONEDDATETIME, DURATION);
+
 	private final Map<String, XmlType> types = new HashMap<>();
 
 	public XmlLoader() {
-		types.put(PrimitiveModel.BOOLEAN.name(), BOOLEAN);
-		types.put(PrimitiveModel.BOOLEAN.boxed().name(), BOOLEAN);
-		types.put(PrimitiveModel.BYTE.name(), BYTE);
-		types.put(PrimitiveModel.BYTE.boxed().name(), BYTE);
-		types.put(PrimitiveModel.SHORT.name(), SHORT);
-		types.put(PrimitiveModel.SHORT.boxed().name(), SHORT);
-		types.put(PrimitiveModel.INT.name(), INT);
-		types.put(PrimitiveModel.INT.boxed().name(), INT);
-		types.put(PrimitiveModel.LONG.name(), LONG);
-		types.put(PrimitiveModel.LONG.boxed().name(), LONG);
-		types.put(PrimitiveModel.FLOAT.name(), FLOAT);
-		types.put(PrimitiveModel.FLOAT.boxed().name(), FLOAT);
-		types.put(PrimitiveModel.DOUBLE.name(), DOUBLE);
-		types.put(PrimitiveModel.DOUBLE.boxed().name(), DOUBLE);
-		types.put(PrimitiveModel.CHAR.name(), CHAR);
-		types.put(PrimitiveModel.CHAR.boxed().name(), CHAR);
-		types.put(String.class.getName(), STRING);
-		types.put(BigInteger.class.getName(), BIGINT);
-		types.put(BigDecimal.class.getName(), BIGDEC);
+		for (XmlType t : BUILTIN)
+			types.put(t.type().name(), t);
 	}
 
 	public Set<Entry<String, XmlType>> entries() {
