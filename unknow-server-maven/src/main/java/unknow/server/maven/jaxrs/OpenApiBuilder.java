@@ -70,9 +70,9 @@ public class OpenApiBuilder {
 			case "java.lang.Byte":
 				return new Schema<>().type(INTEGER).minimum(BigDecimal.valueOf(Byte.MIN_VALUE)).maximum(BigDecimal.valueOf(Byte.MAX_VALUE));
 			case "char":
-				return new Schema<>().type(INTEGER).minimum(BigDecimal.valueOf(Character.MIN_VALUE)).maximum(BigDecimal.valueOf(Character.MAX_VALUE)).nullable(false);
+				return new Schema<>().type(STRING).maxLength(1).minLength(1).nullable(false);
 			case "java.lang.Character":
-				return new Schema<>().type(INTEGER).minimum(BigDecimal.valueOf(Character.MIN_VALUE)).maximum(BigDecimal.valueOf(Character.MAX_VALUE));
+				return new Schema<>().type(STRING).maxLength(1).minLength(1);
 			case "short":
 				return new Schema<>().type(INTEGER).minimum(BigDecimal.valueOf(Short.MIN_VALUE)).maximum(BigDecimal.valueOf(Short.MAX_VALUE)).nullable(false);
 			case "java.lang.Short":
