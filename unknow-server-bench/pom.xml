@@ -46,7 +46,7 @@
 	<dependencies>
 		<dependency>
 			<groupId>${project.groupId}</groupId>
-			<artifactId>unknow-http-test</artifactId>
+			<artifactId>unknow-server-test</artifactId>
 			<version>${project.version}</version>
 			<type>jar</type>
 		</dependency>
