@@ -85,7 +85,7 @@ public abstract class AbstractGeneratorMojo extends AbstractMojo {
 	protected final Map<String, TypeDeclaration<?>> classes = new HashMap<>();
 	protected final Map<String, PackageDeclaration> packages = new HashMap<>();
 	private final Consumer<CompilationUnit> c = cu -> {
-		cu.walk(TypeDeclaration.class, c -> classes.put(c.resolve().getQualifiedName(), c));
+		cu.walk(TypeDeclaration.class, v -> classes.put(v.resolve().getQualifiedName(), v));
 		cu.getPackageDeclaration().filter(p -> p.getAnnotations() != null).ifPresent(p -> packages.put(p.getNameAsString(), p));
 	};
 

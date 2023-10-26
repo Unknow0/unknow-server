@@ -116,9 +116,12 @@ import unknow.server.maven.model_xml.XmlTypeComplex;
  */
 @Mojo(defaultPhase = LifecyclePhase.GENERATE_SOURCES, name = "jaxb-generator", requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME, requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
 public class JaxbGeneratorMojo extends AbstractGeneratorMojo {
+
 	private static final Logger logger = LoggerFactory.getLogger(JaxbGeneratorMojo.class);
 
 	private static final String INSTANCE = "INSTANCE";
+	private static final String PARENT = "parent";
+	private static final NameExpr LISTENER = new NameExpr("listener");
 
 	private final Map<XmlType, String> handlers = new HashMap<>();
 	private final XmlLoader xmlLoader = new XmlLoader();
@@ -285,9 +288,9 @@ public class JaxbGeneratorMojo extends AbstractGeneratorMojo {
 				.addParameter(types.get(XMLStreamWriter.class), "w").addParameter(types.get(xml.type()), "t").addParameter(types.get(Marshaller.Listener.class), "listener")
 				.createBody();
 		xml.type().asClass().method("beforeMarshal", loader.get(Marshaller.class.getName()))
-				.ifPresent(m -> b.addStatement(new MethodCallExpr(new NameExpr("o"), "beforeMarshal", Utils.list(new NameExpr("listener")))));
-		b.addStatement(new IfStmt(new BinaryExpr(new NameExpr("listener"), new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS),
-				new ExpressionStmt(new MethodCallExpr(new NameExpr("listener"), "beforeMarshal", Utils.list(new NameExpr("t")))), null));
+				.ifPresent(m -> b.addStatement(new MethodCallExpr(new NameExpr("o"), "beforeMarshal", Utils.list(LISTENER))));
+		b.addStatement(new IfStmt(new BinaryExpr(LISTENER, new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS),
+				new ExpressionStmt(new MethodCallExpr(LISTENER, "beforeMarshal", Utils.list(new NameExpr("t")))), null));
 
 		if (!xml.getAttributes().isEmpty()) {
 			b.addStatement(new VariableDeclarationExpr(types.get(String.class), "s"));
@@ -317,7 +320,7 @@ public class JaxbGeneratorMojo extends AbstractGeneratorMojo {
 						.addStatement(new IfStmt(new BinaryExpr(new NameExpr("e"), new NullLiteralExpr(), BinaryExpr.Operator.EQUALS), new ContinueStmt(), null))
 						.addStatement(new MethodCallExpr(new NameExpr("w"), "writeStartElement", Utils.list(Utils.text(e.ns()), Utils.text(e.name()))))
 						.addStatement(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(handlers.get(c.component()))), INSTANCE), "write",
-								Utils.list(new NameExpr("w"), new NameExpr("e"), new NameExpr("listener"))))
+								Utils.list(new NameExpr("w"), new NameExpr("e"), LISTENER)))
 						.addStatement(new MethodCallExpr(new NameExpr("w"), "writeEndElement", Utils.list()));
 
 				if (t.type().isArray()) {
@@ -331,7 +334,7 @@ public class JaxbGeneratorMojo extends AbstractGeneratorMojo {
 			} else {
 				w = new BlockStmt().addStatement(new MethodCallExpr(new NameExpr("w"), "writeStartElement", Utils.list(Utils.text(e.ns()), Utils.text(e.name()))))
 						.addStatement(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(handlers.get(e.xmlType()))), INSTANCE), "write",
-								Utils.list(new NameExpr("w"), new NameExpr(n), new NameExpr("listener"))))
+								Utils.list(new NameExpr("w"), new NameExpr(n), LISTENER)))
 						.addStatement(new MethodCallExpr(new NameExpr("w"), "writeEndElement", Utils.list()));
 			}
 			b.addStatement(Utils.assign(types.get(e.type()), n, new MethodCallExpr(new NameExpr("t"), e.getter())))
@@ -345,9 +348,9 @@ public class JaxbGeneratorMojo extends AbstractGeneratorMojo {
 		}
 
 		xml.type().asClass().method("afterMarshal", loader.get(Marshaller.class.getName()))
-				.ifPresent(m -> b.addStatement(new MethodCallExpr(new NameExpr("o"), "afterMarshal", Utils.list(new NameExpr("listener")))));
-		b.addStatement(new IfStmt(new BinaryExpr(new NameExpr("listener"), new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS),
-				new ExpressionStmt(new MethodCallExpr(new NameExpr("listener"), "afterMarshal", Utils.list(new NameExpr("t")))), null));
+				.ifPresent(m -> b.addStatement(new MethodCallExpr(new NameExpr("o"), "afterMarshal", Utils.list(LISTENER))));
+		b.addStatement(new IfStmt(new BinaryExpr(LISTENER, new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS),
+				new ExpressionStmt(new MethodCallExpr(LISTENER, "afterMarshal", Utils.list(new NameExpr("t")))), null));
 	}
 
 	/**
@@ -364,11 +367,11 @@ public class JaxbGeneratorMojo extends AbstractGeneratorMojo {
 			create = new MethodCallExpr(new TypeExpr(types.getClass(xml.factory().clazz)), xml.factory().method);
 
 		BlockStmt b = cl.addMethod("read", Utils.PUBLIC).addMarkerAnnotation(Override.class).addThrownException(types.get(XMLStreamException.class).asClassOrInterfaceType())
-				.addParameter(types.get(XMLStreamReader.class), "r").setType(types.get(xml.type())).addParameter(types.get(Object.class), "parent")
+				.addParameter(types.get(XMLStreamReader.class), "r").setType(types.get(xml.type())).addParameter(types.get(Object.class), PARENT)
 				.addParameter(types.get(UnmarshallerImpl.class), "listener").createBody().addStatement(Utils.assign(types.get(xml.type()), "o", create));
 		xml.type().asClass().method("beforeUnmarshal", loader.get(Unmarshaller.class.getName()), loader.get(Object.class.getName()))
-				.ifPresent(m -> b.addStatement(new MethodCallExpr(new NameExpr("o"), "beforeUnmarshal", Utils.list(new NameExpr("listener"), new NameExpr("parent")))));
-		b.addStatement(new MethodCallExpr(new NameExpr("listener"), "beforeUnmarshal", Utils.list(new NameExpr("o"), new NameExpr("parent"))));
+				.ifPresent(m -> b.addStatement(new MethodCallExpr(new NameExpr("o"), "beforeUnmarshal", Utils.list(LISTENER, new NameExpr(PARENT)))));
+		b.addStatement(new MethodCallExpr(LISTENER, "beforeUnmarshal", Utils.list(new NameExpr("o"), new NameExpr(PARENT))));
 
 		for (XmlElement e : xml.getElements()) {
 			if (!(e.xmlType() instanceof XmlCollection))
@@ -406,11 +409,11 @@ public class JaxbGeneratorMojo extends AbstractGeneratorMojo {
 		}
 
 		xml.type().asClass().method("afterUnmarshal", loader.get(Unmarshaller.class.getName()), loader.get(Object.class.getName()))
-				.ifPresent(m -> b.addStatement(new MethodCallExpr(new NameExpr("o"), "beforeUnmarshal", Utils.list(new NameExpr("listener"), new NameExpr("parent")))));
+				.ifPresent(m -> b.addStatement(new MethodCallExpr(new NameExpr("o"), "beforeUnmarshal", Utils.list(LISTENER, new NameExpr(PARENT)))));
 
 		IfStmt i = new IfStmt(
 				new BinaryExpr(new NameExpr("n"), new FieldAccessExpr(new TypeExpr(types.get(XMLStreamConstants.class)), "END_ELEMENT"), BinaryExpr.Operator.EQUALS),
-				r.addStatement(new MethodCallExpr(new NameExpr("listener"), "afterUnmarshal", Utils.list(new NameExpr("o"), new NameExpr("parent"))))
+				r.addStatement(new MethodCallExpr(LISTENER, "afterUnmarshal", Utils.list(new NameExpr("o"), new NameExpr(PARENT))))
 						.addStatement(new ReturnStmt(new NameExpr("o"))),
 				null);
 
@@ -431,11 +434,11 @@ public class JaxbGeneratorMojo extends AbstractGeneratorMojo {
 									null))
 							.addStatement(new MethodCallExpr(n, "add",
 									Utils.list(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(handlers.get(t.component()))), INSTANCE), "read",
-											Utils.list(new NameExpr("r"), new NameExpr("o"), new NameExpr("listener"))))));
+											Utils.list(new NameExpr("r"), new NameExpr("o"), LISTENER)))));
 				} else
 					s = new ExpressionStmt(new MethodCallExpr(new NameExpr("o"), e.setter(),
 							Utils.list(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(handlers.get(e.xmlType()))), INSTANCE), "read",
-									Utils.list(new NameExpr("r"), new NameExpr("o"), new NameExpr("listener"))))));
+									Utils.list(new NameExpr("r"), new NameExpr("o"), LISTENER)))));
 
 				j = new IfStmt(new MethodCallExpr(new NameExpr(e.name() + "$e" + c++), "equals", Utils.list(new NameExpr("q"))), s, j);
 			}

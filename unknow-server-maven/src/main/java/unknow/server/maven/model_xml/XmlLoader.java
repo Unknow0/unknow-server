@@ -51,9 +51,10 @@ import unknow.server.maven.model_xml.XmlTypeComplex.Factory;
  * @author unknow
  */
 public class XmlLoader {
-	private static final String NAMESPACE = "namespace";
-
 	private static final Logger logger = LoggerFactory.getLogger(XmlLoader.class);
+
+	private static final String NAMESPACE = "namespace";
+	private static final String DEFAULT = "##default";
 
 	public static final String XS = "http://www.w3.org/2001/XMLSchema";
 
@@ -210,12 +211,12 @@ public class XmlLoader {
 				} else if (attr.isPresent()) {
 					if (!(add(t) instanceof XmlTypeSimple))
 						throw new IllegalArgumentException("only simple type allowed in attribute in '" + c.name() + "'");
-					n = attr.flatMap(a -> a.member("name")).map(a -> a.asLiteral()).map(i -> "##default".equals(i) ? null : i).orElse(n);
-					String ns = attr.flatMap(a -> a.member(NAMESPACE)).map(a -> a.asLiteral()).map(i -> "##default".equals(i) ? null : i).orElse("");
+					n = attr.flatMap(a -> a.member("name")).map(a -> a.asLiteral()).map(i -> DEFAULT.equals(i) ? null : i).orElse(n);
+					String ns = attr.flatMap(a -> a.member(NAMESPACE)).map(a -> a.asLiteral()).map(i -> DEFAULT.equals(i) ? null : i).orElse("");
 					attrs.add(new XmlElement(this, new QName(ns, n), t, m.name(), setter));
 				} else {
-					n = elem.flatMap(a -> a.member("name")).map(a -> a.asLiteral()).map(i -> "##default".equals(i) ? null : i).orElse(n);
-					String ns = elem.flatMap(a -> a.member(NAMESPACE)).map(a -> a.asLiteral()).map(i -> "##default".equals(i) ? null : i).orElse(defaultNs);
+					n = elem.flatMap(a -> a.member("name")).map(a -> a.asLiteral()).map(i -> DEFAULT.equals(i) ? null : i).orElse(n);
+					String ns = elem.flatMap(a -> a.member(NAMESPACE)).map(a -> a.asLiteral()).map(i -> DEFAULT.equals(i) ? null : i).orElse(defaultNs);
 					elems.add(new XmlElement(this, new QName(ns, n), t, m.name(), setter));
 				}
 			}
@@ -264,8 +265,8 @@ public class XmlLoader {
 		String name = type.simpleName();
 		String ns = type.parent().annotation(XmlSchema.class).flatMap(v -> v.member(NAMESPACE)).map(v -> v.asLiteral()).orElse("");
 		if (a.isPresent()) {
-			name = a.flatMap(v -> v.member("name")).map(v -> v.asLiteral()).filter(v -> !v.equals("##default")).orElse(name);
-			ns = a.flatMap(v -> v.member(NAMESPACE)).map(v -> v.asLiteral()).filter(v -> !v.equals("##default")).orElse(ns);
+			name = a.flatMap(v -> v.member("name")).map(v -> v.asLiteral()).filter(v -> !v.equals(DEFAULT)).orElse(name);
+			ns = a.flatMap(v -> v.member(NAMESPACE)).map(v -> v.asLiteral()).filter(v -> !v.equals(DEFAULT)).orElse(ns);
 		}
 		return new QName(ns, name);
 	}

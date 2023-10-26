@@ -90,29 +90,16 @@ public class Servlet extends HttpServlet implements ServletRequestListener, Filt
 
 	@Override
 	public void requestInitialized(ServletRequestEvent sre) {
-//		ServletRequestImpl req = (ServletRequestImpl) sre.getServletRequest();
-//		System.out.println(">> '" + req.getMethod() + "' '" + req.getRequestURI() + "' '" + req.getQueryString() + "'");
-//		Enumeration<String> e = req.getHeaderNames();
-//		while (e.hasMoreElements()) {
-//			String k = e.nextElement();
-//			Enumeration<String> headers = req.getHeaders(k);
-//			System.out.print(k);
-//			System.out.print(":");
-//			while (headers.hasMoreElements())
-//				System.out.print(" '" + headers.nextElement() + "'");
-//			System.out.println();
-//		}
+		// nothing
 	}
 
 	@Override
 	public void requestDestroyed(ServletRequestEvent sre) {
-//		ServletRequest req = sre.getServletRequest();
-//		System.out.println("destroy " + req);
+		// nothing
 	}
 
 	@Override
 	public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
-//		System.out.println("filtering " + request);
 		chain.doFilter(request, response);
 	}
 }

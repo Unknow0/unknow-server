@@ -79,8 +79,8 @@ public abstract class AstBaseClass<T extends TypeDeclaration<?>> implements Clas
 		if (parameters().isEmpty())
 			return name();
 		StringBuilder sb = new StringBuilder(name()).append('<');
-		for (TypeParamModel p : parameters())
-			sb.append(p.type()).append(',');
+		for (TypeParamModel t : parameters())
+			sb.append(t.type()).append(',');
 		sb.setCharAt(sb.length() - 1, '>');
 		return sb.toString();
 	}
