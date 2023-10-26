@@ -264,8 +264,8 @@ public class JaxrsModel {
 		}
 		if (basePath == null || basePath.isEmpty())
 			basePath = "/";
-		if (basePath.length() > 1 && basePath.endsWith("/"))
-			basePath = basePath.substring(0, basePath.length() - 1);
+		if (!basePath.endsWith("/"))
+			basePath = basePath + "/";
 		if (basePath.charAt(0) != '/')
 			basePath = '/' + basePath;
 		if (baseConsume == null)
@@ -287,8 +287,8 @@ public class JaxrsModel {
 
 		if (a.isPresent()) {
 			String s = a.flatMap(v -> v.value()).map(v -> v.asLiteral()).orElse("");
-			if (s.charAt(0) != '/')
-				path += "/";
+			if (s.charAt(0) == '/')
+				s = s.substring(1);
 			path += s;
 		}
 

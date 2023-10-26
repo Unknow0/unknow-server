@@ -309,12 +309,15 @@ public class JaxRsServletBuilder {
 
 		JaxrsMapping def = produce.remove("*/*");
 		Statement stmt = new ThrowStmt(new ObjectCreationExpr(null, types.getClass(NotAcceptableException.class), Utils.list()));
+
 		if (def != null)
 			stmt = new ExpressionStmt(new MethodCallExpr(def.var + "$call", new NameExpr("req"), new NameExpr("res")));
 		if (produce.isEmpty())
 			return b.addStatement(accept).addStatement(stmt);
 
-		b.addStatement(Utils.assign(types.getClass(MediaType.class), "accept", accept));
+		b.addStatement(Utils.assign(types.getClass(MediaType.class), "accept", accept))
+				.addStatement(new IfStmt(new BinaryExpr(new NameExpr("accept"), new NullLiteralExpr(), BinaryExpr.Operator.EQUALS),
+						new ThrowStmt(new ObjectCreationExpr(null, types.getClass(NotAcceptableException.class), Utils.list())), null));
 
 		List<String> k = new ArrayList<>(produce.keySet());
 		k.sort(MIME);
