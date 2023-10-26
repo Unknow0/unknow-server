@@ -37,10 +37,10 @@
 		<module>unknow-server-util</module>
 		<module>unknow-server-jaxb</module>
 		<module>unknow-server-jaxws</module>
+		<module>unknow-server-test</module>
 		<module>unknow-nio</module>
 		<module>unknow-http</module>
 		<module>unknow-protobuf</module>
-		<module>unknow-http-test</module>
 		<module>unknow-http-jaxrs</module>
 	</modules>
 	<build>
