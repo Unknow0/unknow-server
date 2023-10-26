@@ -234,6 +234,7 @@ public class JaxrsContext {
 
 		@Override
 		public Response toResponse(WebApplicationException e) {
+			logger.warn("{}", e.getMessage());
 			return e.getResponse();
 		}
 	}
