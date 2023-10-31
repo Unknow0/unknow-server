@@ -8,6 +8,7 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
 
+import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Marshaller;
 
 /**
@@ -24,7 +25,7 @@ public interface XmlHandler<T> {
 	 * @param listener
 	 * @throws XMLStreamException in case of error
 	 */
-	void write(XMLStreamWriter w, T t, Marshaller.Listener listener) throws XMLStreamException;
+	void write(XMLStreamWriter w, T t, Marshaller.Listener listener) throws XMLStreamException, JAXBException;
 
 	/**
 	 * read object content
@@ -35,7 +36,20 @@ public interface XmlHandler<T> {
 	 * @return object read
 	 * @throws XMLStreamException in case of error
 	 */
-	T read(XMLStreamReader r, Object parent, UnmarshallerImpl listener) throws XMLStreamException;
+	T read(XMLStreamReader r, Object parent, UnmarshallerImpl listener) throws XMLStreamException, JAXBException;
+
+	/**
+	 * read object content and validate it
+	 * 
+	 * @param r        reader to read from
+	 * @param parent
+	 * @param listener
+	 * @return object read
+	 * @throws XMLStreamException in case of error
+	 */
+	default T readValidate(XMLStreamReader r, Object parent, UnmarshallerImpl listener) throws XMLStreamException, JAXBException {
+		return read(r, parent, listener);
+	}
 
 	public static void skipTag(XMLStreamReader r) throws XMLStreamException {
 		int i = 1;

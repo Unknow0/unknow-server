@@ -16,16 +16,16 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
 import unknow.server.jaxb.NsCollector;
+import unknow.server.maven.jaxb.model.XmlCollection;
+import unknow.server.maven.jaxb.model.XmlElement;
+import unknow.server.maven.jaxb.model.XmlElements;
+import unknow.server.maven.jaxb.model.XmlEnum;
+import unknow.server.maven.jaxb.model.XmlType;
+import unknow.server.maven.jaxb.model.XmlTypeComplex;
+import unknow.server.maven.jaxb.model.XmlEnum.XmlEnumEntry;
 import unknow.server.maven.jaxws.binding.Operation;
 import unknow.server.maven.jaxws.binding.Parameter;
 import unknow.server.maven.jaxws.binding.Service;
-import unknow.server.maven.model_xml.XmlCollection;
-import unknow.server.maven.model_xml.XmlElement;
-import unknow.server.maven.model_xml.XmlElements;
-import unknow.server.maven.model_xml.XmlEnum;
-import unknow.server.maven.model_xml.XmlEnum.XmlEnumEntry;
-import unknow.server.maven.model_xml.XmlType;
-import unknow.server.maven.model_xml.XmlTypeComplex;
 
 /**
  * @author unknow
@@ -90,7 +90,7 @@ public class WsdlBuilder {
 			XmlTypeComplex x = (XmlTypeComplex) t;
 			for (XmlElement e : x.getAttributes())
 				collectType(e.xmlType(), ns);
-			for (XmlElement e : x.getElements())
+			for (XmlElement e : x.getElements().childs())
 				collectType(e.xmlType(), ns);
 			if (x.getValue() != null)
 				collectType(x.getValue().xmlType(), ns);
@@ -229,7 +229,7 @@ public class WsdlBuilder {
 		if (elements == null)
 			return;
 		out.writeStartElement(XS, elements.group().toString());
-		for (XmlElement e : elements) {
+		for (XmlElement e : elements.childs()) { // TODO
 			out.writeStartElement(XS, ELEMENT);
 			out.writeAttribute("name", e.name());
 			out.writeAttribute("type", name(e.xmlType().name()));

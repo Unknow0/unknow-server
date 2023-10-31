@@ -100,7 +100,7 @@ public interface AnnotationValue {
 	 * @author unknow
 	 */
 	static class AnnotationValueNull implements AnnotationValue {
-		private AnnotationValueNull() {
+		protected AnnotationValueNull() {
 		}
 
 		@Override

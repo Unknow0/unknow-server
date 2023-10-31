@@ -58,7 +58,7 @@ public class JvmField implements FieldModel, JvmMod {
 
 	@Override
 	public String toString() {
-		return f.toString();
+		return type() + " " + name();
 	}
 
 	@Override

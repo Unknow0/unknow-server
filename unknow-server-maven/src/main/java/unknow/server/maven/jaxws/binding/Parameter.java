@@ -2,8 +2,8 @@ package unknow.server.maven.jaxws.binding;
 
 import javax.xml.namespace.QName;
 
+import unknow.server.maven.jaxb.model.XmlType;
 import unknow.server.maven.model.TypeModel;
-import unknow.server.maven.model_xml.XmlType;
 
 public class Parameter {
 	public final QName name;

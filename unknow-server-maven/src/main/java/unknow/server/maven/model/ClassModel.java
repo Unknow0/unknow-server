@@ -3,10 +3,16 @@
  */
 package unknow.server.maven.model;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import unknow.server.maven.model.util.AncestrorIterable;
 import unknow.server.maven.model.util.WithMod;
@@ -15,6 +21,7 @@ import unknow.server.maven.model.util.WithMod;
  * @author unknow
  */
 public interface ClassModel extends TypeModel, WithMod {
+	static final Logger logger = LoggerFactory.getLogger(ClassModel.class);
 
 	/**
 	 * @return super type
@@ -96,7 +103,7 @@ public interface ClassModel extends TypeModel, WithMod {
 	 * @return the method
 	 */
 	default Optional<MethodModel> findMethod(String name, TypeModel... params) {
-		ClassModel c = this;
+
 		Predicate<MethodModel> f = m -> {
 			if (!name.equals(m.name()))
 				return false;
@@ -109,6 +116,7 @@ public interface ClassModel extends TypeModel, WithMod {
 			}
 			return true;
 		};
+		ClassModel c = this;
 		do {
 			Optional<MethodModel> o = methods().stream().filter(f).findFirst();
 			if (o.isPresent())
@@ -204,5 +212,55 @@ public interface ClassModel extends TypeModel, WithMod {
 				return t;
 		}
 		return null;
+	}
+
+	/**
+	 * @return the list of BeanProperty on this class
+	 */
+	default Collection<BeanProperty> properties() {
+		Set<String> names = methods().stream().map(m -> m.name()).filter(m -> m.startsWith("set") || m.startsWith("get"))
+				.map(m -> Character.toLowerCase(m.charAt(3)) + m.substring(4)).collect(Collectors.toSet());
+		for (FieldModel f : fields()) {
+			if (!f.isStatic())
+				names.add(f.name());
+		}
+
+		List<BeanProperty> list = new ArrayList<>();
+		for (String n : names) {
+			BeanProperty p = property(n);
+			if (p != null)
+				list.add(p);
+		}
+		return list;
+	}
+
+	/**
+	 * get a BeanProperty on this class
+	 * @param name property name
+	 * @return the BeanProperty or null if not found
+	 */
+	default BeanProperty property(String name) {
+		String n = Character.toUpperCase(name.charAt(0)) + name.substring(1);
+		MethodModel getter = method("get" + n).orElse(null);
+		if (getter == null)
+			getter = method(name).orElse(null);
+		if (getter == null) {
+			logger.info("Getter not found for property {} in {}", name, this);
+			return null;
+		}
+
+		MethodModel setter = method("set" + n, getter.type()).orElse(null);
+		if (setter == null)
+			setter = method(name, getter.type()).orElse(null);
+		if (setter == null) {
+			logger.info("Setter not found matching {}", getter);
+			return null;
+		}
+		FieldModel field = field(name);
+		if (field != null && !getter.type().isAssignableFrom(field.type())) {
+			logger.warn("Field {} don't match {}", field, getter);
+			return null;
+		}
+		return new BeanProperty(name, field, getter, setter);
 	}
 }

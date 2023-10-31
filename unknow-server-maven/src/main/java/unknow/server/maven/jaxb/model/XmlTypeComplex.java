@@ -1,7 +1,7 @@
 /**
  * 
  */
-package unknow.server.maven.model_xml;
+package unknow.server.maven.jaxb.model;
 
 import java.util.List;
 
@@ -70,5 +70,10 @@ public class XmlTypeComplex implements XmlType {
 			this.clazz = clazz;
 			this.method = method;
 		}
+	}
+
+	@Override
+	public String toString() {
+		return qname + ", " + c + " attrs: " + attrs + ", elems: " + elements + ", value: " + value;
 	}
 }

@@ -1,10 +1,11 @@
 /**
  * 
  */
-package unknow.server.maven.model_xml;
+package unknow.server.maven.jaxb.model;
 
 import javax.xml.namespace.QName;
 
+import unknow.server.maven.model.BeanProperty;
 import unknow.server.maven.model.TypeModel;
 
 /**
@@ -14,8 +15,7 @@ public class XmlElement {
 	private final XmlLoader loader;
 	private final QName qname;
 	private final TypeModel type;
-	private final String getter;
-	private final String setter;
+	private final BeanProperty b;
 
 	/**
 	 * create new XmlElement
@@ -25,12 +25,11 @@ public class XmlElement {
 	 * @param getter
 	 * @param setter
 	 */
-	public XmlElement(XmlLoader loader, QName qname, TypeModel type, String getter, String setter) {
+	public XmlElement(XmlLoader loader, QName qname, TypeModel type, BeanProperty b) {
 		this.loader = loader;
 		this.qname = qname;
 		this.type = type;
-		this.getter = getter;
-		this.setter = setter;
+		this.b = b;
 	}
 
 	public String ns() {
@@ -46,7 +45,7 @@ public class XmlElement {
 	}
 
 	public XmlType xmlType() {
-		return loader.add(type);
+		return loader.add(b.type());
 	}
 
 	public TypeModel type() {
@@ -54,10 +53,15 @@ public class XmlElement {
 	}
 
 	public String getter() {
-		return getter;
+		return b.getter().name();
 	}
 
 	public String setter() {
-		return setter;
+		return b.setter().name();
+	}
+
+	@Override
+	public String toString() {
+		return qname + " " + type;
 	}
 }

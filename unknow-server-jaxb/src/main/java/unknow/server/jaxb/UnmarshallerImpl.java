@@ -45,6 +45,7 @@ public class UnmarshallerImpl implements Unmarshaller {
 	private Listener listener;
 	private ValidationEventHandler validationHandler;
 	private Schema schema;
+	private boolean validating = false;
 
 	public UnmarshallerImpl(Map<QName, XmlRootHandler<?>> rootElement, Map<Class<?>, XmlHandler<?>> handlers) {
 		this.rootElements = rootElement;
@@ -131,7 +132,10 @@ public class UnmarshallerImpl implements Unmarshaller {
 			XmlRootHandler<?> h = rootElements.get(reader.getName());
 			if (h == null)
 				throw new JAXBException("No handler found for xml tag " + reader.getName());
-			return h.read(reader, null, this);
+			if (schema != null)
+				return h.readValidate(reader, null, this);
+			else
+				return h.read(reader, null, this);
 		} catch (XMLStreamException e) {
 			throw new JAXBException(e);
 		}
@@ -141,7 +145,8 @@ public class UnmarshallerImpl implements Unmarshaller {
 	public <T> JAXBElement<T> unmarshal(XMLStreamReader reader, Class<T> declaredType) throws JAXBException {
 		try {
 			QName n = reader.getName();
-			@SuppressWarnings("unchecked") XmlHandler<T> h = (XmlHandler<T>) handlers.get(declaredType);
+			@SuppressWarnings("unchecked")
+			XmlHandler<T> h = (XmlHandler<T>) handlers.get(declaredType);
 			if (h == null)
 				throw new JAXBException("No handler found for class " + declaredType);
 			return new JAXBElement<>(n, declaredType, h.read(reader, null, this));
@@ -236,14 +241,11 @@ public class UnmarshallerImpl implements Unmarshaller {
 
 	@Override
 	public void setValidating(boolean validating) throws JAXBException {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override
 	public boolean isValidating() throws JAXBException {
-		// TODO Auto-generated method stub
-		return false;
+		return schema != null;
 	}
 
 	public void beforeUnmarshal(Object target, Object parent) {

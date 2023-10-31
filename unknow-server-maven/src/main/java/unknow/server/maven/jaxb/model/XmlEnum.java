@@ -1,7 +1,7 @@
 /**
  * 
  */
-package unknow.server.maven.model_xml;
+package unknow.server.maven.jaxb.model;
 
 import java.util.ArrayList;
 import java.util.List;

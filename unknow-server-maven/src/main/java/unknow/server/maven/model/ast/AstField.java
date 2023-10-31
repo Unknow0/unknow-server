@@ -66,7 +66,7 @@ public class AstField implements FieldModel, AstMod<FieldDeclaration> {
 
 	@Override
 	public String toString() {
-		return v.toString();
+		return type() + " " + name();
 	}
 
 	@Override

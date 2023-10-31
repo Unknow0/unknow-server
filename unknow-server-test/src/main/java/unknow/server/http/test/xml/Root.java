@@ -10,6 +10,7 @@ import jakarta.xml.bind.annotation.XmlAccessType;
 import jakarta.xml.bind.annotation.XmlAccessorType;
 import jakarta.xml.bind.annotation.XmlAttribute;
 import jakarta.xml.bind.annotation.XmlElement;
+import jakarta.xml.bind.annotation.XmlElements;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import jakarta.xml.bind.annotation.XmlType;
 
@@ -21,8 +22,8 @@ public class Root {
 	@XmlAttribute
 	private LocalDate value;
 
-	@XmlElement
-	private List<String> elem;
+	@XmlElements({ @XmlElement(name = "elem", type = String.class), @XmlElement(name = "mixed", type = Mixed.class) })
+	private List<Object> elems;
 
 	public LocalDate getValue() {
 		return value;
@@ -32,16 +33,16 @@ public class Root {
 		this.value = value;
 	}
 
-	public List<String> getElem() {
-		return elem;
+	public List<Object> getElems() {
+		return elems;
 	}
 
-	public void setElem(List<String> elem) {
-		this.elem = elem;
+	public void setElems(List<Object> elem) {
+		this.elems = elem;
 	}
 
 	@Override
 	public String toString() {
-		return "Root [value=" + value + ", elem=" + elem + "]";
+		return "Root [value=" + value + ", elem=" + elems + "]";
 	}
 }

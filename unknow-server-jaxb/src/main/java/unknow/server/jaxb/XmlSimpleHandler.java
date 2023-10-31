@@ -8,6 +8,7 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
 
+import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Marshaller;
 
 /**
@@ -16,7 +17,7 @@ import jakarta.xml.bind.Marshaller;
 public interface XmlSimpleHandler<T> extends XmlHandler<T> {
 
 	@Override
-	default void write(XMLStreamWriter w, T t, Marshaller.Listener listener) throws XMLStreamException {
+	default void write(XMLStreamWriter w, T t, Marshaller.Listener listener) throws XMLStreamException, JAXBException {
 		if (listener != null)
 			listener.beforeMarshal(t);
 		w.writeCharacters(toString(t));
@@ -25,7 +26,7 @@ public interface XmlSimpleHandler<T> extends XmlHandler<T> {
 	}
 
 	@Override
-	default T read(XMLStreamReader r, Object parent, UnmarshallerImpl listener) throws XMLStreamException {
+	default T read(XMLStreamReader r, Object parent, UnmarshallerImpl listener) throws XMLStreamException, JAXBException {
 		T o = null;
 		while (r.hasNext()) {
 			int n = r.next();
@@ -42,7 +43,7 @@ public interface XmlSimpleHandler<T> extends XmlHandler<T> {
 		throw new XMLStreamException("EOF");
 	}
 
-	String toString(T t) throws XMLStreamException;
+	String toString(T t) throws XMLStreamException, JAXBException;
 
-	T toObject(String s) throws XMLStreamException;
+	T toObject(String s) throws XMLStreamException, JAXBException;
 }

@@ -34,8 +34,8 @@ import com.github.javaparser.ast.expr.AnnotationExpr;
 import jakarta.jws.WebService;
 import unknow.server.maven.AbstractGeneratorMojo;
 import unknow.server.maven.TypeCache;
+import unknow.server.maven.jaxb.model.XmlLoader;
 import unknow.server.maven.jaxws.binding.Service;
-import unknow.server.maven.model_xml.XmlLoader;
 
 /**
  * @author unknow

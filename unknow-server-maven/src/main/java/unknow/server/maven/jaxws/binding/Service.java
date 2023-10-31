@@ -25,13 +25,13 @@ import jakarta.jws.soap.SOAPBinding.ParameterStyle;
 import jakarta.jws.soap.SOAPBinding.Style;
 import jakarta.jws.soap.SOAPBinding.Use;
 import unknow.server.jaxws.UrlMapping;
+import unknow.server.maven.jaxb.model.XmlLoader;
 import unknow.server.maven.model.AnnotationModel;
 import unknow.server.maven.model.ClassModel;
 import unknow.server.maven.model.MethodModel;
 import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.model.ParamModel;
 import unknow.server.maven.model.TypeModel;
-import unknow.server.maven.model_xml.XmlLoader;
 
 /**
  * @author unknow
