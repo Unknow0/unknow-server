@@ -8,7 +8,7 @@ package unknow.server.jaxws;
  * 
  * @author unknow
  */
-public @interface UrlMapping {
+public @interface WebServiceUrl {
 	/** @return url pattern */
 	String[] value();
 }

@@ -228,7 +228,8 @@ public class XmlLoader {
 	public XmlSimpleElements getElems(Optional<AnnotationModel> elem, String name, String defaultNs, BeanProperty b) {
 		String n = elem.flatMap(a -> a.member("name")).map(a -> a.asLiteral()).map(i -> DEFAULT.equals(i) ? null : i).orElse(name);
 		String ns = elem.flatMap(a -> a.member(NAMESPACE)).map(a -> a.asLiteral()).map(i -> DEFAULT.equals(i) ? null : i).orElse(defaultNs);
-		TypeModel type = elem.flatMap(a -> a.member("type")).map(a -> a.asClass()).orElse(b.type());
+		TypeModel type = elem.flatMap(a -> a.member("type")).map(a -> a.asClass())
+				.filter(a -> !a.name().equals(jakarta.xml.bind.annotation.XmlElement.DEFAULT.class.getName())).orElse(b.type());
 		return new XmlSimpleElements(new XmlElement(this, new QName(ns, n), type, b));
 	}
 

@@ -107,11 +107,11 @@ import unknow.server.maven.Utils;
 import unknow.server.maven.jaxb.model.XmlCollection;
 import unknow.server.maven.jaxb.model.XmlElement;
 import unknow.server.maven.jaxb.model.XmlElements;
+import unknow.server.maven.jaxb.model.XmlElements.XmlGroup;
 import unknow.server.maven.jaxb.model.XmlEnum;
 import unknow.server.maven.jaxb.model.XmlLoader;
 import unknow.server.maven.jaxb.model.XmlType;
 import unknow.server.maven.jaxb.model.XmlTypeComplex;
-import unknow.server.maven.jaxb.model.XmlElements.XmlGroup;
 import unknow.server.maven.model.AnnotationModel;
 import unknow.server.maven.model.TypeModel;
 
@@ -309,8 +309,11 @@ public class JaxbGeneratorMojo extends AbstractGeneratorMojo {
 					l.add(Utils.text(e.ns()));
 				l.add(Utils.text(e.name()));
 				l.add(new NameExpr("s"));
-				b.addStatement(new IfStmt(new BinaryExpr(v, new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS),
-						new ExpressionStmt(new MethodCallExpr(new NameExpr("w"), "writeAttribute", l)), null));
+				if (e.type().isPrimitive())
+					b.addStatement(new MethodCallExpr(new NameExpr("w"), "writeAttribute", l));
+				else
+					b.addStatement(new IfStmt(new BinaryExpr(v, new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS),
+							new ExpressionStmt(new MethodCallExpr(new NameExpr("w"), "writeAttribute", l)), null));
 			}
 		}
 
@@ -358,8 +361,11 @@ public class JaxbGeneratorMojo extends AbstractGeneratorMojo {
 								Utils.list(new NameExpr("w"), new NameExpr(n), LISTENER)))
 						.addStatement(new MethodCallExpr(new NameExpr("w"), "writeEndElement", Utils.list()));
 			}
-			b.addStatement(Utils.assign(types.get(e.type()), n, new MethodCallExpr(new NameExpr("t"), e.getter())))
-					.addStatement(new IfStmt(new BinaryExpr(new NameExpr(n), new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS), w, null));
+			b.addStatement(Utils.assign(types.get(e.type()), n, new MethodCallExpr(new NameExpr("t"), e.getter())));
+			if (e.type().isPrimitive())
+				b.addStatement(w);
+			else
+				b.addStatement(new IfStmt(new BinaryExpr(new NameExpr(n), new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS), w, null));
 			return;
 		}
 		for (XmlElements e : elems)

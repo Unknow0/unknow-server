@@ -24,7 +24,7 @@ import jakarta.jws.soap.SOAPBinding;
 import jakarta.jws.soap.SOAPBinding.ParameterStyle;
 import jakarta.jws.soap.SOAPBinding.Style;
 import jakarta.jws.soap.SOAPBinding.Use;
-import unknow.server.jaxws.UrlMapping;
+import unknow.server.jaxws.WebServiceUrl;
 import unknow.server.maven.jaxb.model.XmlLoader;
 import unknow.server.maven.model.AnnotationModel;
 import unknow.server.maven.model.ClassModel;
@@ -66,12 +66,18 @@ public class Service {
 	public static Service build(TypeDeclaration<?> serviceClass, String basePath, ModelLoader loader, XmlLoader xmlLoader) {
 		TypeModel clazz = loader.get(serviceClass.resolve().getQualifiedName());
 		AnnotationModel ws = clazz.annotation(WebService.class).orElse(null);
-		String name = ws.member("serviceName").map(v -> v.asLiteral()).orElse(serviceClass.getNameAsString() + "Service");
-		String portType = ws.member("name").map(v -> v.asLiteral()).orElse(serviceClass.resolve().getClassName());
-		String portName = ws.member("portName").map(v -> v.asLiteral()).orElse(portType + "Port");
-		String ns = ws.member("targetNamespace").map(v -> v.asLiteral()).orElse(serviceClass.resolve().getPackageName());
+		String name = ws.member("serviceName").map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).orElse(serviceClass.getNameAsString() + "Service");
+		String portType = ws.member("name").map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).orElse(serviceClass.resolve().getClassName());
+		String portName = ws.member("portName").map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).orElse(portType + "Port");
+		String ns = ws.member("targetNamespace").map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).orElse(serviceClass.resolve().getPackageName());
 
-		String[] url = clazz.annotation(UrlMapping.class).flatMap(a -> a.value()).map(v -> v.asArrayLiteral()).orElse(new String[] { basePath + name });
+		String[] url = clazz.annotation(WebServiceUrl.class).flatMap(a -> a.value()).map(v -> v.asArrayLiteral()).orElse(new String[] { name });
+		for (int i = 0; i < url.length; i++) {
+			String u = url[i];
+			if (u.startsWith("/"))
+				u = u.substring(1);
+			url[i] = basePath + u;
+		}
 
 		Optional<AnnotationModel> a = clazz.annotation(SOAPBinding.class);
 		Style style = a.flatMap(v -> v.member("style")).map(v -> v.asEnum(Style.class)).orElse(Style.DOCUMENT);

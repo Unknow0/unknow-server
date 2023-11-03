@@ -64,6 +64,9 @@ public class JaxwsGeneratorMojo extends AbstractGeneratorMojo {
 		init();
 		processSrc();
 
+		if (!basePath.endsWith("/"))
+			basePath += "/";
+
 		if (jaxbFactory == null)
 			jaxbFactory = findJaxbFactory();
 		if (jaxbFactory == null)

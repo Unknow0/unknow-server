@@ -114,8 +114,12 @@ public abstract class AbstractWs extends HttpServlet {
 
 		String action = req.getHeader("soapaction");
 		StringBuilder sig = new StringBuilder();
-		if (action != null)
+		if (action != null) {
+			if (action.startsWith("\"") && action.endsWith("\""))
+				action = action.substring(0, action.length() - 2);
 			sig.append(action);
+		}
+		// TODO get from contentType param
 		e.sig(sig.append('/'));
 		WSMethod m = getCall(sig.toString());
 		if (m != null) {

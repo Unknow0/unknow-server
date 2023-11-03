@@ -142,6 +142,7 @@ public class JaxwsServletBuilder {
 			if (o.result == null)
 				b.addStatement(new MethodCallExpr(new NameExpr("WS"), o.m, param));
 			else {
+				clazz.add(o.result.type);
 				b.addStatement(
 						new AssignExpr(new VariableDeclarationExpr(types.getClass(o.result.type), "ro"), new MethodCallExpr(new NameExpr("WS"), o.m, param), Operator.ASSIGN));
 				e = new ObjectCreationExpr(null, types.getClass(JAXBElement.class, TypeCache.EMPTY),
