@@ -3,7 +3,6 @@
  */
 package unknow.server.http.test.xml;
 
-import java.time.LocalDate;
 import java.util.List;
 
 import jakarta.xml.bind.annotation.XmlAccessType;
@@ -20,7 +19,7 @@ import jakarta.xml.bind.annotation.XmlType;
 public class Root {
 	public static final String NS = "http://webservice.unknow";
 	@XmlAttribute
-	private LocalDate value;
+	private String value;
 
 	@XmlElements({ @XmlElement(name = "s", type = String.class), @XmlElement(name = "elem", type = String.class), @XmlElement(name = "mixed", type = Mixed.class) })
 	private List<Object> elems;
@@ -28,11 +27,11 @@ public class Root {
 	@XmlElements({ @XmlElement(name = "a", type = String.class), @XmlElement(name = "c", type = String.class), @XmlElement(name = "c", type = Mixed.class) })
 	private Object choice;
 
-	public LocalDate getValue() {
+	public String getValue() {
 		return value;
 	}
 
-	public void setValue(LocalDate value) {
+	public void setValue(String value) {
 		this.value = value;
 	}
 

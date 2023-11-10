@@ -36,9 +36,9 @@ public class SimpleAnnotationArray extends AnnotationValueNull {
 	}
 
 	private SimpleAnnotation withAnnotation(String name) {
-		SimpleAnnotation a = new SimpleAnnotation(name);
-		with(new AnnotationValueAnnotation(a));
-		return a;
+		SimpleAnnotation an = new SimpleAnnotation(name);
+		with(new AnnotationValueAnnotation(an));
+		return an;
 	}
 
 	@Override

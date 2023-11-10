@@ -24,6 +24,6 @@ public class HandlerBuilder implements SourceBuilder<HandlerContext> {
 		else if (ctx.xml() instanceof XmlTypeComplex)
 			OBJECT.process(cl, types, ctx);
 		else
-			logger.warn(">> " + ctx.xml());
+			logger.warn(">> {}", ctx.xml());
 	}
 }
