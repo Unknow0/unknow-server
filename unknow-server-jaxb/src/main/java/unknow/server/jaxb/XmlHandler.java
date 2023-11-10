@@ -22,10 +22,11 @@ public interface XmlHandler<T> {
 	 * 
 	 * @param w        writer to write to
 	 * @param t        object to write
+	 * @param m TODO
 	 * @param listener
 	 * @throws XMLStreamException in case of error
 	 */
-	void write(XMLStreamWriter w, T t, Marshaller.Listener listener) throws XMLStreamException, JAXBException;
+	void write(XMLStreamWriter w, T t, MarshallerImpl m, Marshaller.Listener listener) throws XMLStreamException, JAXBException;
 
 	/**
 	 * read object content

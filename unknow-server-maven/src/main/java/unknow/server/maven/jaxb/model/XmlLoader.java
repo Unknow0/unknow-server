@@ -35,10 +35,9 @@ import jakarta.xml.bind.annotation.XmlAccessType;
 import jakarta.xml.bind.annotation.XmlAccessorOrder;
 import jakarta.xml.bind.annotation.XmlAccessorType;
 import jakarta.xml.bind.annotation.XmlSchema;
+import jakarta.xml.bind.annotation.XmlTransient;
 import jakarta.xml.bind.annotation.XmlValue;
 import unknow.server.maven.jaxb.model.XmlElements.XmlGroup;
-import unknow.server.maven.jaxb.model.XmlElements.XmlGroupElements;
-import unknow.server.maven.jaxb.model.XmlElements.XmlSimpleElements;
 import unknow.server.maven.jaxb.model.XmlTypeComplex.Factory;
 import unknow.server.maven.model.AnnotationModel;
 import unknow.server.maven.model.BeanProperty;
@@ -59,7 +58,7 @@ public class XmlLoader {
 	public static final String XS = "http://www.w3.org/2001/XMLSchema";
 
 	public static final XmlType ANY = new XmlTypeComplex(new QName(XS, "any"), JvmModelLoader.GLOBAL.get("java.lang.Object").asClass(),
-			new Factory(JvmModelLoader.GLOBAL.get("java.lang.Object").asClass(), ""), Collections.emptyList(), null, null);
+			new Factory(JvmModelLoader.GLOBAL.get("java.lang.Object").asClass(), ""), Collections.emptyList(), new XmlElements(XmlGroup.SEQUENCE, Arrays.asList()), null);
 
 	public static final XmlTypeSimple BOOLEAN = new XmlTypeSimple(new QName(XS, "boolean"), PrimitiveModel.BOOLEAN);
 	public static final XmlTypeSimple BYTE = new XmlTypeSimple(new QName(XS, "byte"), PrimitiveModel.BYTE);
@@ -102,8 +101,8 @@ public class XmlLoader {
 	public XmlType add(TypeModel type) {
 		XmlType xmlType = types.get(type.name());
 		if (xmlType == null) {
-			logger.info("adding bind for {}", type);
 			types.put(type.name(), xmlType = create(type));
+			logger.info("added {}", xmlType);
 		}
 		return xmlType;
 	}
@@ -151,7 +150,7 @@ public class XmlLoader {
 			defaultNs = o.flatMap(v -> v.member(NAMESPACE)).map(v -> v.asLiteral()).orElse("");
 
 		List<XmlElement> attrs = new ArrayList<>();
-		List<XmlElements> elems = new ArrayList<>();
+		List<XmlElement> elems = new ArrayList<>();
 		XmlElement value = null;
 		for (BeanProperty b : BeanProperty.properties(c)) {
 			Optional<AnnotationModel> choice = b.annotation(jakarta.xml.bind.annotation.XmlElements.class);
@@ -159,7 +158,7 @@ public class XmlLoader {
 			Optional<AnnotationModel> attr = b.annotation(jakarta.xml.bind.annotation.XmlAttribute.class);
 			Optional<AnnotationModel> v = b.annotation(XmlValue.class);
 
-			if (choice.isEmpty() && elem.isEmpty() && attr.isEmpty() && v.isEmpty()) // TODO XmlAccess
+			if (choice.isEmpty() && elem.isEmpty() && attr.isEmpty() && v.isEmpty() && !isAccess(type, b))
 				continue;
 
 			TypeModel t = b.type();
@@ -168,22 +167,26 @@ public class XmlLoader {
 					throw new IllegalArgumentException("multiple value for '" + c.name() + "'");
 				if (!(add(t) instanceof XmlTypeSimple))
 					throw new IllegalArgumentException("only simple type allowed in value '" + c.name() + "'");
-				value = new XmlElement(this, null, b.type(), b);
+				value = new XmlElement(null, b, () -> add(b.type()));
 			} else if (attr.isPresent()) {
 				if (!(add(t) instanceof XmlTypeSimple))
 					throw new IllegalArgumentException("only simple type allowed in attribute in '" + c.name() + "'");
 				String n = attr.flatMap(a -> a.member("name")).map(a -> a.asLiteral()).map(i -> DEFAULT.equals(i) ? null : i).orElse(b.name());
 				String ns = attr.flatMap(a -> a.member(NAMESPACE)).map(a -> a.asLiteral()).map(i -> DEFAULT.equals(i) ? null : i).orElse("");
-				attrs.add(new XmlElement(this, new QName(ns, n), b.type(), b));
+				attrs.add(new XmlElement(new QName(ns, n), b, () -> add(b.type())));
 			} else if (choice.isPresent()) {
 				AnnotationModel[] e = choice.get().value().map(a -> a.asArrayAnnotation()).orElse(null);
 				if (e == null || e.length == 0)
 					throw new IllegalArgumentException("Emtpy choice for " + b);
 
-				List<XmlElements> list = new ArrayList<>();
+				List<XmlElement> list = new ArrayList<>();
 				for (int i = 0; i < e.length; i++)
 					list.add(getElems(Optional.of(e[i]), b.name(), defaultNs, b));
-				elems.add(new XmlGroupElements(XmlGroup.CHOICE, list));
+				XmlType x = new XmlChoice(list);
+				if (b.type().isArray() || b.type().isAssignableTo(Collection.class))
+					x = new XmlCollection(b.type(), x);
+				final XmlType xml = x;
+				elems.add(new XmlElement(new QName(b.name()), b, () -> xml));
 			} else
 				elems.add(getElems(elem, b.name(), defaultNs, b));
 		}
@@ -198,12 +201,12 @@ public class XmlLoader {
 				.orElse(Collections.emptyList());
 		if (propOrder.isEmpty()) {
 			if (defaultOrder == XmlAccessOrder.ALPHABETICAL)
-				Collections.sort(elems, (a, b) -> a.firstName().compareTo(b.firstName()));
-			elements = new XmlGroupElements(XmlGroup.ALL, elems);
+				Collections.sort(elems, (a, b) -> a.name().compareTo(b.name()));
+			elements = new XmlElements(XmlGroup.ALL, elems);
 		} else {
 			Collections.sort(elems, (a, b) -> {
-				String an = a.firstName();
-				String bn = b.firstName();
+				String an = a.name();
+				String bn = b.name();
 				int ai = propOrder.indexOf(an);
 				int bi = propOrder.indexOf(bn);
 				if (bi >= 0 && ai >= 0)
@@ -214,7 +217,7 @@ public class XmlLoader {
 					return -1;
 				return 1;
 			});
-			elements = new XmlGroupElements(XmlGroup.SEQUENCE, elems);
+			elements = new XmlElements(XmlGroup.SEQUENCE, elems);
 		}
 
 		Optional<AnnotationModel> a = c.annotation(jakarta.xml.bind.annotation.XmlType.class);
@@ -225,12 +228,20 @@ public class XmlLoader {
 		return new XmlTypeComplex(qname(c), c, f, attrs, elements, value);
 	}
 
-	public XmlSimpleElements getElems(Optional<AnnotationModel> elem, String name, String defaultNs, BeanProperty b) {
+	public XmlElement getElems(Optional<AnnotationModel> elem, String name, String defaultNs, BeanProperty b) {
 		String n = elem.flatMap(a -> a.member("name")).map(a -> a.asLiteral()).map(i -> DEFAULT.equals(i) ? null : i).orElse(name);
 		String ns = elem.flatMap(a -> a.member(NAMESPACE)).map(a -> a.asLiteral()).map(i -> DEFAULT.equals(i) ? null : i).orElse(defaultNs);
 		TypeModel type = elem.flatMap(a -> a.member("type")).map(a -> a.asClass())
 				.filter(a -> !a.name().equals(jakarta.xml.bind.annotation.XmlElement.DEFAULT.class.getName())).orElse(b.type());
-		return new XmlSimpleElements(new XmlElement(this, new QName(ns, n), type, b));
+		return new XmlElement(new QName(ns, n), b, () -> add(type));
+	}
+
+	private static boolean isAccess(XmlAccessType type, BeanProperty b) {
+		if (b.annotation(XmlTransient.class).isPresent())
+			return false;
+
+		return type == XmlAccessType.PROPERTY || type == XmlAccessType.FIELD && b.field() != null && !b.field().isTransient()
+				|| type == XmlAccessType.PUBLIC_MEMBER && (b.getter().isPublic() && b.setter().isPublic() || b.field() != null && b.field().isPublic());
 	}
 
 	private static QName qname(TypeModel type) {

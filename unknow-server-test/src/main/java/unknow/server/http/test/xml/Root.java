@@ -22,8 +22,11 @@ public class Root {
 	@XmlAttribute
 	private LocalDate value;
 
-	@XmlElements({ @XmlElement(name = "elem", type = String.class), @XmlElement(name = "mixed", type = Mixed.class) })
+	@XmlElements({ @XmlElement(name = "s", type = String.class), @XmlElement(name = "elem", type = String.class), @XmlElement(name = "mixed", type = Mixed.class) })
 	private List<Object> elems;
+
+	@XmlElements({ @XmlElement(name = "a", type = String.class), @XmlElement(name = "c", type = String.class), @XmlElement(name = "c", type = Mixed.class) })
+	private Object choice;
 
 	public LocalDate getValue() {
 		return value;
@@ -39,6 +42,14 @@ public class Root {
 
 	public void setElems(List<Object> elem) {
 		this.elems = elem;
+	}
+
+	public Object getChoice() {
+		return choice;
+	}
+
+	public void setChoice(Object choice) {
+		this.choice = choice;
 	}
 
 	@Override

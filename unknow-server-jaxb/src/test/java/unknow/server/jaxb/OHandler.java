@@ -27,7 +27,7 @@ public class OHandler extends XmlRootHandler<O> {
 	}
 
 	@Override
-	public void write(XMLStreamWriter w, O t, Marshaller.Listener listener) throws XMLStreamException {
+	public void write(XMLStreamWriter w, O t, MarshallerImpl m, Marshaller.Listener listener) throws XMLStreamException {
 		w.writeAttribute("a", Integer.toString(t.a));
 		// or write CDATA
 		w.writeCharacters(t.v);

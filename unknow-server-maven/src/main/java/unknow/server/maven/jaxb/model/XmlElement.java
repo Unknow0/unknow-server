@@ -3,6 +3,10 @@
  */
 package unknow.server.maven.jaxb.model;
 
+import java.util.HashSet;
+import java.util.Set;
+import java.util.function.Supplier;
+
 import javax.xml.namespace.QName;
 
 import unknow.server.maven.model.BeanProperty;
@@ -12,24 +16,22 @@ import unknow.server.maven.model.TypeModel;
  * @author unknow
  */
 public class XmlElement {
-	private final XmlLoader loader;
 	private final QName qname;
-	private final TypeModel type;
 	private final BeanProperty b;
+	private final Supplier<XmlType> xmlType;
 
 	/**
 	 * create new XmlElement
+	 * @param xmlLoader 
 	 * 
 	 * @param qname
-	 * @param type
 	 * @param getter
 	 * @param setter
 	 */
-	public XmlElement(XmlLoader loader, QName qname, TypeModel type, BeanProperty b) {
-		this.loader = loader;
+	public XmlElement(QName qname, BeanProperty b, Supplier<XmlType> xmlType) {
 		this.qname = qname;
-		this.type = type;
 		this.b = b;
+		this.xmlType = xmlType;
 	}
 
 	public String ns() {
@@ -45,11 +47,11 @@ public class XmlElement {
 	}
 
 	public XmlType xmlType() {
-		return loader.add(b.type());
+		return xmlType.get();
 	}
 
 	public TypeModel type() {
-		return type;
+		return b.type();
 	}
 
 	public String getter() {
@@ -60,8 +62,20 @@ public class XmlElement {
 		return b.setter().name();
 	}
 
+	public BeanProperty prop() {
+		return b;
+	}
+
 	@Override
 	public String toString() {
-		return qname + " " + type;
+		StringBuilder sb = new StringBuilder();
+		toString(sb, new HashSet<>());
+		return sb.toString();
+	}
+
+	public void toString(StringBuilder sb, Set<XmlType> saw) {
+		if (qname != null)
+			sb.append(qname).append(':');
+		xmlType.get().toString(sb, saw);
 	}
 }

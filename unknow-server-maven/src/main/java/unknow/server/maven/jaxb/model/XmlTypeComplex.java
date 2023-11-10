@@ -3,7 +3,9 @@
  */
 package unknow.server.maven.jaxb.model;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import javax.xml.namespace.QName;
 
@@ -74,6 +76,24 @@ public class XmlTypeComplex implements XmlType {
 
 	@Override
 	public String toString() {
-		return qname + ", " + c + " attrs: " + attrs + ", elems: " + elements + ", value: " + value;
+		StringBuilder sb = new StringBuilder();
+		toString(sb, new HashSet<>());
+		return sb.toString();
+	}
+
+	@Override
+	public void toString(StringBuilder sb, Set<XmlType> saw) {
+		sb.append(c.name());
+		if (!saw.add(this))
+			return;
+
+		sb.append("{attrs: [");
+		for (XmlElement e : attrs)
+			e.toString(sb, saw);
+		sb.append("], elems: ");
+		elements.toString(sb, saw);
+		if (value != null)
+			value.toString(sb.append(", value: "), saw);
+		sb.append('}');
 	}
 }

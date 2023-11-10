@@ -127,7 +127,7 @@ public class MarshallerImpl implements Marshaller {
 				writer.writeStartElement(ns.get(h.ns()), h.localName(), h.ns());
 				for (Entry<String, String> e : ns.entrySet())
 					writer.writeNamespace(e.getValue(), e.getKey());
-				h.write(writer, jaxbElement, listener);
+				h.write(writer, jaxbElement, this, listener);
 			}
 			if (!fragment)
 				writer.writeEndDocument();
@@ -137,7 +137,7 @@ public class MarshallerImpl implements Marshaller {
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	private final void write(JAXBElement e, XMLStreamWriter writer, Map<String, String> ns) throws JAXBException, XMLStreamException {
+	public final void write(JAXBElement e, XMLStreamWriter writer, Map<String, String> ns) throws JAXBException, XMLStreamException {
 		writer.writeStartElement(e.getName().getNamespaceURI(), e.getName().getLocalPart());
 		if (ns != null) {
 			for (Entry<String, String> n : ns.entrySet())
@@ -149,7 +149,7 @@ public class MarshallerImpl implements Marshaller {
 			XmlHandler h = handlers.get(e.getDeclaredType());
 			if (h == null)
 				throw new JAXBException("Unknown class '" + e.getDeclaredType());
-			h.write(writer, e.getValue(), listener);
+			h.write(writer, e.getValue(), this, listener);
 		}
 		writer.writeEndElement();
 	}
@@ -267,7 +267,7 @@ public class MarshallerImpl implements Marshaller {
 			XmlRootHandler h = rootHandlers.get(t.getClass());
 			if (h == null)
 				throw new JAXBException("Unknown class '" + t.getClass());
-			h.write(c, t, null);
+			h.write(c, t, this, null);
 		}
 		return c.getNs();
 	}

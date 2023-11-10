@@ -16,13 +16,13 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
 import unknow.server.jaxb.NsCollector;
+import unknow.server.maven.jaxb.model.XmlChoice;
 import unknow.server.maven.jaxb.model.XmlCollection;
 import unknow.server.maven.jaxb.model.XmlElement;
-import unknow.server.maven.jaxb.model.XmlElements;
 import unknow.server.maven.jaxb.model.XmlEnum;
+import unknow.server.maven.jaxb.model.XmlEnum.XmlEnumEntry;
 import unknow.server.maven.jaxb.model.XmlType;
 import unknow.server.maven.jaxb.model.XmlTypeComplex;
-import unknow.server.maven.jaxb.model.XmlEnum.XmlEnumEntry;
 import unknow.server.maven.jaxws.binding.Operation;
 import unknow.server.maven.jaxws.binding.Parameter;
 import unknow.server.maven.jaxws.binding.Service;
@@ -82,6 +82,15 @@ public class WsdlBuilder {
 	}
 
 	private void collectType(XmlType t, Map<String, Integer> ns) {
+		if (t instanceof XmlCollection)
+			t = ((XmlCollection) t).component();
+
+		if (t instanceof XmlChoice) {
+			for (XmlElement e : ((XmlChoice) t).choice())
+				collectType(e.xmlType(), ns);
+			return;
+		}
+
 		ns.merge(t.name().getNamespaceURI(), 1, Integer::sum);
 		if (!types.computeIfAbsent(t.name().getNamespaceURI(), k -> new HashSet<>()).add(t))
 			return;
@@ -90,7 +99,7 @@ public class WsdlBuilder {
 			XmlTypeComplex x = (XmlTypeComplex) t;
 			for (XmlElement e : x.getAttributes())
 				collectType(e.xmlType(), ns);
-			for (XmlElement e : x.getElements().childs())
+			for (XmlElement e : x.getElements())
 				collectType(e.xmlType(), ns);
 			if (x.getValue() != null)
 				collectType(x.getValue().xmlType(), ns);
@@ -211,7 +220,12 @@ public class WsdlBuilder {
 			out.writeStartElement(XS, "extension");
 			out.writeAttribute("base", name(o.getValue().qname()));
 		}
-		appendElements(out, o.getElements());
+
+		out.writeStartElement(XS, o.getElements().group().toString());
+		for (XmlElement e : o.getElements())
+			appendElement(out, e);
+		out.writeEndElement();
+
 		for (XmlElement e : o.getAttributes()) { // TODO list ?
 			out.writeStartElement(XS, "attribute");
 			out.writeAttribute("name", e.name());
@@ -225,16 +239,28 @@ public class WsdlBuilder {
 		out.writeEndElement();
 	}
 
-	private void appendElements(XMLStreamWriter out, XmlElements elements) throws XMLStreamException {
-		if (elements == null)
-			return;
-		out.writeStartElement(XS, elements.group().toString());
-		for (XmlElement e : elements.childs()) { // TODO
-			out.writeStartElement(XS, ELEMENT);
-			out.writeAttribute("name", e.name());
-			out.writeAttribute("type", name(e.xmlType().name()));
+	private void appendElement(XMLStreamWriter out, XmlElement e) throws XMLStreamException {
+		XmlType x = e.xmlType();
+		if (x instanceof XmlCollection)
+			x = ((XmlCollection) x).component();
+
+		if (x instanceof XmlChoice) {
+			out.writeStartElement(XS, "choice");
+			if (e.xmlType() instanceof XmlCollection)
+				out.writeAttribute("maxOccurs", "unbounded");
+
+			for (XmlElement v : ((XmlChoice) x).choice())
+				appendElement(out, v);
 			out.writeEndElement();
+
+			return;
 		}
+
+		out.writeStartElement(XS, ELEMENT);
+		if (e.xmlType() instanceof XmlCollection)
+			out.writeAttribute("maxOccurs", "unbounded");
+		out.writeAttribute("name", e.name());
+		out.writeAttribute("type", name(x.name()));
 		out.writeEndElement();
 	}
 

@@ -2,10 +2,10 @@ package unknow.server.maven.model;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,12 +73,18 @@ public class BeanProperty {
 	}
 
 	public static Collection<BeanProperty> properties(ClassModel clazz) {
-		Set<String> names = clazz.methods().stream().map(m -> m.name()).filter(m -> m.startsWith("set") || m.startsWith("get"))
-				.map(m -> Character.toLowerCase(m.charAt(3)) + m.substring(4)).collect(Collectors.toSet());
-		for (FieldModel f : clazz.fields()) {
-			if (!f.isStatic())
-				names.add(f.name());
+		Set<String> names = new HashSet<>();
+
+		for (MethodModel m : clazz.methods()) {
+			if (m.isAbstract() || m.isStatic())
+				continue;
+			String n = m.name();
+			if (n.startsWith("is") && m.parameters().isEmpty())
+				names.add(Character.toLowerCase(n.charAt(2)) + n.substring(3));
+			else if (n.startsWith("get") && m.parameters().isEmpty() || n.startsWith("set") && m.parameters().size() == 1)
+				names.add(Character.toLowerCase(n.charAt(3)) + n.substring(4));
 		}
+		clazz.fields().stream().filter(f -> !f.isStatic()).forEach(f -> f.name());
 
 		List<BeanProperty> list = new ArrayList<>();
 		for (String n : names) {
@@ -99,6 +105,8 @@ public class BeanProperty {
 		MethodModel getter = clazz.method("get" + n).orElse(null);
 		if (getter == null)
 			getter = clazz.method(name).orElse(null);
+		if (getter == null)
+			getter = clazz.method("is" + n).filter(v -> v.type().isAssignableFrom(PrimitiveModel.BOOLEAN)).orElse(null);
 		if (getter == null) {
 			logger.info("Getter not found for property {} in {}", name, clazz);
 			return null;

@@ -17,7 +17,7 @@ import jakarta.xml.bind.Marshaller;
 public interface XmlSimpleHandler<T> extends XmlHandler<T> {
 
 	@Override
-	default void write(XMLStreamWriter w, T t, Marshaller.Listener listener) throws XMLStreamException, JAXBException {
+	default void write(XMLStreamWriter w, T t, MarshallerImpl m, Marshaller.Listener listener) throws XMLStreamException, JAXBException {
 		if (listener != null)
 			listener.beforeMarshal(t);
 		w.writeCharacters(toString(t));

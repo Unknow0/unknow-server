@@ -3,6 +3,8 @@
  */
 package unknow.server.maven.jaxb.model;
 
+import java.util.Set;
+
 import javax.xml.namespace.QName;
 
 import unknow.server.maven.model.TypeModel;
@@ -33,5 +35,15 @@ public class XmlTypeSimple implements XmlType {
 	@Override
 	public TypeModel type() {
 		return type;
+	}
+
+	@Override
+	public String toString() {
+		return type.name();
+	}
+
+	@Override
+	public void toString(StringBuilder sb, Set<XmlType> saw) {
+		sb.append(toString());
 	}
 }

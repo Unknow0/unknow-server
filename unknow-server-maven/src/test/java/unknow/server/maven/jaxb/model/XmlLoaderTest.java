@@ -1,6 +1,7 @@
 package unknow.server.maven.jaxb.model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -12,7 +13,6 @@ import javax.xml.namespace.QName;
 
 import org.junit.jupiter.api.Test;
 
-import jakarta.xml.bind.annotation.XmlElement;
 import unknow.server.maven.jaxb.model.XmlElements.XmlGroup;
 import unknow.server.maven.model.PrimitiveModel;
 import unknow.server.maven.model.jvm.JvmModelLoader;
@@ -25,7 +25,7 @@ public class XmlLoaderTest {
 	public void testXmlElem() {
 		SimpleClass clazz = new SimpleClass("Test", Modifier.PUBLIC);
 
-		clazz.withMethod("getA", Modifier.PUBLIC, PrimitiveModel.INT).withAnnotation(XmlElement.class);
+		clazz.withMethod("getA", Modifier.PUBLIC, PrimitiveModel.INT).withAnnotation(jakarta.xml.bind.annotation.XmlElement.class);
 		clazz.withMethod("setA", Modifier.PUBLIC, PrimitiveModel.VOID).withParam("a", PrimitiveModel.INT);
 
 		XmlLoader xmlLoader = new XmlLoader();
@@ -39,11 +39,9 @@ public class XmlLoaderTest {
 		XmlElements elements = c.getElements();
 		assertNotNull(elements);
 		assertEquals(XmlGroup.ALL, elements.group());
-		Iterator<XmlElements> it = elements.iterator();
+		Iterator<XmlElement> it = elements.iterator();
 		assertTrue(it.hasNext());
-		XmlElements next = it.next();
-		assertEquals(XmlGroup.SIMPLE, next.group());
-		assertEquals(new QName("", "a"), next.childs().iterator().next().qname());
+		assertEquals(new QName("", "a"), it.next().qname());
 	}
 
 	@Test
@@ -52,8 +50,10 @@ public class XmlLoaderTest {
 
 		SimpleAnnotationArray a = clazz.withMethod("getA", Modifier.PUBLIC, PrimitiveModel.INT).withAnnotation(jakarta.xml.bind.annotation.XmlElements.class)
 				.withArray("value");
-		a.withAnnotation(XmlElement.class).withClass("type", PrimitiveModel.INT, JvmModelLoader.GLOBAL.get(XmlElement.DEFAULT.class.getName()));
-		a.withAnnotation(XmlElement.class).withClass("type", PrimitiveModel.DOUBLE, JvmModelLoader.GLOBAL.get(XmlElement.DEFAULT.class.getName()));
+		a.withAnnotation(jakarta.xml.bind.annotation.XmlElement.class).withClass("type", PrimitiveModel.INT,
+				JvmModelLoader.GLOBAL.get(jakarta.xml.bind.annotation.XmlElement.DEFAULT.class.getName()));
+		a.withAnnotation(jakarta.xml.bind.annotation.XmlElement.class).withClass("type", PrimitiveModel.DOUBLE,
+				JvmModelLoader.GLOBAL.get(jakarta.xml.bind.annotation.XmlElement.DEFAULT.class.getName()));
 		clazz.withMethod("setA", Modifier.PUBLIC, PrimitiveModel.VOID).withParam("a", PrimitiveModel.INT);
 
 		XmlLoader xmlLoader = new XmlLoader();
@@ -67,10 +67,10 @@ public class XmlLoaderTest {
 		XmlElements elements = c.getElements();
 		assertNotNull(elements);
 		assertEquals(XmlGroup.ALL, elements.group());
-		Iterator<XmlElements> it = elements.iterator();
+		Iterator<XmlElement> it = elements.iterator();
 		assertTrue(it.hasNext());
-		XmlElements next = it.next();
-		assertEquals(XmlGroup.CHOICE, next.group());
-		assertEquals(new QName("", "a"), next.childs().iterator().next().qname());
+		XmlElement next = it.next();
+		assertInstanceOf(XmlChoice.class, next.xmlType());
+		assertEquals(new QName("", "a"), ((XmlChoice) next.xmlType()).choice().iterator().next().qname());
 	}
 }

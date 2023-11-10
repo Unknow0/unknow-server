@@ -37,7 +37,7 @@ public class XmlEnum extends XmlTypeSimple {
 
 	@Override
 	public String toString() {
-		return "Enum " + entries;
+		return "Enum" + entries;
 	}
 
 	public static final class XmlEnumEntry {

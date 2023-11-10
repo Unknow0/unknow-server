@@ -240,27 +240,6 @@ public interface ClassModel extends TypeModel, WithMod {
 	 * @return the BeanProperty or null if not found
 	 */
 	default BeanProperty property(String name) {
-		String n = Character.toUpperCase(name.charAt(0)) + name.substring(1);
-		MethodModel getter = method("get" + n).orElse(null);
-		if (getter == null)
-			getter = method(name).orElse(null);
-		if (getter == null) {
-			logger.info("Getter not found for property {} in {}", name, this);
-			return null;
-		}
-
-		MethodModel setter = method("set" + n, getter.type()).orElse(null);
-		if (setter == null)
-			setter = method(name, getter.type()).orElse(null);
-		if (setter == null) {
-			logger.info("Setter not found matching {}", getter);
-			return null;
-		}
-		FieldModel field = field(name);
-		if (field != null && !getter.type().isAssignableFrom(field.type())) {
-			logger.warn("Field {} don't match {}", field, getter);
-			return null;
-		}
-		return new BeanProperty(name, field, getter, setter);
+		return BeanProperty.property(this, name);
 	}
 }

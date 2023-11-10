@@ -3,6 +3,9 @@
  */
 package unknow.server.maven.jaxb.model;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import javax.xml.namespace.QName;
 
 import unknow.server.maven.model.TypeModel;
@@ -31,5 +34,17 @@ public class XmlCollection implements XmlType {
 	@Override
 	public TypeModel type() {
 		return type;
+	}
+
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		toString(sb, new HashSet<>());
+		return sb.toString();
+	}
+
+	@Override
+	public void toString(StringBuilder sb, Set<XmlType> saw) {
+		component.toString(sb.append("List "), saw);
 	}
 }
