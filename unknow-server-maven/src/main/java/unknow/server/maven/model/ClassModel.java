@@ -3,9 +3,16 @@
  */
 package unknow.server.maven.model;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import unknow.server.maven.model.util.AncestrorIterable;
 import unknow.server.maven.model.util.WithMod;
@@ -14,6 +21,7 @@ import unknow.server.maven.model.util.WithMod;
  * @author unknow
  */
 public interface ClassModel extends TypeModel, WithMod {
+	static final Logger logger = LoggerFactory.getLogger(ClassModel.class);
 
 	/**
 	 * @return super type
@@ -95,20 +103,22 @@ public interface ClassModel extends TypeModel, WithMod {
 	 * @return the method
 	 */
 	default Optional<MethodModel> findMethod(String name, TypeModel... params) {
+
+		Predicate<MethodModel> f = m -> {
+			if (!name.equals(m.name()))
+				return false;
+			if (m.parameters().size() != params.length)
+				return false;
+			int i = 0;
+			for (ParamModel<MethodModel> p : m.parameters()) {
+				if (!p.type().equals(params[i++]))
+					return false;
+			}
+			return true;
+		};
 		ClassModel c = this;
 		do {
-			Optional<MethodModel> o = methods().stream().filter(m -> {
-				if (!name.equals(m.name()))
-					return false;
-				if (m.parameters().size() != params.length)
-					return false;
-				int i = 0;
-				for (ParamModel<MethodModel> p : m.parameters()) {
-					if (!p.type().equals(params[i++]))
-						return false;
-				}
-				return true;
-			}).findFirst();
+			Optional<MethodModel> o = methods().stream().filter(f).findFirst();
 			if (o.isPresent())
 				return o;
 			c = c.superType();
@@ -190,10 +200,46 @@ public interface ClassModel extends TypeModel, WithMod {
 	 * @return true this class is a boxed type for a primitive (Integer, Character, Double, ect..)
 	 */
 	default boolean isBoxedPrimitive() {
+		return unboxed() != null;
+	}
+
+	/**
+	 * @return the unboxed type or null if it's not a boxed type (Integer, Character, Double, ect..)
+	 */
+	default PrimitiveModel unboxed() {
 		for (PrimitiveModel t : PrimitiveModel.PRIMITIVES) {
 			if (this.equals(t.boxed()))
-				return true;
+				return t;
 		}
-		return false;
+		return null;
+	}
+
+	/**
+	 * @return the list of BeanProperty on this class
+	 */
+	default Collection<BeanProperty> properties() {
+		Set<String> names = methods().stream().map(m -> m.name()).filter(m -> m.startsWith("set") || m.startsWith("get"))
+				.map(m -> Character.toLowerCase(m.charAt(3)) + m.substring(4)).collect(Collectors.toSet());
+		for (FieldModel f : fields()) {
+			if (!f.isStatic())
+				names.add(f.name());
+		}
+
+		List<BeanProperty> list = new ArrayList<>();
+		for (String n : names) {
+			BeanProperty p = property(n);
+			if (p != null)
+				list.add(p);
+		}
+		return list;
+	}
+
+	/**
+	 * get a BeanProperty on this class
+	 * @param name property name
+	 * @return the BeanProperty or null if not found
+	 */
+	default BeanProperty property(String name) {
+		return BeanProperty.property(this, name);
 	}
 }

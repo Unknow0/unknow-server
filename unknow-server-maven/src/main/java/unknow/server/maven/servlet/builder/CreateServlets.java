@@ -35,7 +35,7 @@ public class CreateServlets extends Builder {
 		TypeCache types = ctx.type();
 		ClassOrInterfaceType t = types.getClass(ServletConfigImpl.class);
 		BlockStmt b = ctx.self().addMethod("createServlets", Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL).setType(types.array(ServletConfigImpl.class))
-				.addMarkerAnnotation(Override.class).getBody().get();
+				.addMarkerAnnotation(Override.class).createBody();
 
 		NodeList<Expression> servlets = new NodeList<>();
 

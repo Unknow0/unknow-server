@@ -27,7 +27,7 @@ import jakarta.servlet.http.HttpSessionListener;
  * @author unknow
  */
 public class EventManager {
-	private static final Logger log = LoggerFactory.getLogger(EventManager.class);
+	private static final Logger logger = LoggerFactory.getLogger(EventManager.class);
 
 	private final List<ServletContextListener> contextListeners;
 	private final List<ServletContextAttributeListener> contextAttributeListeners;
@@ -59,7 +59,7 @@ public class EventManager {
 	}
 
 	private static final void error(EventListener l, Exception e) {
-		log.error("failed to notify {}", l, e);
+		logger.error("failed to notify {}", l, e);
 	}
 
 	/**

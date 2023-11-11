@@ -11,6 +11,9 @@ import unknow.server.maven.model.util.WithMod;
  * @author unknow
  */
 public interface JvmMod extends WithMod {
+	/**
+	 * @return modifier
+	 */
 	int mod();
 
 	@Override

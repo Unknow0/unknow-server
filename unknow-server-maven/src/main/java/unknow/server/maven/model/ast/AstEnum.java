@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.github.javaparser.ast.PackageDeclaration;
 import com.github.javaparser.ast.body.EnumConstantDeclaration;
 import com.github.javaparser.ast.body.EnumDeclaration;
 
@@ -27,10 +28,12 @@ public class AstEnum extends AstBaseClass<EnumDeclaration> implements EnumModel 
 	/**
 	 * create new AstEnum
 	 * 
+	 * @param loader
+	 * @param p
 	 * @param e
 	 */
-	public AstEnum(ModelLoader loader, EnumDeclaration e) {
-		super(loader, e);
+	public AstEnum(ModelLoader loader, PackageDeclaration p, EnumDeclaration e) {
+		super(loader, p, e);
 	}
 
 	@Override
@@ -76,6 +79,7 @@ public class AstEnum extends AstBaseClass<EnumDeclaration> implements EnumModel 
 		/**
 		 * create new AstEnumConstant
 		 * 
+		 * @param loader
 		 * @param e
 		 */
 		public AstEnumConstant(ModelLoader loader, EnumConstantDeclaration e) {

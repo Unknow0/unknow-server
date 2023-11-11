@@ -87,6 +87,8 @@ public class TypeCache {
 	private Type create(String cl) {
 		if (cl.endsWith("[]"))
 			return new ArrayType(get(cl.substring(0, cl.length() - 2)));
+		if (cl.startsWith("["))
+			return new ArrayType(get(cl.substring(1)));
 		if (cl.equals("?"))
 			return new WildcardType();
 		if (cl.startsWith("? extends "))
@@ -113,7 +115,11 @@ public class TypeCache {
 				t = new ClassOrInterfaceType(t, split[i]);
 			return t.setTypeArguments(params);
 		}
-		if (split.length > 1 && string == null) {
+		String p = cu.getPackageDeclaration().map(v -> v.getNameAsString()).orElse("");
+		int i = cl.lastIndexOf('.');
+		if (i > 0 && p.equals(cl.substring(0, i)))
+			existingClass.put(last, cl);
+		else if (split.length > 1 && string == null) {
 			cu.addImport(cl.replace('$', '.'));
 			existingClass.put(last, cl);
 		}

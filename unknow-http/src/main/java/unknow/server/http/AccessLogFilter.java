@@ -210,13 +210,8 @@ public class AccessLogFilter implements Filter {
 		List<Part> parts = new ArrayList<>();
 		List<String> param = new ArrayList<>();
 		int last = 0;
-		for (;;) {
-			int i = template.indexOf("%{", last);
-			if (i < 0) {
-				parts.add(new StringPart(template.substring(last)));
-				break;
-			}
-
+		int i;
+		while ((i = template.indexOf("%{", last)) >= 0) {
 			int e = template.indexOf('}', i + 2);
 			if (e < 0) {
 				parts.add(new StringPart(template.substring(last, i + 2)));
@@ -227,31 +222,39 @@ public class AccessLogFilter implements Filter {
 			if (last != i)
 				parts.add(new StringPart(template.substring(last, i)));
 
-			parts.add(parse(template, last + 2, e, param));
+			String key = parseFormat(template, i + 2, e, param);
+			Function<List<String>, Part> f = builders.get(key);
+			if (f == null)
+				throw new RuntimeException("no part named '" + key + "' in template:\n" + template);
+			parts.add(f.apply(param));
+			param.clear();
 			last = e + 1;
 		}
+		if (last < template.length())
+			parts.add(new StringPart(template.substring(last)));
 		return parts.toArray(EMPTY);
 	}
 
-	private static final Part parse(String template, int off, int e, List<String> param) {
-		String key;
-		int i = template.indexOf(':', off);
-		if (i >= 0 && i < e) {
-			key = template.substring(off, i);
-			off = i + 1;
-			while ((i = template.indexOf(':', off)) < e && i > 0) {
-				param.add(template.substring(off, i));
-				off = i + 1;
-			}
-			param.add(template.substring(off, e));
-		} else
-			key = template.substring(off, e);
-		Function<List<String>, Part> f = builders.get(key);
-		if (f == null)
-			throw new RuntimeException("no part named '" + key + "' in template:\n" + template);
-		Part p = f.apply(param);
-		param.clear();
-		return p;
+	/**
+	 * parse a format
+	 * @param template the template
+	 * @param o start index for the format
+	 * @param e end index for the format
+	 * @param param output param
+	 * @return the format name
+	 */
+	private static final String parseFormat(String template, int o, int e, List<String> param) {
+		int i = template.indexOf(':', o);
+		if (i < 0 || i > e)
+			return template.substring(o, e);
+		String key = template.substring(o, i);
+		o = i + 1;
+		while ((i = template.indexOf(':', o)) < e && i > 0) {
+			param.add(template.substring(o, i));
+			o = i + 1;
+		}
+		param.add(template.substring(o, e));
+		return key;
 	}
 
 	public static interface Part {

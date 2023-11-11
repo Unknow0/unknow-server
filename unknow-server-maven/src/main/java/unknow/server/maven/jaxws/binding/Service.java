@@ -7,6 +7,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import javax.xml.namespace.QName;
+
+import org.apache.maven.api.plugin.MojoException;
+
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
 
@@ -19,8 +23,9 @@ import jakarta.jws.WebService;
 import jakarta.jws.soap.SOAPBinding;
 import jakarta.jws.soap.SOAPBinding.ParameterStyle;
 import jakarta.jws.soap.SOAPBinding.Style;
-import unknow.server.jaxws.UrlMapping;
-import unknow.server.maven.jaxws.binding.XmlObject.XmlField;
+import jakarta.jws.soap.SOAPBinding.Use;
+import unknow.server.jaxws.WebServiceUrl;
+import unknow.server.maven.jaxb.model.XmlLoader;
 import unknow.server.maven.model.AnnotationModel;
 import unknow.server.maven.model.ClassModel;
 import unknow.server.maven.model.MethodModel;
@@ -34,62 +39,79 @@ import unknow.server.maven.model.TypeModel;
 public class Service {
 	/** target name */
 	public final String name;
+
+	public final String portType;
+	public final String portName;
 	/** target namespace */
 	public final String ns;
 
 	public final String[] urls;
 
-	public final Style style;
-	public final ParameterStyle paramStyle;
+	public final ParameterStyle defaultParamStyle;
 
 	public String postConstruct;
 	public String preDestroy;
 
-	public final List<Op> operations = new ArrayList<>();
+	public final List<Operation> operations = new ArrayList<>();
 
-	private Service(String name, String ns, String[] urls, Style style, ParameterStyle paramStyle) {
+	private Service(String name, String portType, String portName, String ns, String[] urls, ParameterStyle paramStyle) {
 		this.name = name;
+		this.portType = portType;
+		this.portName = portName;
 		this.ns = ns;
 		this.urls = urls;
-		this.style = style;
-		this.paramStyle = paramStyle;
+		this.defaultParamStyle = paramStyle;
 	}
 
-	public static Service build(TypeDeclaration<?> serviceClass, ModelLoader loader, XmlTypeLoader typeLoader) {
+	public static Service build(TypeDeclaration<?> serviceClass, String basePath, ModelLoader loader, XmlLoader xmlLoader) {
 		TypeModel clazz = loader.get(serviceClass.resolve().getQualifiedName());
-		AnnotationModel ws = clazz.annotation(WebService.class).get();
-		String name = ws.member("name").map(v -> v.asLiteral()).orElse(serviceClass.resolve().getClassName());
-		String ns = ws.member("targetNamespace").map(v -> v.asLiteral()).orElse(serviceClass.resolve().getPackageName());
+		AnnotationModel ws = clazz.annotation(WebService.class).orElse(null);
+		String name = ws.member("serviceName").map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).orElse(serviceClass.getNameAsString() + "Service");
+		String portType = ws.member("name").map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).orElse(serviceClass.resolve().getClassName());
+		String portName = ws.member("portName").map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).orElse(portType + "Port");
+		String ns = ws.member("targetNamespace").map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).orElse(serviceClass.resolve().getPackageName());
 
-		String[] url = clazz.annotation(UrlMapping.class).flatMap(a -> a.value()).map(v -> v.asArrayLiteral()).orElse(new String[] { "/" + name });
+		String[] url = clazz.annotation(WebServiceUrl.class).flatMap(a -> a.value()).map(v -> v.asArrayLiteral()).orElse(new String[] { name });
+		for (int i = 0; i < url.length; i++) {
+			String u = url[i];
+			if (u.startsWith("/"))
+				u = u.substring(1);
+			url[i] = basePath + u;
+		}
 
-		Style style = clazz.annotation(SOAPBinding.class).flatMap(a -> a.member("style")).map(s -> Style.valueOf(s.asLiteral())).orElse(Style.DOCUMENT);
-		ParameterStyle paramStyle = clazz.annotation(SOAPBinding.class).flatMap(a -> a.member("parameterStyle")).map(s -> ParameterStyle.valueOf(s.asLiteral()))
-				.orElse(ParameterStyle.WRAPPED);
+		Optional<AnnotationModel> a = clazz.annotation(SOAPBinding.class);
+		Style style = a.flatMap(v -> v.member("style")).map(v -> v.asEnum(Style.class)).orElse(Style.DOCUMENT);
+		if (style != Style.DOCUMENT)
+			throw new MojoException("Only Document style is managed " + clazz);
+		Use use = a.flatMap(v -> v.member("use")).map(v -> v.asEnum(Use.class)).orElse(Use.LITERAL);
+		if (use != Use.LITERAL)
+			throw new MojoException("Only literal use is managed " + clazz);
 
-		Service service = new Service(name, ns, url, style, paramStyle);
+		ParameterStyle paramStyle = a.flatMap(v -> v.member("parameterStyle")).map(s -> s.asEnum(ParameterStyle.class)).orElse(ParameterStyle.WRAPPED);
+
+		Service service = new Service(name, portType, portName, ns, url, paramStyle);
 
 		String inter = ws.member("endpointInterface").map(v -> v.asLiteral()).orElse("");
 		if (!inter.isEmpty()) {
 			clazz = loader.get(inter);
 			if (clazz == null)
-				throw new RuntimeException("can't find endpointInterface '" + inter + "'");
+				throw new MojoException("can't find endpointInterface '" + inter + "'");
 		}
-		service.collectOp(clazz.asClass(), typeLoader);
+		service.collectOp(clazz.asClass(), xmlLoader);
 
 		for (MethodDeclaration m : serviceClass.getMethods()) {
 			if (m.getAnnotationByClass(PostConstruct.class).isPresent()) {
 				if (m.getParameters().size() != 0)
-					throw new RuntimeException("PostConstruct method can't have parameters on " + clazz.name());
+					throw new MojoException("PostConstruct method can't have parameters on " + clazz.name());
 				if (service.postConstruct != null)
-					throw new RuntimeException("only one method can be annoted with @PostConstruct on " + clazz.name());
+					throw new MojoException("only one method can be annoted with @PostConstruct on " + clazz.name());
 				service.postConstruct = m.getNameAsString();
 			}
 			if (m.getAnnotationByClass(PreDestroy.class).isPresent()) {
 				if (m.getParameters().size() != 0)
-					throw new RuntimeException("@PreDestroy method can't have parameters on " + clazz.name());
+					throw new MojoException("@PreDestroy method can't have parameters on " + clazz.name());
 				if (service.postConstruct != null)
-					throw new RuntimeException("only one method can be annoted with @PreDestroy on " + clazz.name());
+					throw new MojoException("only one method can be annoted with @PreDestroy on " + clazz.name());
 				service.preDestroy = m.getNameAsString();
 			}
 		}
@@ -98,110 +120,48 @@ public class Service {
 
 	/**
 	 * @param cl
-	 * @param typeLoader
+	 * @param xmlLoader
 	 */
-	private void collectOp(ClassModel cl, XmlTypeLoader typeLoader) {
+	private void collectOp(ClassModel cl, XmlLoader xmlLoader) {
 		for (MethodModel m : cl.methods()) {
-			Optional<AnnotationModel> o = m.annotation(WebMethod.class);
-			if (o.isEmpty())
+			Optional<AnnotationModel> a = m.annotation(WebMethod.class);
+			if (a.flatMap(v -> v.member("exclude")).map(v -> v.asBoolean()).orElse(false))
 				continue;
-			if (o.get().member("exclude").map(v -> v.asBoolean()).orElse(false))
-				continue;
-			String name = o.get().member("operationName").map(v -> v.asLiteral()).orElse(m.name());
-			String action = o.get().member("action").map(v -> v.asLiteral()).orElse("");
+			String opName = a.flatMap(v -> v.member("operationName")).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).orElse(m.name());
+			String action = a.flatMap(v -> v.member("action")).map(v -> v.asLiteral()).orElse("");
 
-			Style style = m.annotation(SOAPBinding.class).flatMap(a -> a.member("style")).map(s -> Style.valueOf(s.asLiteral())).orElse(this.style);
-			ParameterStyle paramStyle = m.annotation(SOAPBinding.class).flatMap(a -> a.member("parameterStyle")).map(s -> ParameterStyle.valueOf(s.asLiteral()))
-					.orElse(this.paramStyle);
+			a = m.annotation(SOAPBinding.class);
+			Style style = a.flatMap(v -> v.member("style")).map(v -> v.asEnum(Style.class)).orElse(Style.DOCUMENT);
+			if (style != Style.DOCUMENT)
+				throw new MojoException("Only Document style is managed " + m);
+			Use use = a.flatMap(v -> v.member("use")).map(v -> v.asEnum(Use.class)).orElse(Use.LITERAL);
+			if (use != Use.LITERAL)
+				throw new MojoException("Only literal use is managed " + m);
+			ParameterStyle paramStyle = a.flatMap(v -> v.member("parameterStyle")).map(v -> v.asEnum(ParameterStyle.class)).orElse(defaultParamStyle);
 
-			Param r = null;
+			Parameter r = null;
 			TypeModel type = m.type();
 			if (!type.isVoid()) {
-				boolean header = m.annotation(WebResult.class).flatMap(a -> a.member("header")).map(v -> v.asBoolean()).orElse(false);
-				String rname = m.annotation(WebResult.class).flatMap(a -> a.member("name")).map(v -> v.asLiteral()).orElse("");
-				String rns = m.annotation(WebResult.class).flatMap(a -> a.member("targetNamespace")).map(v -> v.asLiteral()).orElse("");
+				a = m.annotation(WebResult.class);
+				boolean h = a.flatMap(v -> v.member("header")).map(v -> v.asBoolean()).orElse(false);
+				String paramName = a.flatMap(v -> v.member("name")).map(v -> v.asLiteral()).filter(v -> !v.isEmpty())
+						.orElse(paramStyle == ParameterStyle.BARE ? opName + "Response" : "return");
+				String paramNs = a.flatMap(v -> v.member("targetNamespace")).map(v -> v.asLiteral()).filter(v -> !v.isEmpty())
+						.orElse(paramStyle != ParameterStyle.WRAPPED || h ? this.ns : "");
 
-				if (rname.isEmpty())
-					rname = style == Style.DOCUMENT && paramStyle == ParameterStyle.BARE ? name + "Response" : "return";
-				if (rns.isEmpty() && (style != Style.DOCUMENT || paramStyle != ParameterStyle.WRAPPED || header))
-					rns = this.ns;
-
-				r = new Param(rns, rname, typeLoader.get(m.type()), type.name(), header);
+				r = new Parameter(new QName(paramNs, paramName), m.type(), xmlLoader.add(m.type()), h);
 			}
-			Op op = new Op(m.name(), name, ns, r, action, style, paramStyle);
+			List<Parameter> params = new ArrayList<>();
 			for (ParamModel<?> p : m.parameters()) {
-				XmlType<?> t = typeLoader.get(p.type());
-				boolean header = p.annotation(WebParam.class).flatMap(a -> a.member("header")).map(v -> v.asBoolean()).orElse(false);
-				name = p.annotation(WebParam.class).flatMap(a -> a.member("name")).map(v -> v.asLiteral()).orElse("##default");
-				String ns = p.annotation(WebParam.class).flatMap(a -> a.member("targetNamespace")).map(v -> v.asLiteral()).orElse("##default");
-
-				if ("##default".equals(name))
-					name = paramStyle == ParameterStyle.BARE ? op.name : "arg" + op.params.size();
-				if ("##default".equals(ns))
-					ns = paramStyle == ParameterStyle.WRAPPED && !header ? "" : this.ns;
-
-				op.params.add(new Param(ns, name, t, p.type().name(), header));
+				a = p.annotation(WebParam.class);
+				boolean h = a.flatMap(v -> v.member("header")).map(v -> v.asBoolean()).orElse(false);
+				String paramName = a.flatMap(v -> v.member("name")).map(v -> v.asLiteral()).filter(v -> !v.isEmpty())
+						.orElse(paramStyle == ParameterStyle.BARE ? opName : "arg" + p.index());
+				String paramNs = a.flatMap(v -> v.member("targetNamespace")).map(v -> v.asLiteral()).filter(v -> !v.isEmpty())
+						.orElse(paramStyle == ParameterStyle.WRAPPED && !h ? "" : this.ns);
+				params.add(new Parameter(new QName(paramNs, paramName), p.type(), xmlLoader.add(p.type()), h));
 			}
-			operations.add(op);
-		}
-	}
-
-	public static class Op {
-		public final String m;
-		public final String name;
-		public final String ns;
-		public final String action;
-		public final Style style;
-		public final ParameterStyle paramStyle;
-		public final List<Param> params;
-		public final Param result;
-
-		public Op(String m, String name, String ns, Param result, String action, Style style, ParameterStyle paramStyle) {
-			this.m = m;
-			this.name = name;
-			this.ns = ns;
-			this.params = new ArrayList<>();
-			this.result = result;
-			this.action = action;
-			this.style = style;
-			this.paramStyle = paramStyle;
-		}
-
-		public String sig() {
-			if (paramStyle == ParameterStyle.WRAPPED)
-				return (ns.isEmpty() ? "" : '{' + ns + '}') + name;
-			StringBuilder sb = new StringBuilder();
-			for (Param p : params) {
-				if (p.header)
-					sb.append(p.type().javaType().name()).append(';');
-			}
-			sb.append('#');
-			for (Param p : params) {
-				if (!p.header)
-					sb.append(p.type().javaType().name()).append(';');
-			}
-			return sb.toString();
-		}
-
-		@Override
-		public String toString() {
-			return "Operation: " + name + " " + params;
-		}
-	}
-
-	public static class Param extends XmlField<XmlType<?>> {
-		public final String clazz;
-		public final boolean header;
-
-		public Param(String ns, String name, XmlType<?> type, String clazz, boolean header) {
-			super(type, ns, name, "", "");
-			this.clazz = clazz;
-			this.header = header;
-		}
-
-		@Override
-		public String toString() {
-			return qname() + " " + type().name() + " " + header;
+			operations.add(new Operation(m.name(), new QName(ns, opName), paramStyle == ParameterStyle.WRAPPED, action, params, r));
 		}
 	}
 }

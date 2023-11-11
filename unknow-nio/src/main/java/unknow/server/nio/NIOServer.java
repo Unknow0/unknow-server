@@ -18,7 +18,7 @@ import org.slf4j.LoggerFactory;
  * @author unknow
  */
 public class NIOServer extends NIOLoop {
-	private static final Logger log = LoggerFactory.getLogger(NIOServer.class);
+	private static final Logger logger = LoggerFactory.getLogger(NIOServer.class);
 
 	/** the workers to handle the connection */
 	private final NIOWorkers workers;
@@ -47,7 +47,7 @@ public class NIOServer extends NIOLoop {
 	 * @throws IOException
 	 */
 	public void bind(SocketAddress a, HandlerFactory handler) throws IOException {
-		log.info("Server bind to {}", a);
+		logger.info("Server bind to {}", a);
 		ServerSocketChannel open = ServerSocketChannel.open();
 		open.configureBlocking(false);
 		open.register(selector, SelectionKey.OP_ACCEPT, handler);
@@ -67,7 +67,7 @@ public class NIOServer extends NIOLoop {
 			SocketChannel socket = ((ServerSocketChannel) key.channel()).accept();
 			workers.register(socket, new Connection(factory));
 		} catch (IOException e) {
-			log.warn("Failed to accept", e);
+			logger.warn("Failed to accept", e);
 		}
 	}
 
@@ -78,7 +78,7 @@ public class NIOServer extends NIOLoop {
 		try {
 			selector.close();
 		} catch (IOException e) {
-			log.error("failed to close selecctor", e);
+			logger.error("failed to close selecctor", e);
 		}
 	}
 

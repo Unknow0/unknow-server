@@ -29,3 +29,8 @@ jobs:
           sudo apt install libxml2-utils
     - name: validate
       run: bash .github/validate.sh
+    - uses: actions/upload-artifact@v3
+      if: always()
+      with: 
+        name: results-${{matrix.version}}
+        path: log

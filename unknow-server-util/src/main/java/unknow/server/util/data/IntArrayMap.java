@@ -6,6 +6,7 @@ package unknow.server.util.data;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.Set;
 
 /**
@@ -209,6 +210,8 @@ public class IntArrayMap<T> {
 
 		@Override
 		public Integer next() {
+			if (i == len)
+				throw new NoSuchElementException();
 			return keys[i++];
 		}
 

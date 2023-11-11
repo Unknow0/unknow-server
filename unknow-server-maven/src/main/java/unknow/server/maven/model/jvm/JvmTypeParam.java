@@ -11,19 +11,29 @@ import java.util.stream.Collectors;
 
 import unknow.server.maven.model.AnnotationModel;
 import unknow.server.maven.model.ClassModel;
-import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.model.TypeModel;
 import unknow.server.maven.model.TypeParamModel;
 
+/**
+ * @author unknow
+ */
 public class JvmTypeParam implements TypeParamModel {
-	private final ModelLoader loader;
+	private final JvmModelLoader loader;
 	private final ClassModel c;
 	private final TypeVariable<?> t;
 	private final TypeModel type;
 	private Collection<AnnotationModel> annotations;
 	private List<ClassModel> bounds;
 
-	public JvmTypeParam(ModelLoader loader, ClassModel c, TypeVariable<?> t, TypeModel type) {
+	/**
+	 * create new JvmTypeParam
+	 * 
+	 * @param loader
+	 * @param c
+	 * @param t
+	 * @param type
+	 */
+	public JvmTypeParam(JvmModelLoader loader, ClassModel c, TypeVariable<?> t, TypeModel type) {
 		this.loader = loader;
 		this.c = c;
 		this.t = t;

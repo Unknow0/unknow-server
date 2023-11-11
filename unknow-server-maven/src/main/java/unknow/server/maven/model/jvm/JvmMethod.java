@@ -4,6 +4,8 @@
 package unknow.server.maven.model.jvm;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -13,7 +15,6 @@ import unknow.server.maven.model.AnnotationModel;
 import unknow.server.maven.model.AnnotationValue;
 import unknow.server.maven.model.ClassModel;
 import unknow.server.maven.model.MethodModel;
-import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.model.ParamModel;
 import unknow.server.maven.model.TypeModel;
 
@@ -22,7 +23,7 @@ import unknow.server.maven.model.TypeModel;
  */
 public class JvmMethod implements MethodModel, JvmMod {
 	private final ClassModel parent;
-	private final ModelLoader loader;
+	private final JvmModelLoader loader;
 	private final Method m;
 	private Collection<AnnotationModel> annotations;
 	private List<ParamModel<MethodModel>> params;
@@ -31,10 +32,11 @@ public class JvmMethod implements MethodModel, JvmMod {
 	/**
 	 * create new JvmField
 	 * 
+	 * @param parent
 	 * @param loader the loader
 	 * @param m      the method
 	 */
-	public JvmMethod(ClassModel parent, ModelLoader loader, Method m) {
+	public JvmMethod(ClassModel parent, JvmModelLoader loader, Method m) {
 		this.parent = parent;
 		this.loader = loader;
 		this.m = m;
@@ -69,8 +71,12 @@ public class JvmMethod implements MethodModel, JvmMod {
 
 	@Override
 	public List<ParamModel<MethodModel>> parameters() {
-		if (params == null)
-			params = Arrays.stream(m.getParameters()).map(p -> new JvmParam<MethodModel>(loader, this, p)).collect(Collectors.toList());
+		if (params == null) {
+			params = new ArrayList<>();
+			Parameter[] p = m.getParameters();
+			for (int i = 0; i < p.length; i++)
+				params.add(new JvmParam<>(loader, this, p[i], i));
+		}
 		return params;
 	}
 

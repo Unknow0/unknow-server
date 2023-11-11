@@ -11,14 +11,13 @@ import java.util.stream.Collectors;
 import unknow.server.maven.model.AnnotationModel;
 import unknow.server.maven.model.ClassModel;
 import unknow.server.maven.model.FieldModel;
-import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.model.TypeModel;
 
 /**
  * @author unknow
  */
 public class JvmField implements FieldModel, JvmMod {
-	private final ModelLoader loader;
+	private final JvmModelLoader loader;
 	private final ClassModel cl;
 	private final Field f;
 	private Collection<AnnotationModel> annotations;
@@ -27,12 +26,17 @@ public class JvmField implements FieldModel, JvmMod {
 	 * create new JvmField
 	 * 
 	 * @param loader the loader
+	 * @param cl
 	 * @param f      the field
 	 */
-	public JvmField(ModelLoader loader, ClassModel cl, Field f) {
+	public JvmField(JvmModelLoader loader, ClassModel cl, Field f) {
 		this.loader = loader;
 		this.cl = cl;
 		this.f = f;
+	}
+
+	public Field field() {
+		return f;
 	}
 
 	@Override
@@ -54,7 +58,7 @@ public class JvmField implements FieldModel, JvmMod {
 
 	@Override
 	public String toString() {
-		return f.toString();
+		return type() + " " + name();
 	}
 
 	@Override

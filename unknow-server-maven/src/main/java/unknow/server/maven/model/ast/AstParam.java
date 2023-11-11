@@ -23,6 +23,7 @@ public class AstParam<T extends WithParent<ClassModel>> implements ParamModel<T>
 	private final ModelLoader loader;
 	private final T m;
 	private final Parameter p;
+	private final int index;
 	private Collection<AnnotationModel> annotations;
 	private TypeModel type;
 
@@ -33,10 +34,16 @@ public class AstParam<T extends WithParent<ClassModel>> implements ParamModel<T>
 	 * @param m      the owner
 	 * @param p      the parameter
 	 */
-	public AstParam(ModelLoader loader, T m, Parameter p) {
+	public AstParam(ModelLoader loader, T m, Parameter p, int index) {
 		this.loader = loader;
 		this.m = m;
 		this.p = p;
+		this.index = index;
+	}
+
+	@Override
+	public int index() {
+		return index;
 	}
 
 	@Override

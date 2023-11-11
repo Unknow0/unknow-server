@@ -37,8 +37,8 @@ import unknow.server.maven.Utils;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam.JaxrsBeanFieldParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBodyParam;
-import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.model.TypeModel;
+import unknow.server.maven.model.jvm.JvmModelLoader;
 
 /**
  * @author unknow
@@ -110,7 +110,7 @@ public class BeanParamBuilder {
 		if (t.isWildCard()) {
 			t1 = t.asWildcard().bound();
 			if (t1 == null)
-				t1 = ModelLoader.OBJECT;
+				t1 = JvmModelLoader.GLOBAL.get(Object.class.getName());
 		}
 
 		b.addStatement(

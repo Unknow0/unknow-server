@@ -1,6 +1,6 @@
 #!/bin/sh
 
-java -jar unknow-http-test/target/server.jar >log 2>log &
+java -jar unknow-server-test/target/server.jar >log 2>log &
 pid=$!
 trap "kill -9 $pid" EXIT
 sleep 5

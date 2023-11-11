@@ -20,6 +20,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import org.apache.maven.model.Resource;
+import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
@@ -32,6 +33,7 @@ import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Node;
+import com.github.javaparser.ast.PackageDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.resolution.TypeSolver;
 import com.github.javaparser.symbolsolver.JavaSymbolSolver;
@@ -40,11 +42,13 @@ import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSol
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver;
 
 import unknow.server.maven.model.ModelLoader;
+import unknow.server.maven.model.ast.AstModelLoader;
+import unknow.server.maven.model.jvm.JvmModelLoader;
 
 /**
  * @author unknow
  */
-public abstract class AbstractGeneratorMojo extends org.apache.maven.plugin.AbstractMojo {
+public abstract class AbstractGeneratorMojo extends AbstractMojo {
 	private static final Logger logger = LoggerFactory.getLogger(AbstractGeneratorMojo.class);
 
 	@Parameter(defaultValue = "${project}", required = true, readonly = true)
@@ -79,7 +83,11 @@ public abstract class AbstractGeneratorMojo extends org.apache.maven.plugin.Abst
 
 	/** all class in src (fqn to classDef) */
 	protected final Map<String, TypeDeclaration<?>> classes = new HashMap<>();
-	private final Consumer<CompilationUnit> c = cu -> cu.walk(TypeDeclaration.class, c -> classes.put(c.resolve().getQualifiedName(), c));
+	protected final Map<String, PackageDeclaration> packages = new HashMap<>();
+	private final Consumer<CompilationUnit> c = cu -> {
+		cu.walk(TypeDeclaration.class, v -> classes.put(v.resolve().getQualifiedName(), v));
+		cu.getPackageDeclaration().filter(p -> p.getAnnotations() != null).ifPresent(p -> packages.put(p.getNameAsString(), p));
+	};
 
 	protected ModelLoader loader;
 
@@ -89,7 +97,7 @@ public abstract class AbstractGeneratorMojo extends org.apache.maven.plugin.Abst
 
 	protected void init() throws MojoFailureException {
 		classLoader = getClassLoader();
-		loader = new ModelLoader(classLoader, classes);
+		loader = ModelLoader.from(JvmModelLoader.GLOBAL, new JvmModelLoader(classLoader), new AstModelLoader(classes, packages));
 
 		List<String> compileSourceRoots = project.getCompileSourceRoots();
 
@@ -117,6 +125,9 @@ public abstract class AbstractGeneratorMojo extends org.apache.maven.plugin.Abst
 		}
 	}
 
+	/**
+	 * @return a newly created compilationUnit
+	 */
 	public CompilationUnit newCu() {
 		CompilationUnit cu = new CompilationUnit(packageName);
 		cu.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolSolver);
@@ -158,7 +169,8 @@ public abstract class AbstractGeneratorMojo extends org.apache.maven.plugin.Abst
 				Files.walkFileTree(Paths.get(s), new SimpleFileVisitor<Path>() {
 					@Override
 					public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-						if (!file.getFileName().toString().endsWith(".java"))
+						String f = file.getFileName().toString();
+						if (!f.endsWith(".java"))
 							return FileVisitResult.CONTINUE;
 						parser.parse(file).ifSuccessful(p);
 						if (count == file.getNameCount() && file.startsWith(local)) {
@@ -201,7 +213,7 @@ public abstract class AbstractGeneratorMojo extends org.apache.maven.plugin.Abst
 
 		try {
 			Files.createDirectories(Paths.get(resources));
-		} catch (IOException e) { // ignore
+		} catch (@SuppressWarnings("unused") IOException e) { // ignore
 		}
 	}
 

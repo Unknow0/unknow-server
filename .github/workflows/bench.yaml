@@ -20,6 +20,9 @@ jobs:
     - name: build native image 
       run: native-image --install-exit-handlers --static --no-fallback -jar unknow-http-test/target/server.jar server-native
 
+    - name: bench
+      run: java -jar unknow-server-bench/target/benchmark.jar
+
     - uses: actions/upload-artifact@v3
       if: always()
       with: 

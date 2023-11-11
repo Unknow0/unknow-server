@@ -4,26 +4,24 @@
 package unknow.server.maven.jaxws;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import javax.xml.namespace.QName;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.xml.sax.InputSource;
-import org.xml.sax.SAXException;
 
-import com.github.javaparser.Range;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.Parameter;
-import com.github.javaparser.ast.comments.LineComment;
-import com.github.javaparser.ast.expr.ArrayAccessExpr;
 import com.github.javaparser.ast.expr.ArrayInitializerExpr;
 import com.github.javaparser.ast.expr.AssignExpr;
 import com.github.javaparser.ast.expr.AssignExpr.Operator;
@@ -38,43 +36,34 @@ import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.NullLiteralExpr;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
-import com.github.javaparser.ast.expr.ThisExpr;
+import com.github.javaparser.ast.expr.StringLiteralExpr;
 import com.github.javaparser.ast.expr.TypeExpr;
 import com.github.javaparser.ast.expr.VariableDeclarationExpr;
 import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.stmt.CatchClause;
-import com.github.javaparser.ast.stmt.ExpressionStmt;
 import com.github.javaparser.ast.stmt.IfStmt;
 import com.github.javaparser.ast.stmt.ReturnStmt;
+import com.github.javaparser.ast.stmt.Statement;
+import com.github.javaparser.ast.stmt.SwitchEntry;
+import com.github.javaparser.ast.stmt.SwitchStmt;
 import com.github.javaparser.ast.stmt.ThrowStmt;
 import com.github.javaparser.ast.stmt.TryStmt;
-import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.UnknownType;
 
-import jakarta.jws.soap.SOAPBinding.ParameterStyle;
 import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import unknow.sax.SaxContext;
-import unknow.sax.SaxHandler;
-import unknow.sax.SaxParser;
-import unknow.server.jaxws.Element;
+import jakarta.xml.bind.JAXBContext;
+import jakarta.xml.bind.JAXBElement;
+import jakarta.xml.bind.JAXBException;
+import jakarta.xml.bind.Unmarshaller;
+import unknow.server.jaxws.AbstractWs;
 import unknow.server.jaxws.Envelope;
 import unknow.server.jaxws.OperationWrapper;
 import unknow.server.jaxws.WSMethod;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
+import unknow.server.maven.jaxws.binding.Operation;
 import unknow.server.maven.jaxws.binding.Service;
-import unknow.server.maven.jaxws.binding.XmlEnum;
-import unknow.server.maven.jaxws.binding.XmlEnum.XmlEnumEntry;
-import unknow.server.maven.jaxws.binding.XmlObject;
-import unknow.server.maven.jaxws.binding.XmlObject.XmlField;
-import unknow.server.maven.jaxws.binding.XmlType;
-import unknow.server.maven.jaxws.binding.XmlTypeLoader;
-import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.model.TypeModel;
-import unknow.server.maven.model.jvm.JvmClass;
 
 /**
  * @author unknow
@@ -82,269 +71,142 @@ import unknow.server.maven.model.jvm.JvmClass;
 public class JaxwsServletBuilder {
 	private static final Logger logger = LoggerFactory.getLogger(JaxwsServletBuilder.class);
 
-	private static final NameExpr CONTEXT = new NameExpr("context");
-	private static final NameExpr QNAME = new NameExpr("qname");
-
-	private static final Modifier.Keyword[] PSF = { Modifier.Keyword.PRIVATE, Modifier.Keyword.STATIC, Modifier.Keyword.FINAL };
-	private static final Modifier.Keyword[] PF = { Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL };
-
 	private final ClassOrInterfaceDeclaration serviceClass;
-	private final JaxMarshallerBuilder mbuilder;
-
-	private final Map<String, NameExpr> saxHandlers = new HashMap<>();
 
 	private final Service service;
 
 	private ClassOrInterfaceDeclaration servlet;
 
-	private JaxSaxHandlerBuilder header;
-	private JaxSaxHandlerBuilder body;
-
-	public JaxwsServletBuilder(ClassOrInterfaceDeclaration serviceClass, ModelLoader loader, JaxMarshallerBuilder mbuilder, XmlTypeLoader xmlLoader) {
+	public JaxwsServletBuilder(ClassOrInterfaceDeclaration serviceClass, Service service) {
 		this.serviceClass = serviceClass;
-		this.mbuilder = mbuilder;
-		// collect operations
-		this.service = Service.build(serviceClass, loader, xmlLoader);
+		this.service = service;
 	}
 
-	public void generate(CompilationUnit cu, TypeCache types, String baseUrl) {
+	public void generate(CompilationUnit cu, TypeCache types, String factory, String wsdl) {
 		String name = service.name;
 		NodeList<Expression> list = Utils.list();
 		for (String s : service.urls)
 			list.add(Utils.text(s));
 
-		servlet = cu.addClass(Character.toUpperCase(name.charAt(0)) + name.substring(1) + "Servlet", PF).addExtendedType(types.getClass(HttpServlet.class));
+		servlet = cu.addClass(Character.toUpperCase(name.charAt(0)) + name.substring(1) + "Servlet", Utils.PUBLIC).addExtendedType(types.getClass(AbstractWs.class));
 		servlet.addAndGetAnnotation(WebServlet.class).addPair("urlPatterns", new ArrayInitializerExpr(list)).addPair("name", Utils.text(name));
 
-		servlet.addFieldWithInitializer(types.getClass(long.class), "serialVersionUID", new LongLiteralExpr("1"), PSF);
+		servlet.addFieldWithInitializer(types.getClass(long.class), "serialVersionUID", new LongLiteralExpr("1"), Utils.PSF);
 
-		servlet.addFieldWithInitializer(types.getClass(Logger.class), "log",
-				new MethodCallExpr(new TypeExpr(types.getClass(LoggerFactory.class)), "getLogger", Utils.list(new ClassExpr(types.getClass(servlet)))), PSF);
-
-		servlet.addFieldWithInitializer(types.getClass(serviceClass), "WS", new ObjectCreationExpr(null, types.getClass(serviceClass), Utils.list()), PSF);
+		servlet.addFieldWithInitializer(types.getClass(serviceClass), "WS", new ObjectCreationExpr(null, types.getClass(serviceClass), Utils.list()), Utils.PSF);
 
 		Collections.sort(service.operations, (o1, o2) -> o1.sig().compareTo(o2.sig()));
-		servlet.addFieldWithInitializer(types.get(String[].class), "OP_SIG", Utils.array(types.getClass(String.class), service.operations.size()), PSF);
-		servlet.addFieldWithInitializer(types.array(WSMethod.class), "OP_CALL", Utils.array(types.getClass(WSMethod.class), service.operations.size()), PSF);
-		BlockStmt init = servlet.addStaticInitializer();
-		int oi = 0;
-		for (Service.Op o : service.operations) {
-			init.addStatement(new AssignExpr(new ArrayAccessExpr(new NameExpr("OP_SIG"), new IntegerLiteralExpr("" + oi)), Utils.text(o.sig()), Operator.ASSIGN));
 
-			BlockStmt b = new BlockStmt().addStatement(new AssignExpr(new VariableDeclarationExpr(types.getClass(Envelope.class), "r"),
-					new ObjectCreationExpr(null, types.getClass(Envelope.class), Utils.list()), Operator.ASSIGN));
-			if (o.paramStyle == ParameterStyle.WRAPPED)
+		Set<TypeModel> clazz = new HashSet<>();
+		NodeList<SwitchEntry> entries = new NodeList<>();
+		Expression wrapped = null;
+		int w = 0;
+		for (Operation o : service.operations) {
+			BlockStmt b = new BlockStmt();
+			if (o.wrapped) {
 				b.addStatement(new AssignExpr(new VariableDeclarationExpr(types.getClass(OperationWrapper.class), "o"),
 						new CastExpr(types.getClass(OperationWrapper.class), new MethodCallExpr(new NameExpr("e"), "getBody", Utils.list(new IntegerLiteralExpr("0")))),
 						Operator.ASSIGN));
 
+				String n = "N$" + w;
+				servlet.addFieldWithInitializer(types.getClass(QName.class), n,
+						new ObjectCreationExpr(null, types.getClass(QName.class), Utils.list(Utils.text(o.name.getNamespaceURI()), Utils.text(o.name.getLocalPart()))),
+						Utils.PSF);
+				Expression e = new MethodCallExpr(new NameExpr(n), "equals", Utils.list(new NameExpr("n")));
+				if (wrapped != null)
+					wrapped = new BinaryExpr(wrapped, e, BinaryExpr.Operator.OR);
+				else
+					wrapped = e;
+			}
+
 			NodeList<Expression> param = Utils.list();
 
 			int h = 0;
-			int i = 0;
-			for (Service.Param p : o.params) {
+			int bi = 0;
+			for (unknow.server.maven.jaxws.binding.Parameter p : o.params) {
+				servlet.addFieldWithInitializer(types.getClass(QName.class), "P$" + w + "$" + (bi + h),
+						new ObjectCreationExpr(null, types.getClass(QName.class), Utils.list(Utils.text(p.name.getNamespaceURI()), Utils.text(p.name.getLocalPart()))),
+						Utils.PSF);
+				clazz.add(p.type);
 				Expression v;
 				if (p.header)
 					v = new MethodCallExpr(new NameExpr("e"), "getHeader", Utils.list(new IntegerLiteralExpr(Integer.toString(h++))));
-				else if (o.paramStyle == ParameterStyle.WRAPPED)
-					v = new MethodCallExpr(new NameExpr("o"), "get", Utils.list(new IntegerLiteralExpr(Integer.toString(i++))));
+				else if (o.wrapped)
+					v = new MethodCallExpr(new NameExpr("o"), "get", Utils.list(new IntegerLiteralExpr(Integer.toString(bi++))));
 				else
-					v = new MethodCallExpr(new NameExpr("e"), "getBody", Utils.list(new IntegerLiteralExpr(Integer.toString(i++))));
-
-				param.add(new CastExpr(types.get(p.clazz), v));
+					v = new MethodCallExpr(new NameExpr("e"), "getBody", Utils.list(new IntegerLiteralExpr(Integer.toString(bi++))));
+				param.add(new CastExpr(types.get(p.type), v));
 			}
 
 			Expression e = null;
 			if (o.result == null)
 				b.addStatement(new MethodCallExpr(new NameExpr("WS"), o.m, param));
 			else {
+				clazz.add(o.result.type);
 				b.addStatement(
-						new AssignExpr(new VariableDeclarationExpr(types.getClass(Object.class), "ro"), new MethodCallExpr(new NameExpr("WS"), o.m, param), Operator.ASSIGN));
-				e = new ObjectCreationExpr(null, types.getClass(Element.class), Utils.list(Utils.text(o.result.ns()), Utils.text(o.result.name()), new NameExpr("ro")));
+						new AssignExpr(new VariableDeclarationExpr(types.getClass(o.result.type), "ro"), new MethodCallExpr(new NameExpr("WS"), o.m, param), Operator.ASSIGN));
+				e = new ObjectCreationExpr(null, types.getClass(JAXBElement.class, TypeCache.EMPTY),
+						Utils.list(
+								new ObjectCreationExpr(null, types.getClass(QName.class),
+										Utils.list(Utils.text(o.result.name.getNamespaceURI()), Utils.text(o.result.name.getLocalPart()))),
+								new ClassExpr(types.get(o.result.type)), new NameExpr("ro")));
 			}
-			if (o.paramStyle == ParameterStyle.WRAPPED) {
-				NodeList<Expression> p = Utils.list(Utils.text(o.ns), Utils.text(o.name + "Response"));
-				if (e != null)
-					p.add(e);
+			NodeList<Expression> header = Utils.list();
+			NodeList<Expression> body = Utils.list();
+			if (o.wrapped) {
 				// TODO out param
-				e = new ObjectCreationExpr(null, types.getClass(OperationWrapper.class), p);
+				Expression c = new ClassExpr(types.get(e == null ? Object.class : JAXBElement.class));
+				if (e == null)
+					e = new NullLiteralExpr();
+				e = new ObjectCreationExpr(null, types.getClass(JAXBElement.class, TypeCache.EMPTY), Utils.list(new ObjectCreationExpr(null, types.getClass(QName.class),
+						Utils.list(Utils.text(o.name.getNamespaceURI()), Utils.text(o.name.getLocalPart() + "Response"))), c, e));
 			} else {
 				// TODO out param
 			}
 			if (e != null)
-				b.addStatement(new MethodCallExpr(new NameExpr("r"), o.result != null && o.result.header ? "addHeader" : "addBody", Utils.list(e)));
-			b.addStatement(new ReturnStmt(new NameExpr("r")));
+				(o.result != null && o.result.header ? header : body).add(e);
+			b.addStatement(new ReturnStmt(new ObjectCreationExpr(null, types.getClass(Envelope.class), Utils.list(
+					new MethodCallExpr(new TypeExpr(types.get(Arrays.class)), "asList", header), new MethodCallExpr(new TypeExpr(types.get(Arrays.class)), "asList", body)))));
 
-			init.addStatement(new AssignExpr(new ArrayAccessExpr(new NameExpr("OP_CALL"), new IntegerLiteralExpr("" + oi)),
-					new LambdaExpr(Utils.list(new Parameter(new UnknownType(), "e")), b), Operator.ASSIGN));
-			oi++;
+			String n = "CALL$" + entries.size();
+			entries.add(new SwitchEntry().setLabels(Utils.list(new StringLiteralExpr(o.sig()))).addStatement(new ReturnStmt(new NameExpr(n))));
+			servlet.addFieldWithInitializer(types.get(WSMethod.class), n, new LambdaExpr(Utils.list(new Parameter(new UnknownType(), "e")), b), Utils.PSF);
+			w++;
 		}
 
-		generateHandlers(types);
+		servlet.addConstructor(Modifier.Keyword.PUBLIC).getBody().addStatement(new MethodCallExpr(null, "super", Utils.list(new StringLiteralExpr("/" + wsdl))));
 
-		if (service.postConstruct != null)
-			servlet.addMethod("init", PF).addMarkerAnnotation(Override.class).getBody().get().addStatement(new MethodCallExpr(new NameExpr("WS"), service.postConstruct));
-		if (service.preDestroy != null)
-			servlet.addMethod("destroy", PF).addMarkerAnnotation(Override.class).getBody().get().addStatement(new MethodCallExpr(new NameExpr("WS"), service.preDestroy));
+		NodeList<Expression> l = clazz.stream().map(v -> new ClassExpr(types.get(v))).collect(Collectors.toCollection(() -> new NodeList<>()));
+		servlet.addMethod("getCtx", Utils.PROTECT).addMarkerAnnotation(Override.class).setType(types.get(JAXBContext.class)).getBody().get().addStatement(new TryStmt(
+				new BlockStmt().addStatement(new ReturnStmt(new MethodCallExpr(new ObjectCreationExpr(null, types.getClass(factory), Utils.list()), "createContext",
+						Utils.list(Utils.array(types.get(Class.class), l), new NullLiteralExpr())))),
+				Utils.list(new CatchClause(new Parameter(types.get(JAXBException.class), "e"),
+						new BlockStmt().addStatement(new ThrowStmt(new ObjectCreationExpr(null, types.getClass(RuntimeException.class), Utils.list(new NameExpr("e"))))))),
+				null));
 
-		byte[] wsdl = new WsdlBuilder(service, baseUrl).build();
-		servlet.addFieldWithInitializer(types.get(byte[].class), "WSDL", Utils.byteArray(wsdl), PSF);
-		servlet.addMethod("doGet", PF).addMarkerAnnotation(Override.class).addThrownException(types.getClass(IOException.class))
-				.addParameter(types.getClass(HttpServletRequest.class), "req").addParameter(types.getClass(HttpServletResponse.class), "res").getBody().get()
-				.addStatement(new IfStmt(new BinaryExpr(new MethodCallExpr(new NameExpr("req"), "getParameter", Utils.list(Utils.text("wsdl"))), new NullLiteralExpr(),
-						BinaryExpr.Operator.EQUALS), new ReturnStmt(), null))
-				.addStatement(new MethodCallExpr(new NameExpr("res"), "setContentType", Utils.list(Utils.text("text/xml"))))
-				.addStatement(new MethodCallExpr(new NameExpr("res"), "setContentLength", Utils.list(new IntegerLiteralExpr(Integer.toString(wsdl.length)))))
-				.addStatement(new MethodCallExpr(new MethodCallExpr(new NameExpr("res"), "getOutputStream"), "write", Utils.list(new NameExpr("WSDL"))));
+		entries.add(new SwitchEntry().addStatement(new ReturnStmt(new NullLiteralExpr())));
+		servlet.addMethod("getCall", Utils.PROTECT).addMarkerAnnotation(Override.class).setType(types.get(WSMethod.class))
+				.addParameter(new Parameter(types.get(String.class), "sig")).getBody().get().addStatement(new SwitchStmt(new NameExpr("sig"), entries));
 
-		servlet.addMethod("doPost", PF).addMarkerAnnotation(
-				Override.class).addParameter(types.getClass(HttpServletRequest.class),
-						"req")
-				.addParameter(types.getClass(HttpServletResponse.class), "res").getBody().get()
-				.addStatement(new TryStmt(
-						new BlockStmt()
-								.addStatement(new AssignExpr(new VariableDeclarationExpr(types.getClass(Envelope.class), "e"),
-										new MethodCallExpr(new TypeExpr(types.getClass(SaxParser.class)), "parse",
-												Utils.list(new ThisExpr(),
-														new ObjectCreationExpr(null, types.getClass(InputSource.class),
-																Utils.list(new MethodCallExpr(new NameExpr("req"), "getInputStream"))))),
-										Operator.ASSIGN))
-								.addStatement(
-										new AssignExpr(new VariableDeclarationExpr(types.getClass(int.class), "i"),
-												new MethodCallExpr(new TypeExpr(types.getClass(Arrays.class)), "binarySearch",
-														Utils.list(new NameExpr("OP_SIG"), new MethodCallExpr(new NameExpr("e"), "sig"))),
-												Operator.ASSIGN))
-								.addStatement(
-										new IfStmt(new BinaryExpr(new NameExpr("i"), new IntegerLiteralExpr("0"), BinaryExpr.Operator.LESS),
-												new BlockStmt().addStatement(new MethodCallExpr(null, "fault", Utils.list(new NameExpr("res"), Utils.text("unknown request"))))
-														.addStatement(new ReturnStmt()),
-												null))
-								.addStatement(
-										new MethodCallExpr(new NameExpr("Marshallers"), "marshall",
-												Utils.list(
-														new MethodCallExpr(new ArrayAccessExpr(new NameExpr("OP_CALL"), new NameExpr("i")), "call",
-																Utils.list(new NameExpr("e"))),
-														new MethodCallExpr(new NameExpr("res"), "getWriter")))),
-						Utils.list(new CatchClause(new Parameter(types.getClass(Exception.class), "e"), new BlockStmt()
-								.addStatement(new MethodCallExpr(null, "fault", Utils.list(new NameExpr("res"), new MethodCallExpr(new NameExpr("e"), "getMessage"))))
-								.addStatement(new MethodCallExpr(new NameExpr("log"), "warn", Utils.list(Utils.text("failed to service request"), new NameExpr("e")))))),
-						null));
-		generateFault(types);
-
-	}
-
-	private void generateFault(TypeCache types) {
-		LineComment lineComment = new LineComment("OK");
-		lineComment.setRange(Range.range(0, 0, 0, 0));
-		BlockStmt ok = new BlockStmt();
-		ok.addOrphanComment(lineComment);
-
-		servlet.addMethod("fault", PSF).addParameter(types.getClass(HttpServletResponse.class), "res").addParameter(types.getClass(String.class), "err").getBody().get()
-				.addStatement(new TryStmt(
-						new BlockStmt().addStatement(new MethodCallExpr(new NameExpr("res"), "setStatus", Utils.list(new IntegerLiteralExpr("500")))).addStatement(
-								new MethodCallExpr(new MethodCallExpr(new MethodCallExpr(new MethodCallExpr(new NameExpr("res"), "getWriter"), "append", Utils.list(Utils.text(
-										"<e:Envelope xmlns:e=\"http://schemas.xmlsoap.org/soap/envelope/\"><e:Body><e:Fault><faultcode>Server</faultcode><faultstring>"))),
-										"append", Utils.list(new NameExpr("err"))), "write", Utils.list(Utils.text("</faultstring></e:Fault></e:Body></e:Envelope>")))),
-						Utils.list(new CatchClause(new Parameter(types.getClass(Exception.class), "ignore"), ok)), null));
-	}
-
-	private void generateHandlers(TypeCache types) {
-		header = new JaxSaxHandlerBuilder(types, t -> generateHandler(t, types), Envelope.class.getName());
-		body = new JaxSaxHandlerBuilder(types, t -> generateHandler(t, types), Envelope.class.getName());
-
-		for (Service.Op o : service.operations) {
-			logger.info("building {}", o);
-
-			List<XmlField<?>> childs = new ArrayList<>();
-
-			if (o.result != null) {
-				if (o.result.type() instanceof XmlObject)
-					mbuilder.add((XmlObject) o.result.type());
-				else if (o.result.type() instanceof XmlEnum)
-					mbuilder.add((XmlEnum) o.result.type());
-			}
-
-			for (Service.Param p : o.params) {
-				if (p.header)
-					header.addElem(new XmlField<>(p.type(), p.ns(), p.name(), "", "addHeader"));
-				else if (o.paramStyle == ParameterStyle.WRAPPED)
-					childs.add(new XmlField<>(p.type(), p.ns(), p.name(), "", "add"));
-				else
-					body.addElem(new XmlField<>(p.type(), p.ns(), p.name(), "", "addBody"));
-			}
-			if (o.paramStyle == ParameterStyle.WRAPPED)
-				body.addElem(new XmlField<>(new XmlOperation(o.ns, o.name, childs), service.ns, o.name, "", "addBody"));
+		Statement s = new IfStmt(wrapped,
+				new ReturnStmt(new MethodCallExpr(null, "read",
+						Utils.list(new NameExpr("r"), new NameExpr("u"),
+								new ObjectCreationExpr(null, types.getClass(OperationWrapper.class), Utils.list(new NameExpr("n")))))),
+				new ThrowStmt(new ObjectCreationExpr(null, types.getClass(IOException.class), Utils.list(Utils.text("Invalid request")))));
+		w = 0;
+		for (Operation o : service.operations) {
+			int i = 0;
+			for (unknow.server.maven.jaxws.binding.Parameter p : o.params)
+				s = new IfStmt(new MethodCallExpr(new NameExpr("P$" + w + "$" + i++), "equals", Utils.list(new NameExpr("n"))), new ReturnStmt(
+						new MethodCallExpr(new MethodCallExpr(new NameExpr("u"), "unmarshal", Utils.list(new NameExpr("r"), new ClassExpr(types.get(p.type)))), "getValue")),
+						s);
+			w++;
 		}
 
-		ClassOrInterfaceType t = types.getClass(SaxHandler.class, types.getClass(SaxContext.class));
-		servlet.addImplementedType(t);
-		servlet.addMethod("startElement", PF).addParameter(types.getClass(String.class), "qname").addParameter(types.getClass(String.class), "name")
-				.addParameter(types.getClass(SaxContext.class), "context").addMarkerAnnotation(Override.class).addThrownException(types.getClass(SAXException.class))
-				.setBody(new BlockStmt().addStatement(new IfStmt(
-						new MethodCallExpr(Utils.text("{http://schemas.xmlsoap.org/soap/envelope/}Header"), "equals", Utils.list(QNAME)),
-						new ExpressionStmt(new MethodCallExpr(CONTEXT, "next", Utils.list(new NameExpr("HEADER")))),
-						new IfStmt(new MethodCallExpr(Utils.text("{http://schemas.xmlsoap.org/soap/envelope/}Body"), "equals", Utils.list(QNAME)),
-								new ExpressionStmt(new MethodCallExpr(CONTEXT, "next", Utils.list(new NameExpr("BODY")))),
-								new IfStmt(new MethodCallExpr(Utils.text("{http://schemas.xmlsoap.org/soap/envelope/}Envelope"), "equals", Utils.list(QNAME)),
-										new ExpressionStmt(
-												new MethodCallExpr(CONTEXT, "push", Utils.list(new ObjectCreationExpr(null, types.getClass(Envelope.class), Utils.list())))),
-										new ThrowStmt(new ObjectCreationExpr(null, types.getClass(SAXException.class),
-												Utils.list(new BinaryExpr(Utils.text("Invalid tag "), QNAME, BinaryExpr.Operator.PLUS)))))))));
-		servlet.addFieldWithInitializer(t, "HEADER", new ObjectCreationExpr(null, t, null, Utils.list(), header.build()), PSF);
-		servlet.addFieldWithInitializer(t, "BODY", new ObjectCreationExpr(null, t, null, Utils.list(), body.build()), PSF);
+		servlet.addMethod("read", Utils.PROTECT).addMarkerAnnotation(Override.class).setType(types.get(Object.class))
+				.addParameter(new Parameter(types.get(XMLStreamReader.class), "r")).addParameter(new Parameter(types.get(Unmarshaller.class), "u"))
+				.addThrownException(types.getClass(XMLStreamException.class)).addThrownException(types.getClass(JAXBException.class))
+				.addThrownException(types.getClass(IOException.class)).getBody().get()
+				.addStatement(Utils.assign(types.get(QName.class), "n", new MethodCallExpr(new NameExpr("r"), "getName"))).addStatement(s);
 	}
-
-	/**
-	 * @param type
-	 * @param types
-	 */
-	private NameExpr generateHandler(XmlType<?> type, TypeCache types) {
-		logger.info("Building {}", type);
-		if (type instanceof XmlEnum) {
-			XmlEnum e = (XmlEnum) type;
-			NodeList<Expression> values = Utils.list();
-//			Statement s = 
-			for (XmlEnumEntry c : e.entries)
-				values.add(Utils.text(c.value));
-			servlet.addFieldWithInitializer(types.array(String.class), e.convertMethod, Utils.array(types.getClass(String.class), values), PSF);
-			servlet.addMethod(e.convertMethod, PSF).addParameter(types.getClass(String.class), "s").setType(types.get(e.javaType().name()))
-					.addThrownException(types.getClass(SAXException.class)).getBody().get()
-					.addStatement(Utils.assign(types.getClass(int.class), "i",
-							new MethodCallExpr(new TypeExpr(types.getClass(Arrays.class)), "binarySearch", Utils.list(new NameExpr(e.convertMethod), new NameExpr("s")))))
-					.addStatement(new IfStmt(new BinaryExpr(new NameExpr("i"), new IntegerLiteralExpr("0"), BinaryExpr.Operator.LESS),
-							new ThrowStmt(new ObjectCreationExpr(null, types.getClass(SAXException.class),
-									Utils.list(new BinaryExpr(Utils.text("Invalid enum constant: "), new NameExpr("s"), BinaryExpr.Operator.PLUS)))),
-							null))
-					.addStatement(new ReturnStmt(new ArrayAccessExpr(new MethodCallExpr(new TypeExpr(types.get(e.javaType().name())), "values"), new NameExpr("i"))));
-		}
-		String k = type.isSimple() ? "" : type.javaType().name();
-		if (type instanceof XmlOperation)
-			k = type.name();
-		NameExpr nameExpr = saxHandlers.get(k);
-		if (nameExpr != null)
-			return nameExpr;
-		String name = "$" + saxHandlers.size() + "$";
-		saxHandlers.put(k, nameExpr = new NameExpr(name));
-
-		ClassOrInterfaceType t = types.getClass(SaxHandler.class, types.getClass(SaxContext.class));
-
-		servlet.addFieldWithInitializer(t, name, new ObjectCreationExpr(null, t, null, Utils.list(), JaxSaxHandlerBuilder.build(types, type, n -> generateHandler(n, types))),
-				PSF);
-		return nameExpr;
-	}
-
-	private static class XmlOperation extends XmlObject {
-
-		public XmlOperation(String ns, String name, List<XmlField<?>> elems) {
-			super(new JvmClass(null, OperationWrapper.class, new TypeModel[0]), ns, name, new Factory(".qname", null), null);
-			this.elems = elems;
-			this.attrs = Collections.emptyList();
-		}
-
-		@Override
-		public String name() {
-			return "op:" + qname();
-		}
-	}
-
 }

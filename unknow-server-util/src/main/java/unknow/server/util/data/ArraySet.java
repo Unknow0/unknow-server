@@ -16,12 +16,16 @@ public class ArraySet<T extends Comparable<T>> implements Set<T> {
 	private static final Comparable<?>[] EMPTY = new Comparable[0];
 	private final T[] data;
 
-	@SuppressWarnings("unchecked")
 	public ArraySet(T[] data) {
-		Set<T> set = new HashSet<>();
-		for (int i = 0; i < data.length; i++)
-			set.add(data[i]);
-		this.data = (T[]) set.toArray(EMPTY);
+		this(Arrays.asList(data));
+	}
+
+	@SuppressWarnings("unchecked")
+	public ArraySet(Collection<T> data) {
+		if (!(data instanceof Set))
+			data = new HashSet<>(data);
+		this.data = (T[]) data.toArray(EMPTY);
+		Arrays.sort(this.data);
 	}
 
 	@Override

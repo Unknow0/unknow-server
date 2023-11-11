@@ -16,7 +16,7 @@ import unknow.server.maven.model.ClassModel;
 import unknow.server.maven.model.ConstructorModel;
 import unknow.server.maven.model.FieldModel;
 import unknow.server.maven.model.MethodModel;
-import unknow.server.maven.model.ModelLoader;
+import unknow.server.maven.model.PackageModel;
 import unknow.server.maven.model.TypeModel;
 import unknow.server.maven.model.TypeParamModel;
 
@@ -24,8 +24,9 @@ import unknow.server.maven.model.TypeParamModel;
  * @author unknow
  */
 public class JvmClass implements ClassModel, JvmMod {
-	protected final ModelLoader loader;
+	protected final JvmModelLoader loader;
 	protected final Class<?> cl;
+	protected final PackageModel packageModel;
 	private final TypeModel[] paramsClass;
 	private ClassModel superType;
 	private List<ClassModel> interfaces;
@@ -35,15 +36,28 @@ public class JvmClass implements ClassModel, JvmMod {
 	private Collection<MethodModel> methods;
 	private List<TypeParamModel> parameters;
 
-	public JvmClass(ModelLoader loader, Class<?> cl, TypeModel[] paramsClass) {
+	/**
+	 * create new JvmClass
+	 * 
+	 * @param loader
+	 * @param cl
+	 * @param paramsClass
+	 */
+	public JvmClass(JvmModelLoader loader, Class<?> cl, TypeModel[] paramsClass) {
 		this.loader = loader;
 		this.cl = cl;
 		this.paramsClass = paramsClass;
+		this.packageModel = new JvmPackage(loader, cl.getPackage());
+	}
+
+	@Override
+	public PackageModel parent() {
+		return packageModel;
 	}
 
 	@Override
 	public String name() {
-		return cl.getTypeName();
+		return cl.getName();
 	}
 
 	@Override
@@ -118,8 +132,8 @@ public class JvmClass implements ClassModel, JvmMod {
 	@Override
 	public String toString() {
 		if (parameters().isEmpty())
-			return cl.getTypeName();
-		StringBuilder sb = new StringBuilder(cl.getTypeName()).append('<');
+			return cl.getName();
+		StringBuilder sb = new StringBuilder(cl.getName()).append('<');
 		for (TypeParamModel p : parameters())
 			sb.append(p.type()).append(',');
 		sb.setCharAt(sb.length() - 1, '>');

@@ -5,6 +5,7 @@ package unknow.server.maven.model.util;
 
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -23,6 +24,11 @@ public class AncestrorIterator implements Iterator<ClassModel> {
 	private final Queue<ClassModel> queue;
 	private final Set<String> saw;
 
+	/**
+	 * create new AncestrorIterator
+	 * 
+	 * @param clazz
+	 */
 	public AncestrorIterator(ClassModel clazz) {
 		this.queue = new LinkedBlockingQueue<>();
 		this.queue.add(clazz);
@@ -37,12 +43,13 @@ public class AncestrorIterator implements Iterator<ClassModel> {
 
 	@Override
 	public ClassModel next() {
+		if (queue.isEmpty())
+			throw new NoSuchElementException();
 		ClassModel poll = queue.poll();
 		ClassModel s = poll.superType();
-		if (s != null && !"java.lang.Object".equals(s.name())) {
-			if (saw.add(s.toString()))
-				queue.add(s);
-		}
+		if (s != null && !"java.lang.Object".equals(s.name()) && saw.add(s.toString()))
+			queue.add(s);
+
 		for (ClassModel i : poll.interfaces()) {
 			if (saw.add(i.toString()))
 				queue.add(i);

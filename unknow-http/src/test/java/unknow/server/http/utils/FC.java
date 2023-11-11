@@ -33,6 +33,7 @@ public class FC implements FilterChain {
 	}
 
 	@Override
-	public void doFilter(ServletRequest request, ServletResponse response) throws IOException, ServletException { // OK
+	public void doFilter(ServletRequest request, ServletResponse response) throws IOException, ServletException {
+		// nothing
 	}
 }

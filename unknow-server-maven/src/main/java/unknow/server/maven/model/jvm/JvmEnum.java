@@ -10,7 +10,6 @@ import java.util.stream.Collectors;
 
 import unknow.server.maven.model.AnnotationModel;
 import unknow.server.maven.model.EnumModel;
-import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.model.TypeModel;
 
 /**
@@ -25,8 +24,9 @@ public class JvmEnum extends JvmClass implements EnumModel {
 	 * 
 	 * @param cl
 	 * @param loader
+	 * @param params
 	 */
-	public JvmEnum(ModelLoader loader, Class<?> cl, TypeModel params[]) {
+	public JvmEnum(JvmModelLoader loader, Class<?> cl, TypeModel[] params) {
 		super(loader, cl, params);
 	}
 
@@ -44,17 +44,21 @@ public class JvmEnum extends JvmClass implements EnumModel {
 		return entries;
 	}
 
+	/**
+	 * @author unknow
+	 */
 	public static class JvmEnumConstant implements EnumConstant {
-		private final ModelLoader loader;
+		private final JvmModelLoader loader;
 		private final Enum<?> e;
 		private List<AnnotationModel> annotations;
 
 		/**
 		 * create new AstEnumConstant
 		 * 
+		 * @param loader
 		 * @param e
 		 */
-		public JvmEnumConstant(ModelLoader loader, Enum<?> e) {
+		public JvmEnumConstant(JvmModelLoader loader, Enum<?> e) {
 			this.loader = loader;
 			this.e = e;
 		}
@@ -64,8 +68,8 @@ public class JvmEnum extends JvmClass implements EnumModel {
 			if (annotations == null) {
 				try {
 					annotations = Arrays.stream(e.getClass().getField(name()).getAnnotations()).map(a -> new JvmAnnotation(loader, a)).collect(Collectors.toList());
-				} catch (NoSuchFieldException e) {
-					throw new RuntimeException(e);
+				} catch (NoSuchFieldException x) {
+					throw new IllegalStateException(x);
 				}
 			}
 			return annotations;

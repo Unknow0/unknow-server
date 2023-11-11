@@ -10,6 +10,9 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.github.javaparser.ast.Modifier.Keyword;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.NameExpr;
@@ -25,6 +28,7 @@ import unknow.server.maven.servlet.Builder;
  * @author unknow
  */
 public class LoadInitializer extends Builder {
+	private static final Logger logger = LoggerFactory.getLogger(LoadInitializer.class);
 
 	@Override
 	public void add(BuilderContext ctx) {
@@ -40,10 +44,11 @@ public class LoadInitializer extends Builder {
 				}
 			}
 		} catch (Exception ex) {
-			ex.printStackTrace();
+			logger.warn("Failed to process ServletContainerInitializer", ex);
 		}
-		BlockStmt b = ctx.self().addMethod("loadInitializer", Keyword.PROTECTED, Keyword.FINAL).addMarkerAnnotation(Override.class).getBody().get();
+		BlockStmt b = ctx.self().addMethod("loadInitializer", Keyword.PROTECTED, Keyword.FINAL).addMarkerAnnotation(Override.class).createBody();
 		for (String s : clazz)
-			b.addStatement(new MethodCallExpr(new ObjectCreationExpr(null, ctx.type().getClass(s), Utils.list()), "onStartup", Utils.list(new NullLiteralExpr(), new NameExpr("ctx"))));
+			b.addStatement(new MethodCallExpr(new ObjectCreationExpr(null, ctx.type().getClass(s), Utils.list()), "onStartup",
+					Utils.list(new NullLiteralExpr(), new NameExpr("ctx"))));
 	}
 }

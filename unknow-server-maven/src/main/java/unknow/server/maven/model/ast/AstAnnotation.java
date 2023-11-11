@@ -12,7 +12,7 @@ import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.MemberValuePair;
-import com.github.javaparser.resolution.declarations.ResolvedEnumConstantDeclaration;
+import com.github.javaparser.resolution.declarations.ResolvedFieldDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedValueDeclaration;
 
 import unknow.server.maven.model.AnnotationMemberModel;
@@ -21,12 +21,14 @@ import unknow.server.maven.model.AnnotationValue;
 import unknow.server.maven.model.AnnotationValue.AnnotationValueAnnotation;
 import unknow.server.maven.model.AnnotationValue.AnnotationValueArray;
 import unknow.server.maven.model.AnnotationValue.AnnotationValueClass;
-import unknow.server.maven.model.AnnotationValue.AnnotationValueEnum;
 import unknow.server.maven.model.AnnotationValue.AnnotationValueLiteral;
 import unknow.server.maven.model.ClassModel;
+import unknow.server.maven.model.FieldModel;
 import unknow.server.maven.model.MethodModel;
 import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.model.TypeModel;
+import unknow.server.maven.model.jvm.JvmAnnotation;
+import unknow.server.maven.model.jvm.JvmField;
 
 /**
  * @author unknow
@@ -36,6 +38,12 @@ public class AstAnnotation implements AnnotationModel {
 	private final AnnotationExpr a;
 	private final Collection<AnnotationMemberModel> members;
 
+	/**
+	 * create new AstAnnotation
+	 * 
+	 * @param loader
+	 * @param a
+	 */
 	public AstAnnotation(ModelLoader loader, AnnotationExpr a) {
 		this.name = a.resolve().getQualifiedName();
 		this.a = a;
@@ -78,6 +86,11 @@ public class AstAnnotation implements AnnotationModel {
 		return members;
 	}
 
+	/**
+	 * @param loader
+	 * @param v
+	 * @return expression as AnnotationValue
+	 */
 	public static AnnotationValue value(ModelLoader loader, Expression v) {
 		if (v.isNullLiteralExpr())
 			return AnnotationValue.NULL;
@@ -111,25 +124,35 @@ public class AstAnnotation implements AnnotationModel {
 		if (v.isAnnotationExpr())
 			return new AnnotationValueAnnotation(new AstAnnotation(loader, v.asAnnotationExpr()));
 
-		throw new RuntimeException("unsuported value: " + v.getClass());
+		throw new IllegalArgumentException("unsuported value: " + v.getClass());
 	}
 
 	private static AnnotationValue value(ModelLoader loader, ResolvedValueDeclaration r) {
-		if (r.isEnumConstant()) {
-			ResolvedEnumConstantDeclaration e = r.asEnumConstant();
-			TypeModel t = loader.get(e.getType().describe());
-			return new AnnotationValueEnum(t.asEnum().entry(e.getName()).orElseThrow());
+		if (r.isEnumConstant())
+			return new AnnotationValueLiteral(r.asEnumConstant().getName());
+		if (r.isField()) {
+			ResolvedFieldDeclaration f = r.asField();
+			TypeModel t = loader.get(f.declaringType().getQualifiedName());
+			if (t.isEnum())
+				return new AnnotationValueLiteral(f.getName());
+			if (f.isField()) {
+				FieldModel field = t.asClass().field(f.getName());
+				if (field == null)
+					throw new IllegalArgumentException("Can't find field '" + f.getName() + "' in " + t);
+				if (!field.isStatic())
+					throw new IllegalArgumentException("Field " + field + " sould be static");
+				if (field instanceof JvmField) {
+					try {
+						return JvmAnnotation.getValue(loader, ((JvmField) field).field().get(null));
+					} catch (IllegalArgumentException | IllegalAccessException e) {
+						throw new IllegalArgumentException(e);
+					}
+				}
+				if (field instanceof AstField)
+					return value(loader,
+							((AstField) field).object().getVariable(0).getInitializer().orElseThrow(() -> new IllegalArgumentException("Can't find valud for " + field)));
+			}
 		}
-		// TODO
-//		if (r.isField()) {
-//			ResolvedFieldDeclaration f = r.asField();
-//			TypeModel t = loader.get(f.getType().describe());
-//			if (t.isEnum())
-//				return new AnnotationValueEnum(t.asEnum().entry(f.getName()).orElseThrow());
-//			FieldModel field = asClass.field(f.getName());
-//
-//			throw new RuntimeException("Field access in annotation not supported");
-//		}
-		throw new RuntimeException("Annotation value '" + r + "' not supported");
+		throw new IllegalArgumentException("Annotation value '" + r + "' not supported");
 	}
 }

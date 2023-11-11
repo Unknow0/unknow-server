@@ -5,26 +5,21 @@ package unknow.server.maven.model;
 
 import unknow.server.maven.model.util.WithAnnotation;
 import unknow.server.maven.model.util.WithName;
+import unknow.server.maven.model.util.WithParent;
 
 /**
  * @author unknow
  */
-public interface TypeModel extends WithAnnotation, WithName {
+public interface TypeModel extends WithAnnotation, WithName, WithParent<PackageModel> {
 	/**
 	 * @return type fully qualified name with actual parameter
 	 */
 	@Override
 	String name();
 
+	/** @return generic name */
 	default String genericName() {
 		return name();
-	}
-
-	/**
-	 * @return java internalName
-	 */
-	default String internalName() {
-		return "L" + name() + ";";
 	}
 
 	/**
@@ -36,13 +31,13 @@ public interface TypeModel extends WithAnnotation, WithName {
 		return i < 0 ? name : name.substring(i + 1);
 	}
 
-	/**
-	 * @return package
-	 */
+	@Override
+	default PackageModel parent() {
+		return null;
+	}
+
 	default String packageName() {
-		String name = name();
-		int i = name.lastIndexOf(".");
-		return i < 0 ? "" : name.substring(0, i);
+		return parent() == null ? "" : parent().name();
 	}
 
 	/**
@@ -52,10 +47,13 @@ public interface TypeModel extends WithAnnotation, WithName {
 		return this instanceof PrimitiveModel;
 	}
 
+	/**
+	 * @return this as a primive
+	 */
 	default PrimitiveModel asPrimitive() {
 		if (this instanceof PrimitiveModel)
 			return (PrimitiveModel) this;
-		throw new RuntimeException(name() + " isn't a primitive");
+		throw new IllegalStateException(name() + " isn't a primitive");
 	}
 
 	/**
@@ -65,10 +63,13 @@ public interface TypeModel extends WithAnnotation, WithName {
 		return this instanceof ClassModel;
 	}
 
+	/**
+	 * @return this as a class
+	 */
 	default ClassModel asClass() {
 		if (this instanceof ClassModel)
 			return (ClassModel) this;
-		throw new RuntimeException(name() + " isn't a class");
+		throw new IllegalStateException(name() + " isn't a class");
 	}
 
 	/**
@@ -79,6 +80,16 @@ public interface TypeModel extends WithAnnotation, WithName {
 	 */
 	default boolean isAssignableFrom(TypeModel t) {
 		return t.name().equals(name());
+	}
+
+	/**
+	 * Determines if the type represented by the specified parameter is either the same as, or is a superclass or superinterface of, the type represented by this {@code TypeModel} object
+	 * 
+	 * @param cl the clazz
+	 * @return true if cl = this works
+	 */
+	default boolean isAssignableTo(Class<?> cl) {
+		return isAssignableTo(cl.getName());
 	}
 
 	/**
@@ -104,7 +115,7 @@ public interface TypeModel extends WithAnnotation, WithName {
 	default ArrayModel asArray() {
 		if (this instanceof ArrayModel)
 			return (ArrayModel) this;
-		throw new RuntimeException(name() + " isn't an array");
+		throw new IllegalStateException(name() + " isn't an array");
 	}
 
 	/**
@@ -120,7 +131,7 @@ public interface TypeModel extends WithAnnotation, WithName {
 	default EnumModel asEnum() {
 		if (this instanceof EnumModel)
 			return (EnumModel) this;
-		throw new RuntimeException(name() + " isn't an enum");
+		throw new IllegalStateException(name() + " isn't an enum");
 	}
 
 	/**
@@ -130,10 +141,13 @@ public interface TypeModel extends WithAnnotation, WithName {
 		return this instanceof WildcardModel;
 	}
 
+	/**
+	 * @return this as a wildcard
+	 */
 	default WildcardModel asWildcard() {
 		if (this instanceof WildcardModel)
 			return (WildcardModel) this;
-		throw new RuntimeException(name() + " isn't a wildcard");
+		throw new IllegalStateException(name() + " isn't a wildcard");
 	}
 
 	/**
@@ -144,6 +158,7 @@ public interface TypeModel extends WithAnnotation, WithName {
 	}
 
 	/**
+	 * @param t
 	 * @return true if type are equals
 	 */
 	default boolean equals(TypeModel t) {

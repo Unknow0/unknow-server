@@ -8,45 +8,52 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import unknow.server.maven.model.jvm.JvmModelLoader;
+
 /**
  * @author unknow
  */
 public class PrimitiveModel implements TypeModel {
+	@SuppressWarnings("javadoc")
 	public static final PrimitiveModel VOID = new PrimitiveModel("void", "Z", Void.class.getName()) {
 		@Override
 		public boolean isVoid() {
 			return true;
 		}
 	};
+	@SuppressWarnings("javadoc")
 	public static final PrimitiveModel BOOLEAN = new PrimitiveModel("boolean", "Z", Boolean.class.getName());
+	@SuppressWarnings("javadoc")
 	public static final PrimitiveModel BYTE = new PrimitiveModel("byte", "B", Byte.class.getName());
+	@SuppressWarnings("javadoc")
 	public static final PrimitiveModel CHAR = new PrimitiveModel("char", "C", Character.class.getName());
+	@SuppressWarnings("javadoc")
 	public static final PrimitiveModel SHORT = new PrimitiveModel("short", "S", Short.class.getName());
+	@SuppressWarnings("javadoc")
 	public static final PrimitiveModel INT = new PrimitiveModel("int", "I", Integer.class.getName());
+	@SuppressWarnings("javadoc")
 	public static final PrimitiveModel LONG = new PrimitiveModel("long", "L", Long.class.getName());
+	@SuppressWarnings("javadoc")
 	public static final PrimitiveModel FLOAT = new PrimitiveModel("float", "F", Float.class.getName());
+	@SuppressWarnings("javadoc")
 	public static final PrimitiveModel DOUBLE = new PrimitiveModel("double", "D", Double.class.getName());
 
+	/** all primitives types */
 	public static final List<PrimitiveModel> PRIMITIVES = Arrays.asList(VOID, BOOLEAN, BYTE, CHAR, SHORT, INT, LONG, FLOAT, DOUBLE);
 
 	private final String name;
-	private final String internal;
+	private final String binary;
 	private final String boxed;
 
-	private PrimitiveModel(String name, String internal, String boxed) {
+	private PrimitiveModel(String name, String binary, String boxed) {
 		this.name = name;
-		this.internal = internal;
+		this.binary = binary;
 		this.boxed = boxed;
 	}
 
 	@Override
 	public String name() {
-		return name;
-	}
-
-	@Override
-	public String internalName() {
-		return internal;
+		return binary;
 	}
 
 	@Override
@@ -68,11 +75,11 @@ public class PrimitiveModel implements TypeModel {
 	 * @return the boxed type
 	 */
 	public TypeModel boxed() {
-		return ModelLoader.local.get(boxed);
+		return JvmModelLoader.GLOBAL.get(boxed);
 	}
 
 	@Override
 	public String toString() {
-		return name();
+		return name;
 	}
 }

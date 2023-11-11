@@ -4,6 +4,8 @@
 package unknow.server.maven.model.jvm;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Parameter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -12,7 +14,6 @@ import java.util.stream.Collectors;
 import unknow.server.maven.model.AnnotationModel;
 import unknow.server.maven.model.ClassModel;
 import unknow.server.maven.model.ConstructorModel;
-import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.model.ParamModel;
 
 /**
@@ -20,7 +21,7 @@ import unknow.server.maven.model.ParamModel;
  */
 public class JvmConstructor implements ConstructorModel, JvmMod {
 	private final ClassModel parent;
-	private final ModelLoader loader;
+	private final JvmModelLoader loader;
 	private final Constructor<?> c;
 	private Collection<AnnotationModel> annotations;
 	private List<ParamModel<ConstructorModel>> params;
@@ -32,7 +33,7 @@ public class JvmConstructor implements ConstructorModel, JvmMod {
 	 * @param loader the loader
 	 * @param c      the constructor
 	 */
-	public JvmConstructor(ClassModel parent, ModelLoader loader, Constructor<?> c) {
+	public JvmConstructor(ClassModel parent, JvmModelLoader loader, Constructor<?> c) {
 		this.parent = parent;
 		this.loader = loader;
 		this.c = c;
@@ -57,8 +58,12 @@ public class JvmConstructor implements ConstructorModel, JvmMod {
 
 	@Override
 	public List<ParamModel<ConstructorModel>> parameters() {
-		if (params == null)
-			params = Arrays.stream(c.getParameters()).map(p -> new JvmParam<ConstructorModel>(loader, this, p)).collect(Collectors.toList());
+		if (params == null) {
+			params = new ArrayList<>();
+			Parameter[] p = c.getParameters();
+			for (int i = 0; i < p.length; i++)
+				params.add(new JvmParam<>(loader, this, p[i], i));
+		}
 		return params;
 	}
 

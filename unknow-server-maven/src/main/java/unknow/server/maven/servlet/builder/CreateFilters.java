@@ -34,7 +34,7 @@ public class CreateFilters extends Builder {
 		TypeCache types = ctx.type();
 		ClassOrInterfaceType t = types.getClass(FilterConfigImpl.class);
 		BlockStmt b = ctx.self().addMethod("createFilters", Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL).setType(types.array(FilterConfigImpl.class))
-				.addMarkerAnnotation(Override.class).getBody().get();
+				.addMarkerAnnotation(Override.class).createBody();
 
 		NodeList<Expression> filters = new NodeList<>();
 		for (SD f : descriptor.filters) {

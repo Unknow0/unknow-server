@@ -1,6 +1,5 @@
 package unknow.server.maven.model;
 
-import unknow.server.maven.model.EnumModel.EnumConstant;
 import unknow.server.maven.model.util.WithName;
 
 public class AnnotationMemberModel implements WithName, AnnotationValue {
@@ -27,11 +26,6 @@ public class AnnotationMemberModel implements WithName, AnnotationValue {
 	@Override
 	public TypeModel asClass() {
 		return value.asClass();
-	}
-
-	@Override
-	public EnumConstant asEnum() {
-		return value.asEnum();
 	}
 
 	@Override

@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.github.javaparser.ast.PackageDeclaration;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedReferenceTypeDeclaration;
 
@@ -27,14 +28,15 @@ public class AstClass extends AstBaseClass<ClassOrInterfaceDeclaration> {
 	/**
 	 * create new AstClass
 	 * 
-	 * @param loader the loader
-	 * @param cl     the class declaration
+	 * @param loader      the loader
+	 * @param p           the package
+	 * @param cl          the class declaration
+	 * @param paramsClass class parameter
 	 */
-	public AstClass(ModelLoader loader, ClassOrInterfaceDeclaration cl, TypeModel[] paramsClass) {
-		super(loader, cl);
+	public AstClass(ModelLoader loader, PackageDeclaration p, ClassOrInterfaceDeclaration cl, TypeModel[] paramsClass) {
+		super(loader, p, cl);
 		this.paramsClass = paramsClass;
 	}
-
 
 	@Override
 	public ClassModel superType() {
@@ -42,7 +44,7 @@ public class AstClass extends AstBaseClass<ClassOrInterfaceDeclaration> {
 			return null;
 		if (superType == null) {
 			ResolvedReferenceTypeDeclaration r = c.resolve();
-			superType = loader.get(r.asClass().getSuperClass().map(c -> c.describe()).get(), parameters()).asClass();
+			superType = loader.get(r.asClass().getSuperClass().map(c -> c.describe()).orElse("java.lang.Object"), parameters()).asClass();
 		}
 		return superType;
 	}
@@ -50,7 +52,8 @@ public class AstClass extends AstBaseClass<ClassOrInterfaceDeclaration> {
 	@Override
 	public List<ClassModel> interfaces() {
 		if (interfaces == null) {
-			interfaces = (c.isInterface() ? c.getExtendedTypes() : c.getImplementedTypes()).stream().map(c -> loader.get(c.resolve().describe(), parameters()).asClass()).filter(c -> !"java.lang.Object".equals(c.name())).collect(Collectors.toList());
+			interfaces = (c.isInterface() ? c.getExtendedTypes() : c.getImplementedTypes()).stream().map(c -> loader.get(c.resolve().describe(), parameters()).asClass())
+					.filter(c -> !"java.lang.Object".equals(c.name())).collect(Collectors.toList());
 		}
 		return interfaces;
 	}

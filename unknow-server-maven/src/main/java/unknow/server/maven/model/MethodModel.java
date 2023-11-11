@@ -41,10 +41,10 @@ public interface MethodModel extends WithAnnotation, WithMod, WithName, WithType
 		StringBuilder sb = new StringBuilder(name()).append('(');
 		if (!parameters().isEmpty()) {
 			for (ParamModel<MethodModel> t : parameters())
-				sb.append(t.type().internalName()).append(',');
+				sb.append(t.type().name()).append(',');
 			sb.setLength(sb.length() - 1);
 		}
-		sb.append(')').append(type().internalName());
+		sb.append(')').append(type().name());
 		return sb.toString();
 	}
 }

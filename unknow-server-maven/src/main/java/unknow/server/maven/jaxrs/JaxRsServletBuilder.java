@@ -72,9 +72,9 @@ import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBodyParam;
 import unknow.server.maven.model.ClassModel;
 import unknow.server.maven.model.MethodModel;
-import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.model.ParamModel;
 import unknow.server.maven.model.TypeModel;
+import unknow.server.maven.model.jvm.JvmModelLoader;
 
 /**
  * @author unknow
@@ -233,7 +233,7 @@ public class JaxRsServletBuilder {
 		if (t.isWildCard()) {
 			t1 = t.asWildcard().bound();
 			if (t1 == null)
-				t1 = ModelLoader.OBJECT;
+				t1 = JvmModelLoader.GLOBAL.get(Object.class.getName());
 		}
 
 		if (p instanceof JaxrsBodyParam) {

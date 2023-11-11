@@ -94,6 +94,9 @@ public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderCont
 	@Parameter(defaultValue = "false")
 	private boolean addAccessLog;
 
+	@Parameter(defaultValue = "WEB-INF,META-INF,generated")
+	private List<String> ignoredResources;
+
 	@Override
 	protected String id() {
 		return "servlet-generator";
@@ -108,39 +111,7 @@ public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderCont
 			descriptor.filters.add(ACCESSLOG);
 
 		processSrc(descriptor);
-		processResources((full, file) -> {
-			if (file.equals(WEBXML)) {
-				try (InputStream r = Files.newInputStream(full)) {
-					SaxParser.parse(new Context(descriptor, loader), new InputSource(r));
-				} catch (ParserConfigurationException | SAXException | IOException e) {
-					logger.warn("Failed to parse web.xml {}", full, e);
-				}
-				return;
-			}
-			if (file.equals(INITIALIZER)) {
-				try (BufferedReader r = Files.newBufferedReader(full)) {
-					String l;
-					while ((l = r.readLine()) != null)
-						descriptor.initializer.add(l);
-				} catch (IOException e) {
-					logger.warn("Failed to parse {}", full, e);
-				}
-			}
-			if (file.startsWith("WEB-INF") || file.startsWith("META-INF"))
-				return;
-			String p = "/" + file.toString().replace('\\', '/');
-			try {
-				long size = Files.size(full);
-				descriptor.resources.put(p, new Resource(Files.getLastModifiedTime(full).to(TimeUnit.MILLISECONDS), size));
-				SD d = new SD(descriptor.servlets.size());
-				d.clazz = (size < staticResourceSize ? ServletResourceStatic.class : ServletResource.class).getName();
-				d.name = "Resource:" + p;
-				d.pattern.add(p);
-				descriptor.servlets.add(d);
-			} catch (IOException e) {
-				logger.error("Failed to process resources {}", full, e);
-			}
-		});
+		processResources(this::process);
 		if (graalvm && !descriptor.resources.isEmpty())
 			generateGraalvmResources();
 
@@ -157,6 +128,45 @@ public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderCont
 			b.add(this);
 
 		out.save(cu);
+	}
+
+	private void process(Path full, Path file) {
+		if (file.equals(WEBXML)) {
+			try (InputStream r = Files.newInputStream(full)) {
+				SaxParser.parse(new Context(descriptor, loader), new InputSource(r));
+			} catch (ParserConfigurationException | SAXException | IOException e) {
+				logger.warn("Failed to parse web.xml {}", full, e);
+			}
+			return;
+		}
+		if (file.equals(INITIALIZER)) {
+			try (BufferedReader r = Files.newBufferedReader(full)) {
+				String l;
+				while ((l = r.readLine()) != null)
+					descriptor.initializer.add(l);
+			} catch (IOException e) {
+				logger.warn("Failed to parse {}", full, e);
+			}
+		}
+
+		for (String p : ignoredResources) {
+			if (file.startsWith(p))
+				return;
+		}
+
+		String p = "/" + file.toString().replace('\\', '/');
+		try {
+			long size = Files.size(full);
+			descriptor.resources.put(p, new Resource(Files.getLastModifiedTime(full).to(TimeUnit.MILLISECONDS), size));
+			SD d = new SD(descriptor.servlets.size());
+			d.clazz = (size < staticResourceSize ? ServletResourceStatic.class : ServletResource.class).getName();
+			d.name = "Resource:" + p;
+			d.pattern.add(p);
+			descriptor.servlets.add(d);
+		} catch (IOException e) {
+			logger.error("Failed to process resources {}", full, e);
+		}
+
 	}
 
 	/**

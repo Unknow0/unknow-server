@@ -3,12 +3,13 @@
  */
 package unknow.server.maven.model.ast;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import com.github.javaparser.ast.body.MethodDeclaration;
-import com.github.javaparser.ast.nodeTypes.NodeWithModifiers;
+import com.github.javaparser.ast.body.Parameter;
 
 import unknow.server.maven.model.AnnotationModel;
 import unknow.server.maven.model.AnnotationValue;
@@ -21,7 +22,7 @@ import unknow.server.maven.model.TypeModel;
 /**
  * @author unknow
  */
-public class AstMethod implements MethodModel, AstMod {
+public class AstMethod implements MethodModel, AstMod<MethodDeclaration> {
 	private final ClassModel parent;
 	private final ModelLoader loader;
 	private final MethodDeclaration m;
@@ -31,6 +32,8 @@ public class AstMethod implements MethodModel, AstMod {
 
 	/**
 	 * create new AstMethod
+	 * 
+	 * @param parent
 	 * 
 	 * @param loader
 	 * @param m
@@ -55,7 +58,7 @@ public class AstMethod implements MethodModel, AstMod {
 	}
 
 	@Override
-	public NodeWithModifiers<?> object() {
+	public MethodDeclaration object() {
 		return m;
 	}
 
@@ -78,8 +81,12 @@ public class AstMethod implements MethodModel, AstMod {
 
 	@Override
 	public List<ParamModel<MethodModel>> parameters() {
-		if (params == null)
-			params = m.getParameters().stream().map(p -> new AstParam<MethodModel>(loader, this, p)).collect(Collectors.toList());
+		if (params == null) {
+			int i = 0;
+			params = new ArrayList<>();
+			for (Parameter p : m.getParameters())
+				params.add(new AstParam<>(loader, this, p, i++));
+		}
 		return params;
 	}
 

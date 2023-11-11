@@ -11,8 +11,11 @@ import unknow.server.maven.model.util.WithMod;
 /**
  * @author unknow
  */
-public interface AstMod extends WithMod {
-	NodeWithModifiers<?> object();
+public interface AstMod<T extends NodeWithModifiers<?>> extends WithMod {
+	/**
+	 * @return the object with modifier
+	 */
+	T object();
 
 	@Override
 	default boolean isTransient() {

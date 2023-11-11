@@ -59,7 +59,7 @@ public class JspGeneratorMojo {
 		types = new TypeCache(cu, Collections.emptyMap());
 
 		b = cl.addMethod("jspService", Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL).addParameter(types.getClass(HttpServletRequest.class), "request")
-				.addParameter(types.getClass(HttpServletResponse.class), "response").addMarkerAnnotation(Override.class).getBody().get();
+				.addParameter(types.getClass(HttpServletResponse.class), "response").addMarkerAnnotation(Override.class).createBody();
 		try (Reader r = Files.newBufferedReader(file)) {
 			parse(r);
 		}
