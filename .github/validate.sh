@@ -1,5 +1,7 @@
 #!/bin/sh
 
+ls -l . unknow-http-test unknow-http-test/target
+
 java -jar unknow-http-test/target/server.jar >log 2>log &
 pid=$!
 trap "kill -9 $pid" EXIT
