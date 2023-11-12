@@ -42,4 +42,13 @@ public class AnnotationMemberModel implements WithName, AnnotationValue {
 		return defaultValue;
 	}
 
+	public boolean isSet() {
+		return !value.valueEquals(defaultValue);
+	}
+
+	@Override
+	public boolean valueEquals(AnnotationValue a) {
+		return value.valueEquals(a);
+	}
+
 }

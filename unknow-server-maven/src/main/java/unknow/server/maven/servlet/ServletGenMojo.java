@@ -110,7 +110,7 @@ public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderCont
 		if (addAccessLog)
 			descriptor.filters.add(ACCESSLOG);
 
-		processSrc(descriptor);
+		process(descriptor);
 		processResources(this::process);
 		if (graalvm && !descriptor.resources.isEmpty())
 			generateGraalvmResources();

@@ -119,13 +119,10 @@ public class JaxbGeneratorMojo extends AbstractGeneratorMojo {
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
 		init();
-		processSrc();
-
-		for (String c : classes.keySet()) {
-			TypeModel type = loader.get(c);
+		process(type -> {
 			if (type.annotation(jakarta.xml.bind.annotation.XmlType.class).isPresent())
 				xmlLoader.add(type);
-		}
+		});
 
 		int i = 0;
 		List<XmlType> list = new ArrayList<>(xmlLoader.types());
@@ -212,8 +209,7 @@ public class JaxbGeneratorMojo extends AbstractGeneratorMojo {
 			return null;
 		// TODO
 //		XmlSchema
-		return new QName(r.member("namespace").map(v -> v.asLiteral()).filter(v -> !"##default".equals(v)).orElse(""),
-				r.member("name").map(v -> v.asLiteral()).filter(v -> !"##default".equals(v)).orElse(t.simpleName()));
+		return new QName(r.member("namespace").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !"##default".equals(v)).orElse(""),
+				r.member("name").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !"##default".equals(v)).orElse(t.simpleName()));
 	}
-
 }

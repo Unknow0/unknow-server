@@ -47,7 +47,7 @@ public abstract class JaxrsParam<T extends WithName & WithAnnotation & WithType>
 		this.value = value;
 
 		this.v = prefix + "$" + p.name();
-		this.def = p.annotation(DefaultValue.class).flatMap(a -> a.value()).map(v -> v.asLiteral()).orElseGet(() -> {
+		this.def = p.annotation(DefaultValue.class).flatMap(a -> a.value()).filter(v -> v.isSet()).map(v -> v.asLiteral()).orElseGet(() -> {
 			if (!type.isPrimitive())
 				return null;
 			if (type == PrimitiveModel.BOOLEAN)

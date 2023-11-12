@@ -4,6 +4,7 @@
 package unknow.server.maven;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -17,15 +18,23 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 import org.apache.maven.model.Resource;
 import org.apache.maven.plugin.AbstractMojo;
+import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.util.DirectoryWalkListener;
 import org.codehaus.plexus.util.DirectoryWalker;
+import org.eclipse.aether.RepositorySystem;
+import org.eclipse.aether.RepositorySystemSession;
+import org.eclipse.aether.artifact.DefaultArtifact;
+import org.eclipse.aether.resolution.ArtifactRequest;
+import org.eclipse.aether.resolution.ArtifactResolutionException;
+import org.eclipse.aether.resolution.ArtifactResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,6 +51,7 @@ import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSol
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver;
 
 import unknow.server.maven.model.ModelLoader;
+import unknow.server.maven.model.TypeModel;
 import unknow.server.maven.model.ast.AstModelLoader;
 import unknow.server.maven.model.jvm.JvmModelLoader;
 
@@ -54,6 +64,11 @@ public abstract class AbstractGeneratorMojo extends AbstractMojo {
 	@Parameter(defaultValue = "${project}", required = true, readonly = true)
 	protected MavenProject project;
 
+	@Parameter(defaultValue = "${repositorySystemSession}", required = true, readonly = true)
+	private RepositorySystemSession session;
+	@org.apache.maven.plugins.annotations.Component
+	protected RepositorySystem repository;
+
 	@Parameter(name = "packageName")
 	protected String packageName;
 
@@ -65,6 +80,9 @@ public abstract class AbstractGeneratorMojo extends AbstractMojo {
 
 	@Parameter(name = "graalvm", defaultValue = "true")
 	protected boolean graalvm;
+
+	@Parameter(name = "artifacts")
+	protected List<String> artifacts;
 
 	protected Output out;
 
@@ -84,10 +102,6 @@ public abstract class AbstractGeneratorMojo extends AbstractMojo {
 	/** all class in src (fqn to classDef) */
 	protected final Map<String, TypeDeclaration<?>> classes = new HashMap<>();
 	protected final Map<String, PackageDeclaration> packages = new HashMap<>();
-	private final Consumer<CompilationUnit> c = cu -> {
-		cu.walk(TypeDeclaration.class, v -> classes.put(v.resolve().getQualifiedName(), v));
-		cu.getPackageDeclaration().filter(p -> p.getAnnotations() != null).ifPresent(p -> packages.put(p.getNameAsString(), p));
-	};
 
 	protected ModelLoader loader;
 
@@ -149,41 +163,40 @@ public abstract class AbstractGeneratorMojo extends AbstractMojo {
 		}
 	}
 
-	protected void processSrc() throws MojoFailureException {
-		processSrc(null);
-	}
+	protected void process(TypeConsumer c) throws MojoExecutionException, MojoFailureException {
+		SrcWalker w = new SrcWalker(c);
+		for (String s : project.getCompileSourceRoots())
+			w.walk(s);
 
-	protected void processSrc(Consumer<CompilationUnit> consumer) throws MojoFailureException {
-		String[] part = packageName == null ? new String[0] : packageName.split("\\.");
-
-		Consumer<CompilationUnit> p = consumer == null ? c : cu -> {
-			c.accept(cu);
-			consumer.accept(cu);
-		};
-
-		try { // Collect annotation
-			for (String s : project.getCompileSourceRoots()) {
-				final Path local = Paths.get(s, part);
-				final int count = local.getNameCount();
-
-				Files.walkFileTree(Paths.get(s), new SimpleFileVisitor<Path>() {
-					@Override
-					public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-						String f = file.getFileName().toString();
-						if (!f.endsWith(".java"))
-							return FileVisitResult.CONTINUE;
-						parser.parse(file).ifSuccessful(p);
-						if (count == file.getNameCount() && file.startsWith(local)) {
-							String string = file.getFileName().toString();
-							string = string.substring(0, string.length() - 5);
-							existingClass.put(string, packageName + "." + string);
+		if (artifacts == null || artifacts.isEmpty())
+			return;
+		try {
+			for (String id : artifacts) {
+				ArtifactResult a = repository.resolveArtifact(session, new ArtifactRequest().setArtifact(new DefaultArtifact(id)));
+				if (a == null)
+					throw new MojoFailureException("Failed to resolve " + id);
+				try (FileInputStream is = new FileInputStream(a.getArtifact().getFile()); ZipInputStream zip = new ZipInputStream(is)) {
+					ZipEntry e;
+					while ((e = zip.getNextEntry()) != null) {
+						String name = e.getName();
+						if (!name.endsWith(".class"))
+							continue;
+						try {
+							c.accept(loader.get(name.substring(0, name.length() - 6).replaceAll("[/$]", ".")));
+						} catch (MojoExecutionException ex) {
+							throw ex;
+						} catch (MojoFailureException ex) {
+							throw ex;
+						} catch (Exception ex) {
+							throw new MojoExecutionException(ex);
 						}
-						return FileVisitResult.CONTINUE;
 					}
-				});
+				} catch (IOException e) {
+					throw new MojoFailureException("Failed to resolve " + id, e);
+				}
 			}
-		} catch (IOException e) {
-			throw new MojoFailureException("failed to get source failed", e);
+		} catch (ArtifactResolutionException e) {
+			throw new MojoFailureException(e);
 		}
 	}
 
@@ -217,6 +230,62 @@ public abstract class AbstractGeneratorMojo extends AbstractMojo {
 		}
 	}
 
+	private class SrcWalker extends SimpleFileVisitor<Path> {
+		private final TypeConsumer c;
+		private final String[] part;
+		private Path local;
+		private int count;
+		private Exception ex;
+
+		public SrcWalker(TypeConsumer c) {
+			this.c = c;
+			this.part = packageName == null ? new String[0] : packageName.split("\\.");
+		}
+
+		public void walk(String s) throws MojoFailureException, MojoExecutionException {
+			local = Paths.get(s, part);
+			count = local.getNameCount();
+			ex = null;
+
+			try {
+				Files.walkFileTree(Paths.get(s), this);
+			} catch (IOException e) {
+				throw new MojoExecutionException("Failed to process source " + s, e);
+			}
+			if (ex instanceof MojoExecutionException)
+				throw (MojoExecutionException) ex;
+			if (ex instanceof MojoFailureException)
+				throw (MojoFailureException) ex;
+			if (ex != null)
+				throw new MojoExecutionException("Failed to process source " + s, ex);
+		}
+
+		@Override
+		public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+			String f = file.getFileName().toString();
+			if (!f.endsWith(".java"))
+				return FileVisitResult.CONTINUE;
+			CompilationUnit cu = parser.parse(file).getResult().orElse(null);
+			cu.getPackageDeclaration().filter(v -> v.getAnnotations() != null).ifPresent(v -> packages.put(v.getNameAsString(), v));
+			for (TypeDeclaration<?> v : cu.findAll(TypeDeclaration.class)) {
+				String qualifiedName = v.resolve().getQualifiedName();
+				classes.put(qualifiedName, v);
+				TypeModel t = loader.get(qualifiedName);
+				try {
+					c.accept(t);
+				} catch (MojoExecutionException | MojoFailureException e) {
+					ex = e;
+				}
+			}
+			if (count == file.getNameCount() && file.startsWith(local)) {
+				String string = file.getFileName().toString();
+				string = string.substring(0, string.length() - 5);
+				existingClass.put(string, packageName + "." + string);
+			}
+			return FileVisitResult.CONTINUE;
+		}
+	}
+
 	private static class L implements DirectoryWalkListener {
 		final BiConsumer<Path, Path> c;
 		Path root;
@@ -242,5 +311,9 @@ public abstract class AbstractGeneratorMojo extends AbstractMojo {
 		@Override
 		public void debug(String message) { // ok
 		}
+	}
+
+	public static interface TypeConsumer {
+		void accept(TypeModel t) throws MojoExecutionException, MojoFailureException;
 	}
 }

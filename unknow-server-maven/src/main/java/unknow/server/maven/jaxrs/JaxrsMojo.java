@@ -103,8 +103,11 @@ public class JaxrsMojo extends AbstractGeneratorMojo {
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
 		init();
-		model = new JaxrsModel(loader, classLoader);
-		processSrc(cu -> cu.walk(ClassOrInterfaceDeclaration.class, t -> model.process(loader.get(t.getFullyQualifiedName().get()).asClass())));
+		if (basePath.endsWith("/"))
+			basePath = basePath.substring(0, basePath.length() - 1);
+		model = new JaxrsModel(loader, classLoader, basePath);
+
+		process(t -> t.ifClass(model::process));
 		model.implicitConstructor.remove("java.lang.String");
 
 		beans = new BeanParamBuilder(newCu(), existingClass);
@@ -116,11 +119,9 @@ public class JaxrsMojo extends AbstractGeneratorMojo {
 			throw new MojoExecutionException(e);
 		}
 
-		if (basePath.endsWith("/"))
-			basePath = basePath.substring(0, basePath.length() - 1);
 		Map<String, List<JaxrsMapping>> map = new HashMap<>();
 		for (JaxrsMapping m : model.mappings()) {
-			String p = basePath + m.path;
+			String p = m.path;
 			int i = p.indexOf('{');
 			if (i > 0)
 				p = p.substring(0, p.lastIndexOf('/', i)) + "/*";
@@ -174,7 +175,7 @@ public class JaxrsMojo extends AbstractGeneratorMojo {
 				list.add(m);
 
 			NodeList<Expression> l = new NodeList<>(new ObjectCreationExpr(null, types.getClass(e.getKey()), list));
-			l.add(e.getKey().annotation(Priority.class).flatMap(a -> a.value()).map(a -> (Expression) new IntegerLiteralExpr(a.asLiteral()))
+			l.add(e.getKey().annotation(Priority.class).flatMap(a -> a.value()).filter(v -> v.isSet()).map(a -> (Expression) new IntegerLiteralExpr(a.asLiteral()))
 					.orElseGet(() -> new FieldAccessExpr(new TypeExpr(types.get(Priorities.class)), "USER")));
 			for (String s : e.getValue())
 				l.add(Utils.text(s));
@@ -186,7 +187,7 @@ public class JaxrsMojo extends AbstractGeneratorMojo {
 				list.add(m);
 
 			NodeList<Expression> l = new NodeList<>(new ObjectCreationExpr(null, types.getClass(e.getKey()), list));
-			l.add(e.getKey().annotation(Priority.class).flatMap(a -> a.value()).map(a -> (Expression) new IntegerLiteralExpr(a.asLiteral()))
+			l.add(e.getKey().annotation(Priority.class).flatMap(a -> a.value()).filter(v -> v.isSet()).map(a -> (Expression) new IntegerLiteralExpr(a.asLiteral()))
 					.orElseGet(() -> new FieldAccessExpr(new TypeExpr(types.get(Priorities.class)), "USER")));
 			for (String s : e.getValue())
 				l.add(Utils.text(s));

@@ -63,6 +63,7 @@ import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
 import unknow.server.maven.jaxws.binding.Operation;
 import unknow.server.maven.jaxws.binding.Service;
+import unknow.server.maven.model.ClassModel;
 import unknow.server.maven.model.TypeModel;
 
 /**
@@ -71,13 +72,13 @@ import unknow.server.maven.model.TypeModel;
 public class JaxwsServletBuilder {
 	private static final Logger logger = LoggerFactory.getLogger(JaxwsServletBuilder.class);
 
-	private final ClassOrInterfaceDeclaration serviceClass;
+	private final ClassModel serviceClass;
 
 	private final Service service;
 
 	private ClassOrInterfaceDeclaration servlet;
 
-	public JaxwsServletBuilder(ClassOrInterfaceDeclaration serviceClass, Service service) {
+	public JaxwsServletBuilder(ClassModel serviceClass, Service service) {
 		this.serviceClass = serviceClass;
 		this.service = service;
 	}

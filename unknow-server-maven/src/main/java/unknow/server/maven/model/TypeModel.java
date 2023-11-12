@@ -3,6 +3,8 @@
  */
 package unknow.server.maven.model;
 
+import java.util.function.Consumer;
+
 import unknow.server.maven.model.util.WithAnnotation;
 import unknow.server.maven.model.util.WithName;
 import unknow.server.maven.model.util.WithParent;
@@ -27,7 +29,7 @@ public interface TypeModel extends WithAnnotation, WithName, WithParent<PackageM
 	 */
 	default String simpleName() {
 		String name = name();
-		int i = name.lastIndexOf(".");
+		int i = Math.max(name.lastIndexOf("."), name.lastIndexOf("$"));
 		return i < 0 ? name : name.substring(i + 1);
 	}
 
@@ -56,6 +58,11 @@ public interface TypeModel extends WithAnnotation, WithName, WithParent<PackageM
 		throw new IllegalStateException(name() + " isn't a primitive");
 	}
 
+	default void ifPrimitive(Consumer<PrimitiveModel> c) {
+		if (this instanceof PrimitiveModel)
+			c.accept((PrimitiveModel) this);
+	}
+
 	/**
 	 * @return true if it's a class type
 	 */
@@ -70,6 +77,11 @@ public interface TypeModel extends WithAnnotation, WithName, WithParent<PackageM
 		if (this instanceof ClassModel)
 			return (ClassModel) this;
 		throw new IllegalStateException(name() + " isn't a class");
+	}
+
+	default void ifClass(Consumer<ClassModel> c) {
+		if (this instanceof ClassModel)
+			c.accept((ClassModel) this);
 	}
 
 	/**
@@ -109,6 +121,11 @@ public interface TypeModel extends WithAnnotation, WithName, WithParent<PackageM
 		return this instanceof ArrayModel;
 	}
 
+	default void ifArray(Consumer<ArrayModel> c) {
+		if (this instanceof ArrayModel)
+			c.accept((ArrayModel) this);
+	}
+
 	/**
 	 * @return this type as an array or null
 	 */
@@ -116,6 +133,11 @@ public interface TypeModel extends WithAnnotation, WithName, WithParent<PackageM
 		if (this instanceof ArrayModel)
 			return (ArrayModel) this;
 		throw new IllegalStateException(name() + " isn't an array");
+	}
+
+	default void ifEnum(Consumer<EnumModel> c) {
+		if (this instanceof EnumModel)
+			c.accept((EnumModel) this);
 	}
 
 	/**
@@ -150,6 +172,11 @@ public interface TypeModel extends WithAnnotation, WithName, WithParent<PackageM
 		throw new IllegalStateException(name() + " isn't a wildcard");
 	}
 
+	default void ifWildcard(Consumer<WildcardModel> c) {
+		if (this instanceof WildcardModel)
+			c.accept((WildcardModel) this);
+	}
+
 	/**
 	 * @return true if it's void
 	 */
@@ -164,5 +191,4 @@ public interface TypeModel extends WithAnnotation, WithName, WithParent<PackageM
 	default boolean equals(TypeModel t) {
 		return t.toString().equals(toString());
 	}
-
 }

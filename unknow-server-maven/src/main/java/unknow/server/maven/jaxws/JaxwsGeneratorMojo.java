@@ -28,14 +28,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.javaparser.ast.CompilationUnit;
-import com.github.javaparser.ast.body.TypeDeclaration;
-import com.github.javaparser.ast.expr.AnnotationExpr;
 
 import jakarta.jws.WebService;
 import unknow.server.maven.AbstractGeneratorMojo;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.jaxb.model.XmlLoader;
 import unknow.server.maven.jaxws.binding.Service;
+import unknow.server.maven.model.AnnotationModel;
 
 /**
  * @author unknow
@@ -62,7 +61,6 @@ public class JaxwsGeneratorMojo extends AbstractGeneratorMojo {
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
 		init();
-		processSrc();
 
 		if (!basePath.endsWith("/"))
 			basePath += "/";
@@ -73,15 +71,17 @@ public class JaxwsGeneratorMojo extends AbstractGeneratorMojo {
 			throw new MojoFailureException("no jaxb factory found");
 
 		List<String> wsdl = new ArrayList<>();
-		for (TypeDeclaration<?> c : classes.values()) {
-			Optional<AnnotationExpr> a = c.getAnnotationByClass(WebService.class);
+		process(t -> {
+			if (!t.isClass())
+				return;
+			Optional<AnnotationModel> a = t.annotation(WebService.class);
 			if (!a.isPresent())
-				continue;
+				return;
 			CompilationUnit cu = newCu();
 			TypeCache types = new TypeCache(cu, existingClass);
 
 			try {
-				Service service = Service.build(c.asClassOrInterfaceDeclaration(), basePath, loader, xmlLoader);
+				Service service = Service.build(t.asClass(), basePath, loader, xmlLoader);
 
 				String n = "generated/" + id() + "/" + service.name + ".wsdl";
 				Path path = Paths.get(resources, n);
@@ -90,12 +90,12 @@ public class JaxwsGeneratorMojo extends AbstractGeneratorMojo {
 					new WsdlBuilder(service, publishUrl).write(f.createXMLStreamWriter(w));
 				}
 				wsdl.add(n);
-				new JaxwsServletBuilder(c.asClassOrInterfaceDeclaration(), service).generate(cu, types, jaxbFactory, n);
+				new JaxwsServletBuilder(t.asClass(), service).generate(cu, types, jaxbFactory, n);
 				out.save(cu);
 			} catch (Exception e) {
 				throw new MojoFailureException("failed to generate/save output class", e);
 			}
-		}
+		});
 
 		if (graalvm && !wsdl.isEmpty()) {
 			try {

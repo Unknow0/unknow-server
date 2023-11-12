@@ -111,7 +111,8 @@ public class XmlLoader {
 		if (type.isPrimitive()) // should not happen
 			throw new IllegalArgumentException("Unsupported primitive " + type);
 		if (type.isEnum()) {
-			XmlType t = type.annotation(jakarta.xml.bind.annotation.XmlEnum.class).flatMap(v -> v.value()).map(v -> add(v.asClass())).orElse(XmlLoader.STRING);
+			XmlType t = type.annotation(jakarta.xml.bind.annotation.XmlEnum.class).flatMap(v -> v.value()).filter(v -> v.isSet()).map(v -> add(v.asClass()))
+					.orElse(XmlLoader.STRING);
 			if (!(t instanceof XmlTypeSimple))
 				throw new IllegalArgumentException("Enum type should be a simple type " + type);
 			return new XmlEnum(qname(type), type.asEnum(), (XmlTypeSimple) t);
@@ -142,12 +143,13 @@ public class XmlLoader {
 	}
 
 	private XmlType createObject(ClassModel c) {
-		XmlAccessType type = c.annotation(XmlAccessorType.class).flatMap(a -> a.value()).map(a -> XmlAccessType.valueOf(a.asLiteral())).orElse(XmlAccessType.PUBLIC_MEMBER);
+		XmlAccessType type = c.annotation(XmlAccessorType.class).flatMap(a -> a.value()).filter(v -> v.isSet()).map(a -> XmlAccessType.valueOf(a.asLiteral()))
+				.orElse(XmlAccessType.PUBLIC_MEMBER);
 
 		String defaultNs = "";
 		Optional<AnnotationModel> o = c.parent().annotation(XmlSchema.class);
-		if (o.isPresent() && o.flatMap(v -> v.member("elementFormDefault")).map(v -> v.asLiteral().equals("QUALIFIED")).orElse(false))
-			defaultNs = o.flatMap(v -> v.member(NAMESPACE)).map(v -> v.asLiteral()).orElse("");
+		if (o.isPresent() && o.flatMap(v -> v.member("elementFormDefault")).filter(v -> v.isSet()).map(v -> v.asLiteral().equals("QUALIFIED")).orElse(false))
+			defaultNs = o.flatMap(v -> v.member(NAMESPACE)).filter(v -> v.isSet()).map(v -> v.asLiteral()).orElse("");
 
 		List<XmlElement> attrs = new ArrayList<>();
 		List<XmlElement> elems = new ArrayList<>();
@@ -171,11 +173,11 @@ public class XmlLoader {
 			} else if (attr.isPresent()) {
 				if (!(add(t) instanceof XmlTypeSimple))
 					throw new IllegalArgumentException("only simple type allowed in attribute in '" + c.name() + "'");
-				String n = attr.flatMap(a -> a.member("name")).map(a -> a.asLiteral()).map(i -> DEFAULT.equals(i) ? null : i).orElse(b.name());
-				String ns = attr.flatMap(a -> a.member(NAMESPACE)).map(a -> a.asLiteral()).map(i -> DEFAULT.equals(i) ? null : i).orElse("");
+				String n = attr.flatMap(a -> a.member("name")).filter(a -> a.isSet()).map(a -> a.asLiteral()).map(i -> DEFAULT.equals(i) ? null : i).orElse(b.name());
+				String ns = attr.flatMap(a -> a.member(NAMESPACE)).filter(a -> a.isSet()).map(a -> a.asLiteral()).map(i -> DEFAULT.equals(i) ? null : i).orElse("");
 				attrs.add(new XmlElement(new QName(ns, n), b, () -> add(b.type())));
 			} else if (choice.isPresent()) {
-				AnnotationModel[] e = choice.get().value().map(a -> a.asArrayAnnotation()).orElse(null);
+				AnnotationModel[] e = choice.get().value().filter(a -> a.isSet()).map(a -> a.asArrayAnnotation()).orElse(null);
 				if (e == null || e.length == 0)
 					throw new IllegalArgumentException("Emtpy choice for " + b);
 
@@ -195,10 +197,10 @@ public class XmlLoader {
 			throw new IllegalArgumentException("Mixed content not supported in " + c);
 
 		XmlElements elements;
-		XmlAccessOrder defaultOrder = c.annotation(XmlAccessorOrder.class).flatMap(a -> a.value()).map(a -> a.asLiteral()).map(a -> XmlAccessOrder.valueOf(a))
-				.orElse(XmlAccessOrder.UNDEFINED);
-		List<String> propOrder = c.annotation(jakarta.xml.bind.annotation.XmlType.class).flatMap(a -> a.member("propOrder")).map(a -> a.asArrayLiteral()).map(Arrays::asList)
-				.orElse(Collections.emptyList());
+		XmlAccessOrder defaultOrder = c.annotation(XmlAccessorOrder.class).flatMap(a -> a.value()).filter(v -> v.isSet()).map(a -> a.asLiteral())
+				.map(a -> XmlAccessOrder.valueOf(a)).orElse(XmlAccessOrder.UNDEFINED);
+		List<String> propOrder = c.annotation(jakarta.xml.bind.annotation.XmlType.class).flatMap(a -> a.member("propOrder")).filter(v -> v.isSet())
+				.map(a -> a.asArrayLiteral()).map(Arrays::asList).orElse(Collections.emptyList());
 		if (propOrder.isEmpty()) {
 			if (defaultOrder == XmlAccessOrder.ALPHABETICAL)
 				Collections.sort(elems, (a, b) -> a.name().compareTo(b.name()));
@@ -222,16 +224,16 @@ public class XmlLoader {
 
 		Optional<AnnotationModel> a = c.annotation(jakarta.xml.bind.annotation.XmlType.class);
 		Factory f = new Factory(
-				a.flatMap(v -> v.member("factoryClass")).map(v -> v.asClass().asClass())
+				a.flatMap(v -> v.member("factoryClass")).filter(v -> v.isSet()).map(v -> v.asClass().asClass())
 						.filter(v -> !v.isAssignableTo(jakarta.xml.bind.annotation.XmlType.DEFAULT.class.getName())).orElse(c),
-				a.flatMap(v -> v.member("factoryMethod")).map(v -> v.asLiteral()).orElse(""));
+				a.flatMap(v -> v.member("factoryMethod")).filter(v -> v.isSet()).map(v -> v.asLiteral()).orElse(""));
 		return new XmlTypeComplex(qname(c), c, f, attrs, elements, value);
 	}
 
 	public XmlElement getElems(Optional<AnnotationModel> elem, String name, String defaultNs, BeanProperty b) {
-		String n = elem.flatMap(a -> a.member("name")).map(a -> a.asLiteral()).map(i -> DEFAULT.equals(i) ? null : i).orElse(name);
-		String ns = elem.flatMap(a -> a.member(NAMESPACE)).map(a -> a.asLiteral()).map(i -> DEFAULT.equals(i) ? null : i).orElse(defaultNs);
-		TypeModel type = elem.flatMap(a -> a.member("type")).map(a -> a.asClass())
+		String n = elem.flatMap(a -> a.member("name")).filter(v -> v.isSet()).map(a -> a.asLiteral()).map(i -> DEFAULT.equals(i) ? null : i).orElse(name);
+		String ns = elem.flatMap(a -> a.member(NAMESPACE)).filter(v -> v.isSet()).map(a -> a.asLiteral()).map(i -> DEFAULT.equals(i) ? null : i).orElse(defaultNs);
+		TypeModel type = elem.flatMap(a -> a.member("type")).filter(v -> v.isSet()).map(a -> a.asClass())
 				.filter(a -> !a.name().equals(jakarta.xml.bind.annotation.XmlElement.DEFAULT.class.getName())).orElse(b.type());
 		return new XmlElement(new QName(ns, n), b, () -> add(type));
 	}
@@ -248,10 +250,10 @@ public class XmlLoader {
 		Optional<AnnotationModel> a = type.annotation(jakarta.xml.bind.annotation.XmlType.class);
 
 		String name = type.simpleName();
-		String ns = type.parent().annotation(XmlSchema.class).flatMap(v -> v.member(NAMESPACE)).map(v -> v.asLiteral()).orElse("");
+		String ns = type.parent().annotation(XmlSchema.class).flatMap(v -> v.member(NAMESPACE)).filter(v -> v.isSet()).map(v -> v.asLiteral()).orElse("");
 		if (a.isPresent()) {
-			name = a.flatMap(v -> v.member("name")).map(v -> v.asLiteral()).filter(v -> !v.equals(DEFAULT)).orElse(name);
-			ns = a.flatMap(v -> v.member(NAMESPACE)).map(v -> v.asLiteral()).filter(v -> !v.equals(DEFAULT)).orElse(ns);
+			name = a.flatMap(v -> v.member("name")).filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.equals(DEFAULT)).orElse(name);
+			ns = a.flatMap(v -> v.member(NAMESPACE)).filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.equals(DEFAULT)).orElse(ns);
 		}
 		return new QName(ns, name);
 	}

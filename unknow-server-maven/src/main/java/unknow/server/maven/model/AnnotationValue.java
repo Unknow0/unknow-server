@@ -36,6 +36,8 @@ public interface AnnotationValue {
 		return Enum.valueOf(cl, asLiteral());
 	}
 
+	boolean valueEquals(AnnotationValue a);
+
 	/**
 	 * @param <T> array component
 	 * @param t   empty array for type
@@ -94,12 +96,17 @@ public interface AnnotationValue {
 	}
 
 	/** null value */
-	public static final AnnotationValue NULL = new AnnotationValueNull();
+	public static final AnnotationValue NULL = new AnnotationValueNull() {
+		@Override
+		public boolean valueEquals(AnnotationValue a) {
+			return a == NULL;
+		}
+	};
 
 	/**
 	 * @author unknow
 	 */
-	static class AnnotationValueNull implements AnnotationValue {
+	static abstract class AnnotationValueNull implements AnnotationValue {
 		protected AnnotationValueNull() {
 		}
 
@@ -128,7 +135,7 @@ public interface AnnotationValue {
 	 * @author unknow
 	 */
 	public static class AnnotationValueArray extends AnnotationValueNull {
-		private final AnnotationValue[] a;
+		protected AnnotationValue[] a;
 
 		/**
 		 * create new AnnotationValueArray
@@ -142,6 +149,20 @@ public interface AnnotationValue {
 		@Override
 		public AnnotationValue[] asArray() {
 			return a;
+		}
+
+		@Override
+		public boolean valueEquals(AnnotationValue other) {
+			if (!(other instanceof AnnotationValueArray))
+				return false;
+			AnnotationValueArray o = (AnnotationValueArray) other;
+			if (o.a.length != a.length)
+				return false;
+			for (int i = 0; i < a.length; i++) {
+				if (!a[i].valueEquals(o.a[i]))
+					return false;
+			}
+			return true;
 		}
 	}
 
@@ -169,6 +190,13 @@ public interface AnnotationValue {
 		public String asLiteral() {
 			return c.name();
 		}
+
+		@Override
+		public boolean valueEquals(AnnotationValue a) {
+			if (!(a instanceof AnnotationValueClass))
+				return false;
+			return c.equals(((AnnotationValueClass) a).c);
+		}
 	}
 
 	/**
@@ -189,6 +217,13 @@ public interface AnnotationValue {
 		@Override
 		public String asLiteral() {
 			return s;
+		}
+
+		@Override
+		public boolean valueEquals(AnnotationValue a) {
+			if (!(a instanceof AnnotationValueLiteral))
+				return false;
+			return s.equals(((AnnotationValueLiteral) a).s);
 		}
 	}
 
@@ -215,6 +250,16 @@ public interface AnnotationValue {
 		@Override
 		public AnnotationModel asAnnotation() {
 			return a;
+		}
+
+		@Override
+		public boolean valueEquals(AnnotationValue other) {
+			if (!(other instanceof AnnotationValueAnnotation))
+				return false;
+			AnnotationModel o = ((AnnotationValueAnnotation) other).a;
+			if (!a.name().equals(o.name()))
+				return false;
+			return a.members().equals(o.members());
 		}
 	}
 }

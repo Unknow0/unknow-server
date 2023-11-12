@@ -1,7 +1,7 @@
 #!/bin/bash
 
 unknow_start() {
-	java -jar unknow-http-test/target/server.jar > logs/unknow.log 2>&1 &
+	java -jar unknow-server-test/unknow-server-test-jar/target/server.jar > logs/unknow.log 2>&1 &
 	pid=$!
 }
 unknow_stop() {
@@ -18,7 +18,7 @@ native_stop() {
 	pid=
 }
 tomcat_start() {
-	cp unknow-http-test/target/*.war $CATALINA_HOME/webapps/ROOT.war || exit 1
+	cp unknow-server-test/unknow-server-tomcat/target/*.war $CATALINA_HOME/webapps/ROOT.war || exit 1
 	$CATALINA_HOME/bin/catalina.sh run > logs/tomcat.log 2>&1 || exit 1 &
 	pid=$!
 }
@@ -28,6 +28,13 @@ tomcat_stop() {
 	kill -9 $pid
 	pid=
 }
+
+cxf_start() {
+	cp unknow-server-test/unknow-server-cxf/target/*.war $CATALINA_HOME/webapps/ROOT.war || exit 1
+	$CATALINA_HOME/bin/catalina.sh run > logs/tomcat.log 2>&1 || exit 1 &
+	pid=$!
+}
+cxf_stop=tomcat_stop
 
 mkdir -p out
 trap '[[ "$pid" ]] && kill -9 $pid' EXIT

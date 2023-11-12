@@ -11,12 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Consumer;
-
-import com.github.javaparser.ast.CompilationUnit;
-import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
-import com.github.javaparser.ast.expr.AnnotationExpr;
-import com.github.javaparser.resolution.types.ResolvedReferenceType;
 
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.ServletContextAttributeListener;
@@ -31,11 +25,14 @@ import jakarta.servlet.http.HttpSessionIdListener;
 import jakarta.servlet.http.HttpSessionListener;
 import unknow.server.http.servlet.ServletCookieConfigImpl;
 import unknow.server.http.utils.Resource;
+import unknow.server.maven.AbstractGeneratorMojo.TypeConsumer;
+import unknow.server.maven.model.AnnotationModel;
+import unknow.server.maven.model.TypeModel;
 
 /**
  * @author unknow
  */
-public class Descriptor implements Consumer<CompilationUnit> {
+public class Descriptor implements TypeConsumer {
 	public static final List<Class<?>> LISTENERS = Arrays.asList(ServletContextListener.class, ServletContextAttributeListener.class, ServletRequestListener.class,
 			ServletRequestAttributeListener.class, HttpSessionListener.class, HttpSessionAttributeListener.class, HttpSessionIdListener.class);
 
@@ -113,38 +110,31 @@ public class Descriptor implements Consumer<CompilationUnit> {
 	}
 
 	@Override
-	public void accept(CompilationUnit c) {
-		for (ClassOrInterfaceDeclaration t : c.findAll(ClassOrInterfaceDeclaration.class)) {
-			Optional<AnnotationExpr> o = t.getAnnotationByClass(WebServlet.class);
-			if (o.isPresent()) {
-				SD sd = new SD(servlets.size(), o.get(), t);
-				servlets.add(sd);
-			}
-			o = t.getAnnotationByClass(WebFilter.class);
-			if (o.isPresent()) {
-				SD sd = new SD(filters.size(), o.get(), t);
-				if (sd.dispatcher.isEmpty())
-					sd.dispatcher.add(DispatcherType.REQUEST);
-				filters.add(sd);
-			}
-			o = t.getAnnotationByClass(WebListener.class);
-			if (o.isPresent())
-				processListener(t);
+	public void accept(TypeModel t) {
+		Optional<AnnotationModel> o = t.annotation(WebServlet.class);
+		if (o.isPresent()) {
+			SD sd = new SD(servlets.size(), o.get(), t);
+			servlets.add(sd);
 		}
+		o = t.annotation(WebFilter.class);
+		if (o.isPresent()) {
+			SD sd = new SD(filters.size(), o.get(), t);
+			if (sd.dispatcher.isEmpty())
+				sd.dispatcher.add(DispatcherType.REQUEST);
+			filters.add(sd);
+		}
+		o = t.annotation(WebListener.class);
+		if (o.isPresent())
+			processListener(t);
 	}
 
-	private void processListener(ClassOrInterfaceDeclaration t) {
-		Set<String> ancestror = new HashSet<>();
-		for (ResolvedReferenceType i : t.resolve().getAllAncestors())
-			ancestror.add(i.getQualifiedName());
-
+	private void processListener(TypeModel t) {
 		Set<Class<?>> listener = new HashSet<>();
 		for (Class<?> cl : LISTENERS) {
-			if (ancestror.contains(cl.getName()))
+			if (t.isAssignableTo(cl))
 				listener.add(cl);
 		}
-
-		listeners.add(new LD(t.resolve().getQualifiedName(), listener));
+		listeners.add(new LD(t.name(), listener));
 	}
 
 	public List<SD> findFilters(String path, DispatcherType type) {

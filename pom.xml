@@ -32,16 +32,16 @@
 		</repository>
 	</repositories>
 	<modules>
-		<module>unknow-server-bench</module>
+		<module>unknow-server-nio</module>
 		<module>unknow-server-maven</module>
+		<module>unknow-server-http</module>
 		<module>unknow-server-util</module>
 		<module>unknow-server-jaxb</module>
 		<module>unknow-server-jaxws</module>
+		<module>unknow-server-jaxrs</module>
+		<module>unknow-server-protobuf</module>
+		<module>unknow-server-bench</module>
 		<module>unknow-server-test</module>
-		<module>unknow-nio</module>
-		<module>unknow-http</module>
-		<module>unknow-protobuf</module>
-		<module>unknow-http-jaxrs</module>
 	</modules>
 	<build>
 		<pluginManagement>
@@ -182,6 +182,11 @@
 				<groupId>org.apache.maven</groupId>
 				<artifactId>maven-plugin-api</artifactId>
 				<version>${maven.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.maven.resolver</groupId>
+				<artifactId>maven-resolver-api</artifactId>
+				<version>1.9.16</version>
 			</dependency>
 			<dependency>
 				<groupId>javax.inject</groupId>
