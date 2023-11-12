@@ -247,8 +247,11 @@ public abstract class AbstractGeneratorMojo extends AbstractMojo {
 			count = local.getNameCount();
 			ex = null;
 
+			Path path = Paths.get(s);
+			if (!Files.exists(path))
+				return;
 			try {
-				Files.walkFileTree(Paths.get(s), this);
+				Files.walkFileTree(path, this);
 			} catch (IOException e) {
 				throw new MojoExecutionException("Failed to process source " + s, e);
 			}
