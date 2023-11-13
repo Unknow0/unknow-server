@@ -18,7 +18,7 @@ native_stop() {
 	pid=
 }
 tomcat_start() {
-	cp unknow-server-test/unknow-server-tomcat/target/*.war $CATALINA_HOME/webapps/ROOT.war || exit 1
+	cp unknow-server-test/unknow-server-test-tomcat/target/*.war $CATALINA_HOME/webapps/ROOT.war || exit 1
 	$CATALINA_HOME/bin/catalina.sh run > logs/tomcat.log 2>&1 || exit 1 &
 	pid=$!
 }
@@ -30,7 +30,7 @@ tomcat_stop() {
 }
 
 cxf_start() {
-	cp unknow-server-test/unknow-server-cxf/target/*.war $CATALINA_HOME/webapps/ROOT.war || exit 1
+	cp unknow-server-test/unknow-server-test-cxf/target/*.war $CATALINA_HOME/webapps/ROOT.war || exit 1
 	$CATALINA_HOME/bin/catalina.sh run > logs/tomcat.log 2>&1 || exit 1 &
 	pid=$!
 }
