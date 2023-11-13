@@ -14,6 +14,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -115,11 +116,12 @@ public abstract class AbstractGeneratorMojo extends AbstractMojo {
 
 		List<String> compileSourceRoots = project.getCompileSourceRoots();
 
-		TypeSolver[] solver = new TypeSolver[compileSourceRoots.size() + 1];
-		int i = 0;
-		solver[i++] = new ClassLoaderTypeSolver(classLoader);
-		for (String s : compileSourceRoots)
-			solver[i++] = new JavaParserTypeSolver(s);
+		List<TypeSolver> solver = new ArrayList<>(compileSourceRoots.size() + 1);
+		solver.add(new ClassLoaderTypeSolver(classLoader));
+		for (String s : compileSourceRoots) {
+			if (Files.isDirectory(Paths.get(s)))
+				solver.add(new JavaParserTypeSolver(s));
+		}
 		resolver = new CombinedTypeSolver(solver);
 		javaSymbolSolver = new JavaSymbolSolver(resolver);
 		parser = new JavaParser(new ParserConfiguration().setStoreTokens(true).setSymbolResolver(javaSymbolSolver));
@@ -243,13 +245,13 @@ public abstract class AbstractGeneratorMojo extends AbstractMojo {
 		}
 
 		public void walk(String s) throws MojoFailureException, MojoExecutionException {
+			Path path = Paths.get(s);
+			if (!Files.isDirectory(path))
+				return;
+
 			local = Paths.get(s, part);
 			count = local.getNameCount();
 			ex = null;
-
-			Path path = Paths.get(s);
-			if (!Files.exists(path))
-				return;
 			try {
 				Files.walkFileTree(path, this);
 			} catch (IOException e) {
