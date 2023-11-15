@@ -282,17 +282,10 @@ public class JaxrsModel {
 		}
 	}
 
-	private void process(String defaultMethod, String path, String[] consume, String[] produce, ClassModel clazz, MethodModel m) {
+	private void process(String defaultMethod, String basePath, String[] consume, String[] produce, ClassModel clazz, MethodModel m) {
 		Optional<AnnotationModel> a = m.annotation(Path.class);
-		if (path == null && a.isEmpty())
-			throw new MojoException("no path mapping found on " + clazz.name() + " " + m.signature());
-
-		if (a.isPresent()) {
-			String s = a.flatMap(v -> v.value()).filter(v -> v.isSet()).map(v -> v.asLiteral()).orElse("");
-			if (!s.isEmpty() && s.charAt(0) != '/')
-				path += "/";
-			path += s;
-		}
+		String path = a.flatMap(v -> v.value()).filter(v -> v.isSet()).map(v -> basePath + v.asLiteral()).orElse(basePath);
+		path = path.replaceAll("/+$", "").replaceAll("//+", "/");
 
 		String errorName = clazz.name() + "." + m.signature();
 		String method = getMethod(m, errorName);
