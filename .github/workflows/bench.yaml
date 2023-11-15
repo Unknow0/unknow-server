@@ -84,5 +84,9 @@ jobs:
       with:
         name: results-native
         path: out/
+    - uses: actions/download-artifact@v3
+      with:
+        name: results-cxf
+        path: out/
     - name: result
       run: bash bench/result.sh out

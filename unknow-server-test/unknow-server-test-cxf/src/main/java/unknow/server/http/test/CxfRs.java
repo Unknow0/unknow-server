@@ -21,7 +21,7 @@ import jakarta.servlet.annotation.WebServlet;
 /**
  * @author unknow
  */
-@WebServlet(value = "/*")
+@WebServlet(value = "/rest/*")
 public class CxfRs extends CXFNonSpringJaxrsServlet {
 	private static final long serialVersionUID = 1L;
 

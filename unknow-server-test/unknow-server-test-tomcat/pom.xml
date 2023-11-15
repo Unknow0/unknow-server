@@ -8,11 +8,73 @@
 	<artifactId>unknow-server-test-tomcat</artifactId>
 	<packaging>war</packaging>
 
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>unknow.server</groupId>
+				<artifactId>unknow-server-maven</artifactId>
+				<version>${project.version}</version>
+				<executions>
+					<execution>
+						<id>jaxrs</id>
+						<goals>
+							<goal>jaxrs-generator</goal>
+						</goals>
+						<phase>generate-sources</phase>
+						<configuration>
+							<basePath>/rest</basePath>
+							<packageName>unknow.server.http.test.generated</packageName>
+							<artifacts>
+								<artifact>${project.groupId}:unknow-server-test-pojo:${project.version}</artifact>
+							</artifacts>
+						</configuration>
+					</execution>
+					<execution>
+						<id>all</id>
+						<goals>
+							<goal>jaxb-generator</goal>
+							<goal>jaxws-generator</goal>
+						</goals>
+						<phase>generate-sources</phase>
+						<configuration>
+							<addAccessLog>false</addAccessLog>
+							<packageName>unknow.server.http.test.generated</packageName>
+							<!--sessionFactory>bla</sessionFactory-->
+							<artifacts>
+								<artifact>${project.groupId}:unknow-server-test-pojo:${project.version}</artifact>
+							</artifacts>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+
 	<dependencies>
 		<dependency>
 			<groupId>${project.groupId}</groupId>
 			<artifactId>unknow-server-test-pojo</artifactId>
 			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>unknow-server-jaxb</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>unknow-server-jaxws</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>unknow-server-jaxrs</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.fasterxml.jackson.jakarta.rs</groupId>
+			<artifactId>jackson-jakarta-rs-json-provider</artifactId>
 		</dependency>
 	</dependencies>
 </project>
