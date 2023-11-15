@@ -38,7 +38,7 @@ public class HandlerEnum extends AbstractSourceBuilder<HandlerContext> {
 		XmlEnum xml = ctx.xml();
 		TypeModel t = xml.type();
 
-		cl.addImplementedType(types.getClass(XmlSimpleHandler.class, types.get(t)));
+		cl.addImplementedType(types.getClass(XmlSimpleHandler.class, types.getClass(t)));
 
 		cl.addFieldWithInitializer(new ClassOrInterfaceType(null, cl.getNameAsString()), "INSTANCE",
 				new ObjectCreationExpr(null, new ClassOrInterfaceType(null, cl.getNameAsString()), Utils.list()), Utils.PUBLIC_STATIC);
@@ -47,7 +47,7 @@ public class HandlerEnum extends AbstractSourceBuilder<HandlerContext> {
 
 		QName qname = JaxbGeneratorMojo.getRootQN(t);
 		if (qname != null) {
-			cl.addExtendedType(types.getClass(XmlRootHandler.class, types.get(t)));
+			cl.addExtendedType(types.getClass(XmlRootHandler.class, types.getClass(t)));
 			b.addStatement(new MethodCallExpr(null, "super", Utils.list(new ObjectCreationExpr(null, types.getClass(QName.class),
 					Utils.list(new StringLiteralExpr(qname.getNamespaceURI()), new StringLiteralExpr(qname.getLocalPart()))))));
 		}

@@ -1,8 +1,6 @@
 package unknow.server.maven.jaxb.builder;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -152,7 +150,7 @@ public class HandlerObjectReader extends AbstractSourceBuilder<HandlerContext> {
 			end.addStatement(new IfStmt(new BinaryExpr(new NameExpr("l$" + e.name()), new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS),
 					new ExpressionStmt(new MethodCallExpr(new NameExpr("o"), e.setter(), Utils.list(v))), null));
 
-			Type t = e.type().isArray() ? types.getClass(List.class, types.get(e.type().asArray().type())) : types.get(e.type());
+			Type t = e.type().isArray() ? types.getClass(List.class, types.get(e.type().asArray().type().asClass())) : types.get(e.type());
 			b.addStatement(Utils.assign(t, "l$" + e.name(), new NullLiteralExpr()));
 		}
 	}
