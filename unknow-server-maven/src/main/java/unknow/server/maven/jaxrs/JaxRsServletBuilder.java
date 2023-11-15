@@ -128,7 +128,7 @@ public class JaxRsServletBuilder {
 		types = new TypeCache(cu, existingClass);
 		cl = cu.addClass("Jaxrs" + path.replace('/', '_').replace("*", ""), Utils.PUBLIC).addSingleMemberAnnotation(WebServlet.class, Utils.text(path))
 				.addExtendedType(HttpServlet.class);
-		cl.addFieldWithInitializer(long.class, "serialVersionUID", new LongLiteralExpr("1"), Utils.PSF);
+		cl.addFieldWithInitializer(long.class, "serialVersionUID", new LongLiteralExpr("1L"), Utils.PSF);
 
 		b = path.endsWith("*") ? new PatternService(path.length() - 2) : new SimpleService();
 
@@ -194,7 +194,7 @@ public class JaxRsServletBuilder {
 				if (type.isPrimitive())
 					type = type.asPrimitive().boxed();
 
-				cl.addField(types.getClass(JaxrsEntityWriter.class, types.get(type)), m.v + "$r", Utils.PSF);
+				cl.addField(types.getClass(JaxrsEntityWriter.class, types.getClass(type)), m.v + "$r", Utils.PSF);
 				b.addStatement(new AssignExpr(new NameExpr(m.v + "$r"), new MethodCallExpr(new TypeExpr(types.getClass(JaxrsEntityWriter.class)), "create",
 						Utils.list(new ClassExpr(types.get(m.m.type().name())), new NameExpr("r"), new NameExpr("ra"))), AssignExpr.Operator.ASSIGN));
 			}
@@ -237,13 +237,13 @@ public class JaxRsServletBuilder {
 		}
 
 		if (p instanceof JaxrsBodyParam) {
-			cl.addField(types.getClass(JaxrsEntityReader.class, types.get(p.type)), n, Utils.PSF);
+			cl.addField(types.getClass(JaxrsEntityReader.class, types.getClass(p.type)), n, Utils.PSF);
 			b.addStatement(new AssignExpr(new NameExpr(n),
 					new ObjectCreationExpr(null, types.getClass(JaxrsEntityReader.class, TypeCache.EMPTY), Utils.list(new ClassExpr(types.get(p.type.name())),
 							new ArrayAccessExpr(new NameExpr("t"), new IntegerLiteralExpr("" + i)), new ArrayAccessExpr(new NameExpr("a"), new IntegerLiteralExpr("" + i)))),
 					AssignExpr.Operator.ASSIGN));
 		} else {
-			cl.addField(types.getClass(ParamConverter.class, types.get(t)), n, Utils.PSF);
+			cl.addField(types.getClass(ParamConverter.class, types.getClass(t)), n, Utils.PSF);
 			b.addStatement(new AssignExpr(new NameExpr(n),
 					new MethodCallExpr(new TypeExpr(types.getClass(JaxrsContext.class)), "converter",
 							Utils.list(new ClassExpr(types.get(t1.name())),

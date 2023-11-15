@@ -57,6 +57,11 @@ public class PrimitiveModel implements TypeModel {
 	}
 
 	@Override
+	public String simpleName() {
+		return name;
+	}
+
+	@Override
 	public Collection<AnnotationModel> annotations() {
 		return Collections.emptyList();
 	}
