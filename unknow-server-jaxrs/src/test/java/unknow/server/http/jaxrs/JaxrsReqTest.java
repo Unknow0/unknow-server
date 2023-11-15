@@ -23,19 +23,6 @@ import unknow.server.http.jaxrs.impl.DefaultConvert;
  * @author unknow
  */
 public class JaxrsReqTest {
-	public static final Stream<Arguments> path() {
-		return Stream.of(Arguments.of("path", "/path"), Arguments.of("path", "/path/toto"));
-	}
-
-//	@ParameterizedTest(name = "path {1}")
-//	@MethodSource
-//	public void path(String expected, String path) {
-//		HttpServletRequest r = Mockito.mock(HttpServletRequest.class);
-//		Mockito.when(r.getRequestURI()).thenReturn(path);
-//		JaxrsReq req = new JaxrsReq(r, Collections.emptyMap());
-//		req.initPaths(new JaxrsPath[] { new JaxrsPath(1, "p") });
-//		assertEquals(expected, req.getPath("p", null, DefaultConvert.STRING));
-//	}
 
 	public static final Stream<Arguments> query() {
 		return Stream.of(Arguments.of(null, null, null), Arguments.of("d", null, "d"), Arguments.of("d", "a=a", "d"), Arguments.of("n", "n=n", "d"),

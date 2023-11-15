@@ -47,7 +47,7 @@ public class CreateServlets extends Builder {
 			NodeList<Expression> params = new NodeList<>();
 			if (s.name.startsWith("Resource:")) {
 				Resource r = descriptor.resources.get(s.pattern.get(0));
-				params = Utils.list(Utils.text(s.pattern.get(0)), new LongLiteralExpr(r.getLastModified() + "L"), new LongLiteralExpr(r.getSize() + "L"));
+				params = Utils.list(Utils.text(s.pattern.get(0).substring(1)), new LongLiteralExpr(r.getLastModified() + "L"), new LongLiteralExpr(r.getSize() + "L"));
 			}
 			b.addStatement(Utils.assign(t, n, new ObjectCreationExpr(null, t, Utils.list(Utils.text(s.name), new ObjectCreationExpr(null, types.getClass(s.clazz), params),
 					Names.CTX, Utils.mapString(s.param, types), Utils.arraySet(s.pattern, types)))));

@@ -175,7 +175,7 @@ public class JaxwsServletBuilder {
 			w++;
 		}
 
-		servlet.addConstructor(Modifier.Keyword.PUBLIC).getBody().addStatement(new MethodCallExpr(null, "super", Utils.list(new StringLiteralExpr("/" + wsdl))));
+		servlet.addConstructor(Modifier.Keyword.PUBLIC).getBody().addStatement(new MethodCallExpr(null, "super", Utils.list(new StringLiteralExpr(wsdl))));
 
 		NodeList<Expression> l = clazz.stream().map(v -> new ClassExpr(types.get(v))).collect(Collectors.toCollection(() -> new NodeList<>()));
 		servlet.addMethod("getCtx", Utils.PROTECT).addMarkerAnnotation(Override.class).setType(types.get(JAXBContext.class)).getBody().get().addStatement(new TryStmt(

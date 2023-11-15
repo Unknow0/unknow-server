@@ -30,6 +30,7 @@ import com.github.javaparser.ast.expr.ArrayAccessExpr;
 import com.github.javaparser.ast.expr.AssignExpr;
 import com.github.javaparser.ast.expr.AssignExpr.Operator;
 import com.github.javaparser.ast.expr.BinaryExpr;
+import com.github.javaparser.ast.expr.BooleanLiteralExpr;
 import com.github.javaparser.ast.expr.ClassExpr;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.IntegerLiteralExpr;
@@ -66,6 +67,7 @@ import unknow.server.http.jaxrs.JaxrsEntityWriter;
 import unknow.server.http.jaxrs.JaxrsReq;
 import unknow.server.http.jaxrs.PathPattern;
 import unknow.server.http.jaxrs.PathPattern.PathRegexp;
+import unknow.server.http.jaxrs.PathPattern.PathSimple;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam;
@@ -413,25 +415,36 @@ public class JaxRsServletBuilder {
 
 		void addPath(JaxrsMapping mapping, String path) {
 			Map<String, Integer> map = new HashMap<>();
-			StringBuilder sb = new StringBuilder();
+			StringBuilder sb = new StringBuilder("/");
+			List<String> parts = new ArrayList<>();
+			path = path.substring(1);
 			Matcher m = pa.matcher(path);
 			int i = 0;
 			int l = 0;
+			boolean last = true;
 			while (m.find()) {
 				l += m.start() - i;
-				sb.append(path.substring(i, m.start()).replaceAll("([\\\\.+*\\[\\{])", "\\$1"));
+				String s = path.substring(i, m.start());
+				sb.append(s.replaceAll("([\\\\.+*\\[\\{])", "\\$1"));
+				if (parts != null && !s.isEmpty())
+					parts.add(s);
 				map.put(m.group(1), map.size());
-				if (m.group(2) != null)
+				if (m.group(2) != null) {
 					sb.append('(').append(m.group(2)).append(')');
-				else
+					parts = null;
+				} else
 					sb.append("([^/]+)");
 				i = m.end();
 			}
 			l += path.length() - i;
 			sb.append(path.substring(i));
+			if (parts != null && path.length() != i) {
+				last = false;
+				parts.add(path.substring(i));
+			}
 			// TODO simple split
 
-			pattern.computeIfAbsent(new Path(l, sb.toString()), k -> new HashMap<>()).computeIfAbsent(mapping.httpMethod, k -> new ArrayList<>()).add(mapping);
+			pattern.computeIfAbsent(new Path(l, sb.toString(), parts, last), k -> new HashMap<>()).computeIfAbsent(mapping.httpMethod, k -> new ArrayList<>()).add(mapping);
 			NameExpr n = params.get(map);
 			if (!map.isEmpty() && n == null) {
 				params.put(map, n = new NameExpr("path$" + params.size()));
@@ -455,8 +468,16 @@ public class JaxRsServletBuilder {
 			for (Path l : list) {
 				String n = "p$" + i;
 
-				Expression e = new ObjectCreationExpr(null, types.getClass(PathRegexp.class), Utils.list(Utils.text(l.pattern)));
-				// TODO simple match
+				Expression e;
+				if (l.parts == null)
+					e = new ObjectCreationExpr(null, types.getClass(PathRegexp.class), Utils.list(Utils.text(l.pattern)));
+				else {
+					NodeList<Expression> a = Utils.list(new BooleanLiteralExpr(l.last));
+					for (String s : l.parts)
+						a.add(Utils.text(s));
+					e = new ObjectCreationExpr(null, types.getClass(PathSimple.class), a);
+				}
+
 				cl.addFieldWithInitializer(types.get(PathPattern.class), n, e, Utils.PSF);
 
 				b.addStatement(new AssignExpr(new NameExpr("l"), new MethodCallExpr(new NameExpr(n), "process", Utils.list(new NameExpr("p"))), Operator.ASSIGN))
@@ -508,16 +529,22 @@ public class JaxRsServletBuilder {
 	private static class Path {
 		private final int length;
 		private final String pattern;
+		private final List<String> parts;
+		private final boolean last;
 
 		/**
 		 * create new PathPattern
 		 * 
 		 * @param length
 		 * @param pattern
+		 * @param last 
+		 * @param parts 
 		 */
-		public Path(int length, String pattern) {
+		public Path(int length, String pattern, List<String> parts, boolean last) {
 			this.length = length;
 			this.pattern = pattern;
+			this.parts = parts;
+			this.last = last;
 		}
 
 		@Override

@@ -14,7 +14,7 @@ import jakarta.xml.ws.Endpoint;
 /**
  * @author unknow
  */
-@WebServlet("/*")
+@WebServlet("/ws")
 public class CxfWs extends CXFNonSpringServlet {
 	private static final long serialVersionUID = 1L;
 

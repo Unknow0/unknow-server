@@ -55,7 +55,7 @@ public abstract class AbstractWs extends HttpServlet {
 	public final void init() throws ServletException {
 		if (wsdl == null)
 			return;
-		try (InputStream is = getServletContext().getResourceAsStream(wsdl)) {
+		try (InputStream is = Thread.currentThread().getContextClassLoader().getResourceAsStream(wsdl)) {
 			if (is == null)
 				throw new ServletException("WSDL not found '" + wsdl + "'");
 			int l;
