@@ -13,11 +13,14 @@ import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.expr.SimpleName;
 import com.github.javaparser.ast.type.ArrayType;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
+import com.github.javaparser.ast.type.PrimitiveType;
+import com.github.javaparser.ast.type.PrimitiveType.Primitive;
 import com.github.javaparser.ast.type.Type;
 import com.github.javaparser.ast.type.UnknownType;
 import com.github.javaparser.ast.type.WildcardType;
 
 import unknow.server.maven.model.ModelLoader;
+import unknow.server.maven.model.PrimitiveModel;
 import unknow.server.maven.model.TypeModel;
 
 /**
@@ -39,14 +42,28 @@ public class TypeCache {
 		this.types = new HashMap<>();
 		types.put("", EMPTY);
 		types.put("?", ANY);
+
+		for (PrimitiveModel p : PrimitiveModel.PRIMITIVES) {
+			PrimitiveType type = Primitive.byTypeName(p.simpleName()).map(t -> new PrimitiveType(t)).orElse(null);
+			if (type != null) {
+				types.put(p.name(), type);
+				types.put(p.simpleName(), type);
+			}
+		}
 	}
 
 	public ClassOrInterfaceType getClass(String cl) {
-		return get(cl).asClassOrInterfaceType();
+		Type type = get(cl);
+		if (type.isPrimitiveType())
+			return type.asPrimitiveType().toBoxedType();
+		return type.asClassOrInterfaceType();
 	}
 
 	public ClassOrInterfaceType getClass(TypeModel c) {
-		return get(c.name()).asClassOrInterfaceType();
+		Type type = get(c.name());
+		if (type.isPrimitiveType())
+			return type.asPrimitiveType().toBoxedType();
+		return type.asClassOrInterfaceType();
 	}
 
 	public ClassOrInterfaceType getClass(Class<?> c, Type... param) {
@@ -58,7 +75,10 @@ public class TypeCache {
 			sb.setCharAt(sb.length() - 1, '>');
 			cl = sb.toString();
 		}
-		return get(cl).asClassOrInterfaceType();
+		Type type = get(cl);
+		if (type.isPrimitiveType())
+			return type.asPrimitiveType().toBoxedType();
+		return type.asClassOrInterfaceType();
 	}
 
 	public ArrayType array(Class<?> cl) {

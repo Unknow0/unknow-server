@@ -62,27 +62,33 @@ public class OpenApiBuilder {
 	private static Schema<?> getDefault(String n) {
 		switch (n) {
 			case "boolean":
+			case "Z":
 				return new Schema<>().type("boolean").nullable(false);
 			case "java.lang.Boolean":
 				return new Schema<>().type("boolean");
 
 			case "byte":
+			case "B":
 				return new Schema<>().type(INTEGER).minimum(BigDecimal.valueOf(Byte.MIN_VALUE)).maximum(BigDecimal.valueOf(Byte.MAX_VALUE)).nullable(false);
 			case "java.lang.Byte":
 				return new Schema<>().type(INTEGER).minimum(BigDecimal.valueOf(Byte.MIN_VALUE)).maximum(BigDecimal.valueOf(Byte.MAX_VALUE));
 			case "char":
+			case "C":
 				return new Schema<>().type(STRING).maxLength(1).minLength(1).nullable(false);
 			case "java.lang.Character":
 				return new Schema<>().type(STRING).maxLength(1).minLength(1);
 			case "short":
+			case "S":
 				return new Schema<>().type(INTEGER).minimum(BigDecimal.valueOf(Short.MIN_VALUE)).maximum(BigDecimal.valueOf(Short.MAX_VALUE)).nullable(false);
 			case "java.lang.Short":
 				return new Schema<>().type(INTEGER).minimum(BigDecimal.valueOf(Short.MIN_VALUE)).maximum(BigDecimal.valueOf(Short.MAX_VALUE));
 			case "int":
+			case "I":
 				return new Schema<>().type(INTEGER).format("int32").nullable(false);
 			case "java.lang.Integer":
 				return new Schema<>().type(INTEGER).format("int32");
 			case "long":
+			case "L":
 				return new Schema<>().type(INTEGER).format("int64").nullable(false);
 			case "java.lang.Long":
 				return new Schema<>().type(INTEGER).format("int64");
@@ -90,10 +96,12 @@ public class OpenApiBuilder {
 				return new Schema<>().type(INTEGER);
 
 			case "float":
+			case "F":
 				return new Schema<>().type(NUMBER).format("float");
 			case "java.lang.Float":
 				return new Schema<>().type(NUMBER).format("float").nullable(false);
 			case "double":
+			case "D":
 				return new Schema<>().type(NUMBER).format("double").nullable(false);
 			case "java.lang.Double":
 				return new Schema<>().type(NUMBER).format("double");

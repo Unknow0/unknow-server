@@ -37,7 +37,7 @@ public class HandlerObject extends AbstractSourceBuilder<HandlerContext> {
 		XmlTypeComplex xml = ctx.xml();
 		TypeModel t = ctx.type();
 
-		cl.addImplementedType(types.getClass(XmlHandler.class, types.get(t)));
+		cl.addImplementedType(types.getClass(XmlHandler.class, types.getClass(t)));
 
 		cl.addFieldWithInitializer(new ClassOrInterfaceType(null, cl.getNameAsString()), "INSTANCE",
 				new ObjectCreationExpr(null, new ClassOrInterfaceType(null, cl.getNameAsString()), Utils.list()), Utils.PUBLIC_STATIC);
@@ -54,7 +54,7 @@ public class HandlerObject extends AbstractSourceBuilder<HandlerContext> {
 		BlockStmt b = cl.addConstructor(Modifier.Keyword.PRIVATE).getBody();
 		QName qname = JaxbGeneratorMojo.getRootQN(t);
 		if (qname != null) {
-			cl.addExtendedType(types.getClass(XmlRootHandler.class, types.get(t)));
+			cl.addExtendedType(types.getClass(XmlRootHandler.class, types.getClass(t)));
 			b.addStatement(new MethodCallExpr(null, "super", Utils.list(new ObjectCreationExpr(null, types.getClass(QName.class),
 					Utils.list(new StringLiteralExpr(qname.getNamespaceURI()), new StringLiteralExpr(qname.getLocalPart()))))));
 		}

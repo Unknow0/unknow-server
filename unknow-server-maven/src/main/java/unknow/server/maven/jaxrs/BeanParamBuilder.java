@@ -129,7 +129,7 @@ public class BeanParamBuilder {
 						null));
 
 		if (p instanceof JaxrsBodyParam) {
-			cl.addField(types.getClass(JaxrsEntityReader.class, types.get(p.type)), n, Utils.PSF);
+			cl.addField(types.getClass(JaxrsEntityReader.class, types.getClass(p.type)), n, Utils.PSF);
 			b.addStatement(
 					new AssignExpr(new NameExpr(n),
 							new MethodCallExpr(new TypeExpr(types.getClass(JaxrsContext.class)), "reader",
