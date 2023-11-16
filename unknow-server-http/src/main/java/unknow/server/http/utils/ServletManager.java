@@ -80,10 +80,9 @@ public final class ServletManager {
 		return filters;
 	}
 
-	public FilterChain find(ServletRequestImpl req) throws InterruptedException {
+	public FilterChain find(ServletRequestImpl req) {
 		if (req.getDispatcherType() == DispatcherType.REQUEST)
 			return request.find(req);
-		System.out.println("WTF");
 		return null;
 	}
 

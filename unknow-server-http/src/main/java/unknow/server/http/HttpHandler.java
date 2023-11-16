@@ -407,9 +407,7 @@ public class HttpHandler implements Handler, Runnable {
 					return false;
 				if (bbuf.position() > 0)
 					decode();
-				if (bbuf.position() > 0)
-					return false;
-				return true;
+				return bbuf.position() == 0;
 			} finally {
 				cbuf.clear();
 				bbuf.clear();
