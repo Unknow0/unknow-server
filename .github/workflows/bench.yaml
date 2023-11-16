@@ -18,7 +18,7 @@ jobs:
     - name: build
       run: mvn -B package
     - name: build native image 
-      run: native-image --install-exit-handlers --static --no-fallback -jar unknow-http-test/target/server.jar server-native
+      run: native-image --install-exit-handlers --static --no-fallback -jar unknow-server-test/unknow-server-test-jar/target/server.jar server-native
 
     - name: bench
       run: java -jar unknow-server-bench/target/benchmark.jar
@@ -28,15 +28,15 @@ jobs:
       with: 
         name: server
         path: |
-          unknow-http-test/target/server.jar 
+          unknow-server-test/unknow-server-test-jar/target/server.jar 
           server-native
-          unknow-http-test/target/*.war
+          unknow-server-test/*/target/*.war
 
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        t: ['tomcat', 'unknow', 'native']
+        t: ['cxf', 'tomcat', 'unknow', 'native']
     needs: build
     steps:
     - uses: actions/checkout@v3
@@ -83,6 +83,10 @@ jobs:
     - uses: actions/download-artifact@v3
       with:
         name: results-native
+        path: out/
+    - uses: actions/download-artifact@v3
+      with:
+        name: results-cxf
         path: out/
     - name: result
       run: bash bench/result.sh out

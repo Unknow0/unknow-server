@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -136,8 +137,12 @@ public class OpenApiBuilder {
 
 		ObjectMapper m = new ObjectMapper().enable(SerializationFeature.WRITE_ENUMS_USING_TO_STRING).disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
 				.setDefaultPropertyInclusion(Include.NON_EMPTY);
-		try (OutputStream out = Files.newOutputStream(java.nio.file.Paths.get(file))) {
-			m.writeValue(out, build(spec, model));
+		Path path = java.nio.file.Paths.get(file);
+		try {
+			Files.createDirectories(path.getParent());
+			try (OutputStream out = Files.newOutputStream(path)) {
+				m.writeValue(out, build(spec, model));
+			}
 		} catch (IOException e) {
 			throw new MojoExecutionException(e);
 		}
@@ -163,7 +168,7 @@ public class OpenApiBuilder {
 			if (t != null) {
 				List<String> tags = new ArrayList<>(t.length);
 				for (int i = 0; i < t.length; i++)
-					t[i].member("name").map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> tags.add(v));
+					t[i].member("name").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> tags.add(v));
 				o.setTags(tags);
 			}
 
@@ -171,11 +176,11 @@ public class OpenApiBuilder {
 			o.setResponses(responses);
 
 			if (a != null) {
-				a.member("tags").map(v -> v.asArrayLiteral()).filter(v -> v.length > 0).ifPresent(v -> o.setTags(Arrays.asList(v)));
-				a.member("summary").map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> o.setSummary(v));
-				a.member("description").map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> o.setDescription(v));
-				a.member("operationId").map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> o.setOperationId(v));
-				a.member("deprecated").ifPresent(v -> o.setDeprecated(v.asBoolean()));
+				a.member("tags").filter(v -> v.isSet()).map(v -> v.asArrayLiteral()).filter(v -> v.length > 0).ifPresent(v -> o.setTags(Arrays.asList(v)));
+				a.member("summary").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> o.setSummary(v));
+				a.member("description").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> o.setDescription(v));
+				a.member("operationId").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> o.setOperationId(v));
+				a.member("deprecated").filter(v -> v.isSet()).ifPresent(v -> o.setDeprecated(v.asBoolean()));
 
 //				a.member("responses")
 
@@ -233,14 +238,14 @@ public class OpenApiBuilder {
 
 		AnnotationModel a = param.p.annotation(io.swagger.v3.oas.annotations.Parameter.class).orElse(null);
 		if (a != null) {
-			if (a.member("hidden").map(v -> v.asBoolean()).orElse(false))
+			if (a.member("hidden").filter(v -> v.isSet()).map(v -> v.asBoolean()).orElse(false))
 				return;
 
-			a.member("name").map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> p.setName(v));
-			a.member("in").map(v -> v.asLiteral()).filter(v -> !"DEFAULT".equals(v)).ifPresent(v -> p.setIn(v));
-			a.member("description").map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> p.setDescription(v));
-			a.member("required").ifPresent(v -> p.setRequired(v.asBoolean()));
-			a.member("deprecated").ifPresent(v -> p.setDeprecated(v.asBoolean()));
+			a.member("name").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> p.setName(v));
+			a.member("in").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !"DEFAULT".equals(v)).ifPresent(v -> p.setIn(v));
+			a.member("description").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> p.setDescription(v));
+			a.member("required").filter(v -> v.isSet()).ifPresent(v -> p.setRequired(v.asBoolean()));
+			a.member("deprecated").filter(v -> v.isSet()).ifPresent(v -> p.setDeprecated(v.asBoolean()));
 			// allowEmptyValue
 			// style
 			// explode
@@ -362,7 +367,7 @@ public class OpenApiBuilder {
 	}
 
 	public static AnnotationModel[] findTags(MethodModel m) {
-		AnnotationModel[] t = m.annotation(Tags.class).flatMap(v -> v.value()).map(v -> v.asArrayAnnotation()).orElse(null);
+		AnnotationModel[] t = m.annotation(Tags.class).flatMap(v -> v.value()).filter(v -> v.isSet()).map(v -> v.asArrayAnnotation()).orElse(null);
 		if (t == null)
 			t = m.annotation(io.swagger.v3.oas.annotations.tags.Tag.class).map(v -> new AnnotationModel[] { v }).orElse(null);
 		if (t != null)
@@ -374,7 +379,7 @@ public class OpenApiBuilder {
 		if (m == null)
 			return null;
 
-		AnnotationModel[] t = m.annotation(Tags.class).flatMap(v -> v.value()).map(v -> v.asArrayAnnotation()).orElse(null);
+		AnnotationModel[] t = m.annotation(Tags.class).flatMap(v -> v.value()).filter(v -> v.isSet()).map(v -> v.asArrayAnnotation()).orElse(null);
 		if (t == null)
 			t = m.annotation(io.swagger.v3.oas.annotations.tags.Tag.class).map(v -> new AnnotationModel[] { v }).orElse(null);
 		if (t == null)

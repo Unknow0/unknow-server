@@ -24,7 +24,7 @@ public class XmlEnum extends XmlTypeSimple {
 		this.base = base;
 		this.entries = new ArrayList<>();
 		for (EnumConstant e : type.entries())
-			entries.add(new XmlEnumEntry(e.name(), e.annotation(XmlEnumValue.class).flatMap(a -> a.value()).map(a -> a.asLiteral()).orElse(e.name())));
+			entries.add(new XmlEnumEntry(e.name(), e.annotation(XmlEnumValue.class).flatMap(a -> a.value()).filter(v -> v.isSet()).map(a -> a.asLiteral()).orElse(e.name())));
 	}
 
 	public XmlTypeSimple base() {

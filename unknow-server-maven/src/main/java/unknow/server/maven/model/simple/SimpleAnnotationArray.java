@@ -3,10 +3,9 @@ package unknow.server.maven.model.simple;
 import java.util.Arrays;
 
 import unknow.server.maven.model.AnnotationValue;
-import unknow.server.maven.model.AnnotationValue.AnnotationValueNull;
+import unknow.server.maven.model.AnnotationValue.AnnotationValueArray;
 
-public class SimpleAnnotationArray extends AnnotationValueNull {
-	private AnnotationValue[] a;
+public class SimpleAnnotationArray extends AnnotationValueArray {
 
 	/**
 		 * create new AnnotationValueArray
@@ -14,7 +13,7 @@ public class SimpleAnnotationArray extends AnnotationValueNull {
 		 * @param a
 		 */
 	public SimpleAnnotationArray() {
-		this.a = new AnnotationValue[0];
+		super(new AnnotationValue[0]);
 	}
 
 	public SimpleAnnotationArray with(AnnotationValue v) {

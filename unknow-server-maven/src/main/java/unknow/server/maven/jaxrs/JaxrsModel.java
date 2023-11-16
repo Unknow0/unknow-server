@@ -99,8 +99,10 @@ public class JaxrsModel {
 			CookieParam.class.getName(), HeaderParam.class.getName(), FormParam.class.getName(), MatrixParam.class.getName()));
 
 	private final List<JaxrsMapping> mappings = new ArrayList<>();
-	// path, method
+
 	private final ModelLoader loader;
+	private final String path;
+
 	private final TypeModel paramProvider;
 	private final TypeModel exceptionMapper;
 	private final TypeModel bodyReader;
@@ -120,9 +122,12 @@ public class JaxrsModel {
 	 * create new JaxrsModel
 	 * 
 	 * @param loader
+	 * @param basePath 
 	 */
-	public JaxrsModel(ModelLoader loader, ClassLoader cl) {
+	public JaxrsModel(ModelLoader loader, ClassLoader cl, String path) {
 		this.loader = loader;
+		this.path = path;
+
 		this.paramProvider = loader.get(ParamConverterProvider.class.getName());
 		this.exceptionMapper = loader.get(ExceptionMapper.class.getName());
 		this.bodyReader = loader.get(MessageBodyReader.class.getName());
@@ -131,7 +136,7 @@ public class JaxrsModel {
 
 		loadService(cl, MessageBodyReader.class, l -> {
 			ClassModel c = loader.get(l).asClass();
-			String[] v = c.annotation(Consumes.class).flatMap(a -> a.value()).map(a -> a.asArrayLiteral()).orElse(ALL);
+			String[] v = c.annotation(Consumes.class).flatMap(a -> a.value()).filter(a -> a.isSet()).map(a -> a.asArrayLiteral()).orElse(ALL);
 			List<String> list = new ArrayList<>();
 			for (int i = 0; i < v.length; i++)
 				list.addAll(Arrays.asList(v[i].split(" *, *")));
@@ -139,7 +144,7 @@ public class JaxrsModel {
 		});
 		loadService(cl, MessageBodyWriter.class, l -> {
 			ClassModel c = loader.get(l).asClass();
-			String[] v = c.annotation(Produces.class).flatMap(a -> a.value()).map(a -> a.asArrayLiteral()).orElse(ALL);
+			String[] v = c.annotation(Produces.class).flatMap(a -> a.value()).filter(a -> a.isSet()).map(a -> a.asArrayLiteral()).orElse(ALL);
 			List<String> list = new ArrayList<>();
 			for (int i = 0; i < v.length; i++)
 				list.addAll(Arrays.asList(v[i].split(" *, *")));
@@ -207,32 +212,7 @@ public class JaxrsModel {
 	public void process(ClassModel clazz) {
 		if (clazz.annotation(Hidden.class).isPresent())
 			return;
-		clazz.annotation(Provider.class).ifPresent(a -> {
-			if (paramProvider.isAssignableFrom(clazz))
-				converter.add(clazz.name());
-			ClassModel e = clazz.ancestor(exceptionMapper);
-			if (e != null) {
-				if (exceptions.containsKey(e))
-					logger.error("Duplicate exception mapping for '{}'", e);
-				else
-					exceptions.put(e.parameter(0).type(), clazz);
-			}
-			if (bodyReader.isAssignableFrom(clazz)) {
-				List<String> list = new ArrayList<>();
-				for (String s : clazz.annotation(Consumes.class).flatMap(v -> v.value()).map(v -> v.asArrayLiteral()).orElse(ALL))
-					list.addAll(Arrays.asList(s.trim().split(" *, *")));
-				readers.put(clazz, list);
-			}
-			if (bodyWriter.isAssignableFrom(clazz)) {
-				List<String> list = new ArrayList<>();
-				for (String s : clazz.annotation(Produces.class).flatMap(v -> v.value()).map(v -> v.asArrayLiteral()).orElse(ALL))
-					list.addAll(Arrays.asList(s.trim().split(" *, *")));
-				writers.put(clazz, list);
-			}
-			// TODO other
-			// ContainerRequestFilter, ContainerResponseFilter, ReaderInterceptor, WriterInterceptor
-			// ContextResolver<?>
-		});
+		clazz.annotation(Provider.class).ifPresent(a -> processProvider(clazz));
 
 		Iterator<ClassModel> it = new AncestrorIterator(clazz);
 		String basePath = null;
@@ -243,11 +223,11 @@ public class JaxrsModel {
 		while (it.hasNext()) {
 			ClassModel next = it.next();
 			if (basePath == null)
-				basePath = next.annotation(Path.class).flatMap(a -> a.value()).map(v -> v.asLiteral()).orElse(null);
+				basePath = next.annotation(Path.class).flatMap(a -> a.value()).filter(v -> v.isSet()).map(v -> v.asLiteral()).orElse(null);
 			if (baseConsume == null)
-				baseConsume = next.annotation(Consumes.class).flatMap(a -> a.value()).map(v -> v.asArrayLiteral()).orElse(null);
+				baseConsume = next.annotation(Consumes.class).flatMap(a -> a.value()).filter(v -> v.isSet()).map(v -> v.asArrayLiteral()).orElse(null);
 			if (baseProduce == null)
-				baseProduce = next.annotation(Produces.class).flatMap(a -> a.value()).map(v -> v.asArrayLiteral()).orElse(null);
+				baseProduce = next.annotation(Produces.class).flatMap(a -> a.value()).filter(v -> v.isSet()).map(v -> v.asArrayLiteral()).orElse(null);
 			if (method == null)
 				method = getMethod(next, next.name());
 
@@ -268,6 +248,8 @@ public class JaxrsModel {
 		if (baseProduce == null)
 			baseProduce = ALL;
 
+		basePath = path + basePath;
+
 		for (MethodModel m : methods.values()) {
 			if (m.annotation(Hidden.class).isPresent())
 				return;
@@ -275,17 +257,38 @@ public class JaxrsModel {
 		}
 	}
 
-	private void process(String defaultMethod, String path, String[] consume, String[] produce, ClassModel clazz, MethodModel m) {
-		Optional<AnnotationModel> a = m.annotation(Path.class);
-		if (path == null && a.isEmpty())
-			throw new MojoException("no path mapping found on " + clazz.name() + " " + m.signature());
-
-		if (a.isPresent()) {
-			String s = a.flatMap(v -> v.value()).map(v -> v.asLiteral()).orElse("");
-			if (s.charAt(0) == '/')
-				s = s.substring(1);
-			path += s;
+	private void processProvider(ClassModel clazz) {
+		if (paramProvider.isAssignableFrom(clazz))
+			converter.add(clazz.name());
+		ClassModel e = clazz.ancestor(exceptionMapper);
+		if (e != null) {
+			if (exceptions.containsKey(e))
+				logger.error("Duplicate exception mapping for '{}'", e);
+			else
+				exceptions.put(e.parameter(0).type(), clazz);
 		}
+		if (bodyReader.isAssignableFrom(clazz)) {
+			List<String> list = new ArrayList<>();
+			for (String s : clazz.annotation(Consumes.class).flatMap(v -> v.value()).filter(v -> v.isSet()).map(v -> v.asArrayLiteral()).orElse(ALL))
+				list.addAll(Arrays.asList(s.trim().split(" *, *")));
+			readers.put(clazz, list);
+		}
+		if (bodyWriter.isAssignableFrom(clazz)) {
+			List<String> list = new ArrayList<>();
+			for (String s : clazz.annotation(Produces.class).flatMap(v -> v.value()).filter(v -> v.isSet()).map(v -> v.asArrayLiteral()).orElse(ALL))
+				list.addAll(Arrays.asList(s.trim().split(" *, *")));
+			writers.put(clazz, list);
+		}
+		// TODO other
+		// ContainerRequestFilter, ContainerResponseFilter, ReaderInterceptor, WriterInterceptor
+		// ContextResolver<?>
+
+	}
+
+	private void process(String defaultMethod, String basePath, String[] consume, String[] produce, ClassModel clazz, MethodModel m) {
+		Optional<AnnotationModel> a = m.annotation(Path.class);
+		String p = a.flatMap(v -> v.value()).filter(v -> v.isSet()).map(v -> basePath + v.asLiteral()).orElse(basePath);
+		p = p.replaceAll("/+$", "").replaceAll("//+", "/");
 
 		String errorName = clazz.name() + "." + m.signature();
 		String method = getMethod(m, errorName);
@@ -294,18 +297,17 @@ public class JaxrsModel {
 		if (method == null)
 			throw new MojoException("no method mapped on " + errorName);
 		List<JaxrsParam<?>> params = new ArrayList<>();
-		for (ParamModel<MethodModel> p : m.parameters()) {
-			List<AnnotationModel> l = p.annotations().stream().filter(v -> JARXS_PARAM.contains(v.name())).collect(Collectors.toList());
+		for (ParamModel<MethodModel> param : m.parameters()) {
+			List<AnnotationModel> l = param.annotations().stream().filter(v -> JARXS_PARAM.contains(v.name())).collect(Collectors.toList());
 			if (l.size() > 1)
-				throw new MojoException("Duplicate parameter annotation on " + errorName + " " + p.name());
-			JaxrsParam<?> param = l.isEmpty() ? new JaxrsBodyParam<>(p) : buildParam(p, l.get(0));
-			params.add(param);
+				throw new MojoException("Duplicate parameter annotation on " + errorName + " " + param.name());
+			params.add(l.isEmpty() ? new JaxrsBodyParam<>(param) : buildParam(param, l.get(0)));
 		}
 
-		consume = m.annotation(Consumes.class).flatMap(v -> v.value()).map(v -> v.asArrayLiteral()).orElse(consume);
-		produce = m.annotation(Produces.class).flatMap(v -> v.value()).map(v -> v.asArrayLiteral()).orElse(produce);
+		consume = m.annotation(Consumes.class).flatMap(v -> v.value()).filter(v -> v.isSet()).map(v -> v.asArrayLiteral()).orElse(consume);
+		produce = m.annotation(Produces.class).flatMap(v -> v.value()).filter(v -> v.isSet()).map(v -> v.asArrayLiteral()).orElse(produce);
 
-		mappings.add(new JaxrsMapping("m$" + mappings.size(), clazz, m, method, params, path, consume, produce));
+		mappings.add(new JaxrsMapping("m$" + mappings.size(), clazz, m, method, params, p, consume, produce));
 	}
 
 	private static Optional<MethodModel> getSetter(ClassModel cl, String name, TypeModel type) {
@@ -394,17 +396,17 @@ public class JaxrsModel {
 		}
 		processParamConvert(p.type());
 		if (PathParam.class.getName().equals(a.name()))
-			return new JaxrsPathParam<>(p, a.value().map(v -> v.asLiteral()).orElse(""));
+			return new JaxrsPathParam<>(p, a.value().filter(v -> v.isSet()).map(v -> v.asLiteral()).orElse(""));
 		if (QueryParam.class.getName().equals(a.name()))
-			return new JaxrsQueryParam<>(p, a.value().map(v -> v.asLiteral()).orElse(""));
+			return new JaxrsQueryParam<>(p, a.value().filter(v -> v.isSet()).map(v -> v.asLiteral()).orElse(""));
 		if (CookieParam.class.getName().equals(a.name()))
-			return new JaxrsCookieParam<>(p, a.value().map(v -> v.asLiteral()).orElse(""));
+			return new JaxrsCookieParam<>(p, a.value().filter(v -> v.isSet()).map(v -> v.asLiteral()).orElse(""));
 		if (HeaderParam.class.getName().equals(a.name()))
-			return new JaxrsHeaderParam<>(p, a.value().map(v -> v.asLiteral()).orElse(""));
+			return new JaxrsHeaderParam<>(p, a.value().filter(v -> v.isSet()).map(v -> v.asLiteral()).orElse(""));
 		if (FormParam.class.getName().equals(a.name()))
-			return new JaxrsFormParam<>(p, a.value().map(v -> v.asLiteral()).orElse(""));
+			return new JaxrsFormParam<>(p, a.value().filter(v -> v.isSet()).map(v -> v.asLiteral()).orElse(""));
 		if (MatrixParam.class.getName().equals(a.name()))
-			return new JaxrsMatrixParam<>(p, a.value().map(v -> v.asLiteral()).orElse(""));
+			return new JaxrsMatrixParam<>(p, a.value().filter(v -> v.isSet()).map(v -> v.asLiteral()).orElse(""));
 
 		throw new MojoException("Unknow annotation " + a);
 	}
@@ -438,14 +440,14 @@ public class JaxrsModel {
 			if (HttpMethod.class.getName().equals(a.name())) {
 				if (m != null)
 					throw new MojoException("Duplicate mapping on " + name);
-				m = a.value().map(n -> n.asLiteral()).orElse(null);
+				m = a.value().filter(n -> n.isSet()).map(n -> n.asLiteral()).orElse(null);
 				continue;
 			}
 			Optional<AnnotationModel> o = loader.get(a.name()).asClass().annotation(HttpMethod.class);
 			if (o.isPresent()) {
 				if (m != null)
 					throw new MojoException("Duplicate mapping on " + name);
-				m = o.flatMap(n -> n.value()).map(n -> n.asLiteral()).orElse(null);
+				m = o.flatMap(n -> n.value()).filter(n -> n.isSet()).map(n -> n.asLiteral()).orElse(null);
 			}
 		}
 		return m;

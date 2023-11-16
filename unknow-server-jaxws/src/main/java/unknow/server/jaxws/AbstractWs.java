@@ -55,7 +55,7 @@ public abstract class AbstractWs extends HttpServlet {
 	public final void init() throws ServletException {
 		if (wsdl == null)
 			return;
-		try (InputStream is = getServletContext().getResourceAsStream(wsdl)) {
+		try (InputStream is = Thread.currentThread().getContextClassLoader().getResourceAsStream(wsdl)) {
 			if (is == null)
 				throw new ServletException("WSDL not found '" + wsdl + "'");
 			int l;
@@ -78,7 +78,7 @@ public abstract class AbstractWs extends HttpServlet {
 		res.setContentType("text/xml");
 		res.setContentLength(size);
 
-		try (OutputStream out = res.getOutputStream(); InputStream is = getServletContext().getResourceAsStream(wsdl)) {
+		try (OutputStream out = res.getOutputStream(); InputStream is = Thread.currentThread().getContextClassLoader().getResourceAsStream(wsdl)) {
 			int l;
 			byte[] b = new byte[4096];
 			while ((l = is.read(b)) > 0)

@@ -112,8 +112,7 @@ public class ObjectArrayMap<K, V> implements Map<K, V> {
 
 	@Override
 	public Set<Entry<K, V>> entrySet() {
-		// TODO Auto-generated method stub
-		return null;
+		return new EntrySet();
 	}
 
 	@Override
@@ -162,6 +161,106 @@ public class ObjectArrayMap<K, V> implements Map<K, V> {
 		public K nextElement() {
 			return key[i++];
 		}
+	}
+
+	private class EntrySet implements Set<Entry<K, V>> {
+
+		@Override
+		public int size() {
+			return ObjectArrayMap.this.size();
+		}
+
+		@Override
+		public boolean isEmpty() {
+			return ObjectArrayMap.this.isEmpty();
+		}
+
+		@Override
+		public boolean contains(Object o) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public Iterator<Entry<K, V>> iterator() {
+			return new EntryIt();
+		}
+
+		@Override
+		public Object[] toArray() {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public <T> T[] toArray(T[] a) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public boolean add(Entry<K, V> e) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public boolean remove(Object o) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public boolean containsAll(Collection<?> c) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public boolean addAll(Collection<? extends Entry<K, V>> c) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public boolean retainAll(Collection<?> c) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public boolean removeAll(Collection<?> c) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public void clear() {
+			ObjectArrayMap.this.clear();
+		}
+	}
+
+	private class EntryIt implements Iterator<Map.Entry<K, V>>, Map.Entry<K, V> {
+		private int i = 0;
+
+		@Override
+		public boolean hasNext() {
+			return i < len;
+		}
+
+		@Override
+		public Map.Entry<K, V> next() {
+			if (i == len)
+				throw new NoSuchElementException();
+			return this;
+		}
+
+		@Override
+		public K getKey() {
+			return key[i++];
+		}
+
+		@Override
+		public V getValue() {
+			return value[i];
+		}
+
+		@Override
+		public V setValue(V value) {
+			throw new UnsupportedOperationException();
+		}
+
 	}
 
 	private class KeySet implements Set<K> {

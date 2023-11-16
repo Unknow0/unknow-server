@@ -63,6 +63,7 @@ import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
 import unknow.server.maven.jaxws.binding.Operation;
 import unknow.server.maven.jaxws.binding.Service;
+import unknow.server.maven.model.ClassModel;
 import unknow.server.maven.model.TypeModel;
 
 /**
@@ -71,13 +72,13 @@ import unknow.server.maven.model.TypeModel;
 public class JaxwsServletBuilder {
 	private static final Logger logger = LoggerFactory.getLogger(JaxwsServletBuilder.class);
 
-	private final ClassOrInterfaceDeclaration serviceClass;
+	private final ClassModel serviceClass;
 
 	private final Service service;
 
 	private ClassOrInterfaceDeclaration servlet;
 
-	public JaxwsServletBuilder(ClassOrInterfaceDeclaration serviceClass, Service service) {
+	public JaxwsServletBuilder(ClassModel serviceClass, Service service) {
 		this.serviceClass = serviceClass;
 		this.service = service;
 	}
@@ -174,7 +175,7 @@ public class JaxwsServletBuilder {
 			w++;
 		}
 
-		servlet.addConstructor(Modifier.Keyword.PUBLIC).getBody().addStatement(new MethodCallExpr(null, "super", Utils.list(new StringLiteralExpr("/" + wsdl))));
+		servlet.addConstructor(Modifier.Keyword.PUBLIC).getBody().addStatement(new MethodCallExpr(null, "super", Utils.list(new StringLiteralExpr(wsdl))));
 
 		NodeList<Expression> l = clazz.stream().map(v -> new ClassExpr(types.get(v))).collect(Collectors.toCollection(() -> new NodeList<>()));
 		servlet.addMethod("getCtx", Utils.PROTECT).addMarkerAnnotation(Override.class).setType(types.get(JAXBContext.class)).getBody().get().addStatement(new TryStmt(
