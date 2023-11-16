@@ -48,7 +48,9 @@ public class EventManager {
 	 * @param sessionAttributeListeners
 	 * @param sessionIdListeners
 	 */
-	public EventManager(List<ServletContextListener> contextListeners, List<ServletContextAttributeListener> contextAttributeListeners, List<ServletRequestListener> requestListeners, List<ServletRequestAttributeListener> requestAttributeListeners, List<HttpSessionListener> sessionListeners, List<HttpSessionAttributeListener> sessionAttributeListeners, List<HttpSessionIdListener> sessionIdListeners) {
+	public EventManager(List<ServletContextListener> contextListeners, List<ServletContextAttributeListener> contextAttributeListeners,
+			List<ServletRequestListener> requestListeners, List<ServletRequestAttributeListener> requestAttributeListeners, List<HttpSessionListener> sessionListeners,
+			List<HttpSessionAttributeListener> sessionAttributeListeners, List<HttpSessionIdListener> sessionIdListeners) {
 		this.contextListeners = contextListeners;
 		this.contextAttributeListeners = contextAttributeListeners;
 		this.requestListeners = requestListeners;
@@ -87,7 +89,7 @@ public class EventManager {
 		ServletContextEvent e = new ServletContextEvent(context);
 		for (ServletContextListener l : contextListeners) {
 			try {
-				l.contextInitialized(e);
+				l.contextDestroyed(e);
 			} catch (Exception ex) {
 				error(l, ex);
 			}

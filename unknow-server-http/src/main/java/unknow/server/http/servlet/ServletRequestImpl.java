@@ -193,10 +193,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 			if (c == '=')
 				c = readParam(sb, r, false);
 
-			List<String> list = p.get(key);
-			if (list == null)
-				p.put(key, list = new ArrayList<>(1));
-			list.add(sb.toString());
+			p.computeIfAbsent(key, k -> new ArrayList<>(1)).add(sb.toString());
 			sb.setLength(0);
 		} while (c != -1);
 	}

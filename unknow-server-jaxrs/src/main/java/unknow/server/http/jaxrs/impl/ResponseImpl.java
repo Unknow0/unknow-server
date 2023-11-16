@@ -122,7 +122,10 @@ public class ResponseImpl extends Response {
 			while ((l = is.read(b)) != -1)
 				buffers.write(b, 0, l);
 			return true;
-		} catch (InterruptedException | IOException e) {
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			throw new ProcessingException(e);
+		} catch (IOException e) {
 			throw new ProcessingException(e);
 		}
 	}
@@ -225,7 +228,7 @@ public class ResponseImpl extends Response {
 
 	@Override
 	public MultivaluedMap<String, Object> getMetadata() {
-		return headers;
+		return getHeaders();
 	}
 
 	@Override

@@ -34,7 +34,7 @@ public class PathTree {
 	 * @return the chain
 	 * @throws InterruptedException
 	 */
-	public FilterChain find(ServletRequestImpl req) throws InterruptedException {
+	public FilterChain find(ServletRequestImpl req) {
 		if (req.getPaths().isEmpty()) {
 			req.setPathInfo(0);
 			return root.exact;

@@ -42,9 +42,9 @@ import unknow.server.nio.Connection.Out;
  */
 public class ServletResponseImpl implements HttpServletResponse {
 	private static final Logger logger = LoggerFactory.getLogger(ServletResponseImpl.class);
-	
+
 	private static final String UNKNOWN = "Unknown";
-	
+
 	private static final byte[] CRLF = new byte[] { '\r', '\n' };
 	private static final byte[] QUOTE = new byte[] { '\\', '"' };
 	private static final byte[] CHUNKED = new byte[] { 't', 'r', 'a', 'n', 's', 'f', 'e', 'r', '-', 'e', 'n', 'c', 'o', 'd', 'i', 'n', 'g', ':', ' ', 'c', 'h', 'u', 'n', 'k',
@@ -102,10 +102,6 @@ public class ServletResponseImpl implements HttpServletResponse {
 		cookies = new ArrayList<>();
 
 		status = 200;
-	}
-
-	public final boolean isCommited() {
-		return commited;
 	}
 
 	/**
@@ -298,7 +294,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 		throw new IllegalStateException("output already got created with getWriter()");
 	}
 
-	@SuppressWarnings({ "rawtypes", "unchecked" })
+	@SuppressWarnings({ "rawtypes", "unchecked", "resource" })
 	@Override
 	public PrintWriter getWriter() throws IOException {
 		if (servletOut == null)
@@ -358,7 +354,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 	}
 
 	@Override
-	public boolean isCommitted() {
+	public final boolean isCommitted() {
 		return commited;
 	}
 
@@ -446,11 +442,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 
 	@Override
 	public void addHeader(String name, String value) {
-		name = name.toLowerCase();
-		List<String> list = headers.get(name);
-		if (list == null)
-			headers.put(name, list = new ArrayList<>(1));
-		list.add(value);
+		headers.computeIfAbsent(name.toLowerCase(), k -> new ArrayList<>(1)).add(value);
 	}
 
 	@Override

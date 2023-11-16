@@ -40,6 +40,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.javaparser.JavaParser;
+import com.github.javaparser.ParseResult;
 import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Node;
@@ -173,32 +174,29 @@ public abstract class AbstractGeneratorMojo extends AbstractMojo {
 		if (artifacts == null || artifacts.isEmpty())
 			return;
 		try {
-			for (String id : artifacts) {
-				ArtifactResult a = repository.resolveArtifact(session, new ArtifactRequest().setArtifact(new DefaultArtifact(id)));
-				if (a == null)
-					throw new MojoFailureException("Failed to resolve " + id);
-				try (FileInputStream is = new FileInputStream(a.getArtifact().getFile()); ZipInputStream zip = new ZipInputStream(is)) {
-					ZipEntry e;
-					while ((e = zip.getNextEntry()) != null) {
-						String name = e.getName();
-						if (!name.endsWith(".class"))
-							continue;
-						try {
-							c.accept(loader.get(name.substring(0, name.length() - 6).replaceAll("[/$]", ".")));
-						} catch (MojoExecutionException ex) {
-							throw ex;
-						} catch (MojoFailureException ex) {
-							throw ex;
-						} catch (Exception ex) {
-							throw new MojoExecutionException(ex);
-						}
-					}
-				} catch (IOException e) {
-					throw new MojoFailureException("Failed to resolve " + id, e);
-				}
-			}
+			for (String id : artifacts)
+				parseArtifact(id, c);
 		} catch (ArtifactResolutionException e) {
 			throw new MojoFailureException(e);
+		}
+	}
+
+	private void parseArtifact(String id, TypeConsumer c) throws ArtifactResolutionException, MojoExecutionException, MojoFailureException {
+		ArtifactResult a = repository.resolveArtifact(session, new ArtifactRequest().setArtifact(new DefaultArtifact(id)));
+		if (a == null)
+			throw new MojoFailureException("Failed to resolve " + id);
+		try (FileInputStream is = new FileInputStream(a.getArtifact().getFile()); ZipInputStream zip = new ZipInputStream(is)) {
+			ZipEntry e;
+			while ((e = zip.getNextEntry()) != null) {
+				String name = e.getName();
+				if (!name.endsWith(".class"))
+					continue;
+				c.accept(loader.get(name.substring(0, name.length() - 6).replaceAll("[/$]", ".")));
+			}
+		} catch (MojoExecutionException | MojoFailureException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new MojoFailureException("Failed to resolve " + id, e);
 		}
 	}
 
@@ -270,7 +268,15 @@ public abstract class AbstractGeneratorMojo extends AbstractMojo {
 			String f = file.getFileName().toString();
 			if (!f.endsWith(".java"))
 				return FileVisitResult.CONTINUE;
-			CompilationUnit cu = parser.parse(file).getResult().orElse(null);
+			ParseResult<CompilationUnit> parse = parser.parse(file);
+
+			if (!parse.isSuccessful()) {
+				logger.warn("Failed to parse {}: {}", f, parse.getProblems());
+				return FileVisitResult.CONTINUE;
+			}
+			CompilationUnit cu = parse.getResult().orElse(null);
+			if (cu == null)
+				return FileVisitResult.CONTINUE;
 			cu.getPackageDeclaration().filter(v -> v.getAnnotations() != null).ifPresent(v -> packages.put(v.getNameAsString(), v));
 			for (TypeDeclaration<?> v : cu.findAll(TypeDeclaration.class)) {
 				String qualifiedName = v.resolve().getQualifiedName();

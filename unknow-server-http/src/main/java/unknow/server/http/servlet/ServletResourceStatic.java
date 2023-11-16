@@ -38,7 +38,8 @@ public final class ServletResourceStatic extends HttpServlet {
 		this.mimeType = getServletContext().getMimeType(path);
 
 		try (InputStream is = Thread.currentThread().getContextClassLoader().getResourceAsStream(path)) {
-			int i = 0, l;
+			int i = 0;
+			int l;
 			while ((l = is.read(data, i, data.length - i)) > 0)
 				i += l;
 		} catch (IOException e) {

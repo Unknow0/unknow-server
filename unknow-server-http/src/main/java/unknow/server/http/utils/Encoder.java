@@ -11,6 +11,9 @@ import java.nio.charset.StandardCharsets;
 public class Encoder {
 	private static final byte[] HEX = new byte[] { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
+	private Encoder() {
+	}
+
 	public static byte[] encodePart(String s) {
 		byte[] bytes = s.getBytes(StandardCharsets.UTF_8);
 		int l = bytes.length;

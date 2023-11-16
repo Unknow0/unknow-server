@@ -4,6 +4,7 @@
 package unknow.server.http.utils;
 
 import java.util.Comparator;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,8 +54,7 @@ public final class ServletManager {
 			for (String p : sc.getMappings()) {
 				if ((p.equals("/") || p.equals("/*")) && l == 0)
 					s = sc;
-				else if (p.length() > l && (p.startsWith("*.") && path.endsWith(p.substring(1))
-						|| p.endsWith("/*") && path.startsWith(path, p.length() - 2))) {
+				else if (p.length() > l && (p.startsWith("*.") && path.endsWith(p.substring(1)) || p.endsWith("/*") && path.startsWith(p, p.length() - 2))) {
 					l = p.length();
 					s = sc;
 				} else if (p.equals("") && path.equals("/") || p.equals(path))
@@ -81,13 +81,10 @@ public final class ServletManager {
 	}
 
 	public FilterChain find(ServletRequestImpl req) throws InterruptedException {
-		switch (req.getDispatcherType()) {
-			case REQUEST:
-				return request.find(req);
-			default:
-				System.out.println("WTF");
-				return null;
-		}
+		if (req.getDispatcherType() == DispatcherType.REQUEST)
+			return request.find(req);
+		System.out.println("WTF");
+		return null;
 	}
 
 	public void initialize(ServletContextImpl ctx, ServletConfigImpl[] servlets, FilterConfigImpl[] filters) throws ServletException {
@@ -114,13 +111,12 @@ public final class ServletManager {
 		Class<?>[] clazz = new Class[l];
 		chain = new FilterChain[l];
 		i = 0;
-		for (Class<?> c : errorClazzMapping.keySet()) {
-			String path = errorClazzMapping.get(c);
-			ServletConfigImpl s = findServlet(path);
+		for (Map.Entry<Class<?>, String> e : errorClazzMapping.entrySet()) {
+			ServletConfigImpl s = findServlet(e.getValue());
 			if (s == null)
 				continue;
-			clazz[i] = c;
-			chain[i] = buildErrorChain(s, path);
+			clazz[i] = e.getKey();
+			chain[i] = buildErrorChain(s, e.getValue());
 		}
 		errorClazz = new ObjectArrayMap<>(clazz, chain, CMP);
 
@@ -133,9 +129,7 @@ public final class ServletManager {
 	private static FilterChain buildChain(FilterConfigImpl f, FilterChain chain, String path) {
 
 		for (String p : f.getUrlPatternMappings()) {
-			if ((p.equals("/") || p.equals("/*")
-					|| p.startsWith("*.") && path.endsWith(p.substring(1))
-					|| p.endsWith("/*") && path.startsWith(path, p.length() - 2))
+			if ((p.equals("/") || p.equals("/*") || p.startsWith("*.") && path.endsWith(p.substring(1)) || p.endsWith("/*") && path.startsWith(p, p.length() - 2))
 					|| p.equals("") && path.equals("/") || p.equals(path)) {
 				return new FilterChainImpl(f.getFilter(), chain);
 			}

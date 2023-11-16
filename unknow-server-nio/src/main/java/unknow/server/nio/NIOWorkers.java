@@ -41,18 +41,18 @@ public interface NIOWorkers {
 	 */
 	public static class RoundRobin implements NIOWorkers {
 		private final NIOWorker[] w;
-		private int i;
+		private int o;
 
 		public RoundRobin(NIOWorker[] workers) {
 			this.w = workers;
-			this.i = 0;
+			this.o = 0;
 		}
 
 		@Override
 		public synchronized void register(SocketChannel socket, Connection handler) throws IOException {
-			w[i++].register(socket, handler);
-			if (i == w.length)
-				i = 0;
+			w[o++].register(socket, handler);
+			if (o == w.length)
+				o = 0;
 		}
 
 		@Override

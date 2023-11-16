@@ -106,7 +106,7 @@ public interface AnnotationValue {
 	/**
 	 * @author unknow
 	 */
-	static abstract class AnnotationValueNull implements AnnotationValue {
+	abstract static class AnnotationValueNull implements AnnotationValue {
 		protected AnnotationValueNull() {
 		}
 

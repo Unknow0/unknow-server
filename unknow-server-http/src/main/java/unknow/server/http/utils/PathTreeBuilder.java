@@ -15,6 +15,7 @@ import java.util.Set;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
 import unknow.server.http.servlet.FilterChainImpl;
 import unknow.server.http.servlet.FilterChainImpl.ServletFilter;
 import unknow.server.http.servlet.FilterConfigImpl;
@@ -63,7 +64,7 @@ public class PathTreeBuilder {
 		this.defaultServlet = new ServletConfigImpl("", ServletDefault.INSTANCE, ctx, new ArrayMap<>(new String[0], new String[0]), new ArraySet<>(new String[0]));
 	}
 
-	public PathTree build() {
+	public PathTree build() throws ServletException {
 		for (int i = 0; i < servlets.length; i++)
 			addServlet(servlets[i]);
 		for (int i = 0; i < filters.length; i++)
@@ -138,7 +139,7 @@ public class PathTreeBuilder {
 		}
 	}
 
-	private void addFilter(FilterConfigImpl f) {
+	private void addFilter(FilterConfigImpl f) throws ServletException {
 		if (!f.getDispatcherTypes().contains(dispatcherType))
 			return;
 		for (String p : f.getUrlPatternMappings())
@@ -146,7 +147,7 @@ public class PathTreeBuilder {
 		for (String s : f.getServletNameMappings()) {
 			ServletConfigImpl sc = getServlet(s);
 			if (sc == null)
-				throw new RuntimeException("no servlet named '" + s + "' for filter '" + f.getName() + "'");
+				throw new ServletException("no servlet named '" + s + "' for filter '" + f.getName() + "'");
 			for (String p : sc.getMappings())
 				addFilter(f, p);
 		}

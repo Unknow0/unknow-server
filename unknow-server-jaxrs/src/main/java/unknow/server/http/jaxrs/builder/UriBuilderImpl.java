@@ -335,9 +335,9 @@ public class UriBuilderImpl extends UriBuilder {
 
 		if (!query.isEmpty()) {
 			boolean first = true;
-			for (String key : query.keySet()) {
-				for (String v : query.get(key)) {
-					sb.append(first ? '?' : '&').append(key);
+			for (Entry<String, List<String>> e : query.entrySet()) {
+				for (String v : e.getValue()) {
+					sb.append(first ? '?' : '&').append(e.getKey());
 					if (!v.isEmpty())
 						sb.append('=').append(v);
 					first = false;
@@ -486,9 +486,9 @@ public class UriBuilderImpl extends UriBuilder {
 
 		public StringBuilder append(StringBuilder sb) {
 			sb.append(path);
-			for (String key : matrix.keySet()) {
-				for (String v : matrix.get(key)) {
-					sb.append(';').append(key);
+			for (Entry<String, List<String>> e : matrix.entrySet()) {
+				for (String v : e.getValue()) {
+					sb.append(';').append(e.getKey());
 					if (!v.isEmpty())
 						sb.append('=').append(v);
 				}

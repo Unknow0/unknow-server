@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,21 +57,21 @@ public class AccessLogFilter implements Filter {
 	private static final String DEFAULT_FMT = "%{start} %{remote:host} - %{user} \"%{request}\" %{response:status} %{duration}.%{duration:msec_frac}";
 
 	private static final Part[] EMPTY = {};
-	private static final Map<String, Function<List<String>, Part>> builders = new HashMap<>();
+	private static final Map<String, PartBuilder> builders = new HashMap<>();
 	static {
 		builders.put("vhost", param -> (sb, start, end, req, res) -> sb.append(req.getServletContext().getVirtualServerName()));
 		builders.put("remote", param -> {
-			String t = param.size() == 0 ? "host" : param.get(0);
+			String t = param.isEmpty() ? "host" : param.get(0);
 			if ("host".equals(t))
 				return (sb, start, end, req, res) -> sb.append(req.getRemoteHost());
 			if ("addr".equals(t))
 				return (sb, start, end, req, res) -> sb.append(req.getRemoteAddr());
 			if ("port".equals(t))
 				return (sb, start, end, req, res) -> sb.append(req.getRemotePort());
-			throw new RuntimeException("unknow remote type '" + t + "'");
+			throw new ServletException("unknow remote type '" + t + "'");
 		});
 		builders.put("start", param -> {
-			String type = param.size() > 0 ? param.get(0) : "iso";
+			String type = param.isEmpty() ? "iso" : param.get(0);
 			DateTimeFormatter f;
 			if (type.equals("iso"))
 				f = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
@@ -83,7 +82,7 @@ public class AccessLogFilter implements Filter {
 			return (sb, start, end, req, res) -> f.formatTo(start, sb);
 		});
 		builders.put("end", param -> {
-			String type = param.size() > 0 ? param.get(0) : "iso";
+			String type = param.isEmpty() ? "iso" : param.get(0);
 			DateTimeFormatter f;
 			if (type.equals("iso"))
 				f = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
@@ -94,7 +93,7 @@ public class AccessLogFilter implements Filter {
 			return (sb, start, end, req, res) -> f.formatTo(end, sb);
 		});
 		builders.put("duration", param -> {
-			String t = param.size() > 0 ? param.get(0) : "sec";
+			String t = param.isEmpty() ? "sec" : param.get(0);
 
 			if (t.equals("sec"))
 				return (sb, start, end, req, res) -> sb.append(start.until(end, ChronoUnit.SECONDS));
@@ -107,10 +106,10 @@ public class AccessLogFilter implements Filter {
 			else if (t.equals("usec_frac"))
 				return (sb, start, end, req, res) -> sb.append(Duration.between(start, end).getNano() / 1000);
 			else
-				throw new RuntimeException("Unknow duration type '" + t + "'");
+				throw new ServletException("Unknow duration type '" + t + "'");
 		});
 		builders.put("request", param -> {
-			String t = param.size() == 0 ? "line" : param.get(0);
+			String t = param.isEmpty() ? "line" : param.get(0);
 			if ("line".equals(t))
 				return (sb, start, end, req, res) -> {
 					sb.append(req.getMethod()).append(' ').append(req.getRequestURI());
@@ -131,23 +130,23 @@ public class AccessLogFilter implements Filter {
 				return (sb, start, end, req, res) -> sb.append(req.getProtocol());
 			if ("header".equals(t)) {
 				if (param.size() < 2)
-					throw new RuntimeException("missing param for request header");
-				String name = param.get(0);
+					throw new ServletException("missing param for request header");
+				String name = param.get(1);
 				return (sb, start, end, req, res) -> sb.append(req.getHeader(name));
 			}
-			throw new RuntimeException("unknow request type '" + t + "'");
+			throw new ServletException("unknow request type '" + t + "'");
 		});
 		builders.put("response", param -> {
-			String t = param.size() == 0 ? "status" : param.get(0);
+			String t = param.isEmpty() ? "status" : param.get(0);
 			if ("status".equals(t))
 				return (sb, start, end, req, res) -> sb.append(res.getStatus());
 			if ("header".equals(t)) {
 				if (param.size() < 2)
-					throw new RuntimeException("missing param for request header");
-				String name = param.get(0);
+					throw new ServletException("missing param for request header");
+				String name = param.get(1);
 				return (sb, start, end, req, res) -> sb.append(res.getHeader(name));
 			}
-			throw new RuntimeException("unknow response type '" + t + "'");
+			throw new ServletException("unknow response type '" + t + "'");
 		});
 		builders.put("user", param -> (sb, start, end, req, res) -> {
 			String n = req.getRemoteUser();
@@ -168,7 +167,7 @@ public class AccessLogFilter implements Filter {
 	 * 6: request duration in ms <br>
 	 * 7: client ip (taken from x-forwarded-for, or remote address if not found)
 	 */
-	protected void setFormat(String format) {
+	protected void setFormat(String format) throws ServletException {
 		this.parts = parse(format);
 	}
 
@@ -206,7 +205,7 @@ public class AccessLogFilter implements Filter {
 		return "AccessLog";
 	}
 
-	public static Part[] parse(String template) {
+	public static Part[] parse(String template) throws ServletException {
 		List<Part> parts = new ArrayList<>();
 		List<String> param = new ArrayList<>();
 		int last = 0;
@@ -223,9 +222,9 @@ public class AccessLogFilter implements Filter {
 				parts.add(new StringPart(template.substring(last, i)));
 
 			String key = parseFormat(template, i + 2, e, param);
-			Function<List<String>, Part> f = builders.get(key);
+			PartBuilder f = builders.get(key);
 			if (f == null)
-				throw new RuntimeException("no part named '" + key + "' in template:\n" + template);
+				throw new ServletException("no part named '" + key + "' in template:\n" + template);
 			parts.add(f.apply(param));
 			param.clear();
 			last = e + 1;
@@ -258,7 +257,7 @@ public class AccessLogFilter implements Filter {
 	}
 
 	public static interface Part {
-		void append(StringBuilder sb, LocalDateTime start, LocalDateTime end, HttpServletRequest req, HttpServletResponse res);
+		void append(StringBuilder sb, LocalDateTime start, LocalDateTime end, HttpServletRequest req, HttpServletResponse res) throws ServletException;
 	}
 
 	public static final class StringPart implements Part {
@@ -272,5 +271,9 @@ public class AccessLogFilter implements Filter {
 		public void append(StringBuilder sb, LocalDateTime start, LocalDateTime end, HttpServletRequest req, HttpServletResponse res) {
 			sb.append(str);
 		}
+	}
+
+	public static interface PartBuilder {
+		Part apply(List<String> param) throws ServletException;
 	}
 }

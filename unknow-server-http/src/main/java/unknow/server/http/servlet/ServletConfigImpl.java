@@ -48,7 +48,7 @@ public class ServletConfigImpl implements ServletConfig, ServletRegistration {
 
 	@Override
 	public String getServletName() {
-		return name;
+		return getName();
 	}
 
 	/**

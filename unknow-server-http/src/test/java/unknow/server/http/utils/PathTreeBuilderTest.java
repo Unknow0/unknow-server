@@ -14,6 +14,7 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 import jakarta.servlet.DispatcherType;
+import jakarta.servlet.ServletException;
 import unknow.server.http.servlet.FilterConfigImpl;
 import unknow.server.http.servlet.ServletConfigImpl;
 import unknow.server.http.utils.PathTree.PartNode;
@@ -23,7 +24,7 @@ import unknow.server.http.utils.PathTree.PartNode;
  */
 public class PathTreeBuilderTest {
 	@Test
-	public void testDefault() {
+	public void testDefault() throws ServletException {
 		PathTree build = new PathTreeBuilder(null, new ServletConfigImpl[0], new FilterConfigImpl[0], DispatcherType.REQUEST).build();
 		System.out.println("default:\n" + build);
 		PartNode tree = build.root;
@@ -33,7 +34,7 @@ public class PathTreeBuilderTest {
 	}
 
 	@Test
-	public void testEnd() {
+	public void testEnd() throws ServletException {
 		Set<DispatcherType> dispatcher = new HashSet<>(Arrays.asList(DispatcherType.REQUEST));
 		Set<String> urls = new HashSet<>(Arrays.asList("*.html"));
 		FilterConfigImpl[] filters = { new FilterConfigImpl(null, new F("f"), null, null, Collections.emptySet(), urls, dispatcher) };
@@ -48,7 +49,7 @@ public class PathTreeBuilderTest {
 	}
 
 	@Test
-	public void testServletExact() {
+	public void testServletExact() throws ServletException {
 		Set<String> urls = new HashSet<>(Arrays.asList("/test", ""));
 		ServletConfigImpl[] servlets = { new ServletConfigImpl("name", new S("s"), null, null, urls) };
 		PathTree build = new PathTreeBuilder(null, servlets, new FilterConfigImpl[0], DispatcherType.REQUEST).build();
@@ -61,7 +62,7 @@ public class PathTreeBuilderTest {
 	}
 
 	@Test
-	public void testServletDefault() {
+	public void testServletDefault() throws ServletException {
 		Set<String> urls = new HashSet<>(Arrays.asList("/test/*"));
 		ServletConfigImpl[] servlets = { new ServletConfigImpl("name", new S("s"), null, null, urls) };
 		PathTree build = new PathTreeBuilder(null, servlets, new FilterConfigImpl[0], DispatcherType.REQUEST).build();

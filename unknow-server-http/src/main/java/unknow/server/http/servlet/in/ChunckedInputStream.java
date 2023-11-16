@@ -97,7 +97,7 @@ public class ChunckedInputStream extends ServletInputStream {
 	@Override
 	public int read() throws IOException {
 		ensureData();
-		return step == DONE ? -1 : b[o++];
+		return step == DONE ? -1 : b[o++] & 0xFF;
 	}
 
 	@Override

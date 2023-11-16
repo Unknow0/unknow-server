@@ -51,7 +51,7 @@ public final class LimitedInputStream extends InputStream {
 	}
 
 	@Override
-	public void mark(int readlimit) {
+	public synchronized void mark(int readlimit) {
 		in.mark(readlimit);
 	}
 
@@ -66,7 +66,7 @@ public final class LimitedInputStream extends InputStream {
 	}
 
 	@Override
-	public void reset() throws IOException {
+	public synchronized void reset() throws IOException {
 		in.reset();
 	}
 }

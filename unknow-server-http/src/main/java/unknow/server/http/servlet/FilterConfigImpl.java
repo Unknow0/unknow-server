@@ -43,7 +43,8 @@ public class FilterConfigImpl implements FilterConfig, FilterRegistration {
 	 * @param servletMappings the servlet name mappings
 	 * @param urlMappings     the url mappings
 	 */
-	public FilterConfigImpl(String name, Filter filter, ServletContext context, ArrayMap<String> parameters, Set<String> servletMappings, Set<String> urlMappings, Set<DispatcherType> dispatcherTypes) {
+	public FilterConfigImpl(String name, Filter filter, ServletContext context, ArrayMap<String> parameters, Set<String> servletMappings, Set<String> urlMappings,
+			Set<DispatcherType> dispatcherTypes) {
 		this.name = name;
 		this.filter = filter;
 		this.context = context;
@@ -55,7 +56,7 @@ public class FilterConfigImpl implements FilterConfig, FilterRegistration {
 
 	@Override
 	public String getFilterName() {
-		return name;
+		return getName();
 	}
 
 	@Override

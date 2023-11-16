@@ -59,6 +59,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	 * @param handler the handler
 	 * @throws IOException
 	 */
+	@SuppressWarnings("resource")
 	@Override
 	public final void register(SocketChannel socket, Connection handler) throws IOException {
 		socket.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.TRUE).setOption(StandardSocketOptions.SO_REUSEADDR, Boolean.TRUE).configureBlocking(false);
@@ -71,6 +72,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	}
 
 	@Override
+	@SuppressWarnings("resource")
 	protected final void selected(SelectionKey key) throws IOException, InterruptedException {
 		Connection h = (Connection) key.attachment();
 		SocketChannel channel = (SocketChannel) key.channel();
@@ -79,7 +81,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			try {
 				h.writeInto(channel, buf);
 			} catch (IOException e) {
-				logger.error("failed to write", h, e);
+				logger.error("failed to write {}", h, e);
 				channel.close();
 			} finally {
 				buf.clear();

@@ -21,12 +21,14 @@ public abstract class ProtobufHandler<T> implements Handler {
 	protected final Connection co;
 	private final LimitedInputStream limited;
 
-	public ProtobufHandler(Parser<T> parser, Connection co) {
+	@SuppressWarnings("resource")
+	protected ProtobufHandler(Parser<T> parser, Connection co) {
 		this.parser = parser;
 		this.co = co;
 		this.limited = new LimitedInputStream(co.getIn());
 	}
 
+	@SuppressWarnings("resource")
 	@Override
 	public void onRead() {
 		InputStream in = co.getIn();
@@ -37,12 +39,12 @@ public abstract class ProtobufHandler<T> implements Handler {
 				return;
 			limited.setLimit(len);
 			process(parser.parseFrom(limited));
-		} catch (IOException e) {
+		} catch (@SuppressWarnings("unused") IOException e) {
 			co.getOut().close();
 		} finally {
 			try {
 				in.reset();
-			} catch (IOException e) { // OK
+			} catch (@SuppressWarnings("unused") IOException e) { // OK
 			}
 		}
 	}

@@ -100,14 +100,14 @@ public class Service {
 
 		for (MethodModel m : clazz.methods()) {
 			if (m.annotation(PostConstruct.class).isPresent()) {
-				if (m.parameters().size() != 0)
+				if (!m.parameters().isEmpty())
 					throw new MojoException("PostConstruct method can't have parameters on " + clazz.name());
 				if (service.postConstruct != null)
 					throw new MojoException("only one method can be annoted with @PostConstruct on " + clazz.name());
 				service.postConstruct = m.name();
 			}
 			if (m.annotation(PreDestroy.class).isPresent()) {
-				if (m.parameters().size() != 0)
+				if (!m.parameters().isEmpty())
 					throw new MojoException("@PreDestroy method can't have parameters on " + clazz.name());
 				if (service.postConstruct != null)
 					throw new MojoException("only one method can be annoted with @PreDestroy on " + clazz.name());

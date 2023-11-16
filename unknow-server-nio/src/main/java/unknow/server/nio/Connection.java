@@ -163,10 +163,11 @@ public final class Connection {
 	 * 
 	 * @return the remote address
 	 */
+	@SuppressWarnings("resource")
 	public final InetSocketAddress getRemote() {
 		try {
 			return (InetSocketAddress) ((SocketChannel) key.channel()).getRemoteAddress();
-		} catch (IOException e) {
+		} catch (@SuppressWarnings("unused") IOException e) {
 			return null;
 		}
 	}
@@ -176,10 +177,11 @@ public final class Connection {
 	 * 
 	 * @return the local address
 	 */
+	@SuppressWarnings("resource")
 	public final InetSocketAddress getLocal() {
 		try {
 			return (InetSocketAddress) ((SocketChannel) key.channel()).getLocalAddress();
-		} catch (IOException e) {
+		} catch (@SuppressWarnings("unused") IOException e) {
 			return null;
 		}
 	}
@@ -207,6 +209,7 @@ public final class Connection {
 		pendingRead.clear();
 	}
 
+	@SuppressWarnings("resource")
 	@Override
 	public String toString() {
 		return key.channel().toString() + " closed: " + isClosed() + " pending: " + pendingWrite.length();
@@ -220,7 +223,7 @@ public final class Connection {
 		}
 
 		@Override
-		public synchronized final void write(int b) throws IOException {
+		public final synchronized void write(int b) throws IOException {
 			if (h == null)
 				throw new IOException("already closed");
 			try {
@@ -252,7 +255,7 @@ public final class Connection {
 		 * @throws IOException
 		 */
 		@Override
-		public synchronized final void write(byte[] buf, int off, int len) throws IOException {
+		public final synchronized void write(byte[] buf, int off, int len) throws IOException {
 			if (len == 0)
 				return;
 			if ((off | len | (off + len) | (buf.length - (off + len))) < 0)
@@ -286,6 +289,7 @@ public final class Connection {
 		 * flush pending data
 		 * 
 		 */
+		@SuppressWarnings("resource")
 		@Override
 		public synchronized void flush() {
 			if (h == null)

@@ -120,7 +120,7 @@ public class HttpHandler implements Handler, Runnable {
 			OutputStream out = co.getOut();
 			out.write(e.empty());
 			out.close();
-		} catch (IOException ex) { // OK
+		} catch (@SuppressWarnings("unused") IOException ex) { // OK
 		}
 	}
 
@@ -243,6 +243,7 @@ public class HttpHandler implements Handler, Runnable {
 		return true;
 	}
 
+	@SuppressWarnings("resource")
 	@Override
 	public void run() {
 		boolean close = false;
@@ -264,20 +265,11 @@ public class HttpHandler implements Handler, Runnable {
 			if (!close)
 				res.setHeader("connection", "keep-alive");
 			events.fireRequestInitialized(req);
-			FilterChain s = servlets.find(req);
-			try {
-				s.doFilter(req, res);
-			} catch (UnavailableException e) {
-				// TODO add page with retry-after
-				res.sendError(503, e, null);
-			} catch (Exception e) {
-				logger.error("failed to service '{}'", s, e);
-				if (!res.isCommited())
-					res.sendError(500);
-			}
-
+			doRun(req, res);
 			events.fireRequestDestroyed(req);
 			res.close();
+		} catch (@SuppressWarnings("unused") InterruptedException e) {
+			Thread.currentThread().interrupt();
 		} catch (Exception e) {
 			logger.error("processor error", e);
 			error(HttpError.SERVER_ERROR);
@@ -288,6 +280,21 @@ public class HttpHandler implements Handler, Runnable {
 				out.flush();
 			cleanup();
 		}
+	}
+
+	private void doRun(ServletRequestImpl req, ServletResponseImpl res) throws InterruptedException, IOException {
+		FilterChain s = servlets.find(req);
+		try {
+			s.doFilter(req, res);
+		} catch (UnavailableException e) {
+			// TODO add page with retry-after
+			res.sendError(503, e, null);
+		} catch (Exception e) {
+			logger.error("failed to service '{}'", s, e);
+			if (!res.isCommitted())
+				res.sendError(500);
+		}
+
 	}
 
 	private void cleanup() {
@@ -364,7 +371,7 @@ public class HttpHandler implements Handler, Runnable {
 			while (o < e) {
 				byte c = b[o++];
 				if (m > 0) {
-					pending = (byte) ((pending << 4) + c - '0');
+					pending = (byte) ((pending << 4) + (c & 0xff) - '0');
 					if (--m == 0) {
 						bbuf.put(pending);
 						pending = 0;

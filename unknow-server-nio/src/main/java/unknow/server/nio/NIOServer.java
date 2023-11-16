@@ -46,6 +46,7 @@ public class NIOServer extends NIOLoop {
 	 * @param handler
 	 * @throws IOException
 	 */
+	@SuppressWarnings("resource")
 	public void bind(SocketAddress a, HandlerFactory handler) throws IOException {
 		logger.info("Server bind to {}", a);
 		ServerSocketChannel open = ServerSocketChannel.open();
@@ -60,6 +61,7 @@ public class NIOServer extends NIOLoop {
 		listener.starting(this);
 	}
 
+	@SuppressWarnings("resource")
 	@Override
 	protected void selected(SelectionKey key) throws IOException {
 		try {
