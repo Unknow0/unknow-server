@@ -11,27 +11,26 @@ import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.Parser;
 
 import unknow.server.nio.NIOConnection;
-import unknow.server.nio.Handler;
+import unknow.server.util.pool.Pool;
 
 /**
  * @author unknow
  */
-public abstract class ProtobufHandler<T> implements Handler {
+public abstract class ProtobufConnection<T> extends NIOConnection {
 	private final Parser<T> parser;
-	protected final NIOConnection co;
 	private final LimitedInputStream limited;
 
 	@SuppressWarnings("resource")
-	protected ProtobufHandler(Parser<T> parser, NIOConnection co) {
+	protected ProtobufConnection(Pool<NIOConnection> pool, Parser<T> parser) {
+		super(pool);
 		this.parser = parser;
-		this.co = co;
-		this.limited = new LimitedInputStream(co.getIn());
+		this.limited = new LimitedInputStream(getIn());
 	}
 
 	@SuppressWarnings("resource")
 	@Override
-	public void onRead() {
-		InputStream in = co.getIn();
+	public final void onRead() {
+		InputStream in = getIn();
 		try {
 			in.mark(4096);
 			int len = readInt(in);
@@ -40,7 +39,7 @@ public abstract class ProtobufHandler<T> implements Handler {
 			limited.setLimit(len);
 			process(parser.parseFrom(limited));
 		} catch (@SuppressWarnings("unused") IOException e) {
-			co.getOut().close();
+			getOut().close();
 		} finally {
 			try {
 				in.reset();
@@ -59,15 +58,15 @@ public abstract class ProtobufHandler<T> implements Handler {
 	}
 
 	@Override
-	public void onWrite() { // OK
+	public final void onWrite() { // OK
 	}
 
 	@Override
-	public boolean closed(long now, boolean close) {
+	public final boolean closed(long now, boolean close) {
 		return close;
 	}
 
 	@Override
-	public void free() { // OK
+	public final void onFree() { // OK
 	}
 }

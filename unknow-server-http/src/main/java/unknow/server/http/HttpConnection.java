@@ -303,15 +303,19 @@ public class HttpConnection extends NIOConnection implements Runnable {
 		if (stop)
 			return !running;
 
-		if (isClosed())
+		if (isClosed()) {
+			logger.info("isClosed");
 			return true;
+		}
 		if (running)
 			return false;
 
 		if (keepAliveIdle > 0) {
 			long e = now - keepAliveIdle;
-			if (lastRead() <= e && lastWrite() <= e)
+			if (lastRead() <= e && lastWrite() <= e) {
+				logger.info("read: {}, write: {}, e: {}", lastRead(), lastWrite(), e);
 				return true;
+			}
 		}
 
 		// TODO check request timeout

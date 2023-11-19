@@ -15,8 +15,8 @@ import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import unknow.server.util.pool.LocalPool;
 import unknow.server.util.pool.Pool;
+import unknow.server.util.pool.SharedPool;
 
 /**
  * the NIO Server
@@ -60,7 +60,7 @@ public class NIOServer extends NIOLoop {
 		logger.info("Server bind to {}", a);
 		Pool<NIOConnection> pool;
 		synchronized (pools) {
-			pool = pools.computeIfAbsent(s, k -> new LocalPool<>(200, s));
+			pool = pools.computeIfAbsent(s, k -> new SharedPool<>(200, s));
 		}
 
 		ServerSocketChannel open = ServerSocketChannel.open();
