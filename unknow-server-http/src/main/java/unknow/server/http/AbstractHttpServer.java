@@ -89,7 +89,7 @@ public abstract class AbstractHttpServer extends NIOServerCli {
 			return t;
 		});
 
-		handler = co -> new HttpHandler(co, executor, ctx, keepAliveIdle);
+		handler = pool -> new HttpConnection(pool, executor, ctx, keepAliveIdle);
 
 		loadInitializer();
 		servlets.initialize(ctx, createServlets(), createFilters());

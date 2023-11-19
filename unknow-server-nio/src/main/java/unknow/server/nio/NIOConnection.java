@@ -16,19 +16,19 @@ import org.slf4j.LoggerFactory;
 
 import unknow.server.util.io.Buffers;
 import unknow.server.util.io.BuffersInputStream;
+import unknow.server.util.pool.Pool;
 
 /**
  * used to handle raw data
  * 
  * @author unknow
  */
-public final class Connection {
-	private static final Logger logger = LoggerFactory.getLogger(Connection.class);
+public class NIOConnection {
+	private static final Logger logger = LoggerFactory.getLogger(NIOConnection.class);
+
+	private final Pool<NIOConnection> pool;
 
 	private final Object mutex = new Object();
-
-	/** factory that created the handler */
-	private final Handler handler;
 
 	/** the data waiting to be wrote */
 	public final Buffers pendingWrite = new Buffers();
@@ -47,8 +47,9 @@ public final class Connection {
 	private long lastRead;
 	private long lastWrite;
 
-	protected Connection(HandlerFactory factory) {
-		this.handler = factory.create(this);
+	protected NIOConnection(Pool<NIOConnection> pool) {
+		logger.info("Create co");
+		this.pool = pool;
 	}
 
 	void attach(SelectionKey key) {
@@ -57,8 +58,34 @@ public final class Connection {
 		lastRead = lastWrite = System.currentTimeMillis();
 	}
 
-	protected final void init() {
-		handler.init();
+	/**
+	 * called after the connection is initialized
+	 */
+	protected void onInit() { // for override
+	}
+
+	/**
+	 * called after some data has been read
+	 * @throws InterruptedException
+	 * @throws IOException
+	 */
+	protected void onRead() throws InterruptedException, IOException { // for override
+	}
+
+	/**
+	 * called after data has been written
+	 * @throws InterruptedException
+	 * @throws IOException
+	 */
+	protected void onWrite() throws InterruptedException, IOException { // for override
+	}
+
+	/**
+	 * called when the connection is free
+	 * @throws InterruptedException
+	 * @throws IOException
+	 */
+	protected void onFree() throws InterruptedException, IOException { // for override
 	}
 
 	/**
@@ -86,7 +113,7 @@ public final class Connection {
 		}
 
 		pendingRead.write(buf);
-		handler.onRead();
+		onRead();
 	}
 
 	/**
@@ -117,7 +144,7 @@ public final class Connection {
 		if (buf.hasRemaining()) // we didn't write all
 			pendingWrite.prepend(buf);
 		toggleKeyOps();
-		handler.onWrite();
+		onWrite();
 	}
 
 	private void toggleKeyOps() {
@@ -195,18 +222,28 @@ public final class Connection {
 		return out.isClosed() && pendingWrite.isEmpty();
 	}
 
+	/**
+	 * check if the connection is closed and should be stoped
+	 * @param now System.currentMillis()
+	 * @param stop if true the server is in stop phase
+	 * @return true is the collection is closed
+	 */
+	@SuppressWarnings("unused")
 	public boolean closed(long now, boolean stop) {
-		return handler.closed(now, stop);
+		return isClosed();
 	}
 
 	/**
 	 * free the handler
+	 * @throws IOException 
+	 * @throws InterruptedException 
 	 */
-	public final void free() {
-		handler.free();
+	public final void free() throws InterruptedException, IOException {
 		out.close();
 		pendingWrite.clear();
 		pendingRead.clear();
+		onFree();
+		pool.free(this);
 	}
 
 	@SuppressWarnings("resource")
@@ -216,9 +253,9 @@ public final class Connection {
 	}
 
 	public static final class Out extends OutputStream {
-		private Connection h;
+		private NIOConnection h;
 
-		private Out(Connection h) {
+		private Out(NIOConnection h) {
 			this.h = h;
 		}
 

@@ -10,7 +10,7 @@ import java.io.InputStream;
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.Parser;
 
-import unknow.server.nio.Connection;
+import unknow.server.nio.NIOConnection;
 import unknow.server.nio.Handler;
 
 /**
@@ -18,11 +18,11 @@ import unknow.server.nio.Handler;
  */
 public abstract class ProtobufHandler<T> implements Handler {
 	private final Parser<T> parser;
-	protected final Connection co;
+	protected final NIOConnection co;
 	private final LimitedInputStream limited;
 
 	@SuppressWarnings("resource")
-	protected ProtobufHandler(Parser<T> parser, Connection co) {
+	protected ProtobufHandler(Parser<T> parser, NIOConnection co) {
 		this.parser = parser;
 		this.co = co;
 		this.limited = new LimitedInputStream(co.getIn());

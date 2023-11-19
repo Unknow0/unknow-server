@@ -29,13 +29,13 @@ import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import unknow.server.http.HttpError;
-import unknow.server.http.HttpHandler;
+import unknow.server.http.HttpConnection;
 import unknow.server.http.servlet.out.ChunckedOutputStream;
 import unknow.server.http.servlet.out.LengthOutputStream;
 import unknow.server.http.servlet.out.Output;
 import unknow.server.http.servlet.out.ServletWriter;
 import unknow.server.http.utils.ServletManager;
-import unknow.server.nio.Connection.Out;
+import unknow.server.nio.NIOConnection.Out;
 
 /**
  * @author unknow
@@ -69,7 +69,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 
 	private final ServletContextImpl ctx;
 	private final Out out;
-	private final HttpHandler req;
+	private final HttpConnection req;
 	private Output servletOut;
 
 	private boolean commited = false;
@@ -93,7 +93,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 	 * @param out the raw output
 	 * @param req the original request
 	 */
-	public ServletResponseImpl(ServletContextImpl ctx, Out out, HttpHandler req) {
+	public ServletResponseImpl(ServletContextImpl ctx, Out out, HttpConnection req) {
 		this.ctx = ctx;
 		this.out = out;
 		this.req = req;

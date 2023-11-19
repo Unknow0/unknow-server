@@ -32,7 +32,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	/** buffer to read/write */
 	private final ByteBuffer buf;
 
-	private final Queue<Connection> init;
+	private final Queue<NIOConnection> init;
 
 	/**
 	 * create new IOWorker
@@ -61,7 +61,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	 */
 	@SuppressWarnings("resource")
 	@Override
-	public final void register(SocketChannel socket, Connection handler) throws IOException {
+	public final void register(SocketChannel socket, NIOConnection handler) throws IOException {
 		socket.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.TRUE).setOption(StandardSocketOptions.SO_REUSEADDR, Boolean.TRUE).configureBlocking(false);
 		synchronized (mutex) {
 			selector.wakeup();
@@ -74,7 +74,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	@Override
 	@SuppressWarnings("resource")
 	protected final void selected(SelectionKey key) throws IOException, InterruptedException {
-		Connection h = (Connection) key.attachment();
+		NIOConnection h = (NIOConnection) key.attachment();
 		SocketChannel channel = (SocketChannel) key.channel();
 
 		if (key.isValid() && key.isWritable()) {
@@ -104,20 +104,24 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	@Override
 	protected void onSelect(boolean close) throws InterruptedException {
 		synchronized (mutex) {
-			Connection co;
+			NIOConnection co;
 			while ((co = init.poll()) != null)
-				co.init();
+				co.onInit();
 
 			long now = System.currentTimeMillis();
 			for (SelectionKey key : selector.keys()) {
-				co = (Connection) key.attachment();
+				co = (NIOConnection) key.attachment();
 				if (!key.isValid() || co.closed(now, close)) {
 					listener.closed(id, co);
 					key.cancel();
 					try {
 						key.channel().close();
-						co.free();
 					} catch (@SuppressWarnings("unused") IOException e) { // ignore
+					}
+					try {
+						co.free();
+					} catch (InterruptedException | IOException e) {
+						logger.warn("Failed to free connection {}", co, e);
 					}
 				}
 			}

@@ -4,9 +4,7 @@
 package unknow.server.http;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.CharsetDecoder;
@@ -31,15 +29,14 @@ import unknow.server.http.servlet.ServletRequestImpl;
 import unknow.server.http.servlet.ServletResponseImpl;
 import unknow.server.http.utils.EventManager;
 import unknow.server.http.utils.ServletManager;
-import unknow.server.nio.Connection;
-import unknow.server.nio.Connection.Out;
-import unknow.server.nio.Handler;
+import unknow.server.nio.NIOConnection;
 import unknow.server.util.io.Buffers;
 import unknow.server.util.io.Buffers.Walker;
 import unknow.server.util.io.BuffersUtils;
+import unknow.server.util.pool.Pool;
 
-public class HttpHandler implements Handler, Runnable {
-	private static final Logger logger = LoggerFactory.getLogger(HttpHandler.class);
+public class HttpConnection extends NIOConnection implements Runnable {
+	private static final Logger logger = LoggerFactory.getLogger(HttpConnection.class);
 
 	private static final byte[] CRLF = { '\r', '\n' };
 	private static final byte[] CRLF2 = { '\r', '\n', '\r', '\n' };
@@ -61,8 +58,6 @@ public class HttpHandler implements Handler, Runnable {
 
 	private static final int MAX_START_SIZE = 8192;
 
-	private final Connection co;
-
 	private final ExecutorService executor;
 	private final int keepAliveIdle;
 
@@ -80,9 +75,10 @@ public class HttpHandler implements Handler, Runnable {
 
 	/**
 	 * create new RequestBuilder
+	 * @param pool 
 	 */
-	public HttpHandler(Connection co, ExecutorService executor, ServletContextImpl ctx, int keepAliveIdle) {
-		this.co = co;
+	public HttpConnection(Pool<NIOConnection> pool, ExecutorService executor, ServletContextImpl ctx, int keepAliveIdle) {
+		super(pool);
 		this.executor = executor;
 		this.ctx = ctx;
 		this.servlets = ctx.getServletManager();
@@ -97,15 +93,15 @@ public class HttpHandler implements Handler, Runnable {
 	public final void onRead() throws InterruptedException {
 		if (running)
 			return;
-		int i = BuffersUtils.indexOf(co.pendingRead, CRLF2, 0, MAX_START_SIZE);
+		int i = BuffersUtils.indexOf(pendingRead, CRLF2, 0, MAX_START_SIZE);
 		if (i == -1)
 			return;
 		if (i == -2) {
 			error(HttpError.BAD_REQUEST);
 			return;
 		}
-		co.pendingRead.read(meta, i + 2, false);
-		co.pendingRead.skip(2);
+		pendingRead.read(meta, i + 2, false);
+		pendingRead.skip(2);
 		running = true;
 		f = executor.submit(this);
 	}
@@ -115,9 +111,9 @@ public class HttpHandler implements Handler, Runnable {
 	}
 
 	private final void error(HttpError e) {
-		logger.error("{}: {}", co.getRemote(), e);
+		logger.error("{}: {}", getRemote(), e);
 		try {
-			OutputStream out = co.getOut();
+			OutputStream out = getOut();
 			out.write(e.empty());
 			out.close();
 		} catch (@SuppressWarnings("unused") IOException ex) { // OK
@@ -248,7 +244,7 @@ public class HttpHandler implements Handler, Runnable {
 	public void run() {
 		boolean close = false;
 
-		Out out = co.getOut();
+		Out out = getOut();
 		try {
 			ServletResponseImpl res = new ServletResponseImpl(ctx, out, this);
 			ServletRequestImpl req = new ServletRequestImpl(ctx, this, DispatcherType.REQUEST, res);
@@ -282,7 +278,7 @@ public class HttpHandler implements Handler, Runnable {
 		}
 	}
 
-	private void doRun(ServletRequestImpl req, ServletResponseImpl res) throws InterruptedException, IOException {
+	private void doRun(ServletRequestImpl req, ServletResponseImpl res) throws IOException {
 		FilterChain s = servlets.find(req);
 		try {
 			s.doFilter(req, res);
@@ -307,14 +303,14 @@ public class HttpHandler implements Handler, Runnable {
 		if (stop)
 			return !running;
 
-		if (co.isClosed())
+		if (isClosed())
 			return true;
 		if (running)
 			return false;
 
 		if (keepAliveIdle > 0) {
 			long e = now - keepAliveIdle;
-			if (co.lastRead() <= e && co.lastWrite() <= e)
+			if (lastRead() <= e && lastWrite() <= e)
 				return true;
 		}
 
@@ -323,33 +319,12 @@ public class HttpHandler implements Handler, Runnable {
 	}
 
 	@Override
-	public void free() {
+	protected final void onFree() {
 		if (running) {
 			f.cancel(true);
 			running = false;
 		}
 		cleanup();
-	}
-
-	/**
-	 * @return
-	 */
-	public InetSocketAddress getLocal() {
-		return co.getLocal();
-	}
-
-	/**
-	 * @return
-	 */
-	public InetSocketAddress getRemote() {
-		return co.getRemote();
-	}
-
-	/**
-	 * @return
-	 */
-	public InputStream getIn() {
-		return co.getIn();
 	}
 
 	private static final class Decode implements Walker {

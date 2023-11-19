@@ -43,7 +43,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.HttpUpgradeHandler;
 import jakarta.servlet.http.Part;
-import unknow.server.http.HttpHandler;
+import unknow.server.http.HttpConnection;
 import unknow.server.http.servlet.in.ChunckedInputStream;
 import unknow.server.http.servlet.in.EmptyInputStream;
 import unknow.server.http.servlet.in.LengthInputStream;
@@ -61,7 +61,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 	private final ArrayMap<Object> attributes = new ArrayMap<>();
 
 	private final ServletContextImpl ctx;
-	private final HttpHandler req;
+	private final HttpConnection req;
 	private final DispatcherType type;
 	private final ServletResponseImpl res;
 
@@ -110,7 +110,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 	 * @param type dispatcher type of this request
 	 * @param res  the response
 	 */
-	public ServletRequestImpl(ServletContextImpl ctx, HttpHandler req, DispatcherType type, ServletResponseImpl res) {
+	public ServletRequestImpl(ServletContextImpl ctx, HttpConnection req, DispatcherType type, ServletResponseImpl res) {
 		this.ctx = ctx;
 		this.req = req;
 		this.type = type;

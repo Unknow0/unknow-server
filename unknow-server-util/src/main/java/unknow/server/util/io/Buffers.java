@@ -4,10 +4,10 @@
 package unknow.server.util.io;
 
 import java.nio.ByteBuffer;
-import java.util.Queue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+
+import unknow.server.util.pool.LocalPool;
 
 /**
  * @author unknow
@@ -536,7 +536,7 @@ public class Buffers {
 	 * @author unknow
 	 */
 	public static class Chunk {
-		private static final Queue<Chunk> POOL = new LinkedBlockingQueue<>();
+		private static final LocalPool<Chunk> POOL = new LocalPool<>(1000, pool -> new Chunk());
 		/** the content */
 		public final byte[] b;
 		/** the current offset */
@@ -557,13 +557,7 @@ public class Buffers {
 		 * @return a chunk
 		 */
 		public static Chunk get() {
-			Chunk poll;
-			synchronized (POOL) {
-				poll = POOL.poll();
-			}
-			if (poll == null)
-				poll = new Chunk();
-			return poll;
+			return POOL.get();
 		}
 
 		/**
@@ -576,7 +570,7 @@ public class Buffers {
 			Chunk n = c.next;
 			c.o = c.l = 0;
 			c.next = null;
-			POOL.offer(c);
+			POOL.free(c);
 			return n;
 		}
 	}
