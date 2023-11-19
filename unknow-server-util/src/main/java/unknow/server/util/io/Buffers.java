@@ -7,7 +7,8 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-import unknow.server.util.pool.LocalPool;
+import unknow.server.util.pool.Pool;
+import unknow.server.util.pool.SharedPool;
 
 /**
  * @author unknow
@@ -417,6 +418,8 @@ public class Buffers {
 			while (c.l < o) {
 				o -= c.l;
 				c = c.next;
+				if (c == null)
+					return WalkResult.END;
 			}
 			int i = Math.min(l, c.l - o);
 			if (!w.apply(c.b, c.o + o, c.o + o + i))
@@ -536,7 +539,7 @@ public class Buffers {
 	 * @author unknow
 	 */
 	public static class Chunk {
-		private static final LocalPool<Chunk> POOL = new LocalPool<>(1000, pool -> new Chunk());
+		private static final Pool<Chunk> POOL = new SharedPool<>(1000, pool -> new Chunk());
 		/** the content */
 		public final byte[] b;
 		/** the current offset */

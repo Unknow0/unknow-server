@@ -48,7 +48,6 @@ public class NIOConnection {
 	private long lastWrite;
 
 	protected NIOConnection(Pool<NIOConnection> pool) {
-		logger.info("Create co");
 		this.pool = pool;
 	}
 

@@ -111,7 +111,7 @@ public class HttpConnection extends NIOConnection implements Runnable {
 	}
 
 	private final void error(HttpError e) {
-		logger.error("{}: {}", getRemote(), e);
+		logger.error("{}: {}\n{}", getRemote(), e, meta);
 		try {
 			OutputStream out = getOut();
 			out.write(e.empty());
@@ -304,7 +304,7 @@ public class HttpConnection extends NIOConnection implements Runnable {
 			return !running;
 
 		if (isClosed()) {
-			logger.info("isClosed");
+			logger.info("isClosed {}", this);
 			return true;
 		}
 		if (running)
