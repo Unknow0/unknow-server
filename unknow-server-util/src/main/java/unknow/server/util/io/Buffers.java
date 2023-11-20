@@ -125,7 +125,9 @@ public class Buffers {
 		try {
 			len += l;
 			if (head != null && l < head.o) {
-				System.arraycopy(buf, o, head.b, head.o - l, l);
+				head.o -= l;
+				head.l += l;
+				System.arraycopy(buf, o, head.b, head.o, l);
 				return;
 			}
 			Chunk c = Chunk.get();
@@ -149,10 +151,12 @@ public class Buffers {
 	public void prepend(ByteBuffer buf) throws InterruptedException {
 		lock.lockInterruptibly();
 		try {
-			int r = buf.remaining();
-			len += r;
-			if (head != null && r < head.o) {
-				buf.get(head.b, head.o - r, r);
+			int l = buf.remaining();
+			len += l;
+			if (head != null && l < head.o) {
+				head.o -= l;
+				head.l += l;
+				buf.get(head.b, head.o, l);
 				return;
 			}
 			Chunk c = Chunk.get();
@@ -479,8 +483,7 @@ public class Buffers {
 			l -= r;
 			if (l == 0)
 				return c;
-			c.next = Chunk.get();
-			c = c.next;
+			c = c.next = Chunk.get();
 		}
 	}
 
@@ -502,8 +505,7 @@ public class Buffers {
 			o += r;
 			if (l == 0)
 				return c;
-			c.next = Chunk.get();
-			c = c.next;
+			c = c.next = Chunk.get();
 		}
 	}
 
