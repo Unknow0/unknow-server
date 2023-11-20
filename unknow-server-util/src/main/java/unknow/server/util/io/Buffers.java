@@ -18,8 +18,8 @@ public class Buffers {
 	private final ReentrantLock lock = new ReentrantLock();
 	private final Condition cond = lock.newCondition();
 
-	private Chunk head;
-	private Chunk tail;
+	Chunk head;
+	Chunk tail;
 	private int len;
 
 	/**
@@ -279,6 +279,29 @@ public class Buffers {
 	}
 
 	/**
+	 * append chunk
+	 * @param c
+	 * @throws InterruptedException 
+	 */
+	private void append(Chunk c) throws InterruptedException {
+		lock.lockInterruptibly();
+		try {
+			if (tail == null)
+				head = c;
+			else
+				tail.next = c;
+			len += c.l;
+			while (c.next != null) {
+				c = c.next;
+				len += c.l;
+			}
+			tail = c;
+		} finally {
+			lock.unlock();
+		}
+	}
+
+	/**
 	 * read a number amount of byte into the buffers
 	 * 
 	 * @param buf  where to read
@@ -286,10 +309,8 @@ public class Buffers {
 	 * @param l    number of byte to read
 	 * @throws InterruptedException
 	 */
-	@SuppressWarnings("null")
 	public void read(Buffers buf, int l, boolean wait) throws InterruptedException {
 		lock.lockInterruptibly();
-		buf.lock.lockInterruptibly();
 		try {
 			if (wait)
 				awaitContent();
@@ -297,46 +318,43 @@ public class Buffers {
 				return;
 
 			if (l >= len) { // move all content
-				buf.len += len;
-				buf.tail.next = head;
-				buf.tail = tail;
+				buf.append(head);
 				head = tail = null;
 				len = 0;
 				return;
 			}
 
+			Chunk h = head;
 			Chunk last = null;
-			int read = 0;
-
 			Chunk c = head;
 			// read whole chunk
-			while (c != null && l >= c.l) {
+			while (l >= c.l) {
 				l -= c.l;
-				read += c.l;
+				len -= c.l;
 				last = c;
 				c = c.next;
 			}
 
-			if (l > 0) {
+			if (last == null || l > 0) {
 				Chunk n = Chunk.get();
 				System.arraycopy(c.b, c.o, n.b, 0, l);
 				c.o += l;
 				c.l -= l;
 				n.l = l;
-				read += l;
-				last.next = n;
+				len -= l;
+				if (last != null)
+					last.next = n;
+				else
+					h = n;
 				last = n;
-			}
+			} else
+				last.next = null;
 
-			buf.len += read;
-			buf.tail.next = head;
-			buf.tail = last;
-			last.next = null;
+			buf.append(h);
+
 			head = c;
-			len -= read;
 		} finally {
 			lock.unlock();
-			buf.lock.unlock();
 		}
 	}
 
