@@ -286,14 +286,25 @@ public class Buffers {
 	 * @param l    number of byte to read
 	 * @throws InterruptedException
 	 */
+	@SuppressWarnings("null")
 	public void read(Buffers buf, int l, boolean wait) throws InterruptedException {
 		lock.lockInterruptibly();
+		buf.lock.lockInterruptibly();
 		try {
 			if (wait)
 				awaitContent();
 			if (l == 0 || head == null)
 				return;
-			Chunk h = head;
+
+			if (l >= len) { // move all content
+				buf.len += len;
+				buf.tail.next = head;
+				buf.tail = tail;
+				head = tail = null;
+				len = 0;
+				return;
+			}
+
 			Chunk last = null;
 			int read = 0;
 
@@ -306,40 +317,26 @@ public class Buffers {
 				c = c.next;
 			}
 
-			if (c != null && l > 0) {
+			if (l > 0) {
 				Chunk n = Chunk.get();
 				System.arraycopy(c.b, c.o, n.b, 0, l);
 				c.o += l;
 				c.l -= l;
 				n.l = l;
 				read += l;
-				if (last != null)
-					last.next = n;
-				else
-					h = n;
+				last.next = n;
 				last = n;
-			} else { // we move all
-				if (last != null)
-					last.next = null;
 			}
-			buf.lock.lockInterruptibly();
-			try {
-				len -= read;
-				head = c;
-				if (c == null)
-					tail = null;
 
-				buf.len += read;
-				if (buf.head == null)
-					buf.head = h;
-				else
-					buf.tail.next = h;
-				buf.tail = last;
-			} finally {
-				buf.lock.unlock();
-			}
+			buf.len += read;
+			buf.tail.next = head;
+			buf.tail = last;
+			last.next = null;
+			head = c;
+			len -= read;
 		} finally {
 			lock.unlock();
+			buf.lock.unlock();
 		}
 	}
 
