@@ -100,7 +100,9 @@ public class HttpConnection extends NIOConnection implements Runnable {
 			error(HttpError.BAD_REQUEST);
 			return;
 		}
+		logger.info("{} pendingRead: {}", getRemote(), pendingRead);
 		pendingRead.read(meta, i + 2, false);
+		logger.info("{} meta: {}", getRemote(), meta);
 		pendingRead.skip(2);
 		running = true;
 		f = executor.submit(this);

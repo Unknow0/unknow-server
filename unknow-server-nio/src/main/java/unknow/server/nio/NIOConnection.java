@@ -28,8 +28,6 @@ public class NIOConnection {
 
 	private final Pool<NIOConnection> pool;
 
-	private final Object mutex = new Object();
-
 	/** the data waiting to be wrote */
 	public final Buffers pendingWrite = new Buffers();
 	/** the data waiting to be handled */
@@ -152,9 +150,7 @@ public class NIOConnection {
 	}
 
 	private void toggleKeyOps() {
-		synchronized (mutex) {
-			key.interestOps(pendingWrite.isEmpty() ? SelectionKey.OP_READ : SelectionKey.OP_READ | SelectionKey.OP_WRITE);
-		}
+		key.interestOps(pendingWrite.isEmpty() ? SelectionKey.OP_READ : SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 	}
 
 	/**

@@ -1,8 +1,9 @@
 package unknow.server.util.pool;
 
 public final class Node<T> {
+	private static final Object mutex = new Object();
 	@SuppressWarnings("rawtypes")
-	private static final ThreadLocal<Node> idle = new ThreadLocal<>();
+	private static Node idle = null;
 
 	public T t;
 	public Node<T> n;
@@ -12,17 +13,21 @@ public final class Node<T> {
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public static <T> Node<T> get() {
-		Node n = idle.get();
-		if (n == null)
-			return new Node<>();
-		idle.set(n.n);
-		return n;
+		synchronized (mutex) {
+			Node n = idle;
+			if (n == null)
+				return new Node<>();
+			idle = n.n;
+			return n;
+		}
 	}
 
 	@SuppressWarnings("unchecked")
 	public static void free(Node<?> n) {
-		n.t = null;
-		n.n = idle.get();
-		idle.set(n);
+		synchronized (mutex) {
+			n.t = null;
+			n.n = idle;
+			idle = n;
+		}
 	}
 }

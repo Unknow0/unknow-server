@@ -14,6 +14,7 @@ import unknow.server.util.pool.SharedPool;
  * @author unknow
  */
 public class Buffers {
+	private static final int BUF_LEN = 4096;
 	private final ReentrantLock lock = new ReentrantLock();
 	private final Condition cond = lock.newCondition();
 
@@ -45,7 +46,7 @@ public class Buffers {
 		try {
 			if (tail == null)
 				head = tail = Chunk.get();
-			if (tail.o + tail.l == 4096) {
+			if (tail.o + tail.l == BUF_LEN) {
 				tail.next = Chunk.get();
 				tail = tail.next;
 			}
@@ -77,10 +78,10 @@ public class Buffers {
 	 * @throws InterruptedException
 	 */
 	public void write(byte[] buf, int o, int l) throws InterruptedException {
+		if (l == 0)
+			return;
 		lock.lockInterruptibly();
 		try {
-			if (l == 0)
-				return;
 			if (tail == null)
 				head = tail = Chunk.get();
 			len += l;
@@ -97,10 +98,10 @@ public class Buffers {
 	 * @param bb data to append
 	 */
 	public void write(ByteBuffer bb) throws InterruptedException {
+		if (bb.remaining() == 0)
+			return;
 		lock.lockInterruptibly();
 		try {
-			if (bb.remaining() == 0)
-				return;
 			if (tail == null)
 				head = tail = Chunk.get();
 			len += bb.remaining();
@@ -472,7 +473,7 @@ public class Buffers {
 	private final Chunk writeInto(Chunk c, ByteBuffer bb) {
 		int l = bb.remaining();
 		for (;;) {
-			int r = Math.min(l, 4096 - c.l - c.o);
+			int r = Math.min(l, BUF_LEN - c.l - c.o);
 			bb.get(c.b, c.o + c.l, r);
 			c.l += r;
 			l -= r;
@@ -494,7 +495,7 @@ public class Buffers {
 	 */
 	private final Chunk writeInto(Chunk c, byte[] buf, int o, int l) {
 		for (;;) {
-			int r = Math.min(l, 4096 - c.l - c.o);
+			int r = Math.min(l, BUF_LEN - c.l - c.o);
 			System.arraycopy(buf, o, c.b, c.o + c.l, r);
 			c.l += r;
 			l -= r;
@@ -550,7 +551,7 @@ public class Buffers {
 		public Chunk next;
 
 		private Chunk() {
-			b = new byte[4096];
+			b = new byte[BUF_LEN];
 			o = l = 0;
 		}
 
