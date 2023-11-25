@@ -11,7 +11,7 @@ public final class BasePool<T> implements Pool<T> {
 	private final int max;
 	private int len;
 
-	private Node<T> idle;
+	private volatile Node<T> idle;
 
 	/**
 	 * create a new pool
