@@ -8,7 +8,7 @@ import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -45,7 +45,7 @@ public class NIOServer extends NIOLoop {
 		super("NIOServer", 0);
 		this.workers = workers;
 		this.listener = listener == null ? NIOServerListener.NOP : listener;
-		this.pools = new HashMap<>();
+		this.pools = new IdentityHashMap<>();
 	}
 
 	/**

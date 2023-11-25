@@ -181,7 +181,7 @@ public class HttpConnection extends NIOConnection implements Runnable {
 		last = i + 2;
 
 		map = new HashMap<>();
-		while ((i = BuffersUtils.indexOf(pendingRead, CRLF, last, MAX_HEADER_SIZE)) > 0) {
+		while ((i = BuffersUtils.indexOf(pendingRead, CRLF, last, MAX_HEADER_SIZE)) > last) {
 			int c = BuffersUtils.indexOf(pendingRead, COLON, last, i - last);
 			if (c < 0) {
 				error(HttpError.BAD_REQUEST);
@@ -204,7 +204,7 @@ public class HttpConnection extends NIOConnection implements Runnable {
 			last = i + 2;
 		}
 		req.setHeaders(map);
-		pendingRead.skip(2);
+		pendingRead.skip(last+2);
 		return true;
 	}
 
@@ -299,19 +299,15 @@ public class HttpConnection extends NIOConnection implements Runnable {
 		if (stop)
 			return !running;
 
-		if (isClosed()) {
-			logger.info("isClosed {}", this);
+		if (isClosed())
 			return true;
-		}
 		if (running)
 			return false;
 
 		if (keepAliveIdle > 0) {
 			long e = now - keepAliveIdle;
-			if (lastRead() <= e && lastWrite() <= e) {
-				logger.info("read: {}, write: {}, e: {}", lastRead(), lastWrite(), e);
+			if (lastRead() <= e && lastWrite() <= e)
 				return true;
-			}
 		}
 
 		// TODO check request timeout
