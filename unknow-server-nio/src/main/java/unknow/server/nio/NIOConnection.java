@@ -243,7 +243,7 @@ public class NIOConnection {
 		pendingWrite.clear();
 		pendingRead.clear();
 		onFree();
-		pool.free(this);
+//		pool.free(this);
 	}
 
 	@SuppressWarnings("resource")

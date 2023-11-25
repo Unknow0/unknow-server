@@ -584,15 +584,14 @@ public class Buffers {
 		 * @return a chunk
 		 */
 		public static Chunk get() {
-			return new Chunk();
-//			synchronized (mutex) {
-//				if (idle == null)
-//					return new Chunk();
-//				Chunk c = idle;
-//				idle = idle.next;
-//				c.next = null;
-//				return c;
-//			}
+			synchronized (mutex) {
+				if (idle == null)
+					return new Chunk();
+				Chunk c = idle;
+				idle = idle.next;
+				c.next = null;
+				return c;
+			}
 		}
 
 		/**
@@ -603,11 +602,11 @@ public class Buffers {
 		 */
 		public static Chunk free(Chunk c) {
 			Chunk n = c.next;
-//			c.o = c.l = 0;
-//			synchronized (mutex) {
-//				c.next = idle;
-//				idle = c;
-//			}
+			c.o = c.l = 0;
+			synchronized (mutex) {
+				c.next = idle;
+				idle = c;
+			}
 			return n;
 		}
 	}
