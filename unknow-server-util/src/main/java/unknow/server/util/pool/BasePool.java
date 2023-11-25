@@ -37,6 +37,16 @@ public final class BasePool<T> implements Pool<T> {
 		return t;
 	}
 
+	public boolean contains(T t) {
+		Node<T> n = idle;
+		while (n != null) {
+			if (n.t == t)
+				return true;
+			n = n.n;
+		}
+		return false;
+	}
+
 	/**
 	 * put back an element in the pool
 	 * @param t element to free

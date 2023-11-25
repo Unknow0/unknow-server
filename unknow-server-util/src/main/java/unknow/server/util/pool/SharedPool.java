@@ -20,10 +20,12 @@ public class SharedPool<T> implements Pool<T> {
 			return pool.get();
 		}
 	}
-
+	
 	@Override
 	public void free(T t) {
 		synchronized (pool) {
+			if (pool.contains(t))
+				throw new IllegalStateException("Duplicate free");
 			pool.free(t);
 		}
 	}

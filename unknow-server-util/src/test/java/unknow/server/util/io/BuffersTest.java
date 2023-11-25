@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -41,6 +42,19 @@ public class BuffersTest {
 		b.read(w, r, false);
 		assertBuff(b, Math.max(0, l - r));
 		assertBuff(w, Math.min(l, r));
+	}
+
+	@Test
+	public void readIntoBuffers2() throws InterruptedException {
+		Buffers b = new Buffers();
+		for (int i = 0; i < 5000; i++)
+			b.write((byte) i);
+		b.skip(4000);
+
+		Buffers w = new Buffers();
+		b.read(w, 500, false);
+		assertBuff(b, 500);
+		assertBuff(w, 500);
 	}
 
 	private void assertBuff(Buffers b, int l) {
