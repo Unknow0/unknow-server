@@ -7,9 +7,6 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-import unknow.server.util.pool.Pool;
-import unknow.server.util.pool.SharedPool;
-
 /**
  * @author unknow
  */
@@ -121,6 +118,8 @@ public class Buffers {
 	 * @throws InterruptedException
 	 */
 	public void prepend(byte[] buf, int o, int l) throws InterruptedException {
+		if (l == 0)
+			return;
 		lock.lockInterruptibly();
 		try {
 			len += l;
@@ -149,6 +148,8 @@ public class Buffers {
 	 * @throws InterruptedException
 	 */
 	public void prepend(ByteBuffer buf) throws InterruptedException {
+		if (buf.remaining() == 0)
+			return;
 		lock.lockInterruptibly();
 		try {
 			int l = buf.remaining();
@@ -246,6 +247,8 @@ public class Buffers {
 	 * @throws InterruptedException
 	 */
 	public boolean read(ByteBuffer bb, boolean wait) throws InterruptedException {
+		if (bb.remaining() == 0)
+			return false;
 		lock.lockInterruptibly();
 		try {
 			if (wait)
@@ -310,6 +313,8 @@ public class Buffers {
 	 * @throws InterruptedException
 	 */
 	public void read(Buffers buf, int l, boolean wait) throws InterruptedException {
+		if (l == 0)
+			return;
 		lock.lockInterruptibly();
 		try {
 			if (wait)
@@ -557,7 +562,8 @@ public class Buffers {
 	 * @author unknow
 	 */
 	public static class Chunk {
-		private static final Pool<Chunk> POOL = new SharedPool<>(1000, pool -> new Chunk());
+		private static final Object mutex = new Object();
+		private static Chunk idle = null;
 		/** the content */
 		public final byte[] b;
 		/** the current offset */
@@ -578,7 +584,14 @@ public class Buffers {
 		 * @return a chunk
 		 */
 		public static Chunk get() {
-			return POOL.get();
+			synchronized (mutex) {
+				if (idle == null)
+					return new Chunk();
+				Chunk c = idle;
+				idle = idle.next;
+				c.next = null;
+				return c;
+			}
 		}
 
 		/**
@@ -590,8 +603,10 @@ public class Buffers {
 		public static Chunk free(Chunk c) {
 			Chunk n = c.next;
 			c.o = c.l = 0;
-			c.next = null;
-			POOL.free(c);
+			synchronized (mutex) {
+				c.next = idle;
+				idle = c;
+			}
 			return n;
 		}
 	}
