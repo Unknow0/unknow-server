@@ -65,7 +65,6 @@ public class HttpConnection extends NIOConnection implements Runnable {
 	private final ServletManager servlets;
 	private final EventManager events;
 
-	public final Buffers meta;
 	private final StringBuilder sb;
 	private final Decode decode;
 
@@ -84,7 +83,6 @@ public class HttpConnection extends NIOConnection implements Runnable {
 		this.servlets = ctx.getServletManager();
 		this.events = ctx.getEvents();
 		this.keepAliveIdle = keepAliveIdle;
-		meta = new Buffers();
 		sb = new StringBuilder();
 		decode = new Decode(sb);
 	}
@@ -100,10 +98,6 @@ public class HttpConnection extends NIOConnection implements Runnable {
 			error(HttpError.BAD_REQUEST);
 			return;
 		}
-		logger.info("{} pendingRead: {}", getRemote(), pendingRead);
-		pendingRead.read(meta, i + 2, false);
-		logger.info("{} meta: {}", getRemote(), meta);
-		pendingRead.skip(2);
 		running = true;
 		f = executor.submit(this);
 	}
@@ -113,7 +107,6 @@ public class HttpConnection extends NIOConnection implements Runnable {
 	}
 
 	private final void error(HttpError e) {
-		logger.error("{}: {}\n{}", getRemote(), e, meta);
 		try {
 			OutputStream out = getOut();
 			out.write(e.empty());
@@ -123,35 +116,35 @@ public class HttpConnection extends NIOConnection implements Runnable {
 	}
 
 	private boolean fillRequest(ServletRequestImpl req) throws InterruptedException {
-		int i = BuffersUtils.indexOf(meta, SPACE_SLASH, 0, MAX_METHOD_SIZE);
+		int i = BuffersUtils.indexOf(pendingRead, SPACE_SLASH, 0, MAX_METHOD_SIZE);
 		if (i < 0) {
 			error(HttpError.BAD_REQUEST);
 			return false;
 		}
-		BuffersUtils.toString(sb, meta, 0, i);
+		BuffersUtils.toString(sb, pendingRead, 0, i);
 		req.setMethod(sb.toString());
 		sb.setLength(0);
 		int last = i + 1;
 
-		i = BuffersUtils.indexOf(meta, SPACE, last, MAX_PATH_SIZE);
+		i = BuffersUtils.indexOf(pendingRead, SPACE, last, MAX_PATH_SIZE);
 		if (i < 0) {
 			error(HttpError.URI_TOO_LONG);
 			return false;
 		}
-		int q = BuffersUtils.indexOf(meta, QUESTION, last, i - last);
+		int q = BuffersUtils.indexOf(pendingRead, QUESTION, last, i - last);
 		if (q < 0)
 			q = i;
 
-		meta.walk(decode, last, q - last);
+		pendingRead.walk(decode, last, q - last);
 		if (!decode.done())
 			return false;
 		req.setRequestUri(sb.toString());
 		sb.setLength(0);
 
 		int s;
-		while ((s = BuffersUtils.indexOf(meta, SLASH, last + 1, q - last - 1)) > 0) {
-			int c = BuffersUtils.indexOf(meta, SEMICOLON, last + 1, s - last - 1);
-			meta.walk(decode, last + 1, (c < 0 ? s : c) - last - 1);
+		while ((s = BuffersUtils.indexOf(pendingRead, SLASH, last + 1, q - last - 1)) > 0) {
+			int c = BuffersUtils.indexOf(pendingRead, SEMICOLON, last + 1, s - last - 1);
+			pendingRead.walk(decode, last + 1, (c < 0 ? s : c) - last - 1);
 			if (!decode.done())
 				return false;
 			req.addPath(sb.toString());
@@ -159,47 +152,47 @@ public class HttpConnection extends NIOConnection implements Runnable {
 			last = s;
 		}
 		if (s == -2 && last + 1 < q) {
-			int c = BuffersUtils.indexOf(meta, SEMICOLON, last + 1, q - last - 1);
-			BuffersUtils.toString(sb, meta, last + 1, c < 0 ? q - last - 1 : c);
+			int c = BuffersUtils.indexOf(pendingRead, SEMICOLON, last + 1, q - last - 1);
+			BuffersUtils.toString(sb, pendingRead, last + 1, c < 0 ? q - last - 1 : c);
 			req.addPath(sb.toString());
 			sb.setLength(0);
 		}
 
 		if (q < i) {
-			BuffersUtils.toString(sb, meta, q + 1, i - q - 1);
+			BuffersUtils.toString(sb, pendingRead, q + 1, i - q - 1);
 			req.setQuery(sb.toString());
 			sb.setLength(0);
 		} else
 			req.setQuery("");
 
 		Map<String, List<String>> map = new HashMap<>();
-		parseParam(map, meta, q + 1, i);
+		parseParam(map, pendingRead, q + 1, i);
 		req.setQueryParam(map);
 		last = i + 1;
 
-		i = BuffersUtils.indexOf(meta, CRLF, last, MAX_VERSION_SIZE);
+		i = BuffersUtils.indexOf(pendingRead, CRLF, last, MAX_VERSION_SIZE);
 		if (i < 0) {
 			error(HttpError.BAD_REQUEST);
 			return false;
 		}
-		BuffersUtils.toString(sb, meta, last, i - last);
+		BuffersUtils.toString(sb, pendingRead, last, i - last);
 		req.setProtocol(sb.toString());
 		sb.setLength(0);
 		last = i + 2;
 
 		map = new HashMap<>();
-		while ((i = BuffersUtils.indexOf(meta, CRLF, last, MAX_HEADER_SIZE)) > 0) {
-			int c = BuffersUtils.indexOf(meta, COLON, last, i - last);
+		while ((i = BuffersUtils.indexOf(pendingRead, CRLF, last, MAX_HEADER_SIZE)) > 0) {
+			int c = BuffersUtils.indexOf(pendingRead, COLON, last, i - last);
 			if (c < 0) {
 				error(HttpError.BAD_REQUEST);
 				return false;
 			}
 
-			BuffersUtils.toString(sb, meta, last, c - last);
+			BuffersUtils.toString(sb, pendingRead, last, c - last);
 			String k = sb.toString().trim().toLowerCase();
 			sb.setLength(0);
 
-			BuffersUtils.toString(sb, meta, c + 1, i - c - 1);
+			BuffersUtils.toString(sb, pendingRead, c + 1, i - c - 1);
 			String v = sb.toString().trim();
 			sb.setLength(0);
 
@@ -211,6 +204,7 @@ public class HttpConnection extends NIOConnection implements Runnable {
 			last = i + 2;
 		}
 		req.setHeaders(map);
+		pendingRead.skip(2);
 		return true;
 	}
 
@@ -297,7 +291,7 @@ public class HttpConnection extends NIOConnection implements Runnable {
 
 	private void cleanup() {
 		running = false;
-		meta.clear();
+		pendingRead.clear();
 	}
 
 	@Override
