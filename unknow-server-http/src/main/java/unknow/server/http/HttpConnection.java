@@ -204,7 +204,7 @@ public class HttpConnection extends NIOConnection implements Runnable {
 			last = i + 2;
 		}
 		req.setHeaders(map);
-		pendingRead.skip(last+2);
+		pendingRead.skip(last + 2);
 		return true;
 	}
 
@@ -290,6 +290,8 @@ public class HttpConnection extends NIOConnection implements Runnable {
 	}
 
 	private void cleanup() {
+		if (Thread.currentThread().isInterrupted())
+			return;
 		running = false;
 		pendingRead.clear();
 	}
