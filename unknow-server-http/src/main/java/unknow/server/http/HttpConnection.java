@@ -266,11 +266,11 @@ public class HttpConnection extends NIOConnection implements Runnable {
 			logger.error("processor error", e);
 			error(HttpError.SERVER_ERROR);
 		} finally {
+			cleanup();
 			if (close)
 				out.close();
 			else
 				out.flush();
-			cleanup();
 		}
 	}
 
