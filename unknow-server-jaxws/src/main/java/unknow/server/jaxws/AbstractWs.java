@@ -123,10 +123,13 @@ public abstract class AbstractWs extends HttpServlet {
 		e.sig(sig.append('/'));
 		WSMethod m = getCall(sig.toString());
 		if (m != null) {
-			try (OutputStream out = res.getOutputStream()) {
-				XMLStreamWriter w = XML_OUT.createXMLStreamWriter(out);
-				writeEnvelope(w, ns, m.call(e));
-				w.close();
+			try {
+				e = m.call(e);
+				try (OutputStream out = res.getOutputStream()) {
+					XMLStreamWriter w = XML_OUT.createXMLStreamWriter(out);
+					writeEnvelope(w, ns, e);
+					w.close();
+				}
 			} catch (Exception ex) {
 				logger.error("Failed to call operation " + sig, ex);
 				fault(res, ns, ex.getMessage());

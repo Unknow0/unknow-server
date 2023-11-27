@@ -138,18 +138,17 @@ public class WsdlBuilder {
 		out.writeAttribute("elementFormDefault", "qualified");
 
 		for (Operation o : service.operations) {
-			if (o.wrapped) {
-				if (!ns.equals(o.name.getNamespaceURI()))
-					continue;
+			if (o.wrapped && ns.equals(o.name.getNamespaceURI())) {
 				out.writeStartElement(XS, ELEMENT);
 				out.writeAttribute("name", o.name.getLocalPart());
 				out.writeStartElement(XS, "complexType");
+				out.writeStartElement(XS, "all");
 				for (Parameter p : o.params) {
 					out.writeStartElement(XS, ELEMENT);
-					out.writeAttribute("name", p.name.getLocalPart());
-					out.writeAttribute("type", name(p.xml.name()));
+					out.writeAttribute("ref", name(p.name));
 					out.writeEndElement();
 				}
+				out.writeEndElement();
 				out.writeEndElement();
 				out.writeEndElement();
 
@@ -157,9 +156,10 @@ public class WsdlBuilder {
 				out.writeAttribute("name", o.name.getLocalPart() + RESPONSE);
 				out.writeStartElement(XS, "complexType");
 				if (o.result != null) {
+					out.writeStartElement(XS, "all");
 					out.writeStartElement(XS, ELEMENT);
-					out.writeAttribute("name", o.result.name.getLocalPart());
-					out.writeAttribute("type", name(o.result.xml.name()));
+					out.writeAttribute("ref", name(o.result.name));
+					out.writeEndElement();
 					out.writeEndElement();
 				}
 				// TODO result
@@ -177,7 +177,7 @@ public class WsdlBuilder {
 				out.writeEndElement();
 			}
 			if (o.result != null && ns.equals(o.result.name.getNamespaceURI())) {
-				out.writeStartElement(XS, "elementR");
+				out.writeStartElement(XS, "element");
 				out.writeAttribute("name", o.result.name.getLocalPart());
 				out.writeAttribute("type", name(o.result.xml.name()));
 				out.writeEndElement();
@@ -215,16 +215,18 @@ public class WsdlBuilder {
 		out.writeStartElement(XS, "complexType");
 		out.writeAttribute("name", o.name().getLocalPart());
 
-		if (o.getElements() == null && o.getValue() != null) {
+		if (!o.hasElements() && o.getValue() != null) {
 			out.writeStartElement(XS, "simpleContent");
 			out.writeStartElement(XS, "extension");
-			out.writeAttribute("base", name(o.getValue().qname()));
+			out.writeAttribute("base", name(o.getValue().xmlType().name()));
 		}
 
-		out.writeStartElement(XS, o.getElements().group().toString());
-		for (XmlElement e : o.getElements())
-			appendElement(out, e);
-		out.writeEndElement();
+		if (o.hasElements()) {
+			out.writeStartElement(XS, o.getElements().group().toString());
+			for (XmlElement e : o.getElements())
+				appendElement(out, e);
+			out.writeEndElement();
+		}
 
 		for (XmlElement e : o.getAttributes()) { // TODO list ?
 			out.writeStartElement(XS, "attribute");
@@ -294,7 +296,7 @@ public class WsdlBuilder {
 			out.writeAttribute("name", o.name.getLocalPart() + RESPONSE);
 			out.writeStartElement(WS, "part");
 			out.writeAttribute("name", "result");
-			out.writeAttribute(ELEMENT, name(o.wrapped ? o.name : o.result.name));
+			out.writeAttribute(ELEMENT, o.wrapped ? name(o.name.getNamespaceURI(), o.name.getLocalPart() + RESPONSE) : name(o.result.name));
 			out.writeEndElement();
 			out.writeEndElement();
 		}
@@ -325,7 +327,7 @@ public class WsdlBuilder {
 
 	private void appendBinding(XMLStreamWriter out) throws XMLStreamException {
 		out.writeStartElement(WS, "binding");
-		out.writeAttribute("name", service.name + "SoapBinding");
+		out.writeAttribute("name", service.name + "HttpBinding");
 		out.writeAttribute("type", name(service.ns, service.portType));
 
 		out.writeStartElement(WP, "binding");
@@ -366,7 +368,7 @@ public class WsdlBuilder {
 
 		out.writeStartElement(WS, "port");
 		out.writeAttribute("name", service.portName);
-		out.writeAttribute("binding", name(service.ns, service.name + "Binding"));
+		out.writeAttribute("binding", name(service.ns, service.name + "HttpBinding"));
 
 		out.writeStartElement(WP, "address");
 		out.writeAttribute("location", address + service.urls[0]);

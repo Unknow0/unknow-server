@@ -49,11 +49,11 @@ public final class ServletResource extends HttpServlet {
 			resp.setStatus(code);
 		resp.setContentLengthLong(size);
 		resp.setContentType(mimeType);
-		
+
 		if (!content)
 			return;
 		ServletOutputStream os = resp.getOutputStream();
-		try (InputStream is = getServletContext().getResourceAsStream(path)) {
+		try (InputStream is = Thread.currentThread().getContextClassLoader().getResourceAsStream(path)) {
 			Chunk c = Chunk.get();
 			byte[] b = c.b;
 			int l;

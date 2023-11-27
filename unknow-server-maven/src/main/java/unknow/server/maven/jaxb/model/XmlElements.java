@@ -30,6 +30,10 @@ public class XmlElements implements Iterable<XmlElement> {
 		return group;
 	}
 
+	public boolean isEmpty() {
+		return elements.isEmpty();
+	}
+
 	@Override
 	public Iterator<XmlElement> iterator() {
 		return elements.iterator();
@@ -69,5 +73,4 @@ public class XmlElements implements Iterable<XmlElement> {
 			return "ERROR";
 		}
 	}
-
 }

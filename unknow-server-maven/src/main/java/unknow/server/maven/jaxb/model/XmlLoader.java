@@ -207,8 +207,8 @@ public class XmlLoader {
 			elements = new XmlElements(XmlGroup.ALL, elems);
 		} else {
 			Collections.sort(elems, (a, b) -> {
-				String an = a.name();
-				String bn = b.name();
+				String an = a.prop().name();
+				String bn = b.prop().name();
 				int ai = propOrder.indexOf(an);
 				int bi = propOrder.indexOf(bn);
 				if (bi >= 0 && ai >= 0)

@@ -113,7 +113,7 @@ public abstract class AbstractGeneratorMojo extends AbstractMojo {
 
 	protected void init() throws MojoFailureException {
 		classLoader = getClassLoader();
-		loader = ModelLoader.from(JvmModelLoader.GLOBAL, new JvmModelLoader(classLoader), new AstModelLoader(classes, packages));
+		loader = ModelLoader.from(JvmModelLoader.GLOBAL, new AstModelLoader(classes, packages), new JvmModelLoader(classLoader));
 
 		List<String> compileSourceRoots = project.getCompileSourceRoots();
 
@@ -167,9 +167,11 @@ public abstract class AbstractGeneratorMojo extends AbstractMojo {
 	}
 
 	protected void process(TypeConsumer c) throws MojoExecutionException, MojoFailureException {
-		SrcWalker w = new SrcWalker(c);
+		SrcWalker w = new SrcWalker();
 		for (String s : project.getCompileSourceRoots())
 			w.walk(s);
+		for (String q : classes.keySet())
+			c.accept(loader.get(q));
 
 		if (artifacts == null || artifacts.isEmpty())
 			return;
@@ -231,14 +233,12 @@ public abstract class AbstractGeneratorMojo extends AbstractMojo {
 	}
 
 	private class SrcWalker extends SimpleFileVisitor<Path> {
-		private final TypeConsumer c;
 		private final String[] part;
 		private Path local;
 		private int count;
 		private Exception ex;
 
-		public SrcWalker(TypeConsumer c) {
-			this.c = c;
+		public SrcWalker() {
 			this.part = packageName == null ? new String[0] : packageName.split("\\.");
 		}
 
@@ -281,12 +281,6 @@ public abstract class AbstractGeneratorMojo extends AbstractMojo {
 			for (TypeDeclaration<?> v : cu.findAll(TypeDeclaration.class)) {
 				String qualifiedName = v.resolve().getQualifiedName();
 				classes.put(qualifiedName, v);
-				TypeModel t = loader.get(qualifiedName);
-				try {
-					c.accept(t);
-				} catch (MojoExecutionException | MojoFailureException e) {
-					ex = e;
-				}
 			}
 			if (count == file.getNameCount() && file.startsWith(local)) {
 				String string = file.getFileName().toString();
