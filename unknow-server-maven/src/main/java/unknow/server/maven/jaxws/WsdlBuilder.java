@@ -177,7 +177,7 @@ public class WsdlBuilder {
 				out.writeEndElement();
 			}
 			if (o.result != null && ns.equals(o.result.name.getNamespaceURI())) {
-				out.writeStartElement(XS, "element");
+				out.writeStartElement(XS, ELEMENT);
 				out.writeAttribute("name", o.result.name.getLocalPart());
 				out.writeAttribute("type", name(o.result.xml.name()));
 				out.writeEndElement();
