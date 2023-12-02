@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
@@ -68,9 +69,7 @@ public class HttpConnection extends NIOConnection implements Runnable {
 	private final StringBuilder sb;
 	private final Decode decode;
 
-	private Future<?> f;
-
-	private volatile boolean running = false;
+	private Future<?> f = CompletableFuture.completedFuture(null);
 
 	/**
 	 * create new RequestBuilder
@@ -89,7 +88,7 @@ public class HttpConnection extends NIOConnection implements Runnable {
 
 	@Override
 	public final void onRead() throws InterruptedException {
-		if (running)
+		if (!f.isDone())
 			return;
 		int i = BuffersUtils.indexOf(pendingRead, CRLF2, 0, MAX_START_SIZE);
 		if (i == -1)
@@ -98,7 +97,6 @@ public class HttpConnection extends NIOConnection implements Runnable {
 			error(HttpError.BAD_REQUEST);
 			return;
 		}
-		running = true;
 		f = executor.submit(this);
 	}
 
@@ -260,13 +258,13 @@ public class HttpConnection extends NIOConnection implements Runnable {
 			doRun(req, res);
 			events.fireRequestDestroyed(req);
 			res.close();
+			cleanup();
 		} catch (@SuppressWarnings("unused") InterruptedException e) {
 			Thread.currentThread().interrupt();
 		} catch (Exception e) {
 			logger.error("processor error", e);
 			error(HttpError.SERVER_ERROR);
 		} finally {
-			cleanup();
 			if (close)
 				out.close();
 			else
@@ -292,18 +290,17 @@ public class HttpConnection extends NIOConnection implements Runnable {
 	private void cleanup() {
 		if (Thread.currentThread().isInterrupted())
 			return;
-		running = false;
 		pendingRead.clear();
 	}
 
 	@Override
 	public boolean closed(long now, boolean stop) {
 		if (stop)
-			return !running;
+			return f.isDone();
 
 		if (isClosed())
 			return true;
-		if (running)
+		if (!f.isDone())
 			return false;
 
 		if (keepAliveIdle > 0) {
@@ -318,10 +315,7 @@ public class HttpConnection extends NIOConnection implements Runnable {
 
 	@Override
 	protected final void onFree() {
-		if (running) {
-			f.cancel(true);
-			running = false;
-		}
+		f.cancel(true);
 		cleanup();
 	}
 

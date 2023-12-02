@@ -5,6 +5,7 @@ package unknow.server.nio;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,6 +78,8 @@ public interface NIOServerListener {
 	public static final NIOServerListener LOG = new NIOServerListener() {
 		private final Logger logger = LoggerFactory.getLogger(NIOServerListener.class);
 
+		private final AtomicInteger c = new AtomicInteger();
+
 		@Override
 		public void starting(NIOServer server) {
 			logger.info("starting {}", server);
@@ -84,12 +87,12 @@ public interface NIOServerListener {
 
 		@Override
 		public void accepted(int id, NIOConnection h) {
-			logger.info("Worker-{} accepted {}", id, h);
+			logger.info("Worker-{} accepted {} ({})", id, h, c.incrementAndGet());
 		}
 
 		@Override
 		public void closed(int id, NIOConnection h) {
-			logger.info("Worker-{} closed {}", id, h);
+			logger.info("Worker-{} closed {} ({})", id, h, c.decrementAndGet());
 		}
 
 		@Override

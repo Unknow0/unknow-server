@@ -4,6 +4,8 @@
 package unknow.server.util.io;
 
 import java.nio.ByteBuffer;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -52,6 +54,7 @@ public class Buffers {
 			len++;
 			cond.signalAll();
 		} finally {
+			validate();
 			lock.unlock();
 		}
 	}
@@ -85,6 +88,7 @@ public class Buffers {
 			tail = writeInto(tail, buf, o, l);
 			cond.signalAll();
 		} finally {
+			validate();
 			lock.unlock();
 		}
 	}
@@ -105,6 +109,7 @@ public class Buffers {
 			tail = writeInto(tail, bb);
 			cond.signalAll();
 		} finally {
+			validate();
 			lock.unlock();
 		}
 	}
@@ -118,6 +123,8 @@ public class Buffers {
 	 * @throws InterruptedException
 	 */
 	public void prepend(byte[] buf, int o, int l) throws InterruptedException {
+		if (o < 0 || l < 0 || o + l > buf.length)
+			throw new IndexOutOfBoundsException("o: " + o + ", l: " + l + ", buf.length: " + buf.length);
 		if (l == 0)
 			return;
 		lock.lockInterruptibly();
@@ -130,13 +137,15 @@ public class Buffers {
 				return;
 			}
 			Chunk c = Chunk.get();
-			head = c;
-			c = writeInto(c, buf, o, l);
-			c.next = head;
+			Chunk t = writeInto(c, buf, o, l);
 			if (tail == null)
-				tail = c;
+				tail = t;
+			else
+				t.next = head;
+			head = c;
 			cond.signalAll();
 		} finally {
+			validate();
 			lock.unlock();
 		}
 	}
@@ -161,13 +170,15 @@ public class Buffers {
 				return;
 			}
 			Chunk c = Chunk.get();
-			head = c;
-			c = writeInto(c, buf);
-			c.next = head;
+			Chunk t = writeInto(c, buf);
 			if (tail == null)
-				tail = c;
+				tail = t;
+			else
+				t.next = head;
+			head = c;
 			cond.signalAll();
 		} finally {
+			validate();
 			lock.unlock();
 		}
 	}
@@ -193,6 +204,7 @@ public class Buffers {
 				head = Chunk.free(head);
 			return r;
 		} finally {
+			validate();
 			lock.unlock();
 		}
 	}
@@ -208,6 +220,8 @@ public class Buffers {
 	 * @throws InterruptedException
 	 */
 	public int read(byte[] buf, int o, int l, boolean wait) throws InterruptedException {
+		if (o < 0 || l < 0 || o + l > buf.length)
+			throw new IndexOutOfBoundsException("o: " + o + ", l: " + l + ", buf.length: " + buf.length);
 		if (l == 0)
 			return 0;
 		lock.lockInterruptibly();
@@ -234,6 +248,7 @@ public class Buffers {
 			}
 			return v;
 		} finally {
+			validate();
 			lock.unlock();
 		}
 	}
@@ -258,7 +273,11 @@ public class Buffers {
 				return false;
 			while (head != null && l > 0) {
 				int r = Math.min(l, head.l);
-				bb.put(head.b, head.o, r);
+				try {
+					bb.put(head.b, head.o, r);
+				} catch (IndexOutOfBoundsException e) {
+					System.out.println("o: " + head.o + ", l: " + head.l + ", r: " + r);
+				}
 				len -= r;
 				l -= r;
 				if (r == head.l) {
@@ -272,6 +291,7 @@ public class Buffers {
 			}
 			return true;
 		} finally {
+			validate();
 			lock.unlock();
 		}
 	}
@@ -300,6 +320,7 @@ public class Buffers {
 			}
 			tail = c;
 		} finally {
+			validate();
 			lock.unlock();
 		}
 	}
@@ -359,6 +380,7 @@ public class Buffers {
 
 			head = c;
 		} finally {
+			validate();
 			lock.unlock();
 		}
 	}
@@ -388,6 +410,7 @@ public class Buffers {
 			} else
 				tail = null;
 		} finally {
+			validate();
 			lock.unlock();
 		}
 	}
@@ -405,6 +428,7 @@ public class Buffers {
 				c = Chunk.free(c);
 			head = tail = null;
 		} finally {
+			validate();
 			lock.unlock();
 		}
 	}
@@ -494,7 +518,7 @@ public class Buffers {
 	 * @param bb data to append
 	 * @return end chunk of added data
 	 */
-	private final Chunk writeInto(Chunk c, ByteBuffer bb) {
+	private static final Chunk writeInto(Chunk c, ByteBuffer bb) {
 		int l = bb.remaining();
 		for (;;) {
 			int r = Math.min(l, BUF_LEN - c.l - c.o);
@@ -516,7 +540,7 @@ public class Buffers {
 	 * @param l length
 	 * @return end chunk of added data
 	 */
-	private final Chunk writeInto(Chunk c, byte[] buf, int o, int l) {
+	private static final Chunk writeInto(Chunk c, byte[] buf, int o, int l) {
 		for (;;) {
 			int r = Math.min(l, BUF_LEN - c.l - c.o);
 			System.arraycopy(buf, o, c.b, c.o + c.l, r);
@@ -527,6 +551,36 @@ public class Buffers {
 				return c;
 			c = c.next = Chunk.get();
 		}
+	}
+
+	private void validate() {
+//		if (true)
+//			return;
+		if (len == 0) {
+			if (head != null)
+				throw new IllegalStateException("Empty buffers should have null head");
+			if (tail != null)
+				throw new IllegalStateException("Empty buffers should have null tail");
+			return;
+		}
+
+		Chunk c = head;
+		Set<Chunk> set = new HashSet<>();
+		int l = 0;
+		while (c != null) {
+			if (!set.add(c))
+				throw new IllegalStateException("Duplicate chunk");
+			if (c.o < 0)
+				throw new IllegalStateException("Corrupted chunk o < 0");
+			if (c.l < 0)
+				throw new IllegalStateException("Corrupted chunk l < 0");
+			if (c.o + c.l > BUF_LEN)
+				throw new IllegalStateException("Corrupted chunk o+l > buf_size");
+			l += c.l;
+			c = c.next;
+		}
+		if (l != len)
+			throw new IllegalStateException("len != chunk.l");
 	}
 
 	@Override

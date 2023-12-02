@@ -2,7 +2,10 @@ package unknow.server.util.io;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
@@ -57,6 +60,20 @@ public class BuffersTest {
 		assertBuff(w, 500);
 	}
 
+	@Test
+	public void prepend() throws InterruptedException {
+		byte[] b = new byte[500];
+		for (int i = 0; i < 500; i++)
+			b[i] = (byte) i;
+
+		Buffers buf = new Buffers();
+		buf.prepend(b, 0, 500);
+		assertBuff(buf, 500);
+
+		buf.prepend(b, 0, 500);
+		assertBuff(buf, 1000);
+	}
+
 	private void assertBuff(Buffers b, int l) {
 		assertEquals(l, b.length(), "length");
 
@@ -68,7 +85,9 @@ public class BuffersTest {
 
 		int len = 0;
 		Chunk c = b.head;
+		Set<Chunk> set = new HashSet<>();
 		while (c != null) {
+			assertTrue(set.add(c));
 			len += c.l;
 			c = c.next;
 		}
