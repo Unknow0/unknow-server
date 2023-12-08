@@ -26,7 +26,7 @@ public final class BuffersUtils {
 		return w.found;
 	}
 
-	private static final class StartWith implements Walker {
+	public static final class StartWith implements Walker {
 		private final byte[] lookup;
 		int i = 0;
 		boolean found;
@@ -71,7 +71,7 @@ public final class BuffersUtils {
 		}
 	}
 
-	private static final class IndexOf implements Walker {
+	public static final class IndexOf implements Walker {
 		private final byte lookup;
 		int i = 0;
 
@@ -113,7 +113,7 @@ public final class BuffersUtils {
 		}
 	}
 
-	private static final class IndexOfOne implements Walker {
+	public static final class IndexOfOne implements Walker {
 		private final byte[] lookup;
 		int i = 0;
 
@@ -149,16 +149,16 @@ public final class BuffersUtils {
 			case MAX:
 				return -2;
 			case STOPED:
-				return w.r + o;
+				return w.index() + o;
 			default:
 				return -1;
 		}
 	}
 
-	private static final class IndexOfBloc implements Walker {
+	public static final class IndexOfBloc implements Walker {
 		private final byte[] lookup;
 		private int i = 0;
-		int r = 0;
+		private int r = 0;
 
 		public IndexOfBloc(byte[] lookup) {
 			this.lookup = lookup;
@@ -184,6 +184,15 @@ public final class BuffersUtils {
 			}
 			return true;
 		}
+
+		public void reset() {
+			r = 0;
+			i = 0;
+		}
+
+		public int index() {
+			return r;
+		}
 	}
 
 	/**
@@ -200,7 +209,7 @@ public final class BuffersUtils {
 		buf.walk(w, off, len);
 	}
 
-	private static final class ToStringAscii implements Walker {
+	public static final class ToStringAscii implements Walker {
 		private final StringBuilder sb;
 
 		public ToStringAscii(StringBuilder sb) {
@@ -230,7 +239,7 @@ public final class BuffersUtils {
 		return w.b;
 	}
 
-	private static final class ToArray implements Walker {
+	public static final class ToArray implements Walker {
 		private final byte[] b;
 		private int i;
 

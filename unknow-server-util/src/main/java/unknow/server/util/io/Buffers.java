@@ -554,8 +554,8 @@ public class Buffers {
 	}
 
 	private void validate() {
-//		if (true)
-//			return;
+		if (true)
+			return;
 		if (len == 0) {
 			if (head != null)
 				throw new IllegalStateException("Empty buffers should have null head");

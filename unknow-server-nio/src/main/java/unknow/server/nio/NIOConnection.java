@@ -49,10 +49,11 @@ public class NIOConnection {
 		this.pool = pool;
 	}
 
-	void attach(SelectionKey key) {
+	final void init(SelectionKey key) {
 		this.key = key;
 		this.out = new Out(this);
 		lastRead = lastWrite = System.currentTimeMillis();
+		onInit();
 	}
 
 	/**

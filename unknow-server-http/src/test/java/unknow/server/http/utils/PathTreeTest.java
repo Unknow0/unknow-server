@@ -30,7 +30,7 @@ public class PathTreeTest {
 	@BeforeEach
 	public void init() {
 		path = new ArrayList<>();
-		mock = mock(ServletRequestImpl.class, Mockito.withSettings().useConstructor(null, null, DispatcherType.REQUEST, null));
+		mock = mock(ServletRequestImpl.class, Mockito.withSettings().useConstructor(null, null, DispatcherType.REQUEST));
 		Mockito.when(mock.getPaths()).thenReturn(path);
 	}
 

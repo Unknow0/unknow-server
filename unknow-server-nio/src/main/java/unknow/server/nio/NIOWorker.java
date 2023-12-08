@@ -8,11 +8,13 @@ import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
+import java.util.ArrayDeque;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import unknow.server.util.pool.Pool;
 
 /**
  * Thread responsible of all io
@@ -32,7 +34,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	/** buffer to read/write */
 	private final ByteBuffer buf;
 
-	private final Queue<NIOConnection> init;
+	private final Queue<SelectionKey> init;
 
 	/**
 	 * create new IOWorker
@@ -49,26 +51,24 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 
 		this.mutex = new Object();
 		this.buf = ByteBuffer.allocateDirect(4096);
-		this.init = new ConcurrentLinkedQueue<>();
+		this.init = new ArrayDeque<>();
 	}
 
 	/**
 	 * register a new socket to this thread
 	 * 
 	 * @param socket  the socket to register
-	 * @param handler the handler
+	 * @param pool the connection factory
 	 * @throws IOException
 	 */
 	@SuppressWarnings("resource")
 	@Override
-	public final void register(SocketChannel socket, NIOConnection handler) throws IOException {
+	public final void register(SocketChannel socket, Pool<NIOConnection> pool) throws IOException {
 		socket.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.TRUE).configureBlocking(false);
 		synchronized (mutex) {
 			selector.wakeup();
-			init.add(handler);
-			handler.attach(socket.register(selector, SelectionKey.OP_READ, handler));
+			init.add(socket.register(selector, SelectionKey.OP_READ, pool));
 		}
-		listener.accepted(id, handler);
 	}
 
 	@Override
@@ -101,16 +101,21 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	protected void onSelect(boolean close) throws InterruptedException {
 		synchronized (mutex) {
-			NIOConnection co;
-			while ((co = init.poll()) != null)
-				co.onInit();
+			SelectionKey k;
+			while ((k = init.poll()) != null) {
+				NIOConnection co = ((Pool<NIOConnection>) k.attachment()).get();
+				k.attach(co);
+				co.init(k);
+				listener.accepted(id, co);
+			}
 
 			long now = System.currentTimeMillis();
 			for (SelectionKey key : selector.keys()) {
-				co = (NIOConnection) key.attachment();
+				NIOConnection co = (NIOConnection) key.attachment();
 				if (!key.isValid() || co.closed(now, close)) {
 					listener.closed(id, co);
 					key.cancel();

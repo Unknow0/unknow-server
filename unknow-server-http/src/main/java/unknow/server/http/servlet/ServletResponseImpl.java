@@ -4,6 +4,7 @@
 package unknow.server.http.servlet;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.nio.charset.Charset;
@@ -29,13 +30,12 @@ import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import unknow.server.http.HttpError;
-import unknow.server.http.HttpConnection;
+import unknow.server.http.HttpProcessor;
 import unknow.server.http.servlet.out.ChunckedOutputStream;
 import unknow.server.http.servlet.out.LengthOutputStream;
 import unknow.server.http.servlet.out.Output;
 import unknow.server.http.servlet.out.ServletWriter;
 import unknow.server.http.utils.ServletManager;
-import unknow.server.nio.NIOConnection.Out;
 
 /**
  * @author unknow
@@ -68,8 +68,8 @@ public class ServletResponseImpl implements HttpServletResponse {
 	private static final DateTimeFormatter RFC1123 = DateTimeFormatter.RFC_1123_DATE_TIME.withZone(ZoneOffset.UTC);
 
 	private final ServletContextImpl ctx;
-	private final Out out;
-	private final HttpConnection req;
+	private final OutputStream out;
+	private final HttpProcessor p;
 	private Output servletOut;
 
 	private boolean commited = false;
@@ -93,10 +93,10 @@ public class ServletResponseImpl implements HttpServletResponse {
 	 * @param out the raw output
 	 * @param req the original request
 	 */
-	public ServletResponseImpl(ServletContextImpl ctx, Out out, HttpConnection req) {
+	public ServletResponseImpl(ServletContextImpl ctx, HttpProcessor p) {
 		this.ctx = ctx;
-		this.out = out;
-		this.req = req;
+		this.p = p;
+		this.out = p.getOut();
 
 		headers = new HashMap<>();
 		cookies = new ArrayList<>();
@@ -207,7 +207,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 		ServletManager manager = ctx.getServletManager();
 		FilterChain f = manager.getError(sc, t);
 		if (f != null) {
-			ServletRequestImpl r = new ServletRequestImpl(ctx, req, DispatcherType.ERROR, this);
+			ServletRequestImpl r = new ServletRequestImpl(ctx, p, DispatcherType.ERROR);
 			r.setMethod("GET");
 			r.setAttribute("javax.servlet.error.status_code", sc);
 			if (t != null) {

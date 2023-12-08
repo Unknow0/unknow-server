@@ -43,7 +43,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.HttpUpgradeHandler;
 import jakarta.servlet.http.Part;
-import unknow.server.http.HttpConnection;
+import unknow.server.http.HttpProcessor;
 import unknow.server.http.servlet.in.ChunckedInputStream;
 import unknow.server.http.servlet.in.EmptyInputStream;
 import unknow.server.http.servlet.in.LengthInputStream;
@@ -61,9 +61,8 @@ public class ServletRequestImpl implements HttpServletRequest {
 	private final ArrayMap<Object> attributes = new ArrayMap<>();
 
 	private final ServletContextImpl ctx;
-	private final HttpConnection req;
+	private final HttpProcessor p;
 	private final DispatcherType type;
-	private final ServletResponseImpl res;
 
 	private String requestUri;
 	private final List<String> path;
@@ -110,17 +109,16 @@ public class ServletRequestImpl implements HttpServletRequest {
 	 * @param type dispatcher type of this request
 	 * @param res  the response
 	 */
-	public ServletRequestImpl(ServletContextImpl ctx, HttpConnection req, DispatcherType type, ServletResponseImpl res) {
+	public ServletRequestImpl(ServletContextImpl ctx, HttpProcessor p, DispatcherType type) {
 		this.ctx = ctx;
-		this.req = req;
+		this.p = p;
 		this.type = type;
-		this.res = res;
 		this.path = new ArrayList<>();
 
 		this.headers = new HashMap<>();
 
-		this.remote = req != null ? req.getRemote() : null;
-		this.local = req != null ? req.getLocal() : null;
+		this.remote = null;//p.getRemote();
+		this.local = null;//p.getLocal();
 	}
 
 	public void setMethod(String method) {
@@ -606,7 +604,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 //		ctx.getSessionCookieConfig().
 		if (sessionId == null && create) {
 			sessionId = sessionFactory.generateId();
-			res.addCookie(new Cookie("JSESSIONID", sessionId)); // TODO add httpOnly
+//			res.addCookie(new Cookie("JSESSIONID", sessionId)); // TODO add httpOnly
 		}
 		return session = sessionFactory.get(sessionId, create);
 	}
@@ -689,10 +687,10 @@ public class ServletRequestImpl implements HttpServletRequest {
 	private ServletInputStream createInput() {
 		String tr = getHeader("transfer-encoding");
 		if ("chunked".equalsIgnoreCase(tr))
-			return new ChunckedInputStream(req.getIn());
+			return new ChunckedInputStream(p.getIn());
 		long l = getContentLengthLong();
 		if (l > 0)
-			return new LengthInputStream(req.getIn(), l);
+			return new LengthInputStream(p.getIn(), l);
 		return EmptyInputStream.INSTANCE;
 	}
 
