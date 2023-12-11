@@ -18,8 +18,9 @@ public interface NIOWorkers {
 	 * @param socket  the socket to register
 	 * @param pool the connection factory
 	 * @throws IOException
+	 * @throws InterruptedException 
 	 */
-	void register(SocketChannel socket, Pool<NIOConnection> pool) throws IOException;
+	void register(SocketChannel socket, Pool<NIOConnection> pool) throws IOException, InterruptedException;
 
 	/**
 	 * start the IOWorker
@@ -51,7 +52,7 @@ public interface NIOWorkers {
 		}
 
 		@Override
-		public synchronized void register(SocketChannel socket, Pool<NIOConnection> pool) throws IOException {
+		public synchronized void register(SocketChannel socket, Pool<NIOConnection> pool) throws IOException, InterruptedException {
 			w[o++].register(socket, pool);
 			if (o == w.length)
 				o = 0;

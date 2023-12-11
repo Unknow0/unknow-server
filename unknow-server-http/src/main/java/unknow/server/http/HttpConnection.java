@@ -41,6 +41,11 @@ public class HttpConnection extends NIOConnection {
 	}
 
 	@Override
+	protected void onInit() {
+		p = new HttpProcessor11(ctx, keepAliveIdle);
+	}
+
+	@Override
 	public final void onRead() throws InterruptedException {
 		if (!f.isDone())
 			return;

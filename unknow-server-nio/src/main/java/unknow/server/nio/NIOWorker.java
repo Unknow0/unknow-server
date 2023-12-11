@@ -10,6 +10,8 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayDeque;
 import java.util.Queue;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +32,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	private final NIOServerListener listener;
 
 	/** used for all synchronization */
-	private final Object mutex;
+	private final Lock mutex;
 	/** buffer to read/write */
 	private final ByteBuffer buf;
 
@@ -49,7 +51,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		this.id = id;
 		this.listener = listener;
 
-		this.mutex = new Object();
+		this.mutex = new ReentrantLock();
 		this.buf = ByteBuffer.allocateDirect(4096);
 		this.init = new ArrayDeque<>();
 	}
@@ -60,14 +62,18 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	 * @param socket  the socket to register
 	 * @param pool the connection factory
 	 * @throws IOException
+	 * @throws InterruptedException 
 	 */
 	@SuppressWarnings("resource")
 	@Override
-	public final void register(SocketChannel socket, Pool<NIOConnection> pool) throws IOException {
+	public final void register(SocketChannel socket, Pool<NIOConnection> pool) throws IOException, InterruptedException {
 		socket.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.TRUE).configureBlocking(false);
-		synchronized (mutex) {
+		mutex.lockInterruptibly();
+		try {
 			selector.wakeup();
 			init.add(socket.register(selector, SelectionKey.OP_READ, pool));
+		} finally {
+			mutex.unlock();
 		}
 	}
 
@@ -104,7 +110,8 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	@SuppressWarnings("unchecked")
 	@Override
 	protected void onSelect(boolean close) throws InterruptedException {
-		synchronized (mutex) {
+		mutex.lockInterruptibly();
+		try {
 			SelectionKey k;
 			while ((k = init.poll()) != null) {
 				NIOConnection co = ((Pool<NIOConnection>) k.attachment()).get();
@@ -130,6 +137,8 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 					}
 				}
 			}
+		} finally {
+			mutex.unlock();
 		}
 	}
 }

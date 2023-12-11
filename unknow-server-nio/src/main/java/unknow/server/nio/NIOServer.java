@@ -77,7 +77,7 @@ public class NIOServer extends NIOLoop {
 
 	@SuppressWarnings("resource")
 	@Override
-	protected void selected(SelectionKey key) throws IOException {
+	protected void selected(SelectionKey key) throws IOException, InterruptedException {
 		try {
 			@SuppressWarnings("unchecked")
 			Pool<NIOConnection> pool = (Pool<NIOConnection>) key.attachment();
