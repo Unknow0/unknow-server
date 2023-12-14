@@ -447,7 +447,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public int getRemotePort() {
-		return remote.getPort();
+		return remote == null ? null : remote.getPort();
 	}
 
 	@Override
@@ -466,7 +466,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public int getLocalPort() {
-		return local.getPort();
+		return local == null ? null : local.getPort();
 	}
 
 	@Override
