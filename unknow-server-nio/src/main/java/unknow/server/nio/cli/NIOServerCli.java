@@ -6,7 +6,7 @@ package unknow.server.nio.cli;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Callable;
-import java.util.function.Function;
+import java.util.function.Supplier;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -17,7 +17,6 @@ import unknow.server.nio.NIOServerListener;
 import unknow.server.nio.NIOWorker;
 import unknow.server.nio.NIOWorkers;
 import unknow.server.nio.NIOWorkers.RoundRobin;
-import unknow.server.util.pool.Pool;
 
 /**
  * NioServer configuration
@@ -37,7 +36,7 @@ public class NIOServerCli implements Callable<Integer> {
 
 	/** handler factory */
 //	@Option(names = "--handler", descriptionKey = "handler", converter = ObjectConverter.class)
-	public Function<Pool<NIOConnection>, ? extends NIOConnection> handler;
+	public Supplier<? extends NIOConnection> handler;
 
 	/** number of io thread to use, default to the number of CPU */
 	@Option(names = "--iothread", description = "number of io thread to use, default to the number of CPU", descriptionKey = "iothread")
@@ -96,7 +95,7 @@ public class NIOServerCli implements Callable<Integer> {
 		try {
 			nioServer.bind(getInetAddress(), handler);
 			if (shutdownPort > 0)
-				nioServer.bind(new InetSocketAddress(InetAddress.getLoopbackAddress(), shutdownPort), pool -> new ShutdownConnection(pool, nioServer));
+				nioServer.bind(new InetSocketAddress(InetAddress.getLoopbackAddress(), shutdownPort), () -> new ShutdownConnection(nioServer));
 			nioServer.start();
 			nioServer.await();
 		} finally {

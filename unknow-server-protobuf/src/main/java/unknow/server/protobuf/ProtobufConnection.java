@@ -22,7 +22,7 @@ public abstract class ProtobufConnection<T> extends NIOConnection {
 
 	@SuppressWarnings("resource")
 	protected ProtobufConnection(Pool<NIOConnection> pool, Parser<T> parser) {
-		super(pool);
+//		super(pool);
 		this.parser = parser;
 		this.limited = new LimitedInputStream(getIn());
 	}

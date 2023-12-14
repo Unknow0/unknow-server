@@ -13,11 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import unknow.server.http.servlet.ServletContextImpl;
-import unknow.server.http.utils.EventManager;
-import unknow.server.http.utils.ServletManager;
 import unknow.server.nio.NIOConnection;
-import unknow.server.util.io.BuffersUtils;
-import unknow.server.util.pool.Pool;
 
 public class HttpConnection extends NIOConnection {
 	private static final Logger logger = LoggerFactory.getLogger(HttpConnection.class);
@@ -33,8 +29,7 @@ public class HttpConnection extends NIOConnection {
 	 * create new RequestBuilder
 	 * @param pool 
 	 */
-	public HttpConnection(Pool<NIOConnection> pool, ExecutorService executor, ServletContextImpl ctx, int keepAliveIdle) {
-		super(pool);
+	public HttpConnection(ExecutorService executor, ServletContextImpl ctx, int keepAliveIdle) {
 		this.executor = executor;
 		this.keepAliveIdle = keepAliveIdle;
 		this.ctx = ctx;

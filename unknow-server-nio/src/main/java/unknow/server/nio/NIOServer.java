@@ -11,11 +11,11 @@ import java.nio.channels.SocketChannel;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import unknow.server.util.pool.LocalPool;
 import unknow.server.util.pool.Pool;
 
 /**
@@ -56,16 +56,11 @@ public class NIOServer extends NIOLoop {
 	 * @throws IOException
 	 */
 	@SuppressWarnings("resource")
-	public void bind(SocketAddress a, Function<Pool<NIOConnection>, ? extends NIOConnection> s) throws IOException {
+	public void bind(SocketAddress a, Supplier<? extends NIOConnection> s) throws IOException {
 		logger.info("Server bind to {}", a);
-		Pool<NIOConnection> pool;
-		synchronized (pools) {
-			pool = pools.computeIfAbsent(s, k -> new LocalPool<>(200, s));
-		}
-
 		ServerSocketChannel open = ServerSocketChannel.open();
 		open.configureBlocking(false);
-		open.register(selector, SelectionKey.OP_ACCEPT, pool);
+		open.register(selector, SelectionKey.OP_ACCEPT, s);
 		open.bind(a);
 	}
 
@@ -80,7 +75,7 @@ public class NIOServer extends NIOLoop {
 	protected void selected(SelectionKey key) throws IOException, InterruptedException {
 		try {
 			@SuppressWarnings("unchecked")
-			Pool<NIOConnection> pool = (Pool<NIOConnection>) key.attachment();
+			Supplier<NIOConnection> pool = (Supplier<NIOConnection>) key.attachment();
 			SocketChannel socket = ((ServerSocketChannel) key.channel()).accept();
 			workers.register(socket, pool);
 		} catch (IOException e) {

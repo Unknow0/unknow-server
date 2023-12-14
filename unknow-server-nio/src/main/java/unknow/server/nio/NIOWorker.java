@@ -12,11 +12,10 @@ import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import unknow.server.util.pool.Pool;
 
 /**
  * Thread responsible of all io
@@ -66,12 +65,12 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	 */
 	@SuppressWarnings("resource")
 	@Override
-	public final void register(SocketChannel socket, Pool<NIOConnection> pool) throws IOException, InterruptedException {
+	public final void register(SocketChannel socket, Supplier<NIOConnection> pool) throws IOException, InterruptedException {
 		socket.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.TRUE).configureBlocking(false);
 		mutex.lockInterruptibly();
 		try {
 			selector.wakeup();
-			init.add(socket.register(selector, SelectionKey.OP_READ, pool));
+			init.add(socket.register(selector, SelectionKey.OP_READ, pool.get()));
 		} finally {
 			mutex.unlock();
 		}
@@ -107,15 +106,13 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		}
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
 	protected void onSelect(boolean close) throws InterruptedException {
 		mutex.lockInterruptibly();
 		try {
 			SelectionKey k;
 			while ((k = init.poll()) != null) {
-				NIOConnection co = ((Pool<NIOConnection>) k.attachment()).get();
-				k.attach(co);
+				NIOConnection co = (NIOConnection) k.attachment();
 				co.init(k);
 				listener.accepted(id, co);
 			}

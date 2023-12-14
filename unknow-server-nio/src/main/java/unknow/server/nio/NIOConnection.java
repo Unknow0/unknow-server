@@ -16,7 +16,6 @@ import org.slf4j.LoggerFactory;
 
 import unknow.server.util.io.Buffers;
 import unknow.server.util.io.BuffersInputStream;
-import unknow.server.util.pool.Pool;
 
 /**
  * used to handle raw data
@@ -26,7 +25,7 @@ import unknow.server.util.pool.Pool;
 public class NIOConnection {
 	private static final Logger logger = LoggerFactory.getLogger(NIOConnection.class);
 
-	private final Pool<NIOConnection> pool;
+//	private final Pool<NIOConnection> pool;
 
 	/** the data waiting to be wrote */
 	public final Buffers pendingWrite = new Buffers();
@@ -45,9 +44,9 @@ public class NIOConnection {
 	private long lastRead;
 	private long lastWrite;
 
-	protected NIOConnection(Pool<NIOConnection> pool) {
-		this.pool = pool;
-	}
+//	protected NIOConnection(Pool<NIOConnection> pool) {
+//		this.pool = pool;
+//	}
 
 	final void init(SelectionKey key) {
 		this.key = key;
