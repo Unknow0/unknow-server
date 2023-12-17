@@ -1,10 +1,7 @@
 /**
  * 
  */
-package unknow.server.nio.cli;
-
-import unknow.server.nio.NIOConnection;
-import unknow.server.nio.NIOServer;
+package unknow.server.nio;
 
 public class ShutdownConnection extends NIOConnection {
 	private final NIOServer server;

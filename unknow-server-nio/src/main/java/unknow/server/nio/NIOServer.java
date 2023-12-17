@@ -8,15 +8,10 @@ import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.IdentityHashMap;
-import java.util.Map;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import unknow.server.util.pool.Pool;
 
 /**
  * the NIO Server
@@ -31,8 +26,6 @@ public class NIOServer extends NIOLoop {
 	/** the listener */
 	private final NIOServerListener listener;
 
-	private final Map<Function<Pool<NIOConnection>, ? extends NIOConnection>, Pool<NIOConnection>> pools;
-
 	/**
 	 * create new Server
 	 * 
@@ -45,7 +38,6 @@ public class NIOServer extends NIOLoop {
 		super("NIOServer", 0);
 		this.workers = workers;
 		this.listener = listener == null ? NIOServerListener.NOP : listener;
-		this.pools = new IdentityHashMap<>();
 	}
 
 	/**
