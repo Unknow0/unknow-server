@@ -4,7 +4,6 @@
 package unknow.server.http.servlet;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.nio.charset.Charset;
@@ -32,6 +31,7 @@ import unknow.server.http.servlet.out.ChunckedOutputStream;
 import unknow.server.http.servlet.out.LengthOutputStream;
 import unknow.server.http.servlet.out.Output;
 import unknow.server.http.servlet.out.ServletWriter;
+import unknow.server.nio.NIOConnection.Out;
 
 /**
  * @author unknow
@@ -63,7 +63,6 @@ public class ServletResponseImpl implements HttpServletResponse {
 
 	private static final DateTimeFormatter RFC1123 = DateTimeFormatter.RFC_1123_DATE_TIME.withZone(ZoneOffset.UTC);
 
-	private final OutputStream out;
 	private final HttpConnection p;
 	private Output servletOut;
 
@@ -90,8 +89,6 @@ public class ServletResponseImpl implements HttpServletResponse {
 	 */
 	public ServletResponseImpl(HttpConnection p) {
 		this.p = p;
-		this.out = p.getOut();
-
 		headers = new HashMap<>();
 		cookies = new ArrayList<>();
 
@@ -109,6 +106,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 		commited = true;
 
 		HttpError http = HttpError.fromStatus(status);
+		Out out = p.getOut();
 		out.write(http == null ? HttpError.encodeStatusLine(status, UNKNOWN) : http.encoded);
 		for (Entry<String, List<String>> e : headers.entrySet())
 			writeHeader(e.getKey(), e.getValue());
@@ -136,6 +134,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 	}
 
 	public void writeHeader(String name, List<String> values) throws IOException {
+		Out out = p.getOut();
 		out.write(name.getBytes(StandardCharsets.US_ASCII));
 		out.write(':');
 		for (String s : values) {
@@ -146,6 +145,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 	}
 
 	public void writeCookie(Cookie c) throws IOException {
+		Out out = p.getOut();
 		out.write(COOKIE);
 		out.write(c.getName().getBytes(StandardCharsets.US_ASCII));
 		out.write('=');
@@ -170,6 +170,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 
 	public void writeString(String s) throws IOException {
 		boolean escape = shouldEscape(s);
+		Out out = p.getOut();
 		if (escape)
 			out.write('"');
 		int l = 0;
@@ -196,6 +197,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 	}
 
 	public void sendError(HttpError e, int sc, String msg) throws IOException {
+		Out out = p.getOut();
 		if (msg == null) {
 			out.write(e == null ? HttpError.encodeEmptyReponse(sc, UNKNOWN) : e.empty());
 			return;
@@ -214,11 +216,11 @@ public class ServletResponseImpl implements HttpServletResponse {
 		out.write(ERROR_END);
 	}
 
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "resource" })
 	private <T extends ServletOutputStream & Output> T createStream() {
 		if (contentLength < 0)
-			return (T) new ChunckedOutputStream(out, this, bufferSize);
-		return (T) new LengthOutputStream(out, this, contentLength);
+			return (T) new ChunckedOutputStream(p.getOut(), this, bufferSize);
+		return (T) new LengthOutputStream(p.getOut(), this, contentLength);
 	}
 
 	@Override
@@ -301,7 +303,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 		commit();
 		if (servletOut != null)
 			servletOut.flush();
-		out.flush();
+		p.getOut().flush();
 	}
 
 	@Override
@@ -370,6 +372,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 		commited = true;
 		status = HttpError.FOUND.code;
 		commit();
+		Out out = p.getOut();
 		out.write(HttpError.FOUND.encoded);
 		out.write(CONTENT_LENGTH0);
 		out.write(LOCATION);
