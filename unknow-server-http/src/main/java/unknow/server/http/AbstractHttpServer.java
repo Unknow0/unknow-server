@@ -92,7 +92,7 @@ public abstract class AbstractHttpServer extends NIOServerBuilder {
 		}
 	}
 
-	public void process(String arg[]) throws Exception {
+	public void process(String[] arg) throws Exception {
 		NIOServer nioServer = build(arg);
 		try {
 			nioServer.start();
