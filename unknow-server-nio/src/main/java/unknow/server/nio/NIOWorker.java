@@ -85,6 +85,9 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		if (key.isValid() && key.isWritable()) {
 			try {
 				h.writeInto(channel, buf);
+			} catch (InterruptedException e) {
+				logger.error("failed to write {}", h, e);
+				Thread.currentThread().interrupt();
 			} catch (Exception e) {
 				logger.error("failed to write {}", h, e);
 				channel.close();
@@ -97,6 +100,9 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		if (key.isValid() && key.isReadable()) {
 			try {
 				h.readFrom(channel, buf);
+			} catch (InterruptedException e) {
+				logger.error("failed to read {}", h, e);
+				Thread.currentThread().interrupt();
 			} catch (Exception e) {
 				logger.error("failed to read {}", h, e);
 				channel.close();
@@ -129,7 +135,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 					}
 					try {
 						co.free();
-					} catch (InterruptedException | IOException e) {
+					} catch (Exception e) {
 						logger.warn("Failed to free connection {}", co, e);
 					}
 				}

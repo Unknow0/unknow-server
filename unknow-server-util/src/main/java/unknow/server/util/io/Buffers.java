@@ -325,7 +325,7 @@ public class Buffers {
 		try {
 			if (wait)
 				awaitContent();
-			if (l == 0 || head == null)
+			if (len == 0 || head == null)
 				return;
 
 			if (l >= len) { // move all content

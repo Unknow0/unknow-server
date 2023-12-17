@@ -37,7 +37,7 @@ public class HttpConnection extends NIOConnection {
 	 * create new RequestBuilder
 	 * @param pool 
 	 */
-	public HttpConnection(ExecutorService executor, ServletContextImpl ctx, int keepAliveIdle) {
+	protected HttpConnection(ExecutorService executor, ServletContextImpl ctx, int keepAliveIdle) {
 		this.executor = executor;
 		this.keepAliveIdle = keepAliveIdle;
 		this.ctx = ctx;
@@ -56,28 +56,12 @@ public class HttpConnection extends NIOConnection {
 			return;
 		if (!p.init(this))
 			return;
-//		int i = BuffersUtils.indexOf(pendingRead, CRLF2, 0, MAX_START_SIZE);
-//		if (i == -1)
-//			return;
-//		if (i == -2) {
-//			error(HttpError.BAD_REQUEST);
-//			return;
-//		}
 		f = executor.submit(p);
 	}
 
 	@Override
 	public final void onWrite() { // OK
 	}
-
-//	private final void error(HttpError e) {
-//		try {
-//			OutputStream out = getOut();
-//			out.write(e.empty());
-//			out.close();
-//		} catch (@SuppressWarnings("unused") IOException ex) { // OK
-//		}
-//	}
 
 	private void cleanup() {
 		f.cancel(true);

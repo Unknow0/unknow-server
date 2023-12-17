@@ -27,8 +27,6 @@ public class NIOConnection {
 
 	private static final InetSocketAddress DISCONECTED = InetSocketAddress.createUnresolved("", 0);
 
-//	private final Pool<NIOConnection> pool;
-
 	/** the data waiting to be wrote */
 	public final Buffers pendingWrite = new Buffers();
 	/** the data waiting to be handled */
@@ -46,9 +44,8 @@ public class NIOConnection {
 	private long lastRead;
 	private long lastWrite;
 
-//	protected NIOConnection(Pool<NIOConnection> pool) {
-//		this.pool = pool;
-//	}
+	protected NIOConnection() {
+	}
 
 	final void init(SelectionKey key) {
 		this.key = key;
@@ -84,7 +81,7 @@ public class NIOConnection {
 	 * @throws InterruptedException
 	 * @throws IOException
 	 */
-	protected void onFree() throws InterruptedException, IOException { // for override
+	protected void onFree() throws IOException { // for override
 	}
 
 	/**
@@ -240,12 +237,11 @@ public class NIOConnection {
 	 * @throws IOException 
 	 * @throws InterruptedException 
 	 */
-	public final void free() throws InterruptedException, IOException {
+	public final void free() throws IOException {
 		out.close();
 		pendingWrite.clear();
 		pendingRead.clear();
 		onFree();
-//		pool.free(this);
 	}
 
 	@SuppressWarnings("resource")

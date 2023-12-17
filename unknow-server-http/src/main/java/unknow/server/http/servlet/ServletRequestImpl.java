@@ -151,17 +151,17 @@ public class ServletRequestImpl implements HttpServletRequest {
 		if (parameter != null)
 			return;
 		parameter = new HashMap<>();
-		Map<String, List<String>> p = new HashMap<>(queryParam);
+		Map<String, List<String>> map = new HashMap<>(queryParam);
 
 		try {
 			if ("POST".equals(getMethod()) && "application/x-www-form-urlencoded".equalsIgnoreCase(getContentType()))
-				parseContentParam(p);
+				parseContentParam(map);
 		} catch (IOException e) {
 			logger.error("failed to parse params from content", e);
 		}
 
 		String[] s = new String[0];
-		for (Entry<String, List<String>> e : p.entrySet())
+		for (Entry<String, List<String>> e : map.entrySet())
 			parameter.put(e.getKey(), e.getValue().toArray(s));
 	}
 

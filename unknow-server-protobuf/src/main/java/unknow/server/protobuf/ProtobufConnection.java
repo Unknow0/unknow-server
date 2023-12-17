@@ -11,7 +11,6 @@ import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.Parser;
 
 import unknow.server.nio.NIOConnection;
-import unknow.server.util.pool.Pool;
 
 /**
  * @author unknow
@@ -21,8 +20,7 @@ public abstract class ProtobufConnection<T> extends NIOConnection {
 	private final LimitedInputStream limited;
 
 	@SuppressWarnings("resource")
-	protected ProtobufConnection(Pool<NIOConnection> pool, Parser<T> parser) {
-//		super(pool);
+	protected ProtobufConnection(Parser<T> parser) {
 		this.parser = parser;
 		this.limited = new LimitedInputStream(getIn());
 	}
@@ -55,18 +53,5 @@ public abstract class ProtobufConnection<T> extends NIOConnection {
 		if (read == -1)
 			return -1;
 		return CodedInputStream.readRawVarint32(read, in);
-	}
-
-	@Override
-	public final void onWrite() { // OK
-	}
-
-	@Override
-	public final boolean closed(long now, boolean close) {
-		return close;
-	}
-
-	@Override
-	public final void onFree() { // OK
 	}
 }
