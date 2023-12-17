@@ -5,6 +5,7 @@ package unknow.server.nio;
 
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
+import java.util.function.Supplier;
 
 /**
  * @author unknow
@@ -14,10 +15,11 @@ public interface NIOWorkers {
 	 * register a socket to an IOWorker
 	 * 
 	 * @param socket  the socket to register
-	 * @param handler the handler
+	 * @param pool the connection factory
 	 * @throws IOException
+	 * @throws InterruptedException 
 	 */
-	void register(SocketChannel socket, Connection handler) throws IOException;
+	void register(SocketChannel socket, Supplier<NIOConnection> pool) throws IOException, InterruptedException;
 
 	/**
 	 * start the IOWorker
@@ -49,8 +51,8 @@ public interface NIOWorkers {
 		}
 
 		@Override
-		public synchronized void register(SocketChannel socket, Connection handler) throws IOException {
-			w[o++].register(socket, handler);
+		public synchronized void register(SocketChannel socket, Supplier<NIOConnection> pool) throws IOException, InterruptedException {
+			w[o++].register(socket, pool);
 			if (o == w.length)
 				o = 0;
 		}

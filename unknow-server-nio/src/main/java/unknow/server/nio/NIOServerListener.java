@@ -5,6 +5,7 @@ package unknow.server.nio;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,7 +28,7 @@ public interface NIOServerListener {
 	 * @param id worker id
 	 * @param h  client handler
 	 */
-	void accepted(int id, Connection h);
+	void accepted(int id, NIOConnection h);
 
 	/**
 	 * a connection is closed
@@ -35,7 +36,7 @@ public interface NIOServerListener {
 	 * @param id worker id
 	 * @param h  client handler
 	 */
-	void closed(int id, Connection h);
+	void closed(int id, NIOConnection h);
 
 	/**
 	 * call before the server stop
@@ -54,11 +55,11 @@ public interface NIOServerListener {
 		}
 
 		@Override
-		public void accepted(int id, Connection h) { // OK
+		public void accepted(int id, NIOConnection h) { // OK
 		}
 
 		@Override
-		public void closed(int id, Connection h) { // OK
+		public void closed(int id, NIOConnection h) { // OK
 		}
 
 		@Override
@@ -77,19 +78,21 @@ public interface NIOServerListener {
 	public static final NIOServerListener LOG = new NIOServerListener() {
 		private final Logger logger = LoggerFactory.getLogger(NIOServerListener.class);
 
+		private final AtomicInteger c = new AtomicInteger();
+
 		@Override
 		public void starting(NIOServer server) {
 			logger.info("starting {}", server);
 		}
 
 		@Override
-		public void accepted(int id, Connection h) {
-			logger.info("Worker-{} accepted {}", id, h);
+		public void accepted(int id, NIOConnection h) {
+			logger.info("Worker-{} accepted {} ({})", id, h, c.incrementAndGet());
 		}
 
 		@Override
-		public void closed(int id, Connection h) {
-			logger.info("Worker-{} closed {}", id, h);
+		public void closed(int id, NIOConnection h) {
+			logger.info("Worker-{} closed {} ({})", id, h, c.decrementAndGet());
 		}
 
 		@Override
@@ -135,13 +138,13 @@ public interface NIOServerListener {
 		}
 
 		@Override
-		public void accepted(int id, Connection h) {
+		public void accepted(int id, NIOConnection h) {
 			for (int i = 0; i < listeners.length; i++)
 				listeners[i].accepted(id, h);
 		}
 
 		@Override
-		public void closed(int id, Connection h) {
+		public void closed(int id, NIOConnection h) {
 			for (int i = 0; i < listeners.length; i++)
 				listeners[i].closed(id, h);
 		}

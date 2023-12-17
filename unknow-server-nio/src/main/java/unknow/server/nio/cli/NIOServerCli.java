@@ -6,11 +6,12 @@ package unknow.server.nio.cli;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Callable;
+import java.util.function.Supplier;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
-import unknow.server.nio.HandlerFactory;
+import unknow.server.nio.NIOConnection;
 import unknow.server.nio.NIOServer;
 import unknow.server.nio.NIOServerListener;
 import unknow.server.nio.NIOWorker;
@@ -34,8 +35,8 @@ public class NIOServerCli implements Callable<Integer> {
 	public int port;
 
 	/** handler factory */
-	@Option(names = "--handler", descriptionKey = "handler", converter = ObjectConverter.class)
-	public HandlerFactory handler;
+//	@Option(names = "--handler", descriptionKey = "handler", converter = ObjectConverter.class)
+	public Supplier<? extends NIOConnection> handler;
 
 	/** number of io thread to use, default to the number of CPU */
 	@Option(names = "--iothread", description = "number of io thread to use, default to the number of CPU", descriptionKey = "iothread")
@@ -76,32 +77,30 @@ public class NIOServerCli implements Callable<Integer> {
 
 	@Override
 	public final Integer call() throws Exception {
-		NIOServer nioServer = null;
-		try {
-			init();
-			if (selectTime < 0)
-				throw new IllegalArgumentException("selectTime should not be <0");
+		init();
+		if (selectTime < 0)
+			throw new IllegalArgumentException("selectTime should not be <0");
 
-			NIOWorkers workers;
-			if (iothread == 1)
-				workers = new NIOWorker(0, listener, selectTime);
-			else {
-				NIOWorker[] w = new NIOWorker[iothread];
-				for (int i = 0; i < iothread; i++)
-					w[i] = new NIOWorker(i, listener, selectTime);
-				workers = new RoundRobin(w);
-			}
-			nioServer = new NIOServer(workers, listener);
+		NIOWorkers workers;
+		if (iothread == 1)
+			workers = new NIOWorker(0, listener, selectTime);
+		else {
+			NIOWorker[] w = new NIOWorker[iothread];
+			for (int i = 0; i < iothread; i++)
+				w[i] = new NIOWorker(i, listener, selectTime);
+			workers = new RoundRobin(w);
+		}
+
+		NIOServer nioServer = new NIOServer(workers, listener);
+		try {
 			nioServer.bind(getInetAddress(), handler);
 			if (shutdownPort > 0)
-				nioServer.bind(new InetSocketAddress(InetAddress.getLoopbackAddress(), shutdownPort), new ShutdownHandler(nioServer));
+				nioServer.bind(new InetSocketAddress(InetAddress.getLoopbackAddress(), shutdownPort), () -> new ShutdownConnection(nioServer));
 			nioServer.start();
 			nioServer.await();
 		} finally {
-			if (nioServer != null) {
-				nioServer.stop();
-				nioServer.await();
-			}
+			nioServer.stop();
+			nioServer.await();
 			destroy();
 		}
 		return 0;

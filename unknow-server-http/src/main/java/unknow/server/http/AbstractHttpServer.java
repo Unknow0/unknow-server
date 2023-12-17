@@ -52,7 +52,7 @@ public abstract class AbstractHttpServer extends NIOServerCli {
 	 * max time to keep idle keepalive connection, default to -1
 	 */
 	@Option(names = "--keep-alive-idle", description = "max time to keep idle keepalive connection, -1: infinite, 0: no keep alive,  default to -1", descriptionKey = "keep-alive-idle")
-	public int keepAliveIdle = -1;
+	public int keepAliveIdle = 2000;
 
 	protected final ServletContextImpl ctx;
 	protected final ServletManager servlets;
@@ -89,7 +89,7 @@ public abstract class AbstractHttpServer extends NIOServerCli {
 			return t;
 		});
 
-		handler = co -> new HttpHandler(co, executor, ctx, keepAliveIdle);
+		handler = () -> new HttpConnection(executor, ctx, keepAliveIdle);
 
 		loadInitializer();
 		servlets.initialize(ctx, createServlets(), createFilters());

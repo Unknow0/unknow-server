@@ -8,9 +8,15 @@ import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.IdentityHashMap;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import unknow.server.util.pool.Pool;
 
 /**
  * the NIO Server
@@ -25,6 +31,8 @@ public class NIOServer extends NIOLoop {
 	/** the listener */
 	private final NIOServerListener listener;
 
+	private final Map<Function<Pool<NIOConnection>, ? extends NIOConnection>, Pool<NIOConnection>> pools;
+
 	/**
 	 * create new Server
 	 * 
@@ -37,6 +45,7 @@ public class NIOServer extends NIOLoop {
 		super("NIOServer", 0);
 		this.workers = workers;
 		this.listener = listener == null ? NIOServerListener.NOP : listener;
+		this.pools = new IdentityHashMap<>();
 	}
 
 	/**
@@ -47,11 +56,11 @@ public class NIOServer extends NIOLoop {
 	 * @throws IOException
 	 */
 	@SuppressWarnings("resource")
-	public void bind(SocketAddress a, HandlerFactory handler) throws IOException {
+	public void bind(SocketAddress a, Supplier<? extends NIOConnection> s) throws IOException {
 		logger.info("Server bind to {}", a);
 		ServerSocketChannel open = ServerSocketChannel.open();
 		open.configureBlocking(false);
-		open.register(selector, SelectionKey.OP_ACCEPT, handler);
+		open.register(selector, SelectionKey.OP_ACCEPT, s);
 		open.bind(a);
 	}
 
@@ -63,11 +72,12 @@ public class NIOServer extends NIOLoop {
 
 	@SuppressWarnings("resource")
 	@Override
-	protected void selected(SelectionKey key) throws IOException {
+	protected void selected(SelectionKey key) throws IOException, InterruptedException {
 		try {
-			HandlerFactory factory = (HandlerFactory) key.attachment();
+			@SuppressWarnings("unchecked")
+			Supplier<NIOConnection> pool = (Supplier<NIOConnection>) key.attachment();
 			SocketChannel socket = ((ServerSocketChannel) key.channel()).accept();
-			workers.register(socket, new Connection(factory));
+			workers.register(socket, pool);
 		} catch (IOException e) {
 			logger.warn("Failed to accept", e);
 		}

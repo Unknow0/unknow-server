@@ -22,20 +22,16 @@ import java.util.Map.Entry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import jakarta.servlet.DispatcherType;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
+import unknow.server.http.HttpConnection;
 import unknow.server.http.HttpError;
-import unknow.server.http.HttpHandler;
 import unknow.server.http.servlet.out.ChunckedOutputStream;
 import unknow.server.http.servlet.out.LengthOutputStream;
 import unknow.server.http.servlet.out.Output;
 import unknow.server.http.servlet.out.ServletWriter;
-import unknow.server.http.utils.ServletManager;
-import unknow.server.nio.Connection.Out;
+import unknow.server.nio.NIOConnection.Out;
 
 /**
  * @author unknow
@@ -67,9 +63,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 
 	private static final DateTimeFormatter RFC1123 = DateTimeFormatter.RFC_1123_DATE_TIME.withZone(ZoneOffset.UTC);
 
-	private final ServletContextImpl ctx;
-	private final Out out;
-	private final HttpHandler req;
+	private final HttpConnection p;
 	private Output servletOut;
 
 	private boolean commited = false;
@@ -93,11 +87,8 @@ public class ServletResponseImpl implements HttpServletResponse {
 	 * @param out the raw output
 	 * @param req the original request
 	 */
-	public ServletResponseImpl(ServletContextImpl ctx, Out out, HttpHandler req) {
-		this.ctx = ctx;
-		this.out = out;
-		this.req = req;
-
+	public ServletResponseImpl(HttpConnection p) {
+		this.p = p;
 		headers = new HashMap<>();
 		cookies = new ArrayList<>();
 
@@ -115,6 +106,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 		commited = true;
 
 		HttpError http = HttpError.fromStatus(status);
+		Out out = p.getOut();
 		out.write(http == null ? HttpError.encodeStatusLine(status, UNKNOWN) : http.encoded);
 		for (Entry<String, List<String>> e : headers.entrySet())
 			writeHeader(e.getKey(), e.getValue());
@@ -142,6 +134,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 	}
 
 	public void writeHeader(String name, List<String> values) throws IOException {
+		Out out = p.getOut();
 		out.write(name.getBytes(StandardCharsets.US_ASCII));
 		out.write(':');
 		for (String s : values) {
@@ -152,6 +145,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 	}
 
 	public void writeCookie(Cookie c) throws IOException {
+		Out out = p.getOut();
 		out.write(COOKIE);
 		out.write(c.getName().getBytes(StandardCharsets.US_ASCII));
 		out.write('=');
@@ -176,6 +170,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 
 	public void writeString(String s) throws IOException {
 		boolean escape = shouldEscape(s);
+		Out out = p.getOut();
 		if (escape)
 			out.write('"');
 		int l = 0;
@@ -196,37 +191,13 @@ public class ServletResponseImpl implements HttpServletResponse {
 		commit();
 	}
 
-	private void checkCommited() {
+	public void checkCommited() {
 		if (commited)
 			throw new IllegalStateException("already commited");
 	}
 
-	public void sendError(int sc, Throwable t, String msg) throws IOException {
-		checkCommited();
-		status = sc;
-		ServletManager manager = ctx.getServletManager();
-		FilterChain f = manager.getError(sc, t);
-		if (f != null) {
-			ServletRequestImpl r = new ServletRequestImpl(ctx, req, DispatcherType.ERROR, this);
-			r.setMethod("GET");
-			r.setAttribute("javax.servlet.error.status_code", sc);
-			if (t != null) {
-				r.setAttribute("javax.servlet.error.exception_type", t.getClass());
-				r.setAttribute("javax.servlet.error.message", t.getMessage());
-				r.setAttribute("javax.servlet.error.exception", t);
-			}
-			r.setAttribute("javax.servlet.error.request_uri", r.getRequestURI());
-			r.setAttribute("javax.servlet.error.servlet_name", "");
-			reset();
-			try {
-				f.doFilter(r, this);
-				return;
-			} catch (ServletException e) {
-				logger.error("failed to send error", e);
-			}
-		}
-		commited = true;
-		HttpError e = HttpError.fromStatus(sc);
+	public void sendError(HttpError e, int sc, String msg) throws IOException {
+		Out out = p.getOut();
 		if (msg == null) {
 			out.write(e == null ? HttpError.encodeEmptyReponse(sc, UNKNOWN) : e.empty());
 			return;
@@ -245,16 +216,16 @@ public class ServletResponseImpl implements HttpServletResponse {
 		out.write(ERROR_END);
 	}
 
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "resource" })
 	private <T extends ServletOutputStream & Output> T createStream() {
 		if (contentLength < 0)
-			return (T) new ChunckedOutputStream(out, this, bufferSize);
-		return (T) new LengthOutputStream(out, this, contentLength);
+			return (T) new ChunckedOutputStream(p.getOut(), this, bufferSize);
+		return (T) new LengthOutputStream(p.getOut(), this, contentLength);
 	}
 
 	@Override
 	public String getCharacterEncoding() {
-		return charset == null ? ctx.getResponseCharacterEncoding() : charset.name();
+		return charset == null ? p.getCtx().getResponseCharacterEncoding() : charset.name();
 	}
 
 	@Override
@@ -298,7 +269,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 	@Override
 	public PrintWriter getWriter() throws IOException {
 		if (servletOut == null)
-			servletOut = new ServletWriter(createStream(), charset == null ? Charset.forName(ctx.getResponseCharacterEncoding()) : charset);
+			servletOut = new ServletWriter(createStream(), charset == null ? Charset.forName(p.getCtx().getResponseCharacterEncoding()) : charset);
 		if (servletOut instanceof Writer)
 			return new PrintWriter((Writer) servletOut);
 		throw new IllegalStateException("output already got created with getWriter()");
@@ -332,7 +303,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 		commit();
 		if (servletOut != null)
 			servletOut.flush();
-		out.flush();
+		p.getOut().flush();
 	}
 
 	@Override
@@ -361,7 +332,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 	@Override
 	public void setLocale(Locale loc) {
 		if (charset == null)
-			setCharacterEncoding(ctx.getEncoding(loc));
+			setCharacterEncoding(p.getCtx().getEncoding(loc));
 		this.locale = loc;
 	}
 
@@ -387,12 +358,12 @@ public class ServletResponseImpl implements HttpServletResponse {
 
 	@Override
 	public void sendError(int sc, String msg) throws IOException {
-		sendError(sc, null, msg);
+		p.sendError(sc, null, msg);
 	}
 
 	@Override
 	public void sendError(int sc) throws IOException {
-		sendError(sc, null, null);
+		p.sendError(sc, null, null);
 	}
 
 	@Override
@@ -401,6 +372,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 		commited = true;
 		status = HttpError.FOUND.code;
 		commit();
+		Out out = p.getOut();
 		out.write(HttpError.FOUND.encoded);
 		out.write(CONTENT_LENGTH0);
 		out.write(LOCATION);

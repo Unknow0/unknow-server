@@ -22,13 +22,10 @@ import unknow.server.util.io.BuffersInputStream;
  * 
  * @author unknow
  */
-public final class Connection {
-	private static final Logger logger = LoggerFactory.getLogger(Connection.class);
+public class NIOConnection {
+	private static final Logger logger = LoggerFactory.getLogger(NIOConnection.class);
 
-	private final Object mutex = new Object();
-
-	/** factory that created the handler */
-	private final Handler handler;
+	private static final InetSocketAddress DISCONECTED = InetSocketAddress.createUnresolved("", 0);
 
 	/** the data waiting to be wrote */
 	public final Buffers pendingWrite = new Buffers();
@@ -47,18 +44,44 @@ public final class Connection {
 	private long lastRead;
 	private long lastWrite;
 
-	protected Connection(HandlerFactory factory) {
-		this.handler = factory.create(this);
+	protected NIOConnection() {
 	}
 
-	void attach(SelectionKey key) {
+	final void init(SelectionKey key) {
 		this.key = key;
 		this.out = new Out(this);
 		lastRead = lastWrite = System.currentTimeMillis();
+		onInit();
 	}
 
-	protected final void init() {
-		handler.init();
+	/**
+	 * called after the connection is initialized
+	 */
+	protected void onInit() { // for override
+	}
+
+	/**
+	 * called after some data has been read
+	 * @throws InterruptedException
+	 * @throws IOException
+	 */
+	protected void onRead() throws InterruptedException, IOException { // for override
+	}
+
+	/**
+	 * called after data has been written
+	 * @throws InterruptedException
+	 * @throws IOException
+	 */
+	protected void onWrite() throws InterruptedException, IOException { // for override
+	}
+
+	/**
+	 * called when the connection is free
+	 * @throws InterruptedException
+	 * @throws IOException
+	 */
+	protected void onFree() throws IOException { // for override
 	}
 
 	/**
@@ -70,23 +93,28 @@ public final class Connection {
 	 * @throws InterruptedException
 	 */
 	protected final void readFrom(SocketChannel channel, ByteBuffer buf) throws IOException, InterruptedException {
-		lastRead = System.currentTimeMillis();
-		if (channel.read(buf) == -1) {
-			channel.close();
-			return;
-		}
-		buf.flip();
+		int l;
+		while (true) {
+			l = channel.read(buf);
+			if (l == -1) {
+				channel.close();
+				return;
+			}
+			if (l == 0)
+				return;
+			buf.flip();
 
-		if (logger.isTraceEnabled()) {
-			buf.mark();
-			byte[] bytes = new byte[buf.remaining()];
-			buf.get(bytes);
-			logger.trace("read {}", new String(bytes));
-			buf.reset();
-		}
+			if (logger.isTraceEnabled()) {
+				buf.mark();
+				byte[] bytes = new byte[buf.remaining()];
+				buf.get(bytes);
+				logger.trace("read {}", new String(bytes));
+				buf.reset();
+			}
 
-		pendingRead.write(buf);
-		handler.onRead();
+			pendingRead.write(buf);
+			onRead();
+		}
 	}
 
 	/**
@@ -117,13 +145,11 @@ public final class Connection {
 		if (buf.hasRemaining()) // we didn't write all
 			pendingWrite.prepend(buf);
 		toggleKeyOps();
-		handler.onWrite();
+		onWrite();
 	}
 
 	private void toggleKeyOps() {
-		synchronized (mutex) {
-			key.interestOps(pendingWrite.isEmpty() ? SelectionKey.OP_READ : SelectionKey.OP_READ | SelectionKey.OP_WRITE);
-		}
+		key.interestOps(pendingWrite.isEmpty() ? SelectionKey.OP_READ : SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 	}
 
 	/**
@@ -167,8 +193,8 @@ public final class Connection {
 	public final InetSocketAddress getRemote() {
 		try {
 			return (InetSocketAddress) ((SocketChannel) key.channel()).getRemoteAddress();
-		} catch (@SuppressWarnings("unused") IOException e) {
-			return null;
+		} catch (@SuppressWarnings("unused") Exception e) {
+			return DISCONECTED;
 		}
 	}
 
@@ -181,8 +207,8 @@ public final class Connection {
 	public final InetSocketAddress getLocal() {
 		try {
 			return (InetSocketAddress) ((SocketChannel) key.channel()).getLocalAddress();
-		} catch (@SuppressWarnings("unused") IOException e) {
-			return null;
+		} catch (@SuppressWarnings("unused") Exception e) {
+			return DISCONECTED;
 		}
 	}
 
@@ -195,18 +221,27 @@ public final class Connection {
 		return out.isClosed() && pendingWrite.isEmpty();
 	}
 
+	/**
+	 * check if the connection is closed and should be stoped
+	 * @param now System.currentMillis()
+	 * @param stop if true the server is in stop phase
+	 * @return true is the collection is closed
+	 */
+	@SuppressWarnings("unused")
 	public boolean closed(long now, boolean stop) {
-		return handler.closed(now, stop);
+		return isClosed();
 	}
 
 	/**
 	 * free the handler
+	 * @throws IOException 
+	 * @throws InterruptedException 
 	 */
-	public final void free() {
-		handler.free();
+	public final void free() throws IOException {
 		out.close();
 		pendingWrite.clear();
 		pendingRead.clear();
+		onFree();
 	}
 
 	@SuppressWarnings("resource")
@@ -216,9 +251,9 @@ public final class Connection {
 	}
 
 	public static final class Out extends OutputStream {
-		private Connection h;
+		private NIOConnection h;
 
-		private Out(Connection h) {
+		private Out(NIOConnection h) {
 			this.h = h;
 		}
 

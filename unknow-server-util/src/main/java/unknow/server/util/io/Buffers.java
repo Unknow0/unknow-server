@@ -4,8 +4,6 @@
 package unknow.server.util.io;
 
 import java.nio.ByteBuffer;
-import java.util.Queue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -13,11 +11,12 @@ import java.util.concurrent.locks.ReentrantLock;
  * @author unknow
  */
 public class Buffers {
+	private static final int BUF_LEN = 4096;
 	private final ReentrantLock lock = new ReentrantLock();
 	private final Condition cond = lock.newCondition();
 
-	private Chunk head;
-	private Chunk tail;
+	Chunk head;
+	Chunk tail;
 	private int len;
 
 	/**
@@ -43,9 +42,9 @@ public class Buffers {
 		lock.lockInterruptibly();
 		try {
 			if (tail == null)
-				head = tail = Chunk.get();
-			if (tail.o + tail.l == 4096) {
-				tail.next = Chunk.get();
+				head = tail = new Chunk();
+			if (tail.o + tail.l == BUF_LEN) {
+				tail.next = new Chunk();
 				tail = tail.next;
 			}
 			tail.b[tail.o + tail.l] = (byte) b;
@@ -76,12 +75,12 @@ public class Buffers {
 	 * @throws InterruptedException
 	 */
 	public void write(byte[] buf, int o, int l) throws InterruptedException {
+		if (l == 0)
+			return;
 		lock.lockInterruptibly();
 		try {
-			if (l == 0)
-				return;
 			if (tail == null)
-				head = tail = Chunk.get();
+				head = tail = new Chunk();
 			len += l;
 			tail = writeInto(tail, buf, o, l);
 			cond.signalAll();
@@ -96,12 +95,12 @@ public class Buffers {
 	 * @param bb data to append
 	 */
 	public void write(ByteBuffer bb) throws InterruptedException {
+		if (bb.remaining() == 0)
+			return;
 		lock.lockInterruptibly();
 		try {
-			if (bb.remaining() == 0)
-				return;
 			if (tail == null)
-				head = tail = Chunk.get();
+				head = tail = new Chunk();
 			len += bb.remaining();
 			tail = writeInto(tail, bb);
 			cond.signalAll();
@@ -119,19 +118,26 @@ public class Buffers {
 	 * @throws InterruptedException
 	 */
 	public void prepend(byte[] buf, int o, int l) throws InterruptedException {
+		if (o < 0 || l < 0 || o + l > buf.length)
+			throw new IndexOutOfBoundsException("o: " + o + ", l: " + l + ", buf.length: " + buf.length);
+		if (l == 0)
+			return;
 		lock.lockInterruptibly();
 		try {
 			len += l;
 			if (head != null && l < head.o) {
-				System.arraycopy(buf, o, head.b, head.o - l, l);
+				head.o -= l;
+				head.l += l;
+				System.arraycopy(buf, o, head.b, head.o, l);
 				return;
 			}
-			Chunk c = Chunk.get();
-			head = c;
-			c = writeInto(c, buf, o, l);
-			c.next = head;
+			Chunk c = new Chunk();
+			Chunk t = writeInto(c, buf, o, l);
 			if (tail == null)
-				tail = c;
+				tail = t;
+			else
+				t.next = head;
+			head = c;
 			cond.signalAll();
 		} finally {
 			lock.unlock();
@@ -145,20 +151,25 @@ public class Buffers {
 	 * @throws InterruptedException
 	 */
 	public void prepend(ByteBuffer buf) throws InterruptedException {
+		if (buf.remaining() == 0)
+			return;
 		lock.lockInterruptibly();
 		try {
-			int r = buf.remaining();
-			len += r;
-			if (head != null && r < head.o) {
-				buf.get(head.b, head.o - r, r);
+			int l = buf.remaining();
+			len += l;
+			if (head != null && l < head.o) {
+				head.o -= l;
+				head.l += l;
+				buf.get(head.b, head.o, l);
 				return;
 			}
-			Chunk c = Chunk.get();
-			head = c;
-			c = writeInto(c, buf);
-			c.next = head;
+			Chunk c = new Chunk();
+			Chunk t = writeInto(c, buf);
 			if (tail == null)
-				tail = c;
+				tail = t;
+			else
+				t.next = head;
+			head = c;
 			cond.signalAll();
 		} finally {
 			lock.unlock();
@@ -183,7 +194,7 @@ public class Buffers {
 			if (--len == 0)
 				tail = null;
 			if (--head.l == 0)
-				head = Chunk.free(head);
+				head = head.next;
 			return r;
 		} finally {
 			lock.unlock();
@@ -201,6 +212,8 @@ public class Buffers {
 	 * @throws InterruptedException
 	 */
 	public int read(byte[] buf, int o, int l, boolean wait) throws InterruptedException {
+		if (o < 0 || l < 0 || o + l > buf.length)
+			throw new IndexOutOfBoundsException("o: " + o + ", l: " + l + ", buf.length: " + buf.length);
 		if (l == 0)
 			return 0;
 		lock.lockInterruptibly();
@@ -217,7 +230,7 @@ public class Buffers {
 				v += r;
 				o += r;
 				if (r == head.l) {
-					head = Chunk.free(head);
+					head = head.next;
 					if (head == null)
 						tail = null;
 				} else {
@@ -240,6 +253,8 @@ public class Buffers {
 	 * @throws InterruptedException
 	 */
 	public boolean read(ByteBuffer bb, boolean wait) throws InterruptedException {
+		if (bb.remaining() == 0)
+			return false;
 		lock.lockInterruptibly();
 		try {
 			if (wait)
@@ -253,7 +268,7 @@ public class Buffers {
 				len -= r;
 				l -= r;
 				if (r == head.l) {
-					head = Chunk.free(head);
+					head = head.next;
 					if (head == null)
 						tail = null;
 				} else {
@@ -273,6 +288,29 @@ public class Buffers {
 	}
 
 	/**
+	 * append chunk
+	 * @param c
+	 * @throws InterruptedException 
+	 */
+	private void append(Chunk c) throws InterruptedException {
+		lock.lockInterruptibly();
+		try {
+			if (tail == null)
+				head = c;
+			else
+				tail.next = c;
+			len += c.l;
+			while (c.next != null) {
+				c = c.next;
+				len += c.l;
+			}
+			tail = c;
+		} finally {
+			lock.unlock();
+		}
+	}
+
+	/**
 	 * read a number amount of byte into the buffers
 	 * 
 	 * @param buf  where to read
@@ -281,57 +319,51 @@ public class Buffers {
 	 * @throws InterruptedException
 	 */
 	public void read(Buffers buf, int l, boolean wait) throws InterruptedException {
+		if (l == 0)
+			return;
 		lock.lockInterruptibly();
 		try {
 			if (wait)
 				awaitContent();
-			if (l == 0 || head == null)
+			if (len == 0 || head == null)
 				return;
+
+			if (l >= len) { // move all content
+				buf.append(head);
+				head = tail = null;
+				len = 0;
+				return;
+			}
+
 			Chunk h = head;
 			Chunk last = null;
-			int read = 0;
-
 			Chunk c = head;
 			// read whole chunk
-			while (c != null && l >= c.l) {
+			while (l >= c.l) {
 				l -= c.l;
-				read += c.l;
+				len -= c.l;
 				last = c;
 				c = c.next;
 			}
 
-			if (c != null && l > 0) {
-				Chunk n = Chunk.get();
+			if (last == null || l > 0) {
+				Chunk n = new Chunk();
 				System.arraycopy(c.b, c.o, n.b, 0, l);
 				c.o += l;
 				c.l -= l;
 				n.l = l;
-				read += l;
+				len -= l;
 				if (last != null)
 					last.next = n;
 				else
 					h = n;
 				last = n;
-			} else { // we move all
-				if (last != null)
-					last.next = null;
-			}
-			buf.lock.lockInterruptibly();
-			try {
-				len -= read;
-				head = c;
-				if (c == null)
-					tail = null;
+			} else
+				last.next = null;
 
-				buf.len += read;
-				if (buf.head == null)
-					buf.head = h;
-				else
-					buf.tail.next = h;
-				buf.tail = last;
-			} finally {
-				buf.lock.unlock();
-			}
+			buf.append(h);
+
+			head = c;
 		} finally {
 			lock.unlock();
 		}
@@ -353,7 +385,7 @@ public class Buffers {
 			while (head != null && l >= head.l) {
 				l -= head.l;
 				len -= head.l;
-				head = Chunk.free(head);
+				head = head.next;
 			}
 			if (head != null) {
 				head.o += l;
@@ -374,9 +406,6 @@ public class Buffers {
 		lock.lock();
 		try {
 			len = 0;
-			Chunk c = head;
-			while (c != null)
-				c = Chunk.free(c);
 			head = tail = null;
 		} finally {
 			lock.unlock();
@@ -417,6 +446,8 @@ public class Buffers {
 			while (c.l < o) {
 				o -= c.l;
 				c = c.next;
+				if (c == null)
+					return WalkResult.END;
 			}
 			int i = Math.min(l, c.l - o);
 			if (!w.apply(c.b, c.o + o, c.o + o + i))
@@ -466,17 +497,16 @@ public class Buffers {
 	 * @param bb data to append
 	 * @return end chunk of added data
 	 */
-	private final Chunk writeInto(Chunk c, ByteBuffer bb) {
+	private static final Chunk writeInto(Chunk c, ByteBuffer bb) {
 		int l = bb.remaining();
 		for (;;) {
-			int r = Math.min(l, 4096 - c.l - c.o);
+			int r = Math.min(l, BUF_LEN - c.l - c.o);
 			bb.get(c.b, c.o + c.l, r);
 			c.l += r;
 			l -= r;
 			if (l == 0)
 				return c;
-			c.next = Chunk.get();
-			c = c.next;
+			c = c.next = new Chunk();
 		}
 	}
 
@@ -489,17 +519,16 @@ public class Buffers {
 	 * @param l length
 	 * @return end chunk of added data
 	 */
-	private final Chunk writeInto(Chunk c, byte[] buf, int o, int l) {
+	private static final Chunk writeInto(Chunk c, byte[] buf, int o, int l) {
 		for (;;) {
-			int r = Math.min(l, 4096 - c.l - c.o);
+			int r = Math.min(l, BUF_LEN - c.l - c.o);
 			System.arraycopy(buf, o, c.b, c.o + c.l, r);
 			c.l += r;
 			l -= r;
 			o += r;
 			if (l == 0)
 				return c;
-			c.next = Chunk.get();
-			c = c.next;
+			c = c.next = new Chunk();
 		}
 	}
 
@@ -536,7 +565,6 @@ public class Buffers {
 	 * @author unknow
 	 */
 	public static class Chunk {
-		private static final Queue<Chunk> POOL = new LinkedBlockingQueue<>();
 		/** the content */
 		public final byte[] b;
 		/** the current offset */
@@ -547,37 +575,8 @@ public class Buffers {
 		public Chunk next;
 
 		private Chunk() {
-			b = new byte[4096];
+			b = new byte[BUF_LEN];
 			o = l = 0;
-		}
-
-		/**
-		 * create or get an idle chunk
-		 * 
-		 * @return a chunk
-		 */
-		public static Chunk get() {
-			Chunk poll;
-			synchronized (POOL) {
-				poll = POOL.poll();
-			}
-			if (poll == null)
-				poll = new Chunk();
-			return poll;
-		}
-
-		/**
-		 * free a chunk
-		 * 
-		 * @param c the chunk to free
-		 * @return the next of the freed chunk
-		 */
-		public static Chunk free(Chunk c) {
-			Chunk n = c.next;
-			c.o = c.l = 0;
-			c.next = null;
-			POOL.offer(c);
-			return n;
 		}
 	}
 }

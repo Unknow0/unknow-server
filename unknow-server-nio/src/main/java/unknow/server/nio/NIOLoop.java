@@ -60,8 +60,7 @@ public class NIOLoop implements Runnable {
 		onStartup();
 		while (!Thread.interrupted()) {
 			try {
-				select(timeout);
-				onSelect(false);
+				select(timeout, false);
 			} catch (IOException e) {
 				logger.error("failed to execute", e);
 			} catch (InterruptedException e) {
@@ -80,8 +79,7 @@ public class NIOLoop implements Runnable {
 		while (!selector.keys().isEmpty()) {
 			try {
 				logger.info("wait {} connection before close", selector.keys().size());
-				select(500);
-				onSelect(true);
+				select(500, true);
 			} catch (Throwable e) {
 				logger.error("failed to execute", e);
 			}
@@ -94,9 +92,10 @@ public class NIOLoop implements Runnable {
 		afterStop();
 	}
 
-	private final void select(long timeout) throws IOException, InterruptedException {
+	private final void select(long timeout, boolean close) throws IOException, InterruptedException {
 		if (selector.select(timeout) == 0)
 			return;
+		onSelect(close);
 		Iterator<SelectionKey> it = selector.selectedKeys().iterator();
 
 		while (it.hasNext()) {

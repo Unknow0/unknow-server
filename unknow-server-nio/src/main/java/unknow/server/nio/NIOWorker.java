@@ -8,8 +8,11 @@ import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
+import java.util.ArrayDeque;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,11 +31,11 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	private final NIOServerListener listener;
 
 	/** used for all synchronization */
-	private final Object mutex;
+	private final Lock mutex;
 	/** buffer to read/write */
 	private final ByteBuffer buf;
 
-	private final Queue<Connection> init;
+	private final Queue<SelectionKey> init;
 
 	/**
 	 * create new IOWorker
@@ -47,40 +50,45 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		this.id = id;
 		this.listener = listener;
 
-		this.mutex = new Object();
+		this.mutex = new ReentrantLock();
 		this.buf = ByteBuffer.allocateDirect(4096);
-		this.init = new ConcurrentLinkedQueue<>();
+		this.init = new ArrayDeque<>();
 	}
 
 	/**
 	 * register a new socket to this thread
 	 * 
 	 * @param socket  the socket to register
-	 * @param handler the handler
+	 * @param pool the connection factory
 	 * @throws IOException
+	 * @throws InterruptedException 
 	 */
 	@SuppressWarnings("resource")
 	@Override
-	public final void register(SocketChannel socket, Connection handler) throws IOException {
-		socket.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.TRUE).setOption(StandardSocketOptions.SO_REUSEADDR, Boolean.TRUE).configureBlocking(false);
-		synchronized (mutex) {
+	public final void register(SocketChannel socket, Supplier<NIOConnection> pool) throws IOException, InterruptedException {
+		socket.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.TRUE).configureBlocking(false);
+		mutex.lockInterruptibly();
+		try {
 			selector.wakeup();
-			init.add(handler);
-			handler.attach(socket.register(selector, SelectionKey.OP_READ, handler));
+			init.add(socket.register(selector, SelectionKey.OP_READ, pool.get()));
+		} finally {
+			mutex.unlock();
 		}
-		listener.accepted(id, handler);
 	}
 
 	@Override
 	@SuppressWarnings("resource")
 	protected final void selected(SelectionKey key) throws IOException, InterruptedException {
-		Connection h = (Connection) key.attachment();
+		NIOConnection h = (NIOConnection) key.attachment();
 		SocketChannel channel = (SocketChannel) key.channel();
 
 		if (key.isValid() && key.isWritable()) {
 			try {
 				h.writeInto(channel, buf);
-			} catch (IOException e) {
+			} catch (InterruptedException e) {
+				logger.error("failed to write {}", h, e);
+				Thread.currentThread().interrupt();
+			} catch (Exception e) {
 				logger.error("failed to write {}", h, e);
 				channel.close();
 			} finally {
@@ -92,7 +100,10 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		if (key.isValid() && key.isReadable()) {
 			try {
 				h.readFrom(channel, buf);
-			} catch (IOException e) {
+			} catch (InterruptedException e) {
+				logger.error("failed to read {}", h, e);
+				Thread.currentThread().interrupt();
+			} catch (Exception e) {
 				logger.error("failed to read {}", h, e);
 				channel.close();
 			} finally {
@@ -103,24 +114,34 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 
 	@Override
 	protected void onSelect(boolean close) throws InterruptedException {
-		synchronized (mutex) {
-			Connection co;
-			while ((co = init.poll()) != null)
-				co.init();
+		mutex.lockInterruptibly();
+		try {
+			SelectionKey k;
+			while ((k = init.poll()) != null) {
+				NIOConnection co = (NIOConnection) k.attachment();
+				co.init(k);
+				listener.accepted(id, co);
+			}
 
 			long now = System.currentTimeMillis();
 			for (SelectionKey key : selector.keys()) {
-				co = (Connection) key.attachment();
+				NIOConnection co = (NIOConnection) key.attachment();
 				if (!key.isValid() || co.closed(now, close)) {
 					listener.closed(id, co);
 					key.cancel();
 					try {
 						key.channel().close();
-						co.free();
 					} catch (@SuppressWarnings("unused") IOException e) { // ignore
+					}
+					try {
+						co.free();
+					} catch (Exception e) {
+						logger.warn("Failed to free connection {}", co, e);
 					}
 				}
 			}
+		} finally {
+			mutex.unlock();
 		}
 	}
 }

@@ -43,7 +43,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.HttpUpgradeHandler;
 import jakarta.servlet.http.Part;
-import unknow.server.http.HttpHandler;
+import unknow.server.http.HttpConnection;
 import unknow.server.http.servlet.in.ChunckedInputStream;
 import unknow.server.http.servlet.in.EmptyInputStream;
 import unknow.server.http.servlet.in.LengthInputStream;
@@ -60,10 +60,8 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	private final ArrayMap<Object> attributes = new ArrayMap<>();
 
-	private final ServletContextImpl ctx;
-	private final HttpHandler req;
+	private final HttpConnection p;
 	private final DispatcherType type;
-	private final ServletResponseImpl res;
 
 	private String requestUri;
 	private final List<String> path;
@@ -86,9 +84,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 	private Map<String, String[]> parameter;
 
 	private String remoteAddr;
-	private String remoteHost;
 	private String localAddr;
-	private String localHost;
 
 	private HttpSession session;
 
@@ -99,9 +95,6 @@ public class ServletRequestImpl implements HttpServletRequest {
 	private BufferedReader reader;
 	private ServletInputStream input;
 
-	private final InetSocketAddress remote;
-	private final InetSocketAddress local;
-
 	/**
 	 * create new ServletRequestImpl
 	 * 
@@ -110,17 +103,12 @@ public class ServletRequestImpl implements HttpServletRequest {
 	 * @param type dispatcher type of this request
 	 * @param res  the response
 	 */
-	public ServletRequestImpl(ServletContextImpl ctx, HttpHandler req, DispatcherType type, ServletResponseImpl res) {
-		this.ctx = ctx;
-		this.req = req;
+	public ServletRequestImpl(HttpConnection p, DispatcherType type) {
+		this.p = p;
 		this.type = type;
-		this.res = res;
 		this.path = new ArrayList<>();
 
 		this.headers = new HashMap<>();
-
-		this.remote = req != null ? req.getRemote() : null;
-		this.local = req != null ? req.getLocal() : null;
 	}
 
 	public void setMethod(String method) {
@@ -163,17 +151,17 @@ public class ServletRequestImpl implements HttpServletRequest {
 		if (parameter != null)
 			return;
 		parameter = new HashMap<>();
-		Map<String, List<String>> p = new HashMap<>(queryParam);
+		Map<String, List<String>> map = new HashMap<>(queryParam);
 
 		try {
 			if ("POST".equals(getMethod()) && "application/x-www-form-urlencoded".equalsIgnoreCase(getContentType()))
-				parseContentParam(p);
+				parseContentParam(map);
 		} catch (IOException e) {
 			logger.error("failed to parse params from content", e);
 		}
 
 		String[] s = new String[0];
-		for (Entry<String, List<String>> e : p.entrySet())
+		for (Entry<String, List<String>> e : map.entrySet())
 			parameter.put(e.getKey(), e.getValue().toArray(s));
 	}
 
@@ -237,7 +225,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 	@Override
 	public void setAttribute(String name, Object o) {
 		Object old = attributes.put(name, o);
-		ctx.getEvents().fireRequestAttribute(this, name, o, old);
+		p.getCtx().getEvents().fireRequestAttribute(this, name, o, old);
 	}
 
 	@Override
@@ -254,7 +242,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 				}
 			}
 			if (encoding == null)
-				encoding = ctx.getRequestCharacterEncoding();
+				encoding = p.getCtx().getRequestCharacterEncoding();
 		}
 		return encoding;
 	}
@@ -414,7 +402,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public String getServerName() {
-		return ctx.getVirtualServerName();
+		return p.getCtx().getVirtualServerName();
 	}
 
 	@Override
@@ -436,39 +424,35 @@ public class ServletRequestImpl implements HttpServletRequest {
 	@Override
 	public String getRemoteAddr() {
 		if (remoteAddr == null)
-			remoteAddr = getAddr(remote);
+			remoteAddr = getAddr(p.getRemote());
 		return remoteAddr;
 	}
 
 	@Override
 	public String getRemoteHost() {
-		if (remoteHost == null)
-			remoteHost = remote.getHostString();
-		return remoteHost;
+		return p.getRemote().getHostString();
 	}
 
 	@Override
 	public int getRemotePort() {
-		return remote.getPort();
+		return p.getRemote().getPort();
 	}
 
 	@Override
 	public String getLocalName() {
-		if (localHost == null)
-			localHost = local.getHostString();
-		return localHost;
+		return p.getLocal().getHostString();
 	}
 
 	@Override
 	public String getLocalAddr() {
 		if (localAddr == null)
-			localAddr = getAddr(local);
+			localAddr = getAddr(p.getLocal());
 		return localAddr;
 	}
 
 	@Override
 	public int getLocalPort() {
-		return local.getPort();
+		return p.getLocal().getPort();
 	}
 
 	@Override
@@ -583,8 +567,8 @@ public class ServletRequestImpl implements HttpServletRequest {
 			return sessionFromCookie;
 		if (sessionFromUrl != null)
 			return sessionFromUrl;
-		ctx.getEffectiveSessionTrackingModes(); // TODO manage other session traking mode
-		SessionCookieConfig cookieCfg = ctx.getSessionCookieConfig();
+		p.getCtx().getEffectiveSessionTrackingModes(); // TODO manage other session traking mode
+		SessionCookieConfig cookieCfg = p.getCtx().getSessionCookieConfig();
 		if (cookieCfg != null) {
 			String name = cookieCfg.getName();
 			Cookie[] c = getCookies();
@@ -602,11 +586,11 @@ public class ServletRequestImpl implements HttpServletRequest {
 		if (session != null)
 			return session;
 		String sessionId = getRequestedSessionId();
-		SessionFactory sessionFactory = ctx.getSessionFactory();
+		SessionFactory sessionFactory = p.getCtx().getSessionFactory();
 //		ctx.getSessionCookieConfig().
 		if (sessionId == null && create) {
 			sessionId = sessionFactory.generateId();
-			res.addCookie(new Cookie("JSESSIONID", sessionId)); // TODO add httpOnly
+//			res.addCookie(new Cookie("JSESSIONID", sessionId)); // TODO add httpOnly
 		}
 		return session = sessionFactory.get(sessionId, create);
 	}
@@ -620,7 +604,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 	public String changeSessionId() {
 		if (session == null)
 			throw new IllegalStateException("no session");
-		SessionFactory sessionFactory = ctx.getSessionFactory();
+		SessionFactory sessionFactory = p.getCtx().getSessionFactory();
 		String newId = sessionFactory.generateId();
 		sessionFactory.changeId(session, newId);
 		return newId;
@@ -683,16 +667,16 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public ServletContext getServletContext() {
-		return ctx;
+		return p.getCtx();
 	}
 
 	private ServletInputStream createInput() {
 		String tr = getHeader("transfer-encoding");
 		if ("chunked".equalsIgnoreCase(tr))
-			return new ChunckedInputStream(req.getIn());
+			return new ChunckedInputStream(p.getIn());
 		long l = getContentLengthLong();
 		if (l > 0)
-			return new LengthInputStream(req.getIn(), l);
+			return new LengthInputStream(p.getIn(), l);
 		return EmptyInputStream.INSTANCE;
 	}
 

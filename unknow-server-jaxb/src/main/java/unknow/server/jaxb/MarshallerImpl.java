@@ -112,9 +112,6 @@ public class MarshallerImpl implements Marshaller {
 				writer = new IndentedXmlStreamWriter(writer);
 
 			Map<String, String> ns = collectNs(jaxbElement);
-			for (Entry<String, String> n : ns.entrySet())
-				writer.writeNamespace(n.getValue(), n.getKey());
-
 			if (!fragment)
 				writer.writeStartDocument(encoding, "1.0");
 			if (jaxbElement instanceof JAXBElement) {
@@ -124,6 +121,8 @@ public class MarshallerImpl implements Marshaller {
 				if (h == null)
 					throw new JAXBException("Unknown class '" + jaxbElement.getClass());
 
+				for (Entry<String, String> e : ns.entrySet())
+					writer.setPrefix(e.getValue(), e.getKey());
 				writer.writeStartElement(ns.get(h.ns()), h.localName(), h.ns());
 				for (Entry<String, String> e : ns.entrySet())
 					writer.writeNamespace(e.getValue(), e.getKey());

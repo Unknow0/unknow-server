@@ -11,7 +11,6 @@ import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import unknow.server.util.io.Buffers.Chunk;
 
 /**
  * @author unknow
@@ -52,14 +51,11 @@ public final class ServletResource extends HttpServlet {
 
 		if (!content)
 			return;
-		ServletOutputStream os = resp.getOutputStream();
-		try (InputStream is = Thread.currentThread().getContextClassLoader().getResourceAsStream(path)) {
-			Chunk c = Chunk.get();
-			byte[] b = c.b;
+		try (InputStream is = getServletContext().getResourceAsStream(path); ServletOutputStream os = resp.getOutputStream()) {
+			byte[] b = new byte[4096];
 			int l;
 			while ((l = is.read(b)) > 0)
 				os.write(b, 0, l);
-			Chunk.free(c);
 		}
 	}
 
