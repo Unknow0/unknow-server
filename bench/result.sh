@@ -4,32 +4,35 @@ declare -A servers tests count start end error
 
 parse()
 	{
-	s="${1#*/}"
+	s="${1##*/}"
 	s="${s%.*}"
 	servers[$s]=""
-	local IFS=','
-	while read -ra l
+	
+	while read c n
 	do
-		n="${l[2]}"
-		[[ "${n:0:6}" = "warmup" ]] && continue
 		tests[$n]=""
-
-		k="$s:$n"
-		((count[$k]++))
-		[[ -z ${error[$k]} ]] && error[$k]="0"
-		[[ "${l[3]}" = "true" ]] || ((error[$k]++))
+		count[$s:$n]=$c	
+	done < <(cut -d ',' -f 3 "$1" | sort | uniq -c)
+	
+	while read c n
+	do
+		error[$s:$n]=$c
+	done < <(grep ',false$' "$1" | cut -d ',' -f 3 | sort | uniq -c)
+	
+	
+	local IFS=,
+	while read t a n e
+	do
+		start[$s:$n]=$t
+	done < <(sort -t , -k 3,1n "$1" | sort -t , -k 3 -u)
 		
-		t=${l[0]}
-		[[ "${start[$k]}" -gt "$t" ]] && start[$k]=$t
-		[[ -z "${start[$k]}" ]] && start[$k]=$t
-
-		((t+=${l[1]}))
-		[[ "${end[$k]}" -lt "$t" ]] && end[$k]=$t
-		[[ -z "${end[$k]}" ]] && end[$k]=$t
-	done < "$1"
+	while read t a n e
+	do
+		end[$s:$n]=$t
+	done < <(sort -t , -r -k 3,1n "$1" | sort -t , -k 3 -u)
 	}
 
-for i in $1/*; do parse "$i"; done
+for i in $1/*; do echo $i; time parse "$i"; done
 
 echo
 echo 'throughput:'
@@ -54,6 +57,6 @@ printf '%10s' ''; for n in "${!tests[@]}"; do printf ' %10s' "$n"; done; echo
 for s in "${!servers[@]}"
 do
 	printf '%10s' "$s"
-	for n in "${!tests[@]}"; do printf ' %10s' "${error[$s:$n]}"; done
+	for n in "${!tests[@]}"; do printf ' %10s' "${error[$s:$n]:-0}"; done
 	echo
 done
