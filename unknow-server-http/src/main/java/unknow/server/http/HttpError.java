@@ -8,7 +8,6 @@ import java.nio.charset.StandardCharsets;
 /**
  * @author unknow
  */
-@SuppressWarnings("javadoc")
 public final class HttpError {
 	private static final byte[] PROTOCOL = "HTTP/1.1 ".getBytes(StandardCharsets.US_ASCII);
 	private static final byte[] EMPTY_ENDING = "\r\nContent-Length: 0\r\n\r\n".getBytes(StandardCharsets.US_ASCII);

@@ -7,7 +7,6 @@ import java.io.OutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import jakarta.servlet.DispatcherType;
 import unknow.server.http.servlet.ServletContextImpl;
 import unknow.server.http.servlet.ServletRequestImpl;
 import unknow.server.http.servlet.ServletResponseImpl;
@@ -19,14 +18,11 @@ import unknow.server.util.io.Buffers;
 public abstract class HttpProcessor implements Runnable {
 	private static final Logger logger = LoggerFactory.getLogger(HttpProcessor.class);
 
-	private HttpConnection co;
+	protected HttpConnection co;
 	protected final ServletContextImpl ctx;
 	protected final ServletManager servlets;
 	protected final EventManager events;
 	protected final int keepAliveIdle;
-
-	protected ServletResponseImpl res;
-	protected ServletRequestImpl req;
 
 	public HttpProcessor(ServletContextImpl ctx, int keepAliveIdle) {
 		this.ctx = ctx;
@@ -37,7 +33,7 @@ public abstract class HttpProcessor implements Runnable {
 
 	protected abstract boolean canProcess(HttpConnection co) throws InterruptedException;
 
-	protected abstract boolean fillRequest() throws InterruptedException, IOException;
+	protected abstract boolean fillRequest(ServletRequestImpl req) throws InterruptedException, IOException;
 
 	protected abstract void doRun(ServletRequestImpl req, ServletResponseImpl res) throws IOException;
 
@@ -52,13 +48,12 @@ public abstract class HttpProcessor implements Runnable {
 	@Override
 	public void run() {
 		boolean close = false;
+		ServletRequestImpl req = co.req;
+		ServletResponseImpl res = co.res;
 
 		Out out = co.getOut();
 		try {
-			res = new ServletResponseImpl(ctx, this);
-			req = new ServletRequestImpl(ctx, this, DispatcherType.REQUEST);
-
-			if (!fillRequest())
+			if (!fillRequest(req))
 				return;
 
 			if ("100-continue".equals(req.getHeader("expect"))) {

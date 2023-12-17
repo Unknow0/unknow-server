@@ -5,7 +5,9 @@ package unknow.server.http.utils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -16,6 +18,8 @@ import org.mockito.Mockito;
 
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.FilterChain;
+import unknow.server.http.HttpConnection;
+import unknow.server.http.servlet.ServletContextImpl;
 import unknow.server.http.servlet.ServletRequestImpl;
 import unknow.server.http.utils.PathTree.Node;
 import unknow.server.http.utils.PathTree.PartNode;
@@ -30,12 +34,14 @@ public class PathTreeTest {
 	@BeforeEach
 	public void init() {
 		path = new ArrayList<>();
-		mock = mock(ServletRequestImpl.class, Mockito.withSettings().useConstructor(null, null, DispatcherType.REQUEST));
+		ServletContextImpl ctx = new ServletContextImpl("", "", null, null, null, null, null, null);
+		HttpConnection p = mock(HttpConnection.class, Mockito.withSettings().useConstructor(null, ctx, 0));
+		mock = mock(ServletRequestImpl.class, Mockito.withSettings().useConstructor(p, DispatcherType.REQUEST));
 		Mockito.when(mock.getPaths()).thenReturn(path);
 	}
 
 	@Test
-	public void root() throws InterruptedException {
+	public void root() {
 		FilterChain exacts = new FC("exacts");
 		FilterChain defaults = new FC("defaults");
 
@@ -48,7 +54,7 @@ public class PathTreeTest {
 	}
 
 	@Test
-	public void nexts() throws InterruptedException {
+	public void nexts() {
 		FC defaults = new FC("defaults");
 		FC first = new FC("first");
 		FC second = new FC("second");
@@ -68,7 +74,7 @@ public class PathTreeTest {
 	}
 
 	@Test
-	public void ends() throws InterruptedException {
+	public void ends() {
 		FC defaults = new FC("defaults");
 		FC jsp = new FC(".jsp");
 		FC html = new FC(".html");

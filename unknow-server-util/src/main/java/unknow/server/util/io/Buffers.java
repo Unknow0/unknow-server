@@ -4,8 +4,6 @@
 package unknow.server.util.io;
 
 import java.nio.ByteBuffer;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -44,9 +42,9 @@ public class Buffers {
 		lock.lockInterruptibly();
 		try {
 			if (tail == null)
-				head = tail = Chunk.get();
+				head = tail = new Chunk();
 			if (tail.o + tail.l == BUF_LEN) {
-				tail.next = Chunk.get();
+				tail.next = new Chunk();
 				tail = tail.next;
 			}
 			tail.b[tail.o + tail.l] = (byte) b;
@@ -54,7 +52,6 @@ public class Buffers {
 			len++;
 			cond.signalAll();
 		} finally {
-			validate();
 			lock.unlock();
 		}
 	}
@@ -83,12 +80,11 @@ public class Buffers {
 		lock.lockInterruptibly();
 		try {
 			if (tail == null)
-				head = tail = Chunk.get();
+				head = tail = new Chunk();
 			len += l;
 			tail = writeInto(tail, buf, o, l);
 			cond.signalAll();
 		} finally {
-			validate();
 			lock.unlock();
 		}
 	}
@@ -104,12 +100,11 @@ public class Buffers {
 		lock.lockInterruptibly();
 		try {
 			if (tail == null)
-				head = tail = Chunk.get();
+				head = tail = new Chunk();
 			len += bb.remaining();
 			tail = writeInto(tail, bb);
 			cond.signalAll();
 		} finally {
-			validate();
 			lock.unlock();
 		}
 	}
@@ -136,7 +131,7 @@ public class Buffers {
 				System.arraycopy(buf, o, head.b, head.o, l);
 				return;
 			}
-			Chunk c = Chunk.get();
+			Chunk c = new Chunk();
 			Chunk t = writeInto(c, buf, o, l);
 			if (tail == null)
 				tail = t;
@@ -145,7 +140,6 @@ public class Buffers {
 			head = c;
 			cond.signalAll();
 		} finally {
-			validate();
 			lock.unlock();
 		}
 	}
@@ -169,7 +163,7 @@ public class Buffers {
 				buf.get(head.b, head.o, l);
 				return;
 			}
-			Chunk c = Chunk.get();
+			Chunk c = new Chunk();
 			Chunk t = writeInto(c, buf);
 			if (tail == null)
 				tail = t;
@@ -178,7 +172,6 @@ public class Buffers {
 			head = c;
 			cond.signalAll();
 		} finally {
-			validate();
 			lock.unlock();
 		}
 	}
@@ -201,10 +194,9 @@ public class Buffers {
 			if (--len == 0)
 				tail = null;
 			if (--head.l == 0)
-				head = Chunk.free(head);
+				head = head.next;
 			return r;
 		} finally {
-			validate();
 			lock.unlock();
 		}
 	}
@@ -238,7 +230,7 @@ public class Buffers {
 				v += r;
 				o += r;
 				if (r == head.l) {
-					head = Chunk.free(head);
+					head = head.next;
 					if (head == null)
 						tail = null;
 				} else {
@@ -248,7 +240,6 @@ public class Buffers {
 			}
 			return v;
 		} finally {
-			validate();
 			lock.unlock();
 		}
 	}
@@ -273,15 +264,11 @@ public class Buffers {
 				return false;
 			while (head != null && l > 0) {
 				int r = Math.min(l, head.l);
-				try {
-					bb.put(head.b, head.o, r);
-				} catch (IndexOutOfBoundsException e) {
-					System.out.println("o: " + head.o + ", l: " + head.l + ", r: " + r);
-				}
+				bb.put(head.b, head.o, r);
 				len -= r;
 				l -= r;
 				if (r == head.l) {
-					head = Chunk.free(head);
+					head = head.next;
 					if (head == null)
 						tail = null;
 				} else {
@@ -291,7 +278,6 @@ public class Buffers {
 			}
 			return true;
 		} finally {
-			validate();
 			lock.unlock();
 		}
 	}
@@ -320,7 +306,6 @@ public class Buffers {
 			}
 			tail = c;
 		} finally {
-			validate();
 			lock.unlock();
 		}
 	}
@@ -362,7 +347,7 @@ public class Buffers {
 			}
 
 			if (last == null || l > 0) {
-				Chunk n = Chunk.get();
+				Chunk n = new Chunk();
 				System.arraycopy(c.b, c.o, n.b, 0, l);
 				c.o += l;
 				c.l -= l;
@@ -380,7 +365,6 @@ public class Buffers {
 
 			head = c;
 		} finally {
-			validate();
 			lock.unlock();
 		}
 	}
@@ -401,7 +385,7 @@ public class Buffers {
 			while (head != null && l >= head.l) {
 				l -= head.l;
 				len -= head.l;
-				head = Chunk.free(head);
+				head = head.next;
 			}
 			if (head != null) {
 				head.o += l;
@@ -410,7 +394,6 @@ public class Buffers {
 			} else
 				tail = null;
 		} finally {
-			validate();
 			lock.unlock();
 		}
 	}
@@ -423,12 +406,8 @@ public class Buffers {
 		lock.lock();
 		try {
 			len = 0;
-			Chunk c = head;
-			while (c != null)
-				c = Chunk.free(c);
 			head = tail = null;
 		} finally {
-			validate();
 			lock.unlock();
 		}
 	}
@@ -527,7 +506,7 @@ public class Buffers {
 			l -= r;
 			if (l == 0)
 				return c;
-			c = c.next = Chunk.get();
+			c = c.next = new Chunk();
 		}
 	}
 
@@ -549,38 +528,8 @@ public class Buffers {
 			o += r;
 			if (l == 0)
 				return c;
-			c = c.next = Chunk.get();
+			c = c.next = new Chunk();
 		}
-	}
-
-	private void validate() {
-		if (true)
-			return;
-		if (len == 0) {
-			if (head != null)
-				throw new IllegalStateException("Empty buffers should have null head");
-			if (tail != null)
-				throw new IllegalStateException("Empty buffers should have null tail");
-			return;
-		}
-
-		Chunk c = head;
-		Set<Chunk> set = new HashSet<>();
-		int l = 0;
-		while (c != null) {
-			if (!set.add(c))
-				throw new IllegalStateException("Duplicate chunk");
-			if (c.o < 0)
-				throw new IllegalStateException("Corrupted chunk o < 0");
-			if (c.l < 0)
-				throw new IllegalStateException("Corrupted chunk l < 0");
-			if (c.o + c.l > BUF_LEN)
-				throw new IllegalStateException("Corrupted chunk o+l > buf_size");
-			l += c.l;
-			c = c.next;
-		}
-		if (l != len)
-			throw new IllegalStateException("len != chunk.l");
 	}
 
 	@Override
@@ -616,8 +565,6 @@ public class Buffers {
 	 * @author unknow
 	 */
 	public static class Chunk {
-		private static final Object mutex = new Object();
-		private static Chunk idle = null;
 		/** the content */
 		public final byte[] b;
 		/** the current offset */
@@ -630,40 +577,6 @@ public class Buffers {
 		private Chunk() {
 			b = new byte[BUF_LEN];
 			o = l = 0;
-		}
-
-		/**
-		 * create or get an idle chunk
-		 * 
-		 * @return a chunk
-		 */
-		public static Chunk get() {
-			return new Chunk();
-//			synchronized (mutex) {
-//				if (idle == null)
-//					return new Chunk();
-//				Chunk c = idle;
-//				idle = idle.next;
-//				c.next = null;
-//				return c;
-//			}
-		}
-
-		/**
-		 * free a chunk
-		 * 
-		 * @param c the chunk to free
-		 * @return the next of the freed chunk
-		 */
-		public static Chunk free(Chunk c) {
-			return c.next;
-//			Chunk n = c.next;
-//			c.o = c.l = 0;
-//			synchronized (mutex) {
-//				c.next = idle;
-//				idle = c;
-//			}
-//			return n;
 		}
 	}
 }

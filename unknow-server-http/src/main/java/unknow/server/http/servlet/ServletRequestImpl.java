@@ -43,7 +43,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.HttpUpgradeHandler;
 import jakarta.servlet.http.Part;
-import unknow.server.http.HttpProcessor;
+import unknow.server.http.HttpConnection;
 import unknow.server.http.servlet.in.ChunckedInputStream;
 import unknow.server.http.servlet.in.EmptyInputStream;
 import unknow.server.http.servlet.in.LengthInputStream;
@@ -60,8 +60,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	private final ArrayMap<Object> attributes = new ArrayMap<>();
 
-	private final ServletContextImpl ctx;
-	private final HttpProcessor p;
+	private final HttpConnection p;
 	private final DispatcherType type;
 
 	private String requestUri;
@@ -85,9 +84,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 	private Map<String, String[]> parameter;
 
 	private String remoteAddr;
-	private String remoteHost;
 	private String localAddr;
-	private String localHost;
 
 	private HttpSession session;
 
@@ -98,9 +95,6 @@ public class ServletRequestImpl implements HttpServletRequest {
 	private BufferedReader reader;
 	private ServletInputStream input;
 
-	private final InetSocketAddress remote;
-	private final InetSocketAddress local;
-
 	/**
 	 * create new ServletRequestImpl
 	 * 
@@ -109,16 +103,12 @@ public class ServletRequestImpl implements HttpServletRequest {
 	 * @param type dispatcher type of this request
 	 * @param res  the response
 	 */
-	public ServletRequestImpl(ServletContextImpl ctx, HttpProcessor p, DispatcherType type) {
-		this.ctx = ctx;
+	public ServletRequestImpl(HttpConnection p, DispatcherType type) {
 		this.p = p;
 		this.type = type;
 		this.path = new ArrayList<>();
 
 		this.headers = new HashMap<>();
-
-		this.remote = null;//p.getRemote();
-		this.local = null;//p.getLocal();
 	}
 
 	public void setMethod(String method) {
@@ -235,7 +225,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 	@Override
 	public void setAttribute(String name, Object o) {
 		Object old = attributes.put(name, o);
-		ctx.getEvents().fireRequestAttribute(this, name, o, old);
+		p.getCtx().getEvents().fireRequestAttribute(this, name, o, old);
 	}
 
 	@Override
@@ -252,7 +242,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 				}
 			}
 			if (encoding == null)
-				encoding = ctx.getRequestCharacterEncoding();
+				encoding = p.getCtx().getRequestCharacterEncoding();
 		}
 		return encoding;
 	}
@@ -412,7 +402,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public String getServerName() {
-		return ctx.getVirtualServerName();
+		return p.getCtx().getVirtualServerName();
 	}
 
 	@Override
@@ -434,39 +424,35 @@ public class ServletRequestImpl implements HttpServletRequest {
 	@Override
 	public String getRemoteAddr() {
 		if (remoteAddr == null)
-			remoteAddr = getAddr(remote);
+			remoteAddr = getAddr(p.getRemote());
 		return remoteAddr;
 	}
 
 	@Override
 	public String getRemoteHost() {
-		if (remoteHost == null)
-			remoteHost = remote.getHostString();
-		return remoteHost;
+		return p.getRemote().getHostString();
 	}
 
 	@Override
 	public int getRemotePort() {
-		return remote == null ? null : remote.getPort();
+		return p.getRemote().getPort();
 	}
 
 	@Override
 	public String getLocalName() {
-		if (localHost == null)
-			localHost = local.getHostString();
-		return localHost;
+		return p.getLocal().getHostString();
 	}
 
 	@Override
 	public String getLocalAddr() {
 		if (localAddr == null)
-			localAddr = getAddr(local);
+			localAddr = getAddr(p.getLocal());
 		return localAddr;
 	}
 
 	@Override
 	public int getLocalPort() {
-		return local == null ? null : local.getPort();
+		return p.getLocal().getPort();
 	}
 
 	@Override
@@ -581,8 +567,8 @@ public class ServletRequestImpl implements HttpServletRequest {
 			return sessionFromCookie;
 		if (sessionFromUrl != null)
 			return sessionFromUrl;
-		ctx.getEffectiveSessionTrackingModes(); // TODO manage other session traking mode
-		SessionCookieConfig cookieCfg = ctx.getSessionCookieConfig();
+		p.getCtx().getEffectiveSessionTrackingModes(); // TODO manage other session traking mode
+		SessionCookieConfig cookieCfg = p.getCtx().getSessionCookieConfig();
 		if (cookieCfg != null) {
 			String name = cookieCfg.getName();
 			Cookie[] c = getCookies();
@@ -600,7 +586,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 		if (session != null)
 			return session;
 		String sessionId = getRequestedSessionId();
-		SessionFactory sessionFactory = ctx.getSessionFactory();
+		SessionFactory sessionFactory = p.getCtx().getSessionFactory();
 //		ctx.getSessionCookieConfig().
 		if (sessionId == null && create) {
 			sessionId = sessionFactory.generateId();
@@ -618,7 +604,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 	public String changeSessionId() {
 		if (session == null)
 			throw new IllegalStateException("no session");
-		SessionFactory sessionFactory = ctx.getSessionFactory();
+		SessionFactory sessionFactory = p.getCtx().getSessionFactory();
 		String newId = sessionFactory.generateId();
 		sessionFactory.changeId(session, newId);
 		return newId;
@@ -681,7 +667,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public ServletContext getServletContext() {
-		return ctx;
+		return p.getCtx();
 	}
 
 	private ServletInputStream createInput() {

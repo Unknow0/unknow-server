@@ -60,11 +60,11 @@ public class HttpProcessor11 extends HttpProcessor {
 	}
 
 	@Override
-	protected boolean fillRequest() throws InterruptedException, IOException {
+	protected boolean fillRequest(ServletRequestImpl req) throws InterruptedException, IOException {
 		Buffers b = readBuffer();
 		int i = BuffersUtils.indexOf(b, SPACE_SLASH, 0, MAX_METHOD_SIZE);
 		if (i < 0) {
-			res.sendError(HttpError.BAD_REQUEST.code);
+			co.sendError(HttpError.BAD_REQUEST.code, null, null);
 			return false;
 		}
 		BuffersUtils.toString(sb, b, 0, i);
@@ -74,7 +74,7 @@ public class HttpProcessor11 extends HttpProcessor {
 
 		i = BuffersUtils.indexOf(b, SPACE, last, MAX_PATH_SIZE);
 		if (i < 0) {
-			res.sendError(HttpError.URI_TOO_LONG.code);
+			co.sendError(HttpError.URI_TOO_LONG.code, null, null);
 			return false;
 		}
 		int q = BuffersUtils.indexOf(b, QUESTION, last, i - last);
@@ -118,7 +118,7 @@ public class HttpProcessor11 extends HttpProcessor {
 
 		i = BuffersUtils.indexOf(b, CRLF, last, MAX_VERSION_SIZE);
 		if (i < 0) {
-			res.sendError(HttpError.BAD_REQUEST.code);
+			co.sendError(HttpError.BAD_REQUEST.code, null, null);
 			return false;
 		}
 		BuffersUtils.toString(sb, b, last, i - last);
@@ -130,7 +130,7 @@ public class HttpProcessor11 extends HttpProcessor {
 		while ((i = BuffersUtils.indexOf(b, CRLF, last, MAX_HEADER_SIZE)) > last) {
 			int c = BuffersUtils.indexOf(b, COLON, last, i - last);
 			if (c < 0) {
-				res.sendError(HttpError.BAD_REQUEST.code);
+				co.sendError(HttpError.BAD_REQUEST.code, null, null);
 				return false;
 			}
 
@@ -188,7 +188,7 @@ public class HttpProcessor11 extends HttpProcessor {
 			s.doFilter(req, res);
 		} catch (UnavailableException e) {
 			// TODO add page with retry-after
-			res.sendError(503, e, null);
+			co.sendError(503, e, null);
 		} catch (Exception e) {
 			logger.error("failed to service '{}'", s, e);
 			if (!res.isCommitted())

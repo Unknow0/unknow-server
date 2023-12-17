@@ -25,6 +25,8 @@ import unknow.server.util.io.BuffersInputStream;
 public class NIOConnection {
 	private static final Logger logger = LoggerFactory.getLogger(NIOConnection.class);
 
+	private static final InetSocketAddress DISCONECTED = InetSocketAddress.createUnresolved("", 0);
+
 //	private final Pool<NIOConnection> pool;
 
 	/** the data waiting to be wrote */
@@ -194,8 +196,8 @@ public class NIOConnection {
 	public final InetSocketAddress getRemote() {
 		try {
 			return (InetSocketAddress) ((SocketChannel) key.channel()).getRemoteAddress();
-		} catch (@SuppressWarnings("unused") IOException e) {
-			return null;
+		} catch (@SuppressWarnings("unused") Exception e) {
+			return DISCONECTED;
 		}
 	}
 
@@ -208,8 +210,8 @@ public class NIOConnection {
 	public final InetSocketAddress getLocal() {
 		try {
 			return (InetSocketAddress) ((SocketChannel) key.channel()).getLocalAddress();
-		} catch (@SuppressWarnings("unused") IOException e) {
-			return null;
+		} catch (@SuppressWarnings("unused") Exception e) {
+			return DISCONECTED;
 		}
 	}
 
