@@ -60,6 +60,10 @@ public class XmlTypeComplex implements XmlType {
 		return elements;
 	}
 
+	public boolean hasElements() {
+		return elements != null && !elements.isEmpty();
+	}
+
 	public XmlElement getValue() {
 		return value;
 	}

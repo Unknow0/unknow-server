@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.xml.namespace.QName;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
@@ -165,8 +164,8 @@ public class HandlerObjectWriter extends AbstractSourceBuilder<HandlerContext> {
 		for (XmlElement x : list)
 			s = new IfStmt(new InstanceOfExpr(name, types.getClass(x.xmlType().type())),
 					buildElement(types, x, x.xmlType(), new BlockStmt(), new CastExpr(types.get(x.xmlType().type()), name)), s);
-		p.addStatement(new IfStmt(new InstanceOfExpr(name, types.getClass(JAXBElement.class)), new ExpressionStmt(
-				new MethodCallExpr(new NameExpr("m"), "write", Utils.list(new CastExpr(types.get(JAXBElement.class), name), new NameExpr("w"), new NullLiteralExpr()))), s));
+		p.addStatement(new IfStmt(new InstanceOfExpr(name, types.getClass(JAXBElement.class)), new ExpressionStmt(new MethodCallExpr(new NameExpr("m"), "write",
+				Utils.list(new CastExpr(types.getClass(JAXBElement.class, TypeCache.ANY), name), new NameExpr("w"), new NullLiteralExpr()))), s));
 		return p;
 	}
 }
