@@ -27,7 +27,7 @@ public class HttpConnection extends NIOConnection {
 	private final ServletContextImpl ctx;
 	private final int keepAliveIdle;
 
-	private Future<?> f = CompletableFuture.completedFuture(null);
+	private Future<?> exec = CompletableFuture.completedFuture(null);
 	private HttpProcessor p;
 
 	protected final ServletResponseImpl res;
@@ -52,11 +52,11 @@ public class HttpConnection extends NIOConnection {
 
 	@Override
 	public final void onRead() throws InterruptedException {
-		if (!f.isDone())
+		if (!exec.isDone())
 			return;
 		if (!p.init(this))
 			return;
-		f = executor.submit(p);
+		exec = executor.submit(p);
 	}
 
 	@Override
@@ -64,7 +64,7 @@ public class HttpConnection extends NIOConnection {
 	}
 
 	private void cleanup() {
-		f.cancel(true);
+		exec.cancel(true);
 		p.close();
 		p = new HttpProcessor11(getCtx(), keepAliveIdle);
 		pendingRead.clear();
@@ -73,11 +73,11 @@ public class HttpConnection extends NIOConnection {
 	@Override
 	public boolean closed(long now, boolean stop) {
 		if (stop)
-			return f.isDone();
+			return exec.isDone();
 
 		if (isClosed())
 			return true;
-		if (!f.isDone())
+		if (!exec.isDone())
 			return false;
 
 		if (keepAliveIdle > 0) {
@@ -92,7 +92,7 @@ public class HttpConnection extends NIOConnection {
 
 	@Override
 	protected final void onFree() {
-		f.cancel(true);
+		exec.cancel(true);
 		cleanup();
 	}
 

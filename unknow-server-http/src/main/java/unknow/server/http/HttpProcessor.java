@@ -24,7 +24,7 @@ public abstract class HttpProcessor implements Runnable {
 	protected final EventManager events;
 	protected final int keepAliveIdle;
 
-	public HttpProcessor(ServletContextImpl ctx, int keepAliveIdle) {
+	protected HttpProcessor(ServletContextImpl ctx, int keepAliveIdle) {
 		this.ctx = ctx;
 		this.servlets = ctx.getServletManager();
 		this.events = ctx.getEvents();
