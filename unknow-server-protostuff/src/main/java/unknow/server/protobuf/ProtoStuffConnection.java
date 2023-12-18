@@ -27,27 +27,27 @@ public abstract class ProtoStuffConnection<T> extends NIOConnection {
 	private static final Logger logger = LoggerFactory.getLogger(ProtoStuffConnection.class);
 
 	private final Schema<T> schema;
-	private final boolean protobuf;
+	private final boolean protostuff;
 
-	private Out out;
+	protected Out out;
 	private LimitedInputStream in;
 	private CodedInput input;
 
-	protected ProtoStuffConnection(Schema<T> schema, boolean protobuf) {
+	protected ProtoStuffConnection(Schema<T> schema, boolean protostuff) {
 		this.schema = schema;
-		this.protobuf = protobuf;
+		this.protostuff = protostuff;
 	}
 
 	@Override
 	protected void onInit() {
 		out = getOut();
 		in = new LimitedInputStream(getIn(), Integer.MAX_VALUE);
-		input = new CodedInput(in, protobuf);
+		input = new CodedInput(in, protostuff);
 	}
 
 	protected <M extends Message<M>> void write(T o) throws IOException {
 		LinkedBuffer buffer = LinkedBuffer.allocate();
-		Output output = protobuf ? new ProtobufOutput(buffer) : new ProtostuffOutput(buffer);
+		Output output = protostuff ? new ProtobufOutput(buffer) : new ProtostuffOutput(buffer);
 		schema.writeTo(output, o);
 		int size = ((WriteSession) output).getSize();
 		ProtobufOutput.writeRawVarInt32Bytes(out, size);
@@ -55,9 +55,9 @@ public abstract class ProtoStuffConnection<T> extends NIOConnection {
 		out.flush();
 	}
 
-	protected <M extends Message<M>> void write(M o) throws IOException {
+	protected <M extends Message<M>> void writeMessage(M o) throws IOException {
 		LinkedBuffer buffer = LinkedBuffer.allocate();
-		Output output = protobuf ? new ProtobufOutput(buffer) : new ProtostuffOutput(buffer);
+		Output output = protostuff ? new ProtobufOutput(buffer) : new ProtostuffOutput(buffer);
 		o.cachedSchema().writeTo(output, o);
 		int size = ((WriteSession) output).getSize();
 		ProtobufOutput.writeRawVarInt32Bytes(out, size);
