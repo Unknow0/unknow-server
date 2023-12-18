@@ -1,4 +1,4 @@
-package unknow.server.protobuf;
+package unknow.server.util.io;
 
 import java.io.IOException;
 import java.io.InputStream;
