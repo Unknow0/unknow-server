@@ -13,12 +13,14 @@
 		<slf4j.version>1.7.16</slf4j.version>
 		<javaparser.version>3.25.3</javaparser.version>
 		<junit.version>5.8.2</junit.version>
+		<mockito.version>5.8.0 </mockito.version>
 		<swagger.version>2.2.2</swagger.version>
 		<cxf.version>4.0.2</cxf.version>
 		<jackson.version>2.15.2</jackson.version>
 		<unknow-sax.version>0.0.3</unknow-sax.version>
 		<prometheus.version>0.16.0</prometheus.version>
 		<jmh.version>1.37</jmh.version>
+		<protostuff.version>1.8.0</protostuff.version>
 	</properties>
 	<distributionManagement>
 		<repository>
@@ -40,7 +42,7 @@
 		<module>unknow-server-jaxb</module>
 		<module>unknow-server-jaxws</module>
 		<module>unknow-server-jaxrs</module>
-		<module>unknow-server-protobuf</module>
+		<module>unknow-server-protostuff</module>
 		<module>unknow-server-bench</module>
 		<module>unknow-server-test</module>
 	</modules>
@@ -119,6 +121,13 @@
 	</build>
 	<dependencyManagement>
 		<dependencies>
+			<dependency>
+				<groupId>org.mockito</groupId>
+				<artifactId>mockito-core</artifactId>
+				<version>4.2.0</version>
+				<scope>test</scope>
+			</dependency>
+
 			<dependency>
 				<groupId>unknow.sax</groupId>
 				<artifactId>unknow-sax</artifactId>
@@ -239,6 +248,28 @@
 				<artifactId>xmlbeans</artifactId>
 				<version>5.1.1</version>
 			</dependency>
+
+			<dependency>
+				<groupId>io.protostuff</groupId>
+				<artifactId>protostuff-bom</artifactId>
+				<version>${protostuff.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.junit</groupId>
+				<artifactId>junit-bom</artifactId>
+				<version>${junit.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.mockito</groupId>
+				<artifactId>mockito-bom</artifactId>
+				<version>${mockito.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
 		</dependencies>
 	</dependencyManagement>
 	<dependencies>
@@ -250,19 +281,16 @@
 		<dependency>
 			<groupId>org.junit.jupiter</groupId>
 			<artifactId>junit-jupiter-engine</artifactId>
-			<version>${junit.version}</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.junit.jupiter</groupId>
 			<artifactId>junit-jupiter-params</artifactId>
-			<version>${junit.version}</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.mockito</groupId>
 			<artifactId>mockito-core</artifactId>
-			<version>4.2.0</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>

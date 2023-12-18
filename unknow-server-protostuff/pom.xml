@@ -5,7 +5,7 @@
 		<artifactId>unknow-server</artifactId>
 		<version>0.0.1-SNAPSHOT</version>
 	</parent>
-	<artifactId>unknow-server-protobuf</artifactId>
+	<artifactId>unknow-server-protostuff</artifactId>
 
 	<dependencies>
 		<dependency>
@@ -15,9 +15,8 @@
 		</dependency>
 
 		<dependency>
-			<groupId>com.google.protobuf</groupId>
-			<artifactId>protobuf-javalite</artifactId>
-			<version>[3.14.0,)</version>
+			<groupId>io.protostuff</groupId>
+			<artifactId>protostuff-core</artifactId>
 		</dependency>
 	</dependencies>
 </project>
