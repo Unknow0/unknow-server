@@ -40,5 +40,10 @@
 			<artifactId>cxf-rt-rs-service-description-openapi-v3</artifactId>
 			<version>${cxf.version}</version>
 		</dependency>
+		<dependency>
+			<groupId>jakarta.xml.bind</groupId>
+			<artifactId>jakarta.xml.bind-api</artifactId>
+			<version>3.0.1</version>
+		</dependency>
 	</dependencies>
 </project>

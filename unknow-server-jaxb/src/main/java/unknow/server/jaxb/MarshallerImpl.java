@@ -206,24 +206,6 @@ public class MarshallerImpl implements Marshaller {
 	}
 
 	@Override
-	public void setAdapter(XmlAdapter adapter) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public <A extends XmlAdapter> void setAdapter(Class<A> type, A adapter) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public <A extends XmlAdapter> A getAdapter(Class<A> type) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
 	public void setAttachmentMarshaller(AttachmentMarshaller am) {
 		// TODO Auto-generated method stub
 
@@ -266,8 +248,27 @@ public class MarshallerImpl implements Marshaller {
 			XmlRootHandler h = rootHandlers.get(t.getClass());
 			if (h == null)
 				throw new JAXBException("Unknown class '" + t.getClass());
+			c.writeEmptyElement(h.ns(), h.localName());
 			h.write(c, t, this, null);
 		}
 		return c.getNs();
+	}
+
+	@Override
+	public <A extends XmlAdapter<?, ?>> void setAdapter(A adapter) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public <A extends XmlAdapter<?, ?>> void setAdapter(Class<A> type, A adapter) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public <A extends XmlAdapter<?, ?>> A getAdapter(Class<A> type) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }
