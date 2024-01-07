@@ -11,7 +11,6 @@ import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Marshaller;
 import jakarta.xml.bind.Unmarshaller;
-import jakarta.xml.bind.Validator;
 
 /**
  * @author unknow
@@ -36,11 +35,5 @@ public class Context extends JAXBContext {
 	@Override
 	public Marshaller createMarshaller() throws JAXBException {
 		return new MarshallerImpl(rootHandlers, handlers);
-	}
-
-	@Override
-	public Validator createValidator() throws JAXBException {
-		// TODO Auto-generated method stub
-		return null;
 	}
 }

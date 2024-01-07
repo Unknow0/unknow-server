@@ -10,13 +10,13 @@
 		<maven.compiler.target>11</maven.compiler.target>
 		<maven.compiler.release>11</maven.compiler.release>
 
-		<slf4j.version>1.7.16</slf4j.version>
-		<javaparser.version>3.25.3</javaparser.version>
-		<junit.version>5.8.2</junit.version>
+		<slf4j.version>2.0.10</slf4j.version>
+		<javaparser.version>3.25.8</javaparser.version>
+		<junit.version>5.10.1</junit.version>
 		<mockito.version>5.8.0 </mockito.version>
-		<swagger.version>2.2.2</swagger.version>
-		<cxf.version>4.0.2</cxf.version>
-		<jackson.version>2.15.2</jackson.version>
+		<swagger.version>2.2.20</swagger.version>
+		<cxf.version>4.0.3</cxf.version>
+		<jackson.version>2.16.1</jackson.version>
 		<unknow-sax.version>0.0.3</unknow-sax.version>
 		<prometheus.version>0.16.0</prometheus.version>
 		<jmh.version>1.37</jmh.version>
@@ -116,6 +116,34 @@
 					<artifactId>maven-plugin-plugin</artifactId>
 					<version>3.6.0</version>
 				</plugin>
+
+				<plugin>
+					<groupId>org.codehaus.mojo</groupId>
+					<artifactId>versions-maven-plugin</artifactId>
+					<version>2.16.2</version>
+					<configuration>
+						<processDependencyManagementTransitive>false</processDependencyManagementTransitive>
+						<ruleSet>
+							<ignoreVersions>
+								<ignoreVersion>
+									<type>regex</type>
+									<version>.+-(alpha|beta).*</version>
+								</ignoreVersion>
+							</ignoreVersions>
+							<rules>
+								<rule>
+									<groupId>unknow.server</groupId>
+									<ignoreVersions>
+										<ignoreVersion>
+											<type>regex</type>
+											<version>.*</version>
+										</ignoreVersion>
+									</ignoreVersions>
+								</rule>
+							</rules>
+						</ruleSet>
+					</configuration>
+				</plugin>
 			</plugins>
 		</pluginManagement>
 	</build>
@@ -124,7 +152,7 @@
 			<dependency>
 				<groupId>org.mockito</groupId>
 				<artifactId>mockito-core</artifactId>
-				<version>4.2.0</version>
+				<version>${mockito.version}</version>
 				<scope>test</scope>
 			</dependency>
 
@@ -146,7 +174,7 @@
 			<dependency>
 				<groupId>jakarta.xml.bind</groupId>
 				<artifactId>jakarta.xml.bind-api</artifactId>
-				<version>3.0.1</version>
+				<version>4.0.1</version>
 			</dependency>
 			<dependency>
 				<groupId>jakarta.jws</groupId>
@@ -162,6 +190,16 @@
 				<groupId>jakarta.ws.rs</groupId>
 				<artifactId>jakarta.ws.rs-api</artifactId>
 				<version>3.1.0</version>
+			</dependency>
+			<dependency>
+				<groupId>org.glassfish.jaxb</groupId>
+				<artifactId>jaxb-runtime</artifactId>
+				<version>4.0.4</version>
+			</dependency>
+			<dependency>
+				<groupId>org.eclipse.persistence</groupId>
+				<artifactId>org.eclipse.persistence.moxy</artifactId>
+				<version>4.0.2</version>
 			</dependency>
 			<dependency>
 				<groupId>com.github.javaparser</groupId>
@@ -191,7 +229,7 @@
 			<dependency>
 				<groupId>org.apache.maven.resolver</groupId>
 				<artifactId>maven-resolver-api</artifactId>
-				<version>1.9.16</version>
+				<version>1.9.18</version>
 			</dependency>
 			<dependency>
 				<groupId>javax.inject</groupId>
@@ -242,11 +280,6 @@
 				<groupId>io.prometheus</groupId>
 				<artifactId>simpleclient</artifactId>
 				<version>${prometheus.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.xmlbeans</groupId>
-				<artifactId>xmlbeans</artifactId>
-				<version>5.1.1</version>
 			</dependency>
 
 			<dependency>

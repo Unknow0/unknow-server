@@ -134,8 +134,7 @@ public class UnmarshallerImpl implements Unmarshaller {
 				throw new JAXBException("No handler found for xml tag " + reader.getName());
 			if (schema != null)
 				return h.readValidate(reader, null, this);
-			else
-				return h.read(reader, null, this);
+			return h.read(reader, null, this);
 		} catch (XMLStreamException e) {
 			throw new JAXBException(e);
 		}
@@ -204,22 +203,6 @@ public class UnmarshallerImpl implements Unmarshaller {
 	}
 
 	@Override
-	public void setAdapter(XmlAdapter adapter) {
-//	public <A extends XmlAdapter> void setAdapter(A adapter) {
-	}
-
-	@Override
-	public <A extends XmlAdapter> void setAdapter(Class<A> type, A adapter) {
-		// TODO
-	}
-
-	@SuppressWarnings("unchecked")
-	@Override
-	public <A extends XmlAdapter> A getAdapter(Class<A> type) {
-		return null;
-	}
-
-	@Override
 	public void setAttachmentUnmarshaller(AttachmentUnmarshaller au) {
 		// TODO
 	}
@@ -239,15 +222,6 @@ public class UnmarshallerImpl implements Unmarshaller {
 		return listener;
 	}
 
-	@Override
-	public void setValidating(boolean validating) throws JAXBException {
-	}
-
-	@Override
-	public boolean isValidating() throws JAXBException {
-		return schema != null;
-	}
-
 	public void beforeUnmarshal(Object target, Object parent) {
 		if (listener != null)
 			listener.beforeUnmarshal(target, parent);
@@ -256,5 +230,22 @@ public class UnmarshallerImpl implements Unmarshaller {
 	public void afterUnmarshal(Object target, Object parent) {
 		if (listener != null)
 			listener.afterUnmarshal(target, parent);
+	}
+
+	@Override
+	public <A extends XmlAdapter<?, ?>> void setAdapter(A adapter) {
+		// TODO Auto-generated method stub
+	}
+
+	@Override
+	public <A extends XmlAdapter<?, ?>> void setAdapter(Class<A> type, A adapter) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public <A extends XmlAdapter<?, ?>> A getAdapter(Class<A> type) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }
