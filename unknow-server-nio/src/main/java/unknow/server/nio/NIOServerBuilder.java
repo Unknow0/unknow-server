@@ -7,6 +7,7 @@ import java.io.Reader;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
@@ -148,7 +149,7 @@ public class NIOServerBuilder {
 			for (Opt o : options) {
 				String v = (String) prop.get(o.name);
 				if (v != null)
-					o.value = v;
+					o.values = v.split(",");
 			}
 		} catch (IOException e) {
 			logger.warn("Failed to read nioserver.properties", e);
@@ -158,16 +159,16 @@ public class NIOServerBuilder {
 	public static class Opt {
 		private final String name;
 		private Option cli;
-		private String value;
+		private String[] values;
 
 		public Opt(String name) {
 			this.name = name;
 		}
 
-		public Opt withValue(String value) {
+		public Opt withValue(String... values) {
 			if (cli != null)
-				cli.setDescription(cli.getDescription() + ", default to: " + value);
-			this.value = value;
+				cli.setDescription(cli.getDescription() + ", default to: " + Arrays.toString(values));
+			this.values = values;
 			return this;
 		}
 
@@ -181,7 +182,14 @@ public class NIOServerBuilder {
 		}
 
 		public String value(CommandLine c) {
-			return cli != null ? c.getOptionValue(cli, value) : value;
+			return cli != null ? c.getOptionValue(cli, values[0]) : values[0];
+		}
+
+		public String[] values(CommandLine c) {
+			String[] v = values;
+			if (cli != null)
+				v = c.getOptionValues(cli);
+			return v == null ? v : values;
 		}
 	}
 }

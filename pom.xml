@@ -35,6 +35,7 @@
 		</repository>
 	</repositories>
 	<modules>
+		<module>unknow-server-bom</module>
 		<module>unknow-server-nio</module>
 		<module>unknow-server-maven</module>
 		<module>unknow-server-http</module>
