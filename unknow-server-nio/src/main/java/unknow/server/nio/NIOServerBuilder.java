@@ -182,7 +182,8 @@ public class NIOServerBuilder {
 		}
 
 		public String value(CommandLine c) {
-			return cli != null ? c.getOptionValue(cli, values[0]) : values[0];
+			String s = values == null || values.length == 0 ? null : values[0];
+			return cli != null ? c.getOptionValue(cli, s) : s;
 		}
 
 		public String[] values(CommandLine c) {
