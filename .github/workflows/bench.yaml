@@ -76,6 +76,6 @@ jobs:
       with:
         pattern: results-*
         path: out/
-		merge-multiple: true
+        merge-multiple: true
     - name: result
       run: bash bench/result.sh out
