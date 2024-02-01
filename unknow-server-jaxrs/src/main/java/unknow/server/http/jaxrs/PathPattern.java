@@ -26,7 +26,7 @@ public interface PathPattern {
 
 		@Override
 		public List<String> process(String path) {
-			int o = 0;
+			int o = 1;
 			List<String> list = new ArrayList<>(parts.length + (last ? 1 : 0));
 
 			for (int i = 0; i < parts.length; i++) {
