@@ -26,6 +26,9 @@ public interface PathPattern {
 
 		@Override
 		public List<String> process(String path) {
+			if (path == null)
+				return null;
+
 			int o = 1;
 			List<String> list = new ArrayList<>(parts.length + (last ? 1 : 0));
 
@@ -64,6 +67,8 @@ public interface PathPattern {
 
 		@Override
 		public List<String> process(String path) {
+			if (path == null)
+				return null;
 			Matcher m = p.matcher(path);
 			if (!m.matches())
 				return null;
