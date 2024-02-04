@@ -27,6 +27,8 @@ public class NIOConnection {
 
 	private static final InetSocketAddress DISCONECTED = InetSocketAddress.createUnresolved("", 0);
 
+	private static final int MAX_SIZE = 4096 * 2;
+
 	/** the data waiting to be wrote */
 	public final Buffers pendingWrite = new Buffers();
 	/** the data waiting to be handled */
@@ -94,7 +96,7 @@ public class NIOConnection {
 	 */
 	protected final void readFrom(SocketChannel channel, ByteBuffer buf) throws IOException, InterruptedException {
 		int l;
-		while (true) {
+		while (pendingRead.length() < MAX_SIZE) {
 			l = channel.read(buf);
 			if (l == -1) {
 				channel.close();
@@ -262,6 +264,7 @@ public class NIOConnection {
 			if (h == null)
 				throw new IOException("already closed");
 			try {
+				h.pendingWrite.await(MAX_SIZE - 1);
 				h.pendingWrite.write(b);
 				h.toggleKeyOps();
 			} catch (InterruptedException e) {
@@ -298,6 +301,7 @@ public class NIOConnection {
 			if (h == null)
 				throw new IOException("already closed");
 			try {
+				h.pendingWrite.await(MAX_SIZE - len);
 				h.pendingWrite.write(buf, off, len);
 				h.toggleKeyOps();
 			} catch (InterruptedException e) {

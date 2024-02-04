@@ -282,6 +282,16 @@ public class Buffers {
 		}
 	}
 
+	public void await(int max) throws InterruptedException {
+		lock.lockInterruptibly();
+		try {
+			while (len > max)
+				cond.await();
+		} finally {
+			lock.unlock();
+		}
+	}
+
 	private void awaitContent() throws InterruptedException {
 		while (len == 0)
 			cond.await();
