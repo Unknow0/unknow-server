@@ -35,7 +35,8 @@ public class HttpConnection extends NIOConnection {
 
 	/**
 	 * create new RequestBuilder
-	 * @param pool 
+	 * @param executor the executor
+	 * @param ctx the servlet context
 	 */
 	protected HttpConnection(ExecutorService executor, ServletContextImpl ctx, int keepAliveIdle) {
 		this.executor = executor;

@@ -16,6 +16,10 @@ public class BuffersInputStream extends InputStream {
 	private byte[] mark;
 	private int l = 0;
 
+	/**
+	 * create a new input stream
+	 * @param buffers the data to read
+	 */
 	public BuffersInputStream(Buffers buffers) {
 		this.buffers = buffers;
 	}

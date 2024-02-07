@@ -3,6 +3,9 @@ package unknow.server.util.io;
 import java.io.IOException;
 import java.io.InputStream;
 
+/**
+ * input stream to read a limited number of bytes
+ */
 public final class LimitedInputStream extends InputStream {
 	private final InputStream in;
 	private int limit;

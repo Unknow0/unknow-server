@@ -98,10 +98,8 @@ public class ServletRequestImpl implements HttpServletRequest {
 	/**
 	 * create new ServletRequestImpl
 	 * 
-	 * @param ctx  the context
-	 * @param req  the raw request
+	 * @param p  the connection
 	 * @param type dispatcher type of this request
-	 * @param res  the response
 	 */
 	public ServletRequestImpl(HttpConnection p, DispatcherType type) {
 		this.p = p;

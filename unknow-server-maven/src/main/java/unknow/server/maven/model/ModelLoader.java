@@ -114,7 +114,7 @@ public abstract class ModelLoader {
 	 * split class into the class name and it's param
 	 * 
 	 * @param cl the class
-	 * @return a list with the class and it's param (String => [String], List<String> => [List, String], Map<String,List<String>> => [Map, String, List<String>])
+	 * @return a list with the class and it's param {@code (String => [String], List<String> => [List, String], Map<String,List<String>> => [Map, String, List<String>]})
 	 */
 	public static List<String> parse(String cl) {
 		Matcher m = CLAZZ.matcher(cl);

@@ -3,9 +3,13 @@
  */
 package unknow.server.nio;
 
+/** 
+ * a connection that shutdown the server on creation
+ */
 public class ShutdownConnection extends NIOConnection {
 	private final NIOServer server;
 
+	/** @param server the server */
 	public ShutdownConnection(NIOServer server) {
 		this.server = server;
 	}

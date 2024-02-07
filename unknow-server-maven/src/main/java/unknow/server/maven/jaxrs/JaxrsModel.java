@@ -121,8 +121,9 @@ public class JaxrsModel {
 	/**
 	 * create new JaxrsModel
 	 * 
-	 * @param loader
-	 * @param basePath 
+	 * @param loader the loader
+	 * @param cl the classloader
+	 * @param path base path 
 	 */
 	public JaxrsModel(ModelLoader loader, ClassLoader cl, String path) {
 		this.loader = loader;
