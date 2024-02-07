@@ -8,10 +8,8 @@ import unknow.server.maven.model.AnnotationValue.AnnotationValueArray;
 public class SimpleAnnotationArray extends AnnotationValueArray {
 
 	/**
-		 * create new AnnotationValueArray
-		 * 
-		 * @param a
-		 */
+	 * create new AnnotationValueArray
+	 */
 	public SimpleAnnotationArray() {
 		super(new AnnotationValue[0]);
 	}

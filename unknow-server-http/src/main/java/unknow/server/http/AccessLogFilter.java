@@ -33,19 +33,19 @@ import jakarta.servlet.http.HttpServletResponse;
  * <dd>param: host,addr,port</dd>
  * <dd>the remote host, address or port</dd>
  * <dt>start</dt>
- * <td>request starting time in iso, rfc for an DateTimeFormater pattern (default to iso)</dd>
+ * <dd>request starting time in iso, rfc for an DateTimeFormater pattern (default to iso)</dd>
  * <dt>end</dt>
  * <dd>request ending time in iso, rfc for an DateTimeFormater pattern (default to iso)</dd>
  * <dt>duration</dt>
  * <dd>the request duration in sec,msec,usec,msec_frac,usec_frac default to sec</dd>
- * <dt>request</td>
- * <dd>line: same as %{request:method} %{request:path}%{request:query} %{request:protocol} (default)
+ * <dt>request</dt>
+ * <dd>line: same as %{request:method} %{request:path}%{request:query} %{request:protocol} (default)</dd>
  * <dd>method: requested method</dd>
  * <dd>path: requested path</dd>
  * <dd>query: requested query string</dd>
  * <dd>protocol: requested protocol</dd>
- * <dd>header: requested header value</dd>*
- * <dt>response</td>
+ * <dd>header: requested header value</dd>
+ * <dt>response</dt>
  * <dd>status: response status code (default)</dd>
  * <dd>header: requested header value</dd>
  * <dt>user</dt>
@@ -159,13 +159,8 @@ public class AccessLogFilter implements Filter {
 
 	/**
 	 * format used by the access log <br>
-	 * 1: query timestamp <br>
-	 * 2: remote address <br>
-	 * 3: http method <br>
-	 * 4: request uri <br>
-	 * 5: http status code <br>
-	 * 6: request duration in ms <br>
-	 * 7: client ip (taken from x-forwarded-for, or remote address if not found)
+	 * @param format the format
+	 * @throws ServletException on error
 	 */
 	protected void setFormat(String format) throws ServletException {
 		this.parts = parse(format);
@@ -205,6 +200,12 @@ public class AccessLogFilter implements Filter {
 		return "AccessLog";
 	}
 
+	/**
+	 * parse the template
+	 * @param template the template
+	 * @return the part
+	 * @throws ServletException on error
+	 */
 	public static Part[] parse(String template) throws ServletException {
 		List<Part> parts = new ArrayList<>();
 		List<String> param = new ArrayList<>();
@@ -256,13 +257,24 @@ public class AccessLogFilter implements Filter {
 		return key;
 	}
 
+	/** a part */
 	public static interface Part {
+		/** append this part
+		 * @param sb where to
+		 * @param start start time
+		 * @param end end time
+		 * @param req request
+		 * @param res response
+		 * @throws ServletException on error
+		 */
 		void append(StringBuilder sb, LocalDateTime start, LocalDateTime end, HttpServletRequest req, HttpServletResponse res) throws ServletException;
 	}
 
+	/** static text */
 	public static final class StringPart implements Part {
 		private final String str;
 
+		/** @param str the text */
 		public StringPart(String str) {
 			this.str = str;
 		}
@@ -273,7 +285,13 @@ public class AccessLogFilter implements Filter {
 		}
 	}
 
+	/** part builder */
 	public static interface PartBuilder {
+		/** create a new part
+		 * @param param params
+		 * @return the part
+		 * @throws ServletException on error 
+		 */
 		Part apply(List<String> param) throws ServletException;
 	}
 }

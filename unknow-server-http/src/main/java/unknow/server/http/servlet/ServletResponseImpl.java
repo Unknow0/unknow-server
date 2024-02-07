@@ -83,9 +83,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 	/**
 	 * create new ServletResponseImpl
 	 * 
-	 * @param ctx the context
-	 * @param out the raw output
-	 * @param req the original request
+	 * @param p the connection
 	 */
 	public ServletResponseImpl(HttpConnection p) {
 		this.p = p;

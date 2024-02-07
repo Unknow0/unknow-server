@@ -43,7 +43,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	 * @param id       the worker id
 	 * @param listener listener to use
 	 * @param timeout  the timeout on select
-	 * @throws IOException
+	 * @throws IOException on ioexception
 	 */
 	public NIOWorker(int id, NIOServerListener listener, long timeout) throws IOException {
 		super("NIOWorker-" + id, timeout);
@@ -60,8 +60,8 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	 * 
 	 * @param socket  the socket to register
 	 * @param pool the connection factory
-	 * @throws IOException
-	 * @throws InterruptedException 
+	 * @throws IOException on ioexception
+	 * @throws InterruptedException  on interrupt
 	 */
 	@SuppressWarnings("resource")
 	@Override

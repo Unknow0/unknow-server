@@ -36,7 +36,7 @@ public class Buffers {
 	 * append one byte to the buffer
 	 * 
 	 * @param b byte to add
-	 * @throws InterruptedException
+	 * @throws InterruptedException on interrupt
 	 */
 	public void write(int b) throws InterruptedException {
 		lock.lockInterruptibly();
@@ -60,7 +60,7 @@ public class Buffers {
 	 * append data into this buffers, same as @{code write(buf, 0, buf.length)}
 	 * 
 	 * @param buf the data to add
-	 * @throws InterruptedException
+	 * @throws InterruptedException on interrupt
 	 */
 	public void write(byte[] buf) throws InterruptedException {
 		write(buf, 0, buf.length);
@@ -72,7 +72,7 @@ public class Buffers {
 	 * @param buf the data to add
 	 * @param o   the offset
 	 * @param l   the length of data to write
-	 * @throws InterruptedException
+	 * @throws InterruptedException on interrupt
 	 */
 	public void write(byte[] buf, int o, int l) throws InterruptedException {
 		if (l == 0)
@@ -93,6 +93,7 @@ public class Buffers {
 	 * append data to this buffers
 	 * 
 	 * @param bb data to append
+	 * @throws InterruptedException on interrupt
 	 */
 	public void write(ByteBuffer bb) throws InterruptedException {
 		if (bb.remaining() == 0)
@@ -115,7 +116,7 @@ public class Buffers {
 	 * @param buf data to add
 	 * @param o   offset
 	 * @param l   length
-	 * @throws InterruptedException
+	 * @throws InterruptedException on interrupt
 	 */
 	public void prepend(byte[] buf, int o, int l) throws InterruptedException {
 		if (o < 0 || l < 0 || o + l > buf.length)
@@ -148,7 +149,7 @@ public class Buffers {
 	 * add data in front of this buffers
 	 * 
 	 * @param buf data to append
-	 * @throws InterruptedException
+	 * @throws InterruptedException on interrupt
 	 */
 	public void prepend(ByteBuffer buf) throws InterruptedException {
 		if (buf.remaining() == 0)
@@ -181,7 +182,7 @@ public class Buffers {
 	 * 
 	 * @param wait if true wait for data
 	 * @return -1 if no more byte are readable
-	 * @throws InterruptedException
+	 * @throws InterruptedException on interrupt
 	 */
 	public int read(boolean wait) throws InterruptedException {
 		lock.lockInterruptibly();
@@ -209,7 +210,7 @@ public class Buffers {
 	 * @param l    max length to read
 	 * @param wait if true wait for data
 	 * @return the number of bytes read
-	 * @throws InterruptedException
+	 * @throws InterruptedException on interrupt
 	 */
 	public int read(byte[] buf, int o, int l, boolean wait) throws InterruptedException {
 		if (o < 0 || l < 0 || o + l > buf.length)
@@ -250,7 +251,7 @@ public class Buffers {
 	 * @param bb   where to read
 	 * @param wait if true wait for data
 	 * @return true if data where read
-	 * @throws InterruptedException
+	 * @throws InterruptedException on interrupt
 	 */
 	public boolean read(ByteBuffer bb, boolean wait) throws InterruptedException {
 		if (bb.remaining() == 0)
@@ -289,8 +290,8 @@ public class Buffers {
 
 	/**
 	 * append chunk
-	 * @param c
-	 * @throws InterruptedException 
+	 * @param c chunk to add
+	 * @throws InterruptedException on interrupt
 	 */
 	private void append(Chunk c) throws InterruptedException {
 		lock.lockInterruptibly();
@@ -316,7 +317,7 @@ public class Buffers {
 	 * @param buf  where to read
 	 * @param wait if true wait for data
 	 * @param l    number of byte to read
-	 * @throws InterruptedException
+	 * @throws InterruptedException on interrupt
 	 */
 	public void read(Buffers buf, int l, boolean wait) throws InterruptedException {
 		if (l == 0)
@@ -373,7 +374,7 @@ public class Buffers {
 	 * skip l bytes
 	 * 
 	 * @param l number of byte to skip
-	 * @throws InterruptedException
+	 * @throws InterruptedException on interrupt
 	 */
 	public void skip(int l) throws InterruptedException {
 		if (l < 0)
@@ -431,7 +432,7 @@ public class Buffers {
 	 * @param o start index
 	 * @param l max length to process
 	 * @return false if Walker returned false
-	 * @throws InterruptedException
+	 * @throws InterruptedException on interrupt
 	 */
 	public WalkResult walk(Walker w, int o, int l) throws InterruptedException {
 		if (l == 0)
@@ -470,7 +471,7 @@ public class Buffers {
 	 * 
 	 * @param off offset
 	 * @return the byte or -1 if off outside of buffers range
-	 * @throws InterruptedException
+	 * @throws InterruptedException on interrupt
 	 */
 	public int get(int off) throws InterruptedException {
 		lock.lockInterruptibly();
@@ -543,6 +544,7 @@ public class Buffers {
 		return sb.toString();
 	}
 
+	/** interface to walk over a buffers chain */
 	public interface Walker {
 		/**
 		 * apply a bloc of data
@@ -555,8 +557,14 @@ public class Buffers {
 		boolean apply(byte[] b, int o, int e);
 	}
 
+	/** walk result */
 	public static enum WalkResult {
-		END, STOPED, MAX
+		/** walk reached the end of the buffers */
+		END,
+		/** walk stopped */
+		STOPED,
+		/** walk reached the limit */
+		MAX
 	}
 
 	/**

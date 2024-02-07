@@ -44,9 +44,14 @@ public class NIOConnection {
 	private long lastRead;
 	private long lastWrite;
 
+	/** create new connection */
 	protected NIOConnection() {
 	}
 
+	/**
+	 * bind this co on a selection key
+	 * @param key the key
+	 */
 	final void init(SelectionKey key) {
 		this.key = key;
 		this.out = new Out(this);
@@ -62,24 +67,23 @@ public class NIOConnection {
 
 	/**
 	 * called after some data has been read
-	 * @throws InterruptedException
-	 * @throws IOException
+	 * @throws InterruptedException on interrupt
+	 * @throws IOException on io exception
 	 */
 	protected void onRead() throws InterruptedException, IOException { // for override
 	}
 
 	/**
 	 * called after data has been written
-	 * @throws InterruptedException
-	 * @throws IOException
+	 * @throws InterruptedException on interrupt
+	 * @throws IOException on io exception
 	 */
 	protected void onWrite() throws InterruptedException, IOException { // for override
 	}
 
 	/**
 	 * called when the connection is free
-	 * @throws InterruptedException
-	 * @throws IOException
+	 * @throws IOException on io exception
 	 */
 	protected void onFree() throws IOException { // for override
 	}
@@ -89,10 +93,10 @@ public class NIOConnection {
 	 * 
 	 * @param channel source channel
 	 * @param buf     output buffer
-	 * @throws IOException          in case of error
-	 * @throws InterruptedException
+	 * @throws InterruptedException on interrupt
+	 * @throws IOException on io exception
 	 */
-	protected final void readFrom(SocketChannel channel, ByteBuffer buf) throws IOException, InterruptedException {
+	protected final void readFrom(SocketChannel channel, ByteBuffer buf) throws InterruptedException, IOException {
 		int l;
 		while (true) {
 			l = channel.read(buf);
@@ -122,10 +126,10 @@ public class NIOConnection {
 	 * 
 	 * @param channel where to write
 	 * @param buf     local cache
-	 * @throws IOException          in case of error
-	 * @throws InterruptedException
+	 * @throws InterruptedException on interrupt
+	 * @throws IOException on io exception
 	 */
-	protected final void writeInto(SocketChannel channel, ByteBuffer buf) throws IOException, InterruptedException {
+	protected final void writeInto(SocketChannel channel, ByteBuffer buf) throws InterruptedException, IOException {
 		lastWrite = System.currentTimeMillis();
 		while (pendingWrite.read(buf, false)) {
 			buf.flip();
@@ -234,8 +238,7 @@ public class NIOConnection {
 
 	/**
 	 * free the handler
-	 * @throws IOException 
-	 * @throws InterruptedException 
+	 * @throws IOException on io error
 	 */
 	public final void free() throws IOException {
 		out.close();
@@ -250,6 +253,7 @@ public class NIOConnection {
 		return key.channel().toString() + " closed: " + isClosed() + " pending: " + pendingWrite.length();
 	}
 
+	/** output stream for this connection */
 	public static final class Out extends OutputStream {
 		private NIOConnection h;
 
@@ -270,25 +274,11 @@ public class NIOConnection {
 			}
 		}
 
-		/**
-		 * write data
-		 * 
-		 * @param b data to write
-		 * @throws IOException
-		 */
 		@Override
 		public final void write(byte[] b) throws IOException {
 			write(b, 0, b.length);
 		}
 
-		/**
-		 * write some data
-		 * 
-		 * @param buf data
-		 * @param off offset
-		 * @param len number of byte to write
-		 * @throws IOException
-		 */
 		@Override
 		public final synchronized void write(byte[] buf, int off, int len) throws IOException {
 			if (len == 0)
@@ -306,24 +296,20 @@ public class NIOConnection {
 			}
 		}
 
-		/**
-		 * request to close the handler
-		 * 
-		 */
 		@Override
 		public synchronized void close() {
 			flush();
 			h = null;
 		}
 
+		/**
+		 * check if this co is closed
+		 * @return true if the co is closed
+		 */
 		public synchronized boolean isClosed() {
 			return h == null;
 		}
 
-		/**
-		 * flush pending data
-		 * 
-		 */
 		@SuppressWarnings("resource")
 		@Override
 		public synchronized void flush() {

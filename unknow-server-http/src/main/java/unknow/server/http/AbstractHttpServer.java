@@ -34,18 +34,29 @@ public abstract class AbstractHttpServer extends NIOServerBuilder {
 	private Opt execIdle;
 	private Opt keepAlive;
 
+	/** the servlet context */
 	protected ServletContextImpl ctx;
+	/** the servlet manager */
 	protected ServletManager servlets;
+	/** the events */
 	protected EventManager events;
 
+	/** @return the servlet manager */
 	protected abstract ServletManager createServletManager();
 
+	/** @return the event manager */
 	protected abstract EventManager createEventManager();
 
+	/** 
+	 * @param vhost the vhost
+	 * @return the context
+	 */
 	protected abstract ServletContextImpl createContext(String vhost);
 
+	/** @return the servlets */
 	protected abstract ServletConfigImpl[] createServlets();
 
+	/** @return the filters */
 	protected abstract FilterConfigImpl[] createFilters();
 
 	@Override
@@ -86,12 +97,21 @@ public abstract class AbstractHttpServer extends NIOServerBuilder {
 		server.bind(address, () -> new HttpConnection(executor, ctx, keepAliveIdle));
 	}
 
+	/**
+	 * find and call initializer
+	 * @throws ServletException on error
+	 */
 	protected void loadInitializer() throws ServletException {
 		for (ServletContainerInitializer i : ServiceLoader.load(ServletContainerInitializer.class)) {
 			i.onStartup(null, ctx);
 		}
 	}
 
+	/** 
+	 * do build and run the server
+	 * @param arg the main arguments
+	 * @throws Exception on error
+	 */
 	public void process(String[] arg) throws Exception {
 		NIOServer nioServer = build(arg);
 		try {

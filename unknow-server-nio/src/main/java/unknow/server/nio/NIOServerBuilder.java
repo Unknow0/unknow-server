@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 
 import unknow.server.nio.NIOWorkers.RoundRobin;
 
+/** builder for the an NIOServer */
 public class NIOServerBuilder {
 	private static final Logger logger = LoggerFactory.getLogger(NIOServerBuilder.class);
 
@@ -32,6 +33,7 @@ public class NIOServerBuilder {
 	private Opt listener;
 	private Opt shutdown;
 
+	/** create a new builder */
 	public NIOServerBuilder() {
 		iothread = withOpt("iothread").withCli(Option.builder().longOpt("iothread").argName("num").hasArg().type(Integer.class).desc("number of io thread to use").build())
 				.withValue(Integer.toString(Runtime.getRuntime().availableProcessors()));
@@ -43,16 +45,30 @@ public class NIOServerBuilder {
 				Option.builder().longOpt("shutdown").argName("port|addr:port").hasArg().type(Integer.class).desc("addr:port to gracefuly shutdown the server").build());
 	}
 
+	/**
+	 * add an option
+	 * @param name the option name
+	 * @return the new option
+	 */
 	public Opt withOpt(String name) {
 		Opt o = new Opt(name);
 		options.add(o);
 		return o;
 	}
 
+	/** run before the cmd line parsing */
 	protected void beforeParse() {
 		// for override
 	}
 
+	/**
+	 * parse an option to an int
+	 * @param cli the command line
+	 * @param o the option
+	 * @param min the min value
+	 * @return the value
+	 * @throws IllegalArgumentException is the value is inferior to min or isn't an int
+	 */
 	public static int parseInt(CommandLine cli, Opt o, int min) {
 		try {
 			int i = Integer.parseInt(o.value(cli));
@@ -64,6 +80,14 @@ public class NIOServerBuilder {
 		}
 	}
 
+	/**
+	 * parse an option to a inetaddress in the format (port, :port or addr:port)
+	 * @param cli the command line
+	 * @param o the option
+	 * @param defaultHost the default host to use
+	 * @return the value
+	 * @throws IllegalArgumentException if the value is malformed
+	 */
 	public static InetSocketAddress parseAddr(CommandLine cli, Opt o, String defaultHost) {
 		String host = defaultHost;
 		String a = o.value(cli);
@@ -86,11 +110,23 @@ public class NIOServerBuilder {
 		}
 	}
 
+	/**
+	 * run after the server is build
+	 * @param server the server
+	 * @param cli the cli
+	 * @throws Exception on error
+	 */
 	@SuppressWarnings("unused")
 	protected void process(NIOServer server, CommandLine cli) throws Exception {
 		// for override
 	}
 
+	/**
+	 * build the server from the argument
+	 * @param arg the main args
+	 * @return the server build
+	 * @throws Exception on error
+	 */
 	public final NIOServer build(String... arg) throws Exception {
 		beforeParse();
 		readProperties();
@@ -156,15 +192,21 @@ public class NIOServerBuilder {
 		}
 	}
 
+	/** an option */
 	public static class Opt {
 		private final String name;
 		private Option cli;
 		private String[] values;
 
+		/** @param name the option name */
 		public Opt(String name) {
 			this.name = name;
 		}
 
+		/**
+		 * @param values default values
+		 * @return this
+		 */
 		public Opt withValue(String... values) {
 			if (cli != null)
 				cli.setDescription(cli.getDescription() + ", default to: " + Arrays.toString(values));
@@ -172,20 +214,33 @@ public class NIOServerBuilder {
 			return this;
 		}
 
+		/**
+		 * @param cli cli option
+		 * @return this
+		 */
 		public Opt withCli(Option cli) {
 			this.cli = cli;
 			return this;
 		}
 
+		/** @return option name */
 		public String name() {
 			return name;
 		}
 
+		/**
+		 * @param c the cli
+		 * @return the option value
+		 */
 		public String value(CommandLine c) {
 			String s = values == null || values.length == 0 ? null : values[0];
 			return cli != null ? c.getOptionValue(cli, s) : s;
 		}
 
+		/**
+		 * @param c the cli
+		 * @return the option values
+		 */
 		public String[] values(CommandLine c) {
 			String[] v = values;
 			if (cli != null)

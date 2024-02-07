@@ -17,8 +17,7 @@ public class ArrayModel implements TypeModel, WithType {
 	/**
 	 * create new ArrayModel
 	 * 
-	 * @param name
-	 * @param type
+	 * @param type the elem type
 	 */
 	public ArrayModel(TypeModel type) {
 		this.type = type;

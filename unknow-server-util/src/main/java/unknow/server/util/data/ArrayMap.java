@@ -31,6 +31,8 @@ public class ArrayMap<T> implements Map<String, T> {
 
 	/**
 	 * create a new arrayMap with these key/value /!\ key should already be sorted
+	 * @param key the keys
+	 * @param value the value
 	 */
 	public ArrayMap(String[] key, T[] value) {
 		if (key.length != value.length)
@@ -45,11 +47,20 @@ public class ArrayMap<T> implements Map<String, T> {
 		return key instanceof String ? get((String) key) : null;
 	}
 
+	/**
+	 * get a key
+	 * @param name the key
+	 * @return the associated value or null
+	 */
 	public T get(String name) {
 		int i = Arrays.binarySearch(key, 0, len, name);
 		return i < 0 ? null : value[i];
 	}
 
+	/**
+	 * get enumeration of keys
+	 * @return the keys
+	 */
 	public Enumeration<String> names() {
 		return new E();
 	}
@@ -78,6 +89,12 @@ public class ArrayMap<T> implements Map<String, T> {
 		return old;
 	}
 
+	/**
+	 * put a value only if not present
+	 * @param name the key
+	 * @param o the value
+	 * @return true if the value was added
+	 */
 	public boolean putOnce(String name, T o) {
 		int i = Arrays.binarySearch(key, 0, len, name);
 		if (i >= 0)
@@ -98,6 +115,11 @@ public class ArrayMap<T> implements Map<String, T> {
 		return name instanceof String ? remove((String) name) : null;
 	}
 
+	/**
+	 * remove a key
+	 * @param name the key
+	 * @return the old value
+	 */
 	public T remove(String name) {
 		return put(name, null);
 	}
@@ -323,7 +345,7 @@ public class ArrayMap<T> implements Map<String, T> {
 		}
 	}
 
-	public class EntriesIt implements Iterator<Map.Entry<String, T>> {
+	private class EntriesIt implements Iterator<Map.Entry<String, T>> {
 		private int i;
 
 		public EntriesIt() {
