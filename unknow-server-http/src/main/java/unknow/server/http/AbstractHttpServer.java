@@ -56,8 +56,8 @@ public abstract class AbstractHttpServer extends NIOServerBuilder {
 		execMax = withOpt("exec-max").withCli(Option.builder().longOpt("exec-max").desc("max number of exec thread to use").build())
 				.withValue(Integer.toString(Integer.MAX_VALUE));
 		execIdle = withOpt("exec-idle").withCli(Option.builder().longOpt("exec-idle").desc("max idle time for exec thread in seconds").build()).withValue("60");
-		keepAlive = withOpt("exec-idle")
-				.withCli(Option.builder().longOpt("exec-idle").desc("max time to keep idle keepalive connection, -1: infinite, 0: no keep alive").build()).withValue("2000");
+		keepAlive = withOpt("keepalive")
+				.withCli(Option.builder().longOpt("keepalive").desc("max time to keep idle keepalive connection, -1: infinite, 0: no keep alive").build()).withValue("2000");
 	}
 
 	@Override

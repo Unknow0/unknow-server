@@ -80,7 +80,7 @@ public class HttpConnection extends NIOConnection {
 		if (!exec.isDone())
 			return false;
 
-		if (keepAliveIdle > 0) {
+		if (pendingWrite.isEmpty() && keepAliveIdle > 0) {
 			long e = now - keepAliveIdle;
 			if (lastRead() <= e && lastWrite() <= e)
 				return true;
