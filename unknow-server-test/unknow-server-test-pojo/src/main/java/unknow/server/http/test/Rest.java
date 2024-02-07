@@ -32,7 +32,9 @@ public class Rest {
 
 	@GET
 	@Path("t")
-	public void t() { // ok
+	public void t() throws InterruptedException {
+		Thread.sleep(3000);
+		throw new NullPointerException("test");
 	}
 
 	@GET
