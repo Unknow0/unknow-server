@@ -1,8 +1,6 @@
 package unknow.server.http;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,40 +11,31 @@ import unknow.server.http.servlet.ServletResponseImpl;
 import unknow.server.http.utils.EventManager;
 import unknow.server.http.utils.ServletManager;
 import unknow.server.nio.NIOConnection.Out;
-import unknow.server.util.io.Buffers;
 
 public abstract class HttpProcessor implements Runnable {
 	private static final Logger logger = LoggerFactory.getLogger(HttpProcessor.class);
 
-	protected HttpConnection co;
+	protected final HttpConnection co;
 	protected final ServletContextImpl ctx;
 	protected final ServletManager servlets;
 	protected final EventManager events;
 	protected final int keepAliveIdle;
 
-	protected HttpProcessor(ServletContextImpl ctx, int keepAliveIdle) {
-		this.ctx = ctx;
+	protected HttpProcessor(HttpConnection co) {
+		this.co = co;
+		this.ctx = co.getCtx();
 		this.servlets = ctx.getServletManager();
 		this.events = ctx.getEvents();
-		this.keepAliveIdle = keepAliveIdle;
+		this.keepAliveIdle = co.getkeepAlive();
 	}
-
-	protected abstract boolean canProcess(HttpConnection co) throws InterruptedException;
 
 	protected abstract boolean fillRequest(ServletRequestImpl req) throws InterruptedException, IOException;
 
 	protected abstract void doRun(ServletRequestImpl req, ServletResponseImpl res) throws IOException;
 
-	public final boolean init(HttpConnection co) throws InterruptedException {
-		if (!canProcess(co))
-			return false;
-		this.co = co;
-		return true;
-	}
-
 	@SuppressWarnings("resource")
 	@Override
-	public void run() {
+	public final void run() {
 		boolean close = false;
 		ServletRequestImpl req = co.req;
 		ServletResponseImpl res = co.res;
@@ -80,7 +69,6 @@ public abstract class HttpProcessor implements Runnable {
 			} catch (@SuppressWarnings("unused") IOException e1) { //ok
 			}
 		} finally {
-			co = null;
 			if (close)
 				out.close();
 			else
@@ -88,25 +76,13 @@ public abstract class HttpProcessor implements Runnable {
 		}
 	}
 
-	public final void close() {
-		co = null;
-	}
-
-	protected Buffers readBuffer() {
-		if (co == null)
-			throw new ProcessDoneException();
-		return co.pendingRead;
-	}
-
-	public OutputStream getOut() {
-		if (co == null)
-			throw new ProcessDoneException();
-		return co.getOut();
-	}
-
-	public InputStream getIn() {
-		if (co == null)
-			throw new ProcessDoneException();
-		return co.getIn();
+	public static interface HttpProcessorFactory {
+		/**
+		 * create a processor if it can process it
+		 * @param co the connection
+		 * @return the processor or null
+		 * @throws InterruptedException on interrupt
+		 */
+		HttpProcessor create(HttpConnection co) throws InterruptedException;
 	}
 }

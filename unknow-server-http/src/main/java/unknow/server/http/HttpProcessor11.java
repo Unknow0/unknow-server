@@ -11,15 +11,15 @@ import org.slf4j.LoggerFactory;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.UnavailableException;
-import unknow.server.http.servlet.ServletContextImpl;
 import unknow.server.http.servlet.ServletRequestImpl;
 import unknow.server.http.servlet.ServletResponseImpl;
 import unknow.server.util.io.Buffers;
 import unknow.server.util.io.BuffersUtils;
-import unknow.server.util.io.BuffersUtils.IndexOfBloc;
 
 public class HttpProcessor11 extends HttpProcessor {
 	private static final Logger logger = LoggerFactory.getLogger(HttpProcessor11.class);
+
+	private static final byte[] END = new byte[] { '\r', '\n', '\r', '\n' };
 
 	private static final byte[] CRLF = { '\r', '\n' };
 	private static final byte[] PARAM_SEP = { '&', '=' };
@@ -39,29 +39,19 @@ public class HttpProcessor11 extends HttpProcessor {
 
 	private static final int MAX_START_SIZE = 8192;
 
-	private final IndexOfBloc end;
-
 	private final StringBuilder sb;
 	private final Decode decode;
 
-	public HttpProcessor11(ServletContextImpl ctx, int keepAliveIdle) {
-		super(ctx, keepAliveIdle);
+	public HttpProcessor11(HttpConnection co) {
+		super(co);
 
-		end = new IndexOfBloc(new byte[] { '\r', '\n', '\r', '\n' });
 		sb = new StringBuilder();
 		decode = new Decode(sb);
 	}
 
 	@Override
-	protected boolean canProcess(HttpConnection co) throws InterruptedException {
-		end.reset();
-		co.pendingRead.walk(end, 0, MAX_START_SIZE);
-		return end.index() > 0;
-	}
-
-	@Override
 	protected boolean fillRequest(ServletRequestImpl req) throws InterruptedException, IOException {
-		Buffers b = readBuffer();
+		Buffers b = co.pendingRead;
 		int i = BuffersUtils.indexOf(b, SPACE_SLASH, 0, MAX_METHOD_SIZE);
 		if (i < 0) {
 			co.sendError(HttpError.BAD_REQUEST.code, null, null);
@@ -196,4 +186,9 @@ public class HttpProcessor11 extends HttpProcessor {
 		}
 	}
 
+	public static final HttpProcessorFactory Factory = co -> {
+		if (BuffersUtils.indexOf(co.pendingRead, END, 0, MAX_START_SIZE) > 0)
+			return new HttpProcessor11(co);
+		return null;
+	};
 }

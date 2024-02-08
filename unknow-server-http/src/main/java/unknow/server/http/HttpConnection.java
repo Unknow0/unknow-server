@@ -4,6 +4,8 @@
 package unknow.server.http;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -14,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import unknow.server.http.HttpProcessor.HttpProcessorFactory;
 import unknow.server.http.servlet.ServletContextImpl;
 import unknow.server.http.servlet.ServletRequestImpl;
 import unknow.server.http.servlet.ServletResponseImpl;
@@ -22,6 +25,8 @@ import unknow.server.nio.NIOConnection;
 
 public class HttpConnection extends NIOConnection {
 	private static final Logger logger = LoggerFactory.getLogger(HttpConnection.class);
+
+	private static final List<HttpProcessorFactory> VERSIONS = Arrays.asList(HttpProcessor11.Factory);
 
 	private final ExecutorService executor;
 	private final ServletContextImpl ctx;
@@ -46,15 +51,16 @@ public class HttpConnection extends NIOConnection {
 	}
 
 	@Override
-	protected void onInit() {
-		p = new HttpProcessor11(getCtx(), keepAliveIdle);
-	}
-
-	@Override
 	public final void onRead() throws InterruptedException {
 		if (!exec.isDone())
 			return;
-		if (!p.init(this))
+
+		for (HttpProcessorFactory f : VERSIONS) {
+			p = f.create(this);
+			if (p != null)
+				break;
+		}
+		if (p == null)
 			return;
 		exec = executor.submit(p);
 	}
@@ -65,8 +71,7 @@ public class HttpConnection extends NIOConnection {
 
 	private void cleanup() {
 		exec.cancel(true);
-		p.close();
-		p = new HttpProcessor11(getCtx(), keepAliveIdle);
+		p = null;
 		pendingRead.clear();
 	}
 
@@ -127,4 +132,7 @@ public class HttpConnection extends NIOConnection {
 		return ctx;
 	}
 
+	public int getkeepAlive() {
+		return keepAliveIdle;
+	}
 }
