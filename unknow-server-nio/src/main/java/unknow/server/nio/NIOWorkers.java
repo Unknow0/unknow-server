@@ -16,8 +16,8 @@ public interface NIOWorkers {
 	 * 
 	 * @param socket  the socket to register
 	 * @param pool the connection factory
-	 * @throws IOException
-	 * @throws InterruptedException 
+	 * @throws IOException on ioexception
+	 * @throws InterruptedException  on interrupt
 	 */
 	void register(SocketChannel socket, Supplier<NIOConnection> pool) throws IOException, InterruptedException;
 
@@ -45,6 +45,7 @@ public interface NIOWorkers {
 		private final NIOWorker[] w;
 		private int o;
 
+		/** @param workers the workers */
 		public RoundRobin(NIOWorker[] workers) {
 			this.w = workers;
 			this.o = 0;

@@ -40,7 +40,8 @@ public class HttpConnection extends NIOConnection {
 
 	/**
 	 * create new RequestBuilder
-	 * @param pool 
+	 * @param executor the executor
+	 * @param ctx the servlet context
 	 */
 	protected HttpConnection(ExecutorService executor, ServletContextImpl ctx, int keepAliveIdle) {
 		this.executor = executor;
@@ -85,7 +86,7 @@ public class HttpConnection extends NIOConnection {
 		if (!exec.isDone())
 			return false;
 
-		if (keepAliveIdle > 0) {
+		if (pendingWrite.isEmpty() && keepAliveIdle > 0) {
 			long e = now - keepAliveIdle;
 			if (lastRead() <= e && lastWrite() <= e)
 				return true;

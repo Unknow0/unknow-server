@@ -32,7 +32,6 @@ public class PathTree {
 	 * 
 	 * @param req the request
 	 * @return the chain
-	 * @throws InterruptedException
 	 */
 	public FilterChain find(ServletRequestImpl req) {
 		if (req.getPaths().isEmpty()) {
@@ -117,7 +116,7 @@ public class PathTree {
 	 * 
 	 * @param a one
 	 * @param b two
-	 * @return -1,1 or 0 if a <,> or = to b
+	 * @return -1,1 or 0
 	 */
 	public static int compare(byte[] a, byte[] b) {
 		int ai = a.length;
@@ -137,7 +136,7 @@ public class PathTree {
 	 * @param b two
 	 * @param o start of the part in the buffer
 	 * @param e end of the part
-	 * @return -1,1 or 0 if a <,> or = to b
+	 * @return -1,1 or 0
 	 * @throws InterruptedException
 	 */
 	public static int compare(byte[] a, Buffers b, int o, int e) throws InterruptedException {
@@ -156,7 +155,7 @@ public class PathTree {
 	 * 
 	 * @param a one
 	 * @param b two
-	 * @return -1,1 or 0 if a <,> or = to b
+	 * @return -1,1 or 0
 	 */
 	public static int compare(String a, String b) {
 		return compare(a, b, -1);
@@ -168,7 +167,7 @@ public class PathTree {
 	 * @param a   one
 	 * @param b   two
 	 * @param max max number of char to compare
-	 * @return -1,1 or 0 if a <,> or = to b
+	 * @return -1,1 or 0
 	 */
 	public static int compare(String a, String b, int max) {
 		if (max == 0)

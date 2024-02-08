@@ -22,11 +22,10 @@ public class XmlElement {
 
 	/**
 	 * create new XmlElement
-	 * @param xmlLoader 
 	 * 
-	 * @param qname
-	 * @param getter
-	 * @param setter
+	 * @param qname the name
+	 * @param b the property
+	 * @param xmlType xmlType builder
 	 */
 	public XmlElement(QName qname, BeanProperty b, Supplier<XmlType> xmlType) {
 		this.qname = qname;

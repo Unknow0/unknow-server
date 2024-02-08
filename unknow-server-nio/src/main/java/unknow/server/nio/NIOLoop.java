@@ -24,6 +24,12 @@ public class NIOLoop implements Runnable {
 	/** the selector */
 	protected final Selector selector;
 
+	/**
+	 * create new loop
+	 * @param name the thread name
+	 * @param timeout selection timeout
+	 * @throws IOException on ioexception
+	 */
 	public NIOLoop(String name, long timeout) throws IOException {
 		this.t = new Thread(this, name);
 		this.timeout = timeout;
@@ -120,8 +126,8 @@ public class NIOLoop implements Runnable {
 	 * call for each selected key
 	 * 
 	 * @param key the selected key
-	 * @throws IOException
-	 * @throws InterruptedException
+	 * @throws IOException on ioexception
+	 * @throws InterruptedException on interrupt
 	 */
 	@SuppressWarnings("unused")
 	protected void selected(SelectionKey key) throws IOException, InterruptedException { // for override
@@ -131,7 +137,7 @@ public class NIOLoop implements Runnable {
 	 * process after each selection loop
 	 * 
 	 * @param close true if we are closing
-	 * @throws InterruptedException
+	 * @throws InterruptedException on interrupt
 	 */
 	@SuppressWarnings("unused")
 	protected void onSelect(boolean close) throws InterruptedException { // for override

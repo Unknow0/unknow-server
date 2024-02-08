@@ -32,7 +32,7 @@ public class NIOServer extends NIOLoop {
 	 * @param workers  workers handler
 	 * @param listener listener
 	 * 
-	 * @throws IOException
+	 * @throws IOException on ioException
 	 */
 	public NIOServer(NIOWorkers workers, NIOServerListener listener) throws IOException {
 		super("NIOServer", 0);
@@ -43,9 +43,9 @@ public class NIOServer extends NIOLoop {
 	/**
 	 * bind the server on an address
 	 * 
-	 * @param a
-	 * @param handler
-	 * @throws IOException
+	 * @param a the address to bind to
+	 * @param s factory for the connection 
+	 * @throws IOException on ioException
 	 */
 	@SuppressWarnings("resource")
 	public void bind(SocketAddress a, Supplier<? extends NIOConnection> s) throws IOException {

@@ -23,6 +23,7 @@ public class ObjectArrayMap<K, V> implements Map<K, V> {
 
 	/**
 	 * create an empty array map
+	 * @param cmp the key's comparator
 	 */
 	@SuppressWarnings("unchecked")
 	public ObjectArrayMap(Comparator<K> cmp) {
@@ -34,6 +35,9 @@ public class ObjectArrayMap<K, V> implements Map<K, V> {
 
 	/**
 	 * create a new arrayMap with these key/value /!\ key should already be sorted
+	 * @param key the keys
+	 * @param value the values
+	 * @param cmp the key's comparator
 	 */
 	public ObjectArrayMap(K[] key, V[] value, Comparator<K> cmp) {
 		if (key.length != value.length)
@@ -51,6 +55,7 @@ public class ObjectArrayMap<K, V> implements Map<K, V> {
 		return i < 0 ? null : value[i];
 	}
 
+	/** @return the keys */
 	public Enumeration<K> keys() {
 		return new E();
 	}
@@ -74,6 +79,12 @@ public class ObjectArrayMap<K, V> implements Map<K, V> {
 		return old;
 	}
 
+	/**
+	 * put a value only if not present
+	 * @param name the key
+	 * @param o the value
+	 * @return true if the value was added
+	 */
 	public boolean putOnce(K name, V o) {
 		int i = Arrays.binarySearch(key, 0, len, name, cmp);
 		if (i >= 0)

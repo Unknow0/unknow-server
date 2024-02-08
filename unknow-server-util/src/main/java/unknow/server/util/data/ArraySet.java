@@ -16,10 +16,18 @@ public class ArraySet<T extends Comparable<T>> implements Set<T> {
 	private static final Comparable<?>[] EMPTY = new Comparable[0];
 	private final T[] data;
 
+	/**
+	 * create a new array set
+	 * @param data the initial data
+	 */
 	public ArraySet(T[] data) {
 		this(Arrays.asList(data));
 	}
 
+	/**
+	 * create a new array set
+	 * @param data the initial data
+	 */
 	@SuppressWarnings("unchecked")
 	public ArraySet(Collection<T> data) {
 		if (!(data instanceof Set))
