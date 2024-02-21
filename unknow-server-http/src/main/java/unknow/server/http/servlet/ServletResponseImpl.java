@@ -28,6 +28,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import unknow.server.http.HttpConnection;
 import unknow.server.http.HttpError;
 import unknow.server.http.servlet.out.ChunckedOutputStream;
+import unknow.server.http.servlet.out.EmptyStream;
 import unknow.server.http.servlet.out.LengthOutputStream;
 import unknow.server.http.servlet.out.Output;
 import unknow.server.http.servlet.out.ServletWriter;
@@ -220,6 +221,8 @@ public class ServletResponseImpl implements HttpServletResponse {
 	private <T extends ServletOutputStream & Output> T createStream() {
 		if (contentLength < 0)
 			return (T) new ChunckedOutputStream(p.getOut(), this, bufferSize);
+		if (contentLength == 0)
+			return (T) EmptyStream.INSTANCE;
 		return (T) new LengthOutputStream(p.getOut(), this, contentLength);
 	}
 

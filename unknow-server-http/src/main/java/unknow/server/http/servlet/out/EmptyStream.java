@@ -46,6 +46,19 @@ public class EmptyStream extends ServletOutputStream implements Output {
 	}
 
 	@Override
-	public void write(int b) throws IOException { // OK
+	public void write(int b) throws IOException {
+		throw new IOException("empty stream");
+	}
+
+	@Override
+	public void write(byte[] b) throws IOException {
+		if (b.length > 0)
+			throw new IOException("empty stream");
+	}
+
+	@Override
+	public void write(byte[] b, int off, int len) throws IOException {
+		if (len > 0)
+			throw new IOException("empty stream");
 	}
 }
