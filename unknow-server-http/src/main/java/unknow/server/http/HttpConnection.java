@@ -30,8 +30,8 @@ public class HttpConnection extends NIOConnection {
 	private Future<?> exec = CompletableFuture.completedFuture(null);
 	private HttpProcessor p;
 
-	protected final ServletResponseImpl res;
-	protected final ServletRequestImpl req;
+	protected ServletResponseImpl res;
+	protected ServletRequestImpl req;
 
 	/**
 	 * create new RequestBuilder
@@ -42,8 +42,6 @@ public class HttpConnection extends NIOConnection {
 		this.executor = executor;
 		this.keepAliveIdle = keepAliveIdle;
 		this.ctx = ctx;
-		this.res = new ServletResponseImpl(this);
-		this.req = new ServletRequestImpl(this, DispatcherType.REQUEST);
 	}
 
 	@Override
@@ -57,6 +55,8 @@ public class HttpConnection extends NIOConnection {
 			return;
 		if (!p.init(this))
 			return;
+		res = new ServletResponseImpl(this);
+		req = new ServletRequestImpl(this, DispatcherType.REQUEST);
 		exec = executor.submit(p);
 	}
 
