@@ -234,7 +234,7 @@ public class WsdlBuilder {
 			out.writeAttribute("type", name(e.xmlType().name()));
 			out.writeEndElement();
 		}
-		if (o.getElements() == null && o.getValue() != null) {
+		if (!o.hasElements() && o.getValue() != null) {
 			out.writeEndElement();
 			out.writeEndElement();
 		}
