@@ -64,7 +64,7 @@ xml_parse()
 [ "$(http_code "/missing")" = "404" ] || die 'get /missing'
 
 ## validate webservice
-[ "$(post broken)" = '500' ] || die 'Webservice broken'
+[ "$(post xml/broken_req.xml)" = '500' ] || die 'Webservice broken'
 xmllint --format out.xml | grep -q '<faultstring>' || die 'Webservice broken content'
 
 [ "$(post xml/bare_req.xml)" = '200' ] || die 'webservice bare'

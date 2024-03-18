@@ -26,7 +26,6 @@ import java.util.TreeSet;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import org.apache.maven.api.plugin.MojoException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -296,12 +295,12 @@ public class JaxrsModel {
 		if (method == null)
 			method = defaultMethod;
 		if (method == null)
-			throw new MojoException("no method mapped on " + errorName);
+			throw new RuntimeException("no method mapped on " + errorName);
 		List<JaxrsParam<?>> params = new ArrayList<>();
 		for (ParamModel<MethodModel> param : m.parameters()) {
 			List<AnnotationModel> l = param.annotations().stream().filter(v -> JARXS_PARAM.contains(v.name())).collect(Collectors.toList());
 			if (l.size() > 1)
-				throw new MojoException("Duplicate parameter annotation on " + errorName + " " + param.name());
+				throw new RuntimeException("Duplicate parameter annotation on " + errorName + " " + param.name());
 			params.add(l.isEmpty() ? new JaxrsBodyParam<>(param) : buildParam(param, l.get(0)));
 		}
 
@@ -364,11 +363,11 @@ public class JaxrsModel {
 				if (l.isEmpty())
 					continue;
 				if (l.size() > 1)
-					throw new MojoException("Duplicate parameter annotation on " + f.parent() + "." + f.name());
+					throw new RuntimeException("Duplicate parameter annotation on " + f.parent() + "." + f.name());
 
 				Optional<MethodModel> s = getSetter(cl, f.name(), f.type());
 				if (!f.isPublic() && s.isEmpty())
-					throw new MojoException("Can't find setter for " + f + " in " + cl);
+					throw new RuntimeException("Can't find setter for " + f + " in " + cl);
 				params.add(new JaxrsBeanFieldParam(buildParam(f, l.get(0)), f, s.orElse(null)));
 				s.ifPresent(setters::add);
 			}
@@ -379,12 +378,12 @@ public class JaxrsModel {
 				if (l.isEmpty())
 					continue;
 				if (l.size() > 1)
-					throw new MojoException("Duplicate parameter annotation on " + m.parent() + "." + m.name());
+					throw new RuntimeException("Duplicate parameter annotation on " + m.parent() + "." + m.name());
 				String n = m.name();
 				if (n.startsWith("get")) {
-					m = getSetter(cl, n.substring(3), m.type()).orElseThrow(() -> new MojoException("Can't find setter for " + n + " in " + cl));
+					m = getSetter(cl, n.substring(3), m.type()).orElseThrow(() -> new RuntimeException("Can't find setter for " + n + " in " + cl));
 				} else if (!n.startsWith("set")) {
-					m = getSetter(cl, n, m.type()).orElseThrow(() -> new MojoException("Can't find setter for " + n + " in " + cl));
+					m = getSetter(cl, n, m.type()).orElseThrow(() -> new RuntimeException("Can't find setter for " + n + " in " + cl));
 				}
 
 				setters.add(m);
@@ -409,7 +408,7 @@ public class JaxrsModel {
 		if (MatrixParam.class.getName().equals(a.name()))
 			return new JaxrsMatrixParam<>(p, a.value().filter(v -> v.isSet()).map(v -> v.asLiteral()).orElse(""));
 
-		throw new MojoException("Unknow annotation " + a);
+		throw new RuntimeException("Unknow annotation " + a);
 	}
 
 	private void processParamConvert(TypeModel t) {
@@ -440,14 +439,14 @@ public class JaxrsModel {
 		for (AnnotationModel a : v.annotations()) {
 			if (HttpMethod.class.getName().equals(a.name())) {
 				if (m != null)
-					throw new MojoException("Duplicate mapping on " + name);
+					throw new RuntimeException("Duplicate mapping on " + name);
 				m = a.value().filter(n -> n.isSet()).map(n -> n.asLiteral()).orElse(null);
 				continue;
 			}
 			Optional<AnnotationModel> o = loader.get(a.name()).asClass().annotation(HttpMethod.class);
 			if (o.isPresent()) {
 				if (m != null)
-					throw new MojoException("Duplicate mapping on " + name);
+					throw new RuntimeException("Duplicate mapping on " + name);
 				m = o.flatMap(n -> n.value()).filter(n -> n.isSet()).map(n -> n.asLiteral()).orElse(null);
 			}
 		}
