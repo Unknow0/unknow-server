@@ -84,7 +84,6 @@ public class ServletResponseImpl implements HttpServletResponse {
 
 	public void sendError(int sc, Throwable t, String msg) throws IOException {
 		reset();
-		status = sc;
 		ServletManager manager = co.ctx().getServletManager();
 		FilterChain f = manager.getError(sc, t);
 		if (f != null) {
@@ -105,6 +104,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 				logger.error("failed to send error", e);
 			}
 		}
+		status = sc;
 		try (PrintWriter w = getWriter()) {
 			w.append("<html><body><p>Error ").append(Integer.toString(sc)).append(" ").append(msg).write("</p></body></html>");
 		}

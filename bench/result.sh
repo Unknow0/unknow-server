@@ -32,7 +32,7 @@ parse()
 	done < <(sort -t , -r -k 3,1n "$1" | sort -t , -k 3 -u)
 	}
 
-for i in $1/*; do echo $i; time parse "$i"; done
+for i in $1/*; do parse "$i"; done
 
 echo
 echo 'throughput:'

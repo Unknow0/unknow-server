@@ -125,6 +125,7 @@ public class Http11Worker extends HttpWorker {
 		if (res.getHeader("content-type") == null && res.getContentType() != null) {
 			out.write(CONTENT_TYPE);
 			writeString(out, res.getContentType());
+			out.write(CRLF);
 		}
 
 		@SuppressWarnings("resource")
@@ -133,8 +134,7 @@ public class Http11Worker extends HttpWorker {
 			out.write(CONTENT_LENGTH);
 			out.write(Long.toString(res.getContentLength()).getBytes(StandardCharsets.US_ASCII));
 			out.write(CRLF);
-		}
-		if (rawStream instanceof ChunckedOutputStream)
+		} else if (rawStream instanceof ChunckedOutputStream)
 			out.write(CHUNKED);
 		else
 			out.write(CONTENT_LENGTH0);
