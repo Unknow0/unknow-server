@@ -65,8 +65,10 @@ public final class ServletResourceStatic extends HttpServlet {
 
 		if (!content)
 			return;
-		ServletOutputStream os = resp.getOutputStream();
-		os.write(data);
+
+		try (ServletOutputStream os = resp.getOutputStream()) {
+			os.write(data);
+		}
 	}
 
 	@Override

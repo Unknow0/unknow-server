@@ -182,9 +182,8 @@ public class Http11Worker extends HttpWorker {
 			out.flush();
 		}
 
-		close = keepAliveIdle == 0 || !"keep-alive".equals(req.getHeader("connection"));
-		if (!close)
-			res.setHeader("connection", "keep-alive");
+		close = keepAliveIdle == 0 || !"keep-alive".equalsIgnoreCase(req.getHeader("connection"));
+		res.setHeader("connection", close ? "close" : "keep-alive");
 	}
 
 	@Override

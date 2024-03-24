@@ -167,6 +167,7 @@ public abstract class AbstractGeneratorMojo extends AbstractMojo {
 	}
 
 	protected void process(TypeConsumer c) throws MojoExecutionException, MojoFailureException {
+
 		SrcWalker w = new SrcWalker();
 		for (String s : project.getCompileSourceRoots())
 			w.walk(s);
@@ -178,8 +179,8 @@ public abstract class AbstractGeneratorMojo extends AbstractMojo {
 		try {
 			for (String id : artifacts)
 				parseArtifact(id, c);
-		} catch (ArtifactResolutionException e) {
-			throw new MojoFailureException(e);
+		} catch (Exception e) {
+			throw new MojoExecutionException(e);
 		}
 	}
 
