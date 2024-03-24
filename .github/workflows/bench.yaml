@@ -103,5 +103,5 @@ jobs:
         merge-multiple: true
     - name: result
       run: |
-	  	cat bench.log
-	  	bash bench/result.sh out
+        cat bench.log
+        bash bench/result.sh out
