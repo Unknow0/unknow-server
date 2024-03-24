@@ -144,27 +144,26 @@ public class Http11Worker extends HttpWorker {
 		out.write(CRLF);
 	}
 
-	@SuppressWarnings("resource")
-	@Override
-	public void sendError(HttpError e, Throwable t, String msg) throws IOException {
-		Out out = co.getOut();
-		if (msg == null) {
-			out.write(e.empty());
-			return;
-		}
-
-		out.write(e.encoded);
-		byte[] bytes = msg.getBytes(StandardCharsets.UTF_8);
-
-		out.write(CONTENT_HTML);
-		out.write(CONTENT_LENGTH);
-		out.write(Integer.toString(bytes.length + ERROR_START.length + ERROR_END.length).getBytes(StandardCharsets.US_ASCII));
-		out.write(CRLF);
-		out.write(CRLF);
-		out.write(ERROR_START);
-		out.write(bytes);
-		out.write(ERROR_END);
-	}
+//	@SuppressWarnings("resource")
+//	public void sendError(HttpError e, Throwable t, String msg) throws IOException {
+//		Out out = co.getOut();
+//		if (msg == null) {
+//			out.write(e.empty());
+//			return;
+//		}
+//
+//		out.write(e.encoded);
+//		byte[] bytes = msg.getBytes(StandardCharsets.UTF_8);
+//
+//		out.write(CONTENT_HTML);
+//		out.write(CONTENT_LENGTH);
+//		out.write(Integer.toString(bytes.length + ERROR_START.length + ERROR_END.length).getBytes(StandardCharsets.US_ASCII));
+//		out.write(CRLF);
+//		out.write(CRLF);
+//		out.write(ERROR_START);
+//		out.write(bytes);
+//		out.write(ERROR_END);
+//	}
 
 	@SuppressWarnings("resource")
 	@Override

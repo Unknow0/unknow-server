@@ -165,7 +165,7 @@ public final class ServletRequestImpl implements HttpServletRequest {
 	 * @throws IOException
 	 */
 	private void parseContentParam(Map<String, List<String>> p) throws IOException {
-		try (BufferedReader r = getReader()) {
+		try (BufferedReader r = new BufferedReader(new InputStreamReader(co.createInput(), getCharacterEncoding()))) {
 			int c;
 			String key;
 			StringBuilder sb = new StringBuilder();
@@ -180,6 +180,7 @@ public final class ServletRequestImpl implements HttpServletRequest {
 				sb.setLength(0);
 			} while (c != -1);
 		}
+		contentLength = 0;
 	}
 
 	private int readParam(StringBuilder sb, Reader r, boolean key) throws IOException {

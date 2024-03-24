@@ -330,6 +330,8 @@ public class Buffers {
 				awaitContent();
 			if (len == 0 || head == null)
 				return;
+			if (l == -1)
+				l = len;
 
 			if (l >= len) { // move all content
 				buf.append(head);
@@ -390,6 +392,8 @@ public class Buffers {
 				awaitContent();
 			if (len == 0 || head == null)
 				return;
+			if (l == -1)
+				l = len;
 
 			Chunk last = null;
 			Chunk c = head;

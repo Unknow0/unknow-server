@@ -19,7 +19,4 @@ public interface HttpAdapter {
 	AbstractServletOutput createOutput();
 
 	void commit() throws IOException;
-
-	void sendError(HttpError e, Throwable t, String msg) throws IOException;
-
 }

@@ -83,7 +83,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 	}
 
 	public void sendError(int sc, Throwable t, String msg) throws IOException {
-		checkCommited();
+		reset();
 		status = sc;
 		ServletManager manager = co.ctx().getServletManager();
 		FilterChain f = manager.getError(sc, t);
@@ -98,7 +98,6 @@ public class ServletResponseImpl implements HttpServletResponse {
 			}
 			r.setAttribute("javax.servlet.error.request_uri", r.getRequestURI());
 			r.setAttribute("javax.servlet.error.servlet_name", "");
-			reset();
 			try {
 				f.doFilter(r, this);
 				return;
@@ -106,7 +105,9 @@ public class ServletResponseImpl implements HttpServletResponse {
 				logger.error("failed to send error", e);
 			}
 		}
-		co.sendError(HttpError.fromStatus(sc), t, msg);
+		try (PrintWriter w = getWriter()) {
+			w.append("<html><body><p>Error ").append(Integer.toString(sc)).append(" ").append(msg).write("</p></body></html>");
+		}
 	}
 
 	public void close() throws IOException {
@@ -154,6 +155,8 @@ public class ServletResponseImpl implements HttpServletResponse {
 
 	@Override
 	public String getContentType() {
+		if (type == null)
+			return null;
 		if (!type.contains("charset="))
 			type += "; charset=" + getCharacterEncoding();
 		return type;
@@ -168,7 +171,6 @@ public class ServletResponseImpl implements HttpServletResponse {
 		return stream;
 	}
 
-	@SuppressWarnings({ "rawtypes", "unchecked", "resource" })
 	@Override
 	public PrintWriter getWriter() throws IOException {
 		if (writer != null)

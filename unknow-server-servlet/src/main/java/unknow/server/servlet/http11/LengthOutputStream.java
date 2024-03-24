@@ -65,6 +65,7 @@ public class LengthOutputStream extends AbstractServletOutput {
 
 	@Override
 	public void flush() throws IOException {
+		res.commit();
 		try {
 			buffer.read(out, -1, false);
 		} catch (@SuppressWarnings("unused") InterruptedException e) {
