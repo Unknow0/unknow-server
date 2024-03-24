@@ -3,6 +3,8 @@
  */
 package unknow.server.util.io;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
@@ -11,7 +13,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * @author unknow
  */
 public class Buffers {
-	private static final int BUF_LEN = 4096;
+	public static final int BUF_LEN = 4096;
 	private final ReentrantLock lock = new ReentrantLock();
 	private final Condition cond = lock.newCondition();
 
@@ -47,7 +49,7 @@ public class Buffers {
 				tail.next = new Chunk();
 				tail = tail.next;
 			}
-			tail.b[tail.o + tail.l] = (byte) b;
+			tail.b[tail.o + tail.l] = (byte) (b & 0xFF);
 			tail.l++;
 			len++;
 			cond.signalAll();
@@ -191,7 +193,7 @@ public class Buffers {
 				awaitContent();
 			if (len == 0)
 				return -1;
-			int r = head.b[head.o++];
+			int r = head.b[head.o++] & 0xFF;
 			if (--len == 0)
 				tail = null;
 			if (--head.l == 0)
@@ -315,8 +317,8 @@ public class Buffers {
 	 * read a number amount of byte into the buffers
 	 * 
 	 * @param buf  where to read
-	 * @param wait if true wait for data
 	 * @param l    number of byte to read
+	 * @param wait if true wait for data
 	 * @throws InterruptedException on interrupt
 	 */
 	public void read(Buffers buf, int l, boolean wait) throws InterruptedException {
@@ -365,6 +367,53 @@ public class Buffers {
 			buf.append(h);
 
 			head = c;
+		} finally {
+			lock.unlock();
+		}
+	}
+
+	/**
+	 * read a number amount of byte into the buffers
+	 * 
+	 * @param out  where to read
+	 * @param l    number of byte to read
+	 * @param wait if true wait for data
+	 * @throws InterruptedException on interrupt
+	 * @throws IOException 
+	 */
+	public void read(OutputStream out, int l, boolean wait) throws InterruptedException, IOException {
+		if (l == 0)
+			return;
+		lock.lockInterruptibly();
+		try {
+			if (wait)
+				awaitContent();
+			if (len == 0 || head == null)
+				return;
+
+			Chunk last = null;
+			Chunk c = head;
+			// read whole chunk
+			while (c != null && l >= c.l) {
+				out.write(c.b, c.o, c.l);
+				l -= c.l;
+				len -= c.l;
+				last = c;
+				c = c.next;
+			}
+			if (last != null)
+				last.next = null;
+
+			if (c != null && l > 0) {
+				out.write(c.b, c.o, l);
+				c.o += l;
+				c.l -= l;
+				len -= l;
+				head = c;
+			}
+			head = c;
+			if (c == null)
+				tail = null;
 		} finally {
 			lock.unlock();
 		}
@@ -485,7 +534,7 @@ public class Buffers {
 				if (b == null)
 					return -1;
 			}
-			return b.b[b.o + off];
+			return b.b[b.o + off] & 0xFF;
 		} finally {
 			lock.unlock();
 		}

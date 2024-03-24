@@ -156,6 +156,14 @@ public class NIOConnection {
 		key.interestOps(pendingWrite.isEmpty() ? SelectionKey.OP_READ : SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 	}
 
+	@SuppressWarnings("resource")
+	public void flush() {
+		if (pendingWrite.isEmpty())
+			return;
+		toggleKeyOps();
+		key.selector().wakeup();
+	}
+
 	/**
 	 * timestamp of the last read
 	 * 

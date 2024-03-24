@@ -64,10 +64,6 @@ public class IntArrayMap<T> {
 			values[i] = value;
 			return null;
 		}
-		if (i < len) {
-			System.arraycopy(keys, i, keys, i + 1, len - i);
-			System.arraycopy(values, i, values, i + 1, len - i);
-		}
 		ensure(++len);
 		i = -i - 1;
 		T old = values[i];
