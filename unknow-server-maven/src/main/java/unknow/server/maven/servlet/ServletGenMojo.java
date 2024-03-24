@@ -33,11 +33,6 @@ import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.ServletContainerInitializer;
 import unknow.sax.SaxParser;
-import unknow.server.http.AbstractHttpServer;
-import unknow.server.http.AccessLogFilter;
-import unknow.server.http.servlet.ServletResource;
-import unknow.server.http.servlet.ServletResourceStatic;
-import unknow.server.http.utils.Resource;
 import unknow.server.maven.AbstractGeneratorMojo;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.model.ModelLoader;
@@ -52,6 +47,11 @@ import unknow.server.maven.servlet.builder.Main;
 import unknow.server.maven.servlet.descriptor.Descriptor;
 import unknow.server.maven.servlet.descriptor.SD;
 import unknow.server.maven.servlet.sax.Context;
+import unknow.server.servlet.AbstractHttpServer;
+import unknow.server.servlet.AccessLogFilter;
+import unknow.server.servlet.utils.Resource;
+import unknow.server.servlet.utils.ServletResource;
+import unknow.server.servlet.utils.ServletResourceStatic;
 
 /**
  * @author unknow
@@ -88,7 +88,7 @@ public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderCont
 	@Parameter(defaultValue = "4096")
 	private int staticResourceSize;
 
-	@Parameter(defaultValue = "unknow.server.http.servlet.session.NoSessionFactory")
+	@Parameter(defaultValue = "unknow.server.servlet.impl.session.NoSessionFactory")
 	private String sessionFactory;
 
 	@Parameter(defaultValue = "false")

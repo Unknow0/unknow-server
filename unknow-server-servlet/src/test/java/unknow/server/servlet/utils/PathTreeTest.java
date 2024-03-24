@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -18,10 +17,9 @@ import org.mockito.Mockito;
 
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.FilterChain;
-import unknow.server.servlet.HttpConnection;
+import unknow.server.servlet.HttpAdapter;
 import unknow.server.servlet.impl.ServletContextImpl;
 import unknow.server.servlet.impl.ServletRequestImpl;
-import unknow.server.servlet.utils.PathTree;
 import unknow.server.servlet.utils.PathTree.Node;
 import unknow.server.servlet.utils.PathTree.PartNode;
 
@@ -36,9 +34,11 @@ public class PathTreeTest {
 	public void init() {
 		path = new ArrayList<>();
 		ServletContextImpl ctx = new ServletContextImpl("", "", null, null, null, null, null, null);
-		HttpConnection p = mock(HttpConnection.class, Mockito.withSettings().useConstructor(null, ctx, 0));
+		HttpAdapter p = mock(HttpAdapter.class);
+		when(p.ctx()).thenReturn(ctx);
+
 		mock = mock(ServletRequestImpl.class, Mockito.withSettings().useConstructor(p, DispatcherType.REQUEST));
-		Mockito.when(mock.getPaths()).thenReturn(path);
+		when(mock.getPaths()).thenReturn(path);
 	}
 
 	@Test

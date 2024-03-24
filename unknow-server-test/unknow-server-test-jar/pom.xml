@@ -101,7 +101,7 @@
 		</dependency>
 		<dependency>
 			<groupId>${project.groupId}</groupId>
-			<artifactId>unknow-server-http</artifactId>
+			<artifactId>unknow-server-servlet</artifactId>
 			<version>${project.version}</version>
 		</dependency>
 		<dependency>

@@ -23,11 +23,11 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpSessionAttributeListener;
 import jakarta.servlet.http.HttpSessionIdListener;
 import jakarta.servlet.http.HttpSessionListener;
-import unknow.server.http.servlet.ServletCookieConfigImpl;
-import unknow.server.http.utils.Resource;
 import unknow.server.maven.AbstractGeneratorMojo.TypeConsumer;
 import unknow.server.maven.model.AnnotationModel;
 import unknow.server.maven.model.TypeModel;
+import unknow.server.servlet.impl.ServletCookieConfigImpl;
+import unknow.server.servlet.utils.Resource;
 
 /**
  * @author unknow
