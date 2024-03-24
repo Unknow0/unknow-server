@@ -5,7 +5,6 @@ import java.util.concurrent.Future;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import unknow.server.servlet.Decode;
 import unknow.server.servlet.HttpConnection;
 import unknow.server.servlet.HttpProcessor;
 import unknow.server.util.io.BuffersUtils;
@@ -18,18 +17,11 @@ public class Http11Processor implements HttpProcessor {
 	private static final int MAX_START_SIZE = 8192;
 
 	private final HttpConnection co;
-	private final int keepAliveIdle;
-	private final StringBuilder sb;
-	private final Decode decode;
 
 	private volatile Future<?> exec;
 
 	public Http11Processor(HttpConnection co) {
 		this.co = co;
-		this.keepAliveIdle = co.getkeepAlive();
-
-		sb = new StringBuilder();
-		decode = new Decode(sb);
 	}
 
 	@Override
@@ -40,12 +32,13 @@ public class Http11Processor implements HttpProcessor {
 
 	@Override
 	public final boolean isClosed() {
-		return exec.isDone();
+		return exec == null || exec.isDone();
 	}
 
 	@Override
 	public final void close() {
-		exec.cancel(true);
+		if (exec != null)
+			exec.cancel(true);
 	}
 
 	public static final HttpProcessorFactory Factory = co -> {
