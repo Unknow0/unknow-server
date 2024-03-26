@@ -99,9 +99,8 @@ public class NIOLoop implements Runnable {
 	}
 
 	private final void select(long timeout, boolean close) throws IOException, InterruptedException {
-		int l = selector.select(timeout);
 		onSelect(close);
-		if (l == 0)
+		if (selector.select(timeout) == 0)
 			return;
 		Iterator<SelectionKey> it = selector.selectedKeys().iterator();
 
