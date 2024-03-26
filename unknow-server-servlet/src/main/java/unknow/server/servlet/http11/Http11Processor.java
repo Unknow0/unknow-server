@@ -26,7 +26,7 @@ public class Http11Processor implements HttpProcessor {
 
 	@Override
 	public final void process() { // nothing to do
-		if (exec == null)
+		if (exec == null || exec.isDone())
 			exec = co.submit(new Http11Worker(co));
 	}
 
