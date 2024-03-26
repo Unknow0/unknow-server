@@ -1,5 +1,6 @@
 package unknow.server.servlet.http11;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
 import org.slf4j.Logger;
@@ -18,7 +19,7 @@ public class Http11Processor implements HttpProcessor {
 
 	private final HttpConnection co;
 
-	private volatile Future<?> exec;
+	private volatile Future<?> exec = CompletableFuture.completedFuture(null);
 
 	public Http11Processor(HttpConnection co) {
 		this.co = co;
@@ -26,19 +27,18 @@ public class Http11Processor implements HttpProcessor {
 
 	@Override
 	public final void process() { // nothing to do
-		if (exec == null || exec.isDone())
+		if (exec.isDone())
 			exec = co.submit(new Http11Worker(co));
 	}
 
 	@Override
 	public final boolean isClosed() {
-		return exec == null || exec.isDone();
+		return exec.isDone();
 	}
 
 	@Override
 	public final void close() {
-		if (exec != null)
-			exec.cancel(true);
+		exec.cancel(true);
 	}
 
 	public static final HttpProcessorFactory Factory = co -> {

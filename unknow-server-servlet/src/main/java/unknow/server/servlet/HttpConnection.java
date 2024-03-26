@@ -47,14 +47,12 @@ public class HttpConnection extends NIOConnection {
 
 	@Override
 	public boolean closed(long now, boolean stop) {
-		if (!pendingWrite.isEmpty())
-			return false;
-
 		if (stop)
 			return p == null || p.isClosed();
 
 		if (isClosed())
 			return true;
+
 		if (p != null && !p.isClosed())
 			return false;
 
@@ -70,8 +68,10 @@ public class HttpConnection extends NIOConnection {
 
 	@Override
 	protected final void onFree() {
-		p.close();
-		p = null;
+		if (p != null) {
+			p.close();
+			p = null;
+		}
 		pendingRead.clear();
 	}
 
