@@ -98,6 +98,7 @@ public class NIOConnection {
 	 */
 	protected final void readFrom(SocketChannel channel, ByteBuffer buf) throws InterruptedException, IOException {
 		int l;
+		lastRead = System.currentTimeMillis();
 		while (true) {
 			l = channel.read(buf);
 			if (l == -1) {

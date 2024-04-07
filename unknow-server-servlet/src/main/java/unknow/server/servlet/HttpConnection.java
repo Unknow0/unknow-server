@@ -58,8 +58,10 @@ public class HttpConnection extends NIOConnection {
 
 		if (pendingWrite.isEmpty() && keepAliveIdle > 0) {
 			long e = now - keepAliveIdle;
-			if (lastRead() <= e && lastWrite() <= e)
+			if (lastRead() <= e && lastWrite() <= e) {
+				logger.info("	keep alive idle reached");
 				return true;
+			}
 		}
 
 		// TODO check request timeout
