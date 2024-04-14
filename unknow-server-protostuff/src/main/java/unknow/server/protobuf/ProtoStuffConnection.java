@@ -80,7 +80,7 @@ public abstract class ProtoStuffConnection<T> extends NIOConnection {
 			process(m);
 		} catch (IOException e) {
 			logger.warn("", e);
-			getOut().close();
+			out.close();
 		}
 	}
 

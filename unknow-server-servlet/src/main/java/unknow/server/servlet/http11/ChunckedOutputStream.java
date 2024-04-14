@@ -33,7 +33,6 @@ public class ChunckedOutputStream extends AbstractServletOutput {
 	@Override
 	protected void afterClose() throws IOException {
 		out.write(END);
-		out.flush();
 	}
 
 	@Override

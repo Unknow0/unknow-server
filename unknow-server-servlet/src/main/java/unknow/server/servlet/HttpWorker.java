@@ -2,8 +2,6 @@ package unknow.server.servlet;
 
 import java.io.IOException;
 
-import javax.swing.plaf.metal.MetalBorders.Flush3DBorder;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,8 +35,6 @@ public abstract class HttpWorker implements Runnable, HttpAdapter {
 
 	protected abstract void doStart() throws IOException, InterruptedException;
 
-//	protected abstract void doRun() throws IOException, InterruptedException;
-
 	protected abstract void doDone();
 
 	@Override
@@ -69,6 +65,7 @@ public abstract class HttpWorker implements Runnable, HttpAdapter {
 		} finally {
 			doDone();
 			co.flush();
+			co.pendingRead.clear();
 		}
 	}
 }
