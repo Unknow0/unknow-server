@@ -154,6 +154,8 @@ public class AccessLogFilter implements Filter {
 		});
 	}
 
+	private static final ThreadLocal<StringBuilder> SB = ThreadLocal.withInitial(() -> new StringBuilder());
+
 	/** format used to log */
 	private Part[] parts;
 
@@ -169,6 +171,10 @@ public class AccessLogFilter implements Filter {
 	@Override
 	public void init(FilterConfig filterConfig) throws ServletException {
 		String f = filterConfig.getInitParameter("format");
+		if (f == null)
+			f = System.getProperty("ACCESS_LOG_FMT");
+		if (f == null)
+			f = System.getenv("ACCESS_LOG_FMT");
 		setFormat(f == null ? DEFAULT_FMT : f);
 	}
 
@@ -179,15 +185,17 @@ public class AccessLogFilter implements Filter {
 			return;
 		}
 		LocalDateTime start = LocalDateTime.now();
+
 		try {
 			chain.doFilter(request, response);
 		} finally {
 			LocalDateTime end = LocalDateTime.now();
 
-			StringBuilder sb = new StringBuilder();
+			StringBuilder sb = SB.get();
 			for (int i = 0; i < parts.length; i++)
 				parts[i].append(sb, start, end, (HttpServletRequest) request, (HttpServletResponse) response);
 			logger.info("{}", sb);
+			sb.setLength(0);
 		}
 	}
 

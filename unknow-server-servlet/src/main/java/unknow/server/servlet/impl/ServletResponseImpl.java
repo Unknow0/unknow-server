@@ -83,7 +83,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 	}
 
 	public void sendError(int sc, Throwable t, String msg) throws IOException {
-		reset();
+		reset(false);
 		ServletManager manager = co.ctx().getServletManager();
 		FilterChain f = manager.getError(sc, t);
 		if (f != null) {
@@ -224,12 +224,18 @@ public class ServletResponseImpl implements HttpServletResponse {
 
 	@Override
 	public void reset() {
+		reset(true);
+	}
+
+	public void reset(boolean clearHeader) {
 		resetBuffer();
 		status = 200;
-		List<String> list = headers.get("connection");
-		headers.clear();
-		if (list != null)
-			headers.put("connection", list);
+		if (clearHeader) {
+			List<String> list = headers.get("connection");
+			headers.clear();
+			if (list != null)
+				headers.put("connection", list);
+		}
 		stream = null;
 		writer = null;
 	}

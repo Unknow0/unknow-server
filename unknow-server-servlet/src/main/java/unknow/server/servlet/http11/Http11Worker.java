@@ -12,6 +12,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.http.Cookie;
 import unknow.server.nio.NIOConnection.Out;
@@ -20,6 +21,7 @@ import unknow.server.servlet.HttpConnection;
 import unknow.server.servlet.HttpError;
 import unknow.server.servlet.HttpWorker;
 import unknow.server.servlet.impl.ServletRequestImpl;
+import unknow.server.servlet.impl.ServletResponseImpl;
 import unknow.server.servlet.impl.in.ChunckedInputStream;
 import unknow.server.servlet.impl.in.EmptyInputStream;
 import unknow.server.servlet.impl.in.LengthInputStream;
@@ -27,7 +29,7 @@ import unknow.server.servlet.impl.out.AbstractServletOutput;
 import unknow.server.util.io.Buffers;
 import unknow.server.util.io.BuffersUtils;
 
-public class Http11Worker extends HttpWorker {
+public final class Http11Worker extends HttpWorker {
 	private static final Logger logger = LoggerFactory.getLogger(Http11Worker.class);
 
 	private static final byte[] END = new byte[] { '\r', '\n', '\r', '\n' };
@@ -165,24 +167,38 @@ public class Http11Worker extends HttpWorker {
 //		out.write(ERROR_END);
 //	}
 
+	@Override
+	public void run() {
+		doRun();
+		while (!co.pendingRead.isEmpty()) {
+			this.req = new ServletRequestImpl(this, DispatcherType.REQUEST);
+			this.res = new ServletResponseImpl(this);
+			doRun();
+		}
+	}
+
 	@SuppressWarnings("resource")
 	@Override
-	public final void doStart() throws IOException, InterruptedException {
-		boolean close = false;
-
-		Out out = co.getOut();
-		if (!fillRequest(req))
-			return;
+	public final boolean doStart() throws IOException, InterruptedException {
+		if (!fillRequest(req)) {
+			logger.warn("Failed to process request");
+			return false;
+		}
 
 		if ("100-continue".equals(req.getHeader("expect"))) {
+			Out out = co.getOut();
 			out.write(HttpError.CONTINUE.encoded);
 			out.write('\r');
 			out.write('\n');
 			out.flush();
 		}
 
-		close = keepAliveIdle == 0 || !"keep-alive".equalsIgnoreCase(req.getHeader("connection"));
-		res.setHeader("connection", close ? "close" : "keep-alive");
+		if (keepAliveIdle != 0 && "keep-alive".equalsIgnoreCase(req.getHeader("connection"))) {
+			res.setHeader("connection", "keep-alive");
+			res.setHeader("keep-alive", "timeout=" + (keepAliveIdle / 1000));
+		} else
+			res.setHeader("connection", "close");
+		return true;
 	}
 
 	@Override

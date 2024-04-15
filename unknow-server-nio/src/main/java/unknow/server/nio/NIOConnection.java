@@ -144,11 +144,11 @@ public class NIOConnection {
 			}
 
 			channel.write(buf);
-			if (buf.hasRemaining())
+			if (buf.hasRemaining()) {
+				pendingWrite.prepend(buf);
 				break;
+			}
 		}
-		if (buf.hasRemaining()) // we didn't write all
-			pendingWrite.prepend(buf);
 		toggleKeyOps();
 		onWrite();
 	}

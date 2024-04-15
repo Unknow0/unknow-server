@@ -18,8 +18,8 @@ public abstract class HttpWorker implements Runnable, HttpAdapter {
 
 	protected final HttpConnection co;
 	protected final EventManager events;
-	protected final ServletRequestImpl req;
-	protected final ServletResponseImpl res;
+	protected ServletRequestImpl req;
+	protected ServletResponseImpl res;
 
 	public HttpWorker(HttpConnection co) {
 		this.co = co;
@@ -33,18 +33,27 @@ public abstract class HttpWorker implements Runnable, HttpAdapter {
 		return co.getCtx();
 	}
 
-	protected abstract void doStart() throws IOException, InterruptedException;
+	protected abstract boolean doStart() throws IOException, InterruptedException;
 
 	protected abstract void doDone();
 
 	@Override
-	public final void run() {
+	public void run() {
+		doRun();
+	}
+
+	protected final void doRun() {
 		try {
-			doStart();
+			if (!doStart()) {
+				logger.warn("init req failed");
+				co.getOut().close();
+				return;
+			}
 			events.fireRequestInitialized(req);
 			FilterChain s = co.getCtx().getServletManager().find(req);
 			try {
 				s.doFilter(req, res);
+				co.pendingRead.clear();
 			} catch (UnavailableException e) {
 				// TODO add page with retry-after
 				res.sendError(503, e, null);
@@ -65,7 +74,6 @@ public abstract class HttpWorker implements Runnable, HttpAdapter {
 		} finally {
 			doDone();
 			co.flush();
-			co.pendingRead.clear();
 		}
 	}
 }

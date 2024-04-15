@@ -55,9 +55,9 @@ public class Http2Stream extends HttpWorker implements Http2FlowControl {
 	}
 
 	@Override
-	protected void doStart() throws IOException, InterruptedException {
+	protected boolean doStart() throws IOException, InterruptedException {
 		// TODO Auto-generated method stub
-
+		return true;
 	}
 
 	@Override

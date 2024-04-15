@@ -56,6 +56,11 @@ public class HttpConnection extends NIOConnection {
 		if (p != null && !p.isClosed())
 			return false;
 
+		if (p == null && lastRead() < now - 1000) {
+			logger.warn("	request timeout");
+			return true;
+		}
+
 		if (pendingWrite.isEmpty() && keepAliveIdle > 0) {
 			long e = now - keepAliveIdle;
 			if (lastRead() <= e && lastWrite() <= e) {
@@ -74,7 +79,6 @@ public class HttpConnection extends NIOConnection {
 			p.close();
 			p = null;
 		}
-		pendingRead.clear();
 	}
 
 	public Future<?> submit(Runnable r) {

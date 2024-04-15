@@ -28,10 +28,8 @@ parse()
 		
 	while read t a n e
 	do
-		l=end[$s:$n]
-		e=$(($t+$a ))
-		[[ -z $l || $l -lt $n ]] && end[$s:$n]=$e
-	done < <(sort -t , -r -k 3,1n "$1")
+		end[$s:$n]=$t
+	done < <(sort -t , -r -k 3,1n "$1" | sort -t , -k 3 -u)
 	}
 
 for i in $1/*.csv; do parse "$i"; done
