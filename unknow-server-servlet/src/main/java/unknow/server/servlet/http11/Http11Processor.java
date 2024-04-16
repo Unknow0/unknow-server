@@ -10,6 +10,9 @@ import unknow.server.servlet.HttpConnection;
 import unknow.server.servlet.HttpProcessor;
 import unknow.server.util.io.BuffersUtils;
 
+/**
+ * http/1.1 implementation
+ */
 public class Http11Processor implements HttpProcessor {
 	private static final Logger logger = LoggerFactory.getLogger(Http11Processor.class);
 
@@ -21,6 +24,10 @@ public class Http11Processor implements HttpProcessor {
 
 	private volatile Future<?> exec = CompletableFuture.completedFuture(null);
 
+	/**
+	 * new http11 processor
+	 * @param co the connection
+	 */
 	public Http11Processor(HttpConnection co) {
 		this.co = co;
 	}
@@ -41,6 +48,7 @@ public class Http11Processor implements HttpProcessor {
 		exec.cancel(true);
 	}
 
+	/** the processor factory */
 	public static final HttpProcessorFactory Factory = co -> {
 		if (BuffersUtils.indexOf(co.pendingRead, END, 0, MAX_START_SIZE) > 0)
 			return new Http11Processor(co);

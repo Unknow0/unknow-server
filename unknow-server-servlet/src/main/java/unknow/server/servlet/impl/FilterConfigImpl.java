@@ -42,6 +42,7 @@ public class FilterConfigImpl implements FilterConfig, FilterRegistration {
 	 * @param parameters      the init param
 	 * @param servletMappings the servlet name mappings
 	 * @param urlMappings     the url mappings
+	 * @param dispatcherTypes the allowed dispatcher types
 	 */
 	public FilterConfigImpl(String name, Filter filter, ServletContext context, ArrayMap<String> parameters, Set<String> servletMappings, Set<String> urlMappings,
 			Set<DispatcherType> dispatcherTypes) {
@@ -126,6 +127,9 @@ public class FilterConfigImpl implements FilterConfig, FilterRegistration {
 		return urlMappings;
 	}
 
+	/**
+	 * @return the allowed dispacher types
+	 */
 	public Collection<DispatcherType> getDispatcherTypes() {
 		return dispatcherTypes;
 	}

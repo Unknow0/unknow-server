@@ -33,6 +33,9 @@ public class ChunckedInputStream extends ServletInputStream {
 
 	private final StringBuilder sb = new StringBuilder();
 
+	/**
+	 * @param in raw input
+	 */
 	public ChunckedInputStream(InputStream in) {
 		this.in = in;
 	}
@@ -45,6 +48,23 @@ public class ChunckedInputStream extends ServletInputStream {
 	@Override
 	public boolean isReady() {
 		return true;
+	}
+
+	@Override
+	public long skip(long n) throws IOException {
+		long s = 0;
+
+		while (!isFinished() && n > l) {
+			s += l;
+			l = 0;
+			ensureData();
+		}
+		if (l > n) {
+			s += n;
+			o += n;
+			l -= n;
+		}
+		return s;
 	}
 
 	@Override

@@ -26,7 +26,7 @@ public class CreateContext extends Builder {
 		ctx.self().addMethod("createContext", Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL).setType(t.getClass(ServletContextImpl.class))
 				.addParameter(String.class, "vhost").addMarkerAnnotation(Override.class).createBody()
 				.addStatement(new ReturnStmt(new ObjectCreationExpr(null, t.getClass(ServletContextImpl.class),
-						Utils.list(Utils.text(ctx.descriptor().name), new NameExpr("vhost"), Utils.mapString(ctx.descriptor().param, t), Names.SERVLETS, Names.EVENTS,
+						Utils.list(Utils.text(ctx.descriptor().name), new NameExpr("vhost"), Utils.mapString(ctx.descriptor().param, t), Names.EVENTS,
 								new ObjectCreationExpr(null, t.getClass(ctx.sessionFactory()), Utils.list()), Utils.mapString(ctx.descriptor().localeMapping, t),
 								Utils.mapString(ctx.descriptor().mimeTypes, t)))));
 	}

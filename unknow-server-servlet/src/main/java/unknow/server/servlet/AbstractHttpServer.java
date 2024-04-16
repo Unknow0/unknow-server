@@ -37,7 +37,7 @@ public abstract class AbstractHttpServer extends NIOServerBuilder {
 	/** the servlet context */
 	protected ServletContextImpl ctx;
 	/** the servlet manager */
-	protected ServletManager servlets;
+	protected ServletManager manager;
 	/** the events */
 	protected EventManager events;
 
@@ -78,12 +78,12 @@ public abstract class AbstractHttpServer extends NIOServerBuilder {
 		if (value == null)
 			value = address.getHostString();
 
-		servlets = createServletManager();
+		manager = createServletManager();
 		events = createEventManager();
 		ctx = createContext(value);
 
 		loadInitializer();
-		servlets.initialize(ctx, createServlets(), createFilters());
+		manager.initialize(ctx, createServlets(), createFilters());
 		events.fireContextInitialized(ctx);
 
 		AtomicInteger i = new AtomicInteger();
@@ -94,7 +94,7 @@ public abstract class AbstractHttpServer extends NIOServerBuilder {
 					return t;
 				});
 		int keepAliveIdle = parseInt(cli, keepAlive, -1);
-		server.bind(address, () -> new HttpConnection(executor, ctx, keepAliveIdle));
+		server.bind(address, () -> new HttpConnection(executor, ctx, manager, events, keepAliveIdle));
 	}
 
 	/**
@@ -120,7 +120,7 @@ public abstract class AbstractHttpServer extends NIOServerBuilder {
 		} finally {
 			nioServer.stop();
 			nioServer.await();
-			events.fireContextDestroyed(ctx);
+			events.fireContextDestroyed();
 		}
 	}
 }

@@ -37,16 +37,18 @@ public class EventManager {
 	private final List<HttpSessionAttributeListener> sessionAttributeListeners;
 	private final List<HttpSessionIdListener> sessionIdListeners;
 
+	private ServletContext ctx;
+
 	/**
 	 * create new EventManager
 	 * 
-	 * @param contextListeners
-	 * @param contextAttributeListeners
-	 * @param requestListeners
-	 * @param requestAttributeListeners
-	 * @param sessionListeners
-	 * @param sessionAttributeListeners
-	 * @param sessionIdListeners
+	 * @param contextListeners the context listeners
+	 * @param contextAttributeListeners the attribute listeners
+	 * @param requestListeners the request listeners
+	 * @param requestAttributeListeners the request attribute listeners
+	 * @param sessionListeners the session listener
+	 * @param sessionAttributeListeners the session attribute listeners
+	 * @param sessionIdListeners the sessionId listeners
 	 */
 	public EventManager(List<ServletContextListener> contextListeners, List<ServletContextAttributeListener> contextAttributeListeners,
 			List<ServletRequestListener> requestListeners, List<ServletRequestAttributeListener> requestAttributeListeners, List<HttpSessionListener> sessionListeners,
@@ -67,9 +69,12 @@ public class EventManager {
 	/**
 	 * notify of the context initialization
 	 * 
-	 * @param context
+	 * @param context the context
 	 */
 	public void fireContextInitialized(ServletContext context) {
+		if (ctx != null)
+			throw new IllegalStateException("context already initialized");
+		this.ctx = context;
 		ServletContextEvent e = new ServletContextEvent(context);
 		for (ServletContextListener l : contextListeners) {
 			try {
@@ -82,11 +87,12 @@ public class EventManager {
 
 	/**
 	 * notify the context destruction
-	 * 
-	 * @param context
 	 */
-	public void fireContextDestroyed(ServletContext context) {
-		ServletContextEvent e = new ServletContextEvent(context);
+	public void fireContextDestroyed() {
+		if (ctx == null)
+			throw new IllegalStateException("context wasn't initialized");
+
+		ServletContextEvent e = new ServletContextEvent(ctx);
 		for (ServletContextListener l : contextListeners) {
 			try {
 				l.contextDestroyed(e);
@@ -99,20 +105,19 @@ public class EventManager {
 	/**
 	 * fire a change in the context attribute
 	 * 
-	 * @param context
 	 * @param key     the key that changed
 	 * @param value   the new value
 	 * @param old     the old value
 	 */
-	public void fireContextAttribute(ServletContext context, String key, Object value, Object old) {
+	public void fireContextAttribute(String key, Object value, Object old) {
 		if (contextAttributeListeners.isEmpty())
 			return;
 		if (value == null)
-			fireContextAttributeRemoved(new ServletContextAttributeEvent(context, key, old));
+			fireContextAttributeRemoved(new ServletContextAttributeEvent(ctx, key, old));
 		else if (old == null)
-			fireContextAttributeAdded(new ServletContextAttributeEvent(context, key, value));
+			fireContextAttributeAdded(new ServletContextAttributeEvent(ctx, key, value));
 		else
-			fireContextAttributeReplaced(new ServletContextAttributeEvent(context, key, old));
+			fireContextAttributeReplaced(new ServletContextAttributeEvent(ctx, key, old));
 	}
 
 	private void fireContextAttributeRemoved(ServletContextAttributeEvent e) {
@@ -151,7 +156,7 @@ public class EventManager {
 	 * @param req the request
 	 */
 	public void fireRequestInitialized(ServletRequest req) {
-		ServletRequestEvent e = new ServletRequestEvent(req.getServletContext(), req);
+		ServletRequestEvent e = new ServletRequestEvent(ctx, req);
 		for (ServletRequestListener l : requestListeners) {
 			try {
 				l.requestInitialized(e);
@@ -167,7 +172,7 @@ public class EventManager {
 	 * @param req the request
 	 */
 	public void fireRequestDestroyed(ServletRequest req) {
-		ServletRequestEvent e = new ServletRequestEvent(req.getServletContext(), req);
+		ServletRequestEvent e = new ServletRequestEvent(ctx, req);
 		for (ServletRequestListener l : requestListeners) {
 			try {
 				l.requestDestroyed(e);
@@ -189,11 +194,11 @@ public class EventManager {
 		if (contextAttributeListeners.isEmpty())
 			return;
 		if (value == null)
-			fireRequestAttributeRemoved(new ServletRequestAttributeEvent(req.getServletContext(), req, key, old));
+			fireRequestAttributeRemoved(new ServletRequestAttributeEvent(ctx, req, key, old));
 		else if (old == null)
-			fireRequestAttributeAdded(new ServletRequestAttributeEvent(req.getServletContext(), req, key, value));
+			fireRequestAttributeAdded(new ServletRequestAttributeEvent(ctx, req, key, value));
 		else
-			fireRequestAttributeReplaced(new ServletRequestAttributeEvent(req.getServletContext(), req, key, old));
+			fireRequestAttributeReplaced(new ServletRequestAttributeEvent(ctx, req, key, old));
 	}
 
 	private void fireRequestAttributeRemoved(ServletRequestAttributeEvent e) {
@@ -226,20 +231,25 @@ public class EventManager {
 		}
 	}
 
+	/**
+	 * add a listener
+	 * @param <T> listeners type
+	 * @param t the listener
+	 */
 	public <T extends EventListener> void addListener(T t) {
 		if (t instanceof ServletContextListener)
 			contextListeners.add((ServletContextListener) t);
-		else if (t instanceof ServletContextAttributeListener)
+		if (t instanceof ServletContextAttributeListener)
 			contextAttributeListeners.add((ServletContextAttributeListener) t);
-		else if (t instanceof ServletRequestListener)
+		if (t instanceof ServletRequestListener)
 			requestListeners.add((ServletRequestListener) t);
-		else if (t instanceof ServletRequestAttributeListener)
+		if (t instanceof ServletRequestAttributeListener)
 			requestAttributeListeners.add((ServletRequestAttributeListener) t);
-		else if (t instanceof HttpSessionListener)
+		if (t instanceof HttpSessionListener)
 			sessionListeners.add((HttpSessionListener) t);
-		else if (t instanceof HttpSessionAttributeListener)
+		if (t instanceof HttpSessionAttributeListener)
 			sessionAttributeListeners.add((HttpSessionAttributeListener) t);
-		else if (t instanceof HttpSessionIdListener)
+		if (t instanceof HttpSessionIdListener)
 			sessionIdListeners.add((HttpSessionIdListener) t);
 	}
 }

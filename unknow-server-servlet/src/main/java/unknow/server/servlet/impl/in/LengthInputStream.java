@@ -27,7 +27,14 @@ public class LengthInputStream extends ServletInputStream {
 
 	@Override
 	public boolean isFinished() {
-		return length > 0;
+		return length == 0;
+	}
+
+	@Override
+	public long skip(long n) throws IOException {
+		long skip = in.skip(Math.min(n, length));
+		length -= skip;
+		return skip;
 	}
 
 	@Override

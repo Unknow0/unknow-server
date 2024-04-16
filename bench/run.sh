@@ -45,6 +45,6 @@ echo "Warming up"
 $JMETER -n -t bench/test.jmx -Jhost=127.0.0.1 -Jt=20 -Jport=8080 -Jout=/dev/null
 sleep 10
 echo "Testing.."
-$JMETER -n -t bench/test.jmx -Jhost=127.0.0.1 -Jt=60 -Jport=8080 -Jout=out/$1.csv
+$JMETER -n -t bench/test.jmx -Jhost=127.0.0.1 -Jt=60 -Jc=10 -Jport=8080 -Jout=out/$1.csv
 ${1}_stop
 sleep 10

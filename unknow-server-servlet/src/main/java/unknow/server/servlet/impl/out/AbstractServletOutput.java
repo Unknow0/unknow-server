@@ -61,6 +61,10 @@ public abstract class AbstractServletOutput extends ServletOutputStream {
 		this.bufferSize = r == 0 ? bufferSize : bufferSize + Buffers.BUF_LEN - r;
 	}
 
+	public boolean isClosed() {
+		return closed;
+	}
+
 	/**
 	 * @throws IOException if the stream is closed
 	 */

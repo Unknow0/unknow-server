@@ -14,6 +14,11 @@ public class Encoder {
 	private Encoder() {
 	}
 
+	/**
+	 * % encode
+	 * @param s the string
+	 * @return the encoded bytes
+	 */
 	public static byte[] encodePart(String s) {
 		byte[] bytes = s.getBytes(StandardCharsets.UTF_8);
 		int l = bytes.length;

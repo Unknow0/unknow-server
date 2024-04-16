@@ -1,6 +1,7 @@
 package unknow.server.servlet.http11;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -13,6 +14,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import jakarta.servlet.DispatcherType;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.http.Cookie;
 import unknow.server.nio.NIOConnection.Out;
@@ -26,9 +29,12 @@ import unknow.server.servlet.impl.in.ChunckedInputStream;
 import unknow.server.servlet.impl.in.EmptyInputStream;
 import unknow.server.servlet.impl.in.LengthInputStream;
 import unknow.server.servlet.impl.out.AbstractServletOutput;
+import unknow.server.servlet.utils.EventManager;
+import unknow.server.servlet.utils.ServletManager;
 import unknow.server.util.io.Buffers;
 import unknow.server.util.io.BuffersUtils;
 
+/** http/1.1 worker */
 public final class Http11Worker extends HttpWorker {
 	private static final Logger logger = LoggerFactory.getLogger(Http11Worker.class);
 
@@ -73,6 +79,10 @@ public final class Http11Worker extends HttpWorker {
 	private final StringBuilder sb;
 	private final Decode decode;
 
+	/**
+	 * new worker
+	 * @param co the connection
+	 */
 	public Http11Worker(HttpConnection co) {
 		super(co);
 		this.keepAliveIdle = co.getkeepAlive();
@@ -115,6 +125,38 @@ public final class Http11Worker extends HttpWorker {
 	}
 
 	@Override
+	public void sendError(int sc, Throwable t, String msg) throws IOException {
+		res.reset(false);
+		FilterChain f = manager.getError(sc, t);
+		if (f != null) {
+			ServletRequestImpl r = new ServletRequestImpl(this, DispatcherType.ERROR);
+			r.setMethod("GET");
+			r.setAttribute("javax.servlet.error.status_code", sc);
+			if (t != null) {
+				r.setAttribute("javax.servlet.error.exception_type", t.getClass());
+				r.setAttribute("javax.servlet.error.message", t.getMessage());
+				r.setAttribute("javax.servlet.error.exception", t);
+			}
+			r.setAttribute("javax.servlet.error.request_uri", r.getRequestURI());
+			r.setAttribute("javax.servlet.error.servlet_name", "");
+			try {
+				f.doFilter(r, res);
+				return;
+			} catch (ServletException e) {
+				logger.error("failed to send error", e);
+			}
+		}
+		res.setStatus(sc);
+		if (msg == null) {
+			HttpError e = HttpError.fromStatus(sc);
+			msg = e == null ? "" : e.message;
+		}
+		try (PrintWriter w = res.getWriter()) {
+			w.append("<html><body><p>Error ").append(Integer.toString(sc)).append(" ").append(msg.replace("<", "&lt;")).write("</p></body></html>");
+		}
+	}
+
+	@Override
 	public void commit() throws IOException {
 		HttpError http = HttpError.fromStatus(res.getStatus());
 		@SuppressWarnings("resource")
@@ -126,7 +168,7 @@ public final class Http11Worker extends HttpWorker {
 
 		if (res.getHeader("content-type") == null && res.getContentType() != null) {
 			out.write(CONTENT_TYPE);
-			writeString(out, res.getContentType());
+			out.write(res.getContentType().getBytes(StandardCharsets.US_ASCII));
 			out.write(CRLF);
 		}
 
@@ -136,9 +178,9 @@ public final class Http11Worker extends HttpWorker {
 			out.write(CONTENT_LENGTH);
 			out.write(Long.toString(res.getContentLength()).getBytes(StandardCharsets.US_ASCII));
 			out.write(CRLF);
-		} else if (rawStream instanceof ChunckedOutputStream)
+		} else if (rawStream instanceof ChunckedOutputStream) {
 			out.write(CHUNKED);
-		else
+		} else
 			out.write(CONTENT_LENGTH0);
 
 		for (Cookie c : res.getCookies())
@@ -211,7 +253,7 @@ public final class Http11Worker extends HttpWorker {
 		Buffers b = co.pendingRead;
 		int i = BuffersUtils.indexOf(b, SPACE_SLASH, 0, MAX_METHOD_SIZE);
 		if (i < 0) {
-			res.sendError(HttpError.BAD_REQUEST.code, null, null);
+			sendError(HttpError.BAD_REQUEST.code, null, null);
 			return false;
 		}
 		BuffersUtils.toString(sb, b, 0, i);
@@ -221,7 +263,7 @@ public final class Http11Worker extends HttpWorker {
 
 		i = BuffersUtils.indexOf(b, SPACE, last, MAX_PATH_SIZE);
 		if (i < 0) {
-			res.sendError(HttpError.URI_TOO_LONG.code, null, null);
+			sendError(HttpError.URI_TOO_LONG.code, null, null);
 			return false;
 		}
 		int q = BuffersUtils.indexOf(b, QUESTION, last, i - last);
@@ -265,7 +307,7 @@ public final class Http11Worker extends HttpWorker {
 
 		i = BuffersUtils.indexOf(b, CRLF, last, MAX_VERSION_SIZE);
 		if (i < 0) {
-			res.sendError(HttpError.BAD_REQUEST.code, null, null);
+			sendError(HttpError.BAD_REQUEST.code, null, null);
 			return false;
 		}
 		BuffersUtils.toString(sb, b, last, i - last);
@@ -277,7 +319,7 @@ public final class Http11Worker extends HttpWorker {
 		while ((i = BuffersUtils.indexOf(b, CRLF, last, MAX_HEADER_SIZE)) > last) {
 			int c = BuffersUtils.indexOf(b, COLON, last, i - last);
 			if (c < 0) {
-				res.sendError(HttpError.BAD_REQUEST.code, null, null);
+				sendError(HttpError.BAD_REQUEST.code, null, null);
 				return false;
 			}
 

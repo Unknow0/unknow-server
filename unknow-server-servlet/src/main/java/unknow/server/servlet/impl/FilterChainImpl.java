@@ -72,10 +72,16 @@ public final class FilterChainImpl implements FilterChain {
 		}
 	}
 
+	/** change the request path */
 	public static class ChangePath implements FilterChain {
 		private final String path;
 		private final FilterChain next;
 
+		/**
+		 * change path filter
+		 * @param path the new path
+		 * @param next the next filter
+		 */
 		public ChangePath(String path, FilterChain next) {
 			this.path = path;
 			this.next = next;

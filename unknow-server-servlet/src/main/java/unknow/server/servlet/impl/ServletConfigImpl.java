@@ -33,7 +33,6 @@ public class ServletConfigImpl implements ServletConfig, ServletRegistration {
 	 * create new FilterConfigImpl
 	 * 
 	 * @param name       the name of this servlet
-	 * @param servlet    the servlet
 	 * @param context    the context
 	 * @param parameters the init param
 	 * @param mappings   the url mappings

@@ -204,6 +204,13 @@ public final class ServletRequestImpl implements HttpServletRequest {
 		this.query = "";
 	}
 
+	public void clearInput() throws IOException {
+		if (input == null)
+			input = co.createInput();
+		while (!input.isFinished())
+			input.skip(Long.MAX_VALUE);
+	}
+
 	@Override
 	public Object getAttribute(String name) {
 		return attributes.get(name);
@@ -222,7 +229,7 @@ public final class ServletRequestImpl implements HttpServletRequest {
 	@Override
 	public void setAttribute(String name, Object o) {
 		Object old = attributes.put(name, o);
-		co.ctx().getEvents().fireRequestAttribute(this, name, o, old);
+		co.events().fireRequestAttribute(this, name, o, old);
 	}
 
 	@Override

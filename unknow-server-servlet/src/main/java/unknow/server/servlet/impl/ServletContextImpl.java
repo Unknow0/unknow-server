@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Enumeration;
 import java.util.EventListener;
 import java.util.Locale;
@@ -29,7 +30,6 @@ import jakarta.servlet.SessionTrackingMode;
 import jakarta.servlet.descriptor.JspConfigDescriptor;
 import unknow.server.servlet.impl.session.SessionFactory;
 import unknow.server.servlet.utils.EventManager;
-import unknow.server.servlet.utils.ServletManager;
 import unknow.server.util.data.ArrayMap;
 
 /**
@@ -45,49 +45,38 @@ public class ServletContextImpl implements ServletContext {
 	private final ArrayMap<String> parameters;
 	private final ArrayMap<Object> attributes;
 
-	private final ServletManager servlets;
 	private final EventManager events;
 	private final SessionFactory sessions;
 
 	private final ArrayMap<String> localeEncodings;
 	private final ArrayMap<String> mimeTypes;
 
-	private String requestEncoding = "UTF8";
-	private String responseEncoding = "UTF8";
+	private String requestEncoding = "utf-8";
+	private String responseEncoding = "utf-8";
 
 	/**
 	 * create new ServletContextImpl
 	 * 
 	 * @param name       name for this context
+	 * @param vhost	the vhost
 	 * @param parameters initial parameter
-	 * @param servlets   the servlet manager
 	 * @param events     the event manager
+	 * @param sessions the session factory
+	 * @param localeEncodings the encoding per locale
+	 * @param mimeTypes the mime type per file extentions
 	 */
-	public ServletContextImpl(String name, String vhost, ArrayMap<String> parameters, ServletManager servlets, EventManager events, SessionFactory sessions, ArrayMap<String> localeEncodings, ArrayMap<String> mimeTypes) {
+	public ServletContextImpl(String name, String vhost, ArrayMap<String> parameters, EventManager events, SessionFactory sessions, ArrayMap<String> localeEncodings,
+			ArrayMap<String> mimeTypes) {
 		this.name = name;
 		this.vhost = vhost;
 		this.parameters = parameters;
-		this.attributes = new ArrayMap<>();
-
-		this.servlets = servlets;
 		this.events = events;
+
 		this.sessions = sessions;
 		this.localeEncodings = localeEncodings;
 		this.mimeTypes = mimeTypes;
-	}
 
-	/**
-	 * @return the events manager
-	 */
-	public EventManager getEvents() {
-		return events;
-	}
-
-	/**
-	 * @return the servlet manager
-	 */
-	public ServletManager getServletManager() {
-		return servlets;
+		this.attributes = new ArrayMap<>();
 	}
 
 	/**
@@ -164,7 +153,7 @@ public class ServletContextImpl implements ServletContext {
 	@Override
 	public void setAttribute(String name, Object object) {
 		Object old = attributes.put(name, object);
-		events.fireContextAttribute(this, name, object, old);
+		events.fireContextAttribute(name, object, old);
 	}
 
 	@Override

@@ -9,10 +9,13 @@ import java.util.concurrent.Future;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import jakarta.servlet.ServletContext;
 import unknow.server.nio.NIOConnection;
 import unknow.server.servlet.HttpProcessor.HttpProcessorFactory;
 import unknow.server.servlet.http11.Http11Processor;
 import unknow.server.servlet.impl.ServletContextImpl;
+import unknow.server.servlet.utils.EventManager;
+import unknow.server.servlet.utils.ServletManager;
 
 public class HttpConnection extends NIOConnection {
 	private static final Logger logger = LoggerFactory.getLogger(HttpConnection.class);
@@ -20,7 +23,9 @@ public class HttpConnection extends NIOConnection {
 	private static final HttpProcessorFactory[] VERSIONS = new HttpProcessorFactory[] { /*Http2Processor.Factory, */Http11Processor.Factory };
 
 	private final ExecutorService executor;
-	private final ServletContextImpl ctx;
+	protected final ServletContextImpl ctx;
+	protected final ServletManager manager;
+	protected final EventManager events;
 	private final int keepAliveIdle;
 
 	private HttpProcessor p;
@@ -29,11 +34,15 @@ public class HttpConnection extends NIOConnection {
 	 * create new RequestBuilder
 	 * @param executor the executor
 	 * @param ctx the servlet context
+	 * @param events 
+	 * @param manager 
 	 */
-	protected HttpConnection(ExecutorService executor, ServletContextImpl ctx, int keepAliveIdle) {
+	protected HttpConnection(ExecutorService executor, ServletContextImpl ctx, ServletManager manager, EventManager events, int keepAliveIdle) {
 		this.executor = executor;
-		this.keepAliveIdle = keepAliveIdle;
 		this.ctx = ctx;
+		this.manager = manager;
+		this.events = events;
+		this.keepAliveIdle = keepAliveIdle;
 	}
 
 	@Override
@@ -85,7 +94,7 @@ public class HttpConnection extends NIOConnection {
 		return executor.submit(r);
 	}
 
-	public ServletContextImpl getCtx() {
+	public ServletContext getCtx() {
 		return ctx;
 	}
 

@@ -12,7 +12,9 @@ import jakarta.servlet.ServletInputStream;
  * @author unknow
  */
 public class EmptyInputStream extends ServletInputStream {
-	/** the instance */
+	/**
+	 *  the instance
+	 */
 	public static final ServletInputStream INSTANCE = new EmptyInputStream();
 
 	private EmptyInputStream() {
@@ -38,6 +40,11 @@ public class EmptyInputStream extends ServletInputStream {
 
 	@Override
 	public int available() throws IOException {
+		return 0;
+	}
+
+	@Override
+	public long skip(long n) throws IOException {
 		return 0;
 	}
 

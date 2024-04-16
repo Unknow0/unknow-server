@@ -9,6 +9,9 @@ import java.nio.charset.StandardCharsets;
 
 import unknow.server.util.io.Buffers.Walker;
 
+/**
+ * decode utf8
+ */
 public final class Decode implements Walker {
 	private final CharsetDecoder d = StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPLACE).onUnmappableCharacter(CodingErrorAction.REPLACE);
 	private final char[] tmp = new char[2048];
@@ -16,6 +19,9 @@ public final class Decode implements Walker {
 	private final ByteBuffer bbuf = ByteBuffer.allocate(4096);
 	private final StringBuilder sb;
 
+	/**
+	 * @param sb where to read data
+	 */
 	public Decode(StringBuilder sb) {
 		this.sb = sb;
 	}
@@ -58,6 +64,10 @@ public final class Decode implements Walker {
 		bbuf.compact();
 	}
 
+	/**
+	 * finish the decoding
+	 * @return true if all data was decoded
+	 */
 	public boolean done() {
 		try {
 			if (m != 0)

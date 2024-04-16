@@ -82,34 +82,6 @@ public class ServletResponseImpl implements HttpServletResponse {
 		co.commit();
 	}
 
-	public void sendError(int sc, Throwable t, String msg) throws IOException {
-		reset(false);
-		ServletManager manager = co.ctx().getServletManager();
-		FilterChain f = manager.getError(sc, t);
-		if (f != null) {
-			ServletRequestImpl r = new ServletRequestImpl(co, DispatcherType.ERROR);
-			r.setMethod("GET");
-			r.setAttribute("javax.servlet.error.status_code", sc);
-			if (t != null) {
-				r.setAttribute("javax.servlet.error.exception_type", t.getClass());
-				r.setAttribute("javax.servlet.error.message", t.getMessage());
-				r.setAttribute("javax.servlet.error.exception", t);
-			}
-			r.setAttribute("javax.servlet.error.request_uri", r.getRequestURI());
-			r.setAttribute("javax.servlet.error.servlet_name", "");
-			try {
-				f.doFilter(r, this);
-				return;
-			} catch (ServletException e) {
-				logger.error("failed to send error", e);
-			}
-		}
-		status = sc;
-		try (PrintWriter w = getWriter()) {
-			w.append("<html><body><p>Error ").append(Integer.toString(sc)).append(" ").append(msg).write("</p></body></html>");
-		}
-	}
-
 	public void close() throws IOException {
 		commit();
 		if (writer != null)
@@ -158,7 +130,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 		if (type == null)
 			return null;
 		if (!type.contains("charset="))
-			type += "; charset=" + getCharacterEncoding();
+			type += ";charset=" + getCharacterEncoding();
 		return type;
 	}
 
@@ -227,17 +199,22 @@ public class ServletResponseImpl implements HttpServletResponse {
 		reset(true);
 	}
 
-	public void reset(boolean clearHeader) {
+	public void reset(boolean full) {
 		resetBuffer();
 		status = 200;
-		if (clearHeader) {
+		stream = null;
+		writer = null;
+		if (full) {
 			List<String> list = headers.get("connection");
 			headers.clear();
 			if (list != null)
 				headers.put("connection", list);
+			charset = null;
+			type = null;
+			cookies.clear();
+			contentLength = -1;
+			locale = null;
 		}
-		stream = null;
-		writer = null;
 	}
 
 	@Override
@@ -278,12 +255,12 @@ public class ServletResponseImpl implements HttpServletResponse {
 
 	@Override
 	public void sendError(int sc, String msg) throws IOException {
-		sendError(sc, null, msg);
+		co.sendError(sc, null, msg);
 	}
 
 	@Override
 	public void sendError(int sc) throws IOException {
-		sendError(sc, null, null);
+		co.sendError(sc, null, null);
 	}
 
 	@Override

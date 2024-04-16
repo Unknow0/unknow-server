@@ -2,7 +2,10 @@ package unknow.server.servlet;
 
 public interface HttpProcessor {
 
-	/** called when we have more data */
+	/**
+	 * called when we have more data
+	 * @throws InterruptedException on interrupt
+	 */
 	void process() throws InterruptedException;
 
 	/** @return true if the connection is closed */

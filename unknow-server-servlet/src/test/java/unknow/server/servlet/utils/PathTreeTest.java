@@ -33,7 +33,7 @@ public class PathTreeTest {
 	@BeforeEach
 	public void init() {
 		path = new ArrayList<>();
-		ServletContextImpl ctx = new ServletContextImpl("", "", null, null, null, null, null, null);
+		ServletContextImpl ctx = new ServletContextImpl("", "", null, null, null, null, null);
 		HttpAdapter p = mock(HttpAdapter.class);
 		when(p.ctx()).thenReturn(ctx);
 

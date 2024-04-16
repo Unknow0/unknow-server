@@ -5,7 +5,6 @@ import java.net.InetSocketAddress;
 
 import jakarta.servlet.ServletInputStream;
 import unknow.server.servlet.HttpConnection;
-import unknow.server.servlet.HttpError;
 import unknow.server.servlet.HttpWorker;
 import unknow.server.servlet.impl.out.AbstractServletOutput;
 
@@ -25,12 +24,6 @@ public class Http2Stream extends HttpWorker implements Http2FlowControl {
 	}
 
 	@Override
-	public ServletInputStream createInput() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
 	public InetSocketAddress getRemote() {
 		// TODO Auto-generated method stub
 		return null;
@@ -43,9 +36,21 @@ public class Http2Stream extends HttpWorker implements Http2FlowControl {
 	}
 
 	@Override
+	public ServletInputStream createInput() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
 	public AbstractServletOutput createOutput() {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	@Override
+	public void sendError(int sc, Throwable t, String msg) throws IOException {
+		// TODO Auto-generated method stub
+
 	}
 
 	@Override

@@ -12,25 +12,31 @@ import unknow.server.servlet.impl.ServletContextImpl;
 import unknow.server.servlet.impl.ServletRequestImpl;
 import unknow.server.servlet.impl.ServletResponseImpl;
 import unknow.server.servlet.utils.EventManager;
+import unknow.server.servlet.utils.ServletManager;
 
 public abstract class HttpWorker implements Runnable, HttpAdapter {
 	private static final Logger logger = LoggerFactory.getLogger(HttpWorker.class);
 
 	protected final HttpConnection co;
-	protected final EventManager events;
+	protected final ServletManager manager;
 	protected ServletRequestImpl req;
 	protected ServletResponseImpl res;
 
 	public HttpWorker(HttpConnection co) {
 		this.co = co;
-		this.events = co.getCtx().getEvents();
+		this.manager = co.manager;
 		this.req = new ServletRequestImpl(this, DispatcherType.REQUEST);
 		this.res = new ServletResponseImpl(this);
 	}
 
 	@Override
-	public ServletContextImpl ctx() {
-		return co.getCtx();
+	public final ServletContextImpl ctx() {
+		return co.ctx;
+	}
+
+	@Override
+	public final EventManager events() {
+		return co.events;
 	}
 
 	protected abstract boolean doStart() throws IOException, InterruptedException;
@@ -49,20 +55,20 @@ public abstract class HttpWorker implements Runnable, HttpAdapter {
 				co.getOut().close();
 				return;
 			}
-			events.fireRequestInitialized(req);
-			FilterChain s = co.getCtx().getServletManager().find(req);
+			co.events.fireRequestInitialized(req);
+			FilterChain s = manager.find(req);
 			try {
 				s.doFilter(req, res);
-				co.pendingRead.clear();
 			} catch (UnavailableException e) {
 				// TODO add page with retry-after
-				res.sendError(503, e, null);
+				sendError(503, e, null);
 			} catch (Exception e) {
 				logger.error("failed to service '{}'", s, e);
 				if (!res.isCommitted())
 					res.sendError(500);
 			}
-			events.fireRequestDestroyed(req);
+			co.events.fireRequestDestroyed(req);
+			req.clearInput();
 			res.close();
 		} catch (Exception e) {
 			logger.error("processor error", e);
