@@ -40,7 +40,12 @@ public class Http11Processor implements HttpProcessor {
 
 	@Override
 	public final boolean isClosed() {
-		return exec.isDone();
+		if (!exec.isDone())
+			return false;
+		if (co.pendingRead.isEmpty())
+			return true;
+		exec = co.submit(new Http11Worker(co));
+		return false;
 	}
 
 	@Override
