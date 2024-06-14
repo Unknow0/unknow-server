@@ -46,5 +46,8 @@ $JMETER -n -t bench/test.jmx -Jhost=127.0.0.1 -Jt=20 -Jport=8080 -Jout=/dev/null
 sleep 10
 echo "Testing.."
 $JMETER -n -t bench/test.jmx -Jhost=127.0.0.1 -Jt=60 -Jc=10 -Jport=8080 -Jout=out/$1.csv
+
+h2load -c 10 -t 10 -m 10 -D 60 --warm-up-time=10 http://127.0.0.1:8080/test
+
 ${1}_stop
 sleep 10
