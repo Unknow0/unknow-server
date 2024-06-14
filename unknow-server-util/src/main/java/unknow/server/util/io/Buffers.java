@@ -180,6 +180,30 @@ public class Buffers {
 	}
 
 	/**
+	* add data in front of this buffers
+	* 
+	* @param buf data to append
+	* @throws InterruptedException on interrupt
+	*/
+	public void prepend(Buffers buf) throws InterruptedException {
+		lock.lockInterruptibly();
+		buf.lock.lockInterruptibly();
+		try {
+			if (buf.isEmpty())
+				return;
+			len += buf.len;
+			buf.tail.next = head;
+			head = buf.head;
+
+			buf.len = 0;
+			buf.head = buf.tail = null;
+			cond.signalAll();
+		} finally {
+			lock.unlock();
+		}
+	}
+
+	/**
 	 * read one byte
 	 * 
 	 * @param wait if true wait for data
@@ -285,9 +309,18 @@ public class Buffers {
 		}
 	}
 
-	private void awaitContent() throws InterruptedException {
-		while (len == 0)
-			cond.await();
+	/**
+	 * wait for more content to be written
+	 * @throws InterruptedException
+	 */
+	public void awaitContent() throws InterruptedException {
+		lock.lockInterruptibly();
+		try {
+			while (len == 0)
+				cond.await();
+		} finally {
+			lock.unlock();
+		}
 	}
 
 	/**
@@ -427,26 +460,31 @@ public class Buffers {
 	 * skip l bytes
 	 * 
 	 * @param l number of byte to skip
+	 * @return actual number of byte skiped
 	 * @throws InterruptedException on interrupt
 	 */
-	public void skip(int l) throws InterruptedException {
+	public long skip(long l) throws InterruptedException {
 		if (l < 0)
 			throw new IllegalArgumentException("length < 0");
 		if (l == 0)
-			return;
+			return 0;
+		long s = 0;
 		lock.lockInterruptibly();
 		try {
 			while (head != null && l >= head.l) {
 				l -= head.l;
 				len -= head.l;
+				s += head.l;
 				head = head.next;
 			}
 			if (head != null) {
 				head.o += l;
 				head.l -= l;
 				len -= l;
+				s += l;
 			} else
 				tail = null;
+			return s;
 		} finally {
 			lock.unlock();
 		}

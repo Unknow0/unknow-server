@@ -1,12 +1,15 @@
 package unknow.server.servlet;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.net.InetSocketAddress;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.UnavailableException;
 import unknow.server.servlet.impl.ServletContextImpl;
 import unknow.server.servlet.impl.ServletRequestImpl;
@@ -39,6 +42,16 @@ public abstract class HttpWorker implements Runnable, HttpAdapter {
 		return co.events;
 	}
 
+	@Override
+	public InetSocketAddress getRemote() {
+		return co.getRemote();
+	}
+
+	@Override
+	public InetSocketAddress getLocal() {
+		return co.getLocal();
+	}
+
 	protected abstract boolean doStart() throws IOException, InterruptedException;
 
 	protected abstract void doDone();
@@ -46,6 +59,38 @@ public abstract class HttpWorker implements Runnable, HttpAdapter {
 	@Override
 	public void run() {
 		doRun();
+	}
+
+	@Override
+	public void sendError(int sc, Throwable t, String msg) throws IOException {
+		res.reset(false);
+		FilterChain f = manager.getError(sc, t);
+		if (f != null) {
+			ServletRequestImpl r = new ServletRequestImpl(this, DispatcherType.ERROR);
+			r.setMethod("GET");
+			r.setAttribute("javax.servlet.error.status_code", sc);
+			if (t != null) {
+				r.setAttribute("javax.servlet.error.exception_type", t.getClass());
+				r.setAttribute("javax.servlet.error.message", t.getMessage());
+				r.setAttribute("javax.servlet.error.exception", t);
+			}
+			r.setAttribute("javax.servlet.error.request_uri", r.getRequestURI());
+			r.setAttribute("javax.servlet.error.servlet_name", "");
+			try {
+				f.doFilter(r, res);
+				return;
+			} catch (ServletException e) {
+				logger.error("failed to send error", e);
+			}
+		}
+		res.setStatus(sc);
+		if (msg == null) {
+			HttpError e = HttpError.fromStatus(sc);
+			msg = e == null ? "" : e.message;
+		}
+		try (PrintWriter w = res.getWriter()) {
+			w.append("<html><body><p>Error ").append(Integer.toString(sc)).append(" ").append(msg.replace("<", "&lt;")).write("</p></body></html>");
+		}
 	}
 
 	protected final void doRun() {
@@ -65,7 +110,7 @@ public abstract class HttpWorker implements Runnable, HttpAdapter {
 			} catch (Exception e) {
 				logger.error("failed to service '{}'", s, e);
 				if (!res.isCommitted())
-					res.sendError(500);
+					sendError(500, e, null);
 			}
 			co.events.fireRequestDestroyed(req);
 			req.clearInput();

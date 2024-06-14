@@ -44,6 +44,14 @@ public class IntArrayMap<T> {
 
 	/**
 	 * @param key the key
+	 * @return true if the key exists
+	 */
+	public boolean contains(int key) {
+		return Arrays.binarySearch(keys, 0, len, key) >= 0;
+	}
+
+	/**
+	 * @param key the key
 	 * @return the associated value
 	 */
 	public T get(int key) {
@@ -128,6 +136,10 @@ public class IntArrayMap<T> {
 		return new KeySet();
 	}
 
+	public Collection<T> values() {
+		return new Values();
+	}
+
 	private class KeySet implements Set<Integer> {
 
 		@Override
@@ -209,6 +221,92 @@ public class IntArrayMap<T> {
 			if (i == len)
 				throw new NoSuchElementException();
 			return keys[i++];
+		}
+
+	}
+
+	private class Values implements Collection<T> {
+
+		@Override
+		public int size() {
+			return len;
+		}
+
+		@Override
+		public boolean isEmpty() {
+			return len == 0;
+		}
+
+		@Override
+		public boolean contains(Object o) {
+			// TODO Auto-generated method stub
+			return false;
+		}
+
+		@Override
+		public Iterator<T> iterator() {
+			return new ValuesIt();
+		}
+
+		@Override
+		public Object[] toArray() {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public <E> E[] toArray(E[] a) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public boolean add(T e) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public boolean remove(Object o) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public boolean containsAll(Collection<?> c) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public boolean addAll(Collection<? extends T> c) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public boolean removeAll(Collection<?> c) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public boolean retainAll(Collection<?> c) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public void clear() {
+			throw new UnsupportedOperationException();
+		}
+	}
+
+	private class ValuesIt implements Iterator<T> {
+		private int i = 0;
+
+		@Override
+		public boolean hasNext() {
+			return i < len;
+		}
+
+		@Override
+		public T next() {
+			if (i == len)
+				throw new NoSuchElementException();
+			return values[i++];
 		}
 
 	}

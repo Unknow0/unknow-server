@@ -13,7 +13,7 @@ import unknow.server.util.io.Buffers;
 public abstract class AbstractServletOutput extends ServletOutputStream {
 	/** the buffer */
 	protected final Buffers buffer;
-	/** response taht created this stream */
+	/** response that created this stream */
 	protected final ServletResponseImpl res;
 	private int bufferSize;
 

@@ -83,11 +83,11 @@ public class ServletResponseImpl implements HttpServletResponse {
 	}
 
 	public void close() throws IOException {
-		commit();
 		if (writer != null)
 			writer.close();
 		if (stream != null)
 			stream.close();
+		commit();
 	}
 
 	public void checkCommited() {

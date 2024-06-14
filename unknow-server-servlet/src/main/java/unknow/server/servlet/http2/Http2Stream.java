@@ -1,19 +1,69 @@
 package unknow.server.servlet.http2;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
+import java.io.Reader;
+import java.io.StringReader;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
 
 import jakarta.servlet.ServletInputStream;
 import unknow.server.servlet.HttpConnection;
 import unknow.server.servlet.HttpWorker;
 import unknow.server.servlet.impl.out.AbstractServletOutput;
+import unknow.server.servlet.utils.PathUtils;
 
 public class Http2Stream extends HttpWorker implements Http2FlowControl {
+
+	private final int id;
+	private final Http2Processor p;
+	final Http2ServletInput in;
+	final Http2ServletOutput out;
+
 	private int window;
 
-	protected Http2Stream(HttpConnection co, int window) {
+	private volatile Future<?> exec;
+
+	protected Http2Stream(HttpConnection co, int id, Http2Processor p, int window) {
 		super(co);
+		this.id = id;
+		this.p = p;
+		this.in = new Http2ServletInput();
+		this.out = new Http2ServletOutput(res, p, id);
+
 		this.window = window;
+
+		this.exec = CompletableFuture.completedFuture(null);
+
+		req.setProtocol("HTTP/2");
+	}
+
+	public final void addHeader(String name, String value) {
+		if (name.charAt(0) != ':') {
+			req.addHeader(name, value);
+			return;
+		}
+
+		if (":method".equals(name))
+			req.setMethod(value);
+		else if (":path".equals(name))
+			parsePath(value);
+	}
+
+	private void parsePath(String path) {
+		int q = path.indexOf('?');
+		if (q > 0) {
+			req.setQuery(path.substring(q + 1));
+			try (Reader r = new StringReader(req.getQueryString())) {
+				PathUtils.pathQuery(r, req.getQueryParam());
+			} catch (@SuppressWarnings("unused") IOException e) { // ok
+			}
+			path = path.substring(0, q);
+		}
+		req.setRequestUri(path);
+	}
+
+	public void start() {
+		exec = co.submit(this);
 	}
 
 	@Override
@@ -24,39 +74,24 @@ public class Http2Stream extends HttpWorker implements Http2FlowControl {
 	}
 
 	@Override
-	public InetSocketAddress getRemote() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public InetSocketAddress getLocal() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
 	public ServletInputStream createInput() {
-		// TODO Auto-generated method stub
-		return null;
+		return in;
 	}
 
 	@Override
 	public AbstractServletOutput createOutput() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public void sendError(int sc, Throwable t, String msg) throws IOException {
-		// TODO Auto-generated method stub
-
+		return out;
 	}
 
 	@Override
 	public void commit() throws IOException {
-		// TODO Auto-generated method stub
+		// write header
 
+		try {
+			p.sendHeaders(id, res);
+		} catch (InterruptedException e) {
+			throw new IOException(e);
+		}
 	}
 
 	@Override
@@ -68,6 +103,11 @@ public class Http2Stream extends HttpWorker implements Http2FlowControl {
 	@Override
 	protected void doDone() {
 		// TODO Auto-generated method stub
+	}
 
+	public final void close(boolean stop) {
+		in.close();
+		if (stop)
+			exec.cancel(true);
 	}
 }

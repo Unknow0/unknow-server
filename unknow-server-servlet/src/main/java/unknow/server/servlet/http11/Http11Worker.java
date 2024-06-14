@@ -1,12 +1,9 @@
 package unknow.server.servlet.http11;
 
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -14,8 +11,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import jakarta.servlet.DispatcherType;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.http.Cookie;
 import unknow.server.nio.NIOConnection.Out;
@@ -29,8 +24,6 @@ import unknow.server.servlet.impl.in.ChunckedInputStream;
 import unknow.server.servlet.impl.in.EmptyInputStream;
 import unknow.server.servlet.impl.in.LengthInputStream;
 import unknow.server.servlet.impl.out.AbstractServletOutput;
-import unknow.server.servlet.utils.EventManager;
-import unknow.server.servlet.utils.ServletManager;
 import unknow.server.util.io.Buffers;
 import unknow.server.util.io.BuffersUtils;
 
@@ -91,16 +84,6 @@ public final class Http11Worker extends HttpWorker {
 		decode = new Decode(sb);
 	}
 
-	@Override
-	public InetSocketAddress getRemote() {
-		return co.getRemote();
-	}
-
-	@Override
-	public InetSocketAddress getLocal() {
-		return co.getLocal();
-	}
-
 	@SuppressWarnings("resource")
 	@Override
 	public ServletInputStream createInput() {
@@ -122,38 +105,6 @@ public final class Http11Worker extends HttpWorker {
 		if (contentLength == 0)
 			return EmptyStream.INSTANCE;
 		return new LengthOutputStream(co.getOut(), res, contentLength);
-	}
-
-	@Override
-	public void sendError(int sc, Throwable t, String msg) throws IOException {
-		res.reset(false);
-		FilterChain f = manager.getError(sc, t);
-		if (f != null) {
-			ServletRequestImpl r = new ServletRequestImpl(this, DispatcherType.ERROR);
-			r.setMethod("GET");
-			r.setAttribute("javax.servlet.error.status_code", sc);
-			if (t != null) {
-				r.setAttribute("javax.servlet.error.exception_type", t.getClass());
-				r.setAttribute("javax.servlet.error.message", t.getMessage());
-				r.setAttribute("javax.servlet.error.exception", t);
-			}
-			r.setAttribute("javax.servlet.error.request_uri", r.getRequestURI());
-			r.setAttribute("javax.servlet.error.servlet_name", "");
-			try {
-				f.doFilter(r, res);
-				return;
-			} catch (ServletException e) {
-				logger.error("failed to send error", e);
-			}
-		}
-		res.setStatus(sc);
-		if (msg == null) {
-			HttpError e = HttpError.fromStatus(sc);
-			msg = e == null ? "" : e.message;
-		}
-		try (PrintWriter w = res.getWriter()) {
-			w.append("<html><body><p>Error ").append(Integer.toString(sc)).append(" ").append(msg.replace("<", "&lt;")).write("</p></body></html>");
-		}
 	}
 
 	@Override
@@ -276,23 +227,6 @@ public final class Http11Worker extends HttpWorker {
 		req.setRequestUri(sb.toString());
 		sb.setLength(0);
 
-		int s;
-		while ((s = BuffersUtils.indexOf(b, SLASH, last + 1, q - last - 1)) > 0) {
-			int c = BuffersUtils.indexOf(b, SEMICOLON, last + 1, s - last - 1);
-			b.walk(decode, last + 1, (c < 0 ? s : c) - last - 1);
-			if (!decode.done())
-				return false;
-			req.addPath(sb.toString());
-			sb.setLength(0);
-			last = s;
-		}
-		if (s == -2 && last + 1 < q) {
-			int c = BuffersUtils.indexOf(b, SEMICOLON, last + 1, q - last - 1);
-			BuffersUtils.toString(sb, b, last + 1, c < 0 ? q - last - 1 : c);
-			req.addPath(sb.toString());
-			sb.setLength(0);
-		}
-
 		if (q < i) {
 			BuffersUtils.toString(sb, b, q + 1, i - q - 1);
 			req.setQuery(sb.toString());
@@ -300,9 +234,7 @@ public final class Http11Worker extends HttpWorker {
 		} else
 			req.setQuery("");
 
-		Map<String, List<String>> map = new HashMap<>();
-		parseParam(map, b, q + 1, i);
-		req.setQueryParam(map);
+		parseParam(req.getQueryParam(), b, q + 1, i);
 		last = i + 1;
 
 		i = BuffersUtils.indexOf(b, CRLF, last, MAX_VERSION_SIZE);
@@ -315,7 +247,6 @@ public final class Http11Worker extends HttpWorker {
 		sb.setLength(0);
 		last = i + 2;
 
-		map = new HashMap<>();
 		while ((i = BuffersUtils.indexOf(b, CRLF, last, MAX_HEADER_SIZE)) > last) {
 			int c = BuffersUtils.indexOf(b, COLON, last, i - last);
 			if (c < 0) {
@@ -331,14 +262,9 @@ public final class Http11Worker extends HttpWorker {
 			String v = sb.toString().trim();
 			sb.setLength(0);
 
-			List<String> list = map.get(k);
-			if (list == null)
-				map.put(k, list = new ArrayList<>(1));
-			list.add(v);
-
+			req.addHeader(k, v);
 			last = i + 2;
 		}
-		req.setHeaders(map);
 		b.skip(last + 2);
 		return true;
 	}

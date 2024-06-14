@@ -13,6 +13,7 @@ import jakarta.servlet.ServletContext;
 import unknow.server.nio.NIOConnection;
 import unknow.server.servlet.HttpProcessor.HttpProcessorFactory;
 import unknow.server.servlet.http11.Http11Processor;
+import unknow.server.servlet.http2.Http2Processor;
 import unknow.server.servlet.impl.ServletContextImpl;
 import unknow.server.servlet.utils.EventManager;
 import unknow.server.servlet.utils.ServletManager;
@@ -20,7 +21,7 @@ import unknow.server.servlet.utils.ServletManager;
 public class HttpConnection extends NIOConnection {
 	private static final Logger logger = LoggerFactory.getLogger(HttpConnection.class);
 
-	private static final HttpProcessorFactory[] VERSIONS = new HttpProcessorFactory[] { /*Http2Processor.Factory, */Http11Processor.Factory };
+	private static final HttpProcessorFactory[] VERSIONS = new HttpProcessorFactory[] { Http2Processor.Factory, Http11Processor.Factory };
 
 	private final ExecutorService executor;
 	protected final ServletContextImpl ctx;

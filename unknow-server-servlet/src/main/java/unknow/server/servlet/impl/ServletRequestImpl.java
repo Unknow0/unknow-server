@@ -6,7 +6,6 @@ package unknow.server.servlet.impl;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -45,6 +44,7 @@ import jakarta.servlet.http.HttpUpgradeHandler;
 import jakarta.servlet.http.Part;
 import unknow.server.servlet.HttpAdapter;
 import unknow.server.servlet.impl.session.SessionFactory;
+import unknow.server.servlet.utils.PathUtils;
 import unknow.server.util.data.ArrayMap;
 
 /**
@@ -68,8 +68,8 @@ public final class ServletRequestImpl implements HttpServletRequest {
 	private String method = null;
 	private String servletPath = null;
 	private String pathInfo = null;
-	private String query = null;
-	private Map<String, List<String>> queryParam = null;
+	private String query = "";
+	private Map<String, List<String>> queryParam = new HashMap<>();
 
 	private String encoding = null;
 	private long contentLength = -2;
@@ -114,12 +114,16 @@ public final class ServletRequestImpl implements HttpServletRequest {
 		this.query = query;
 	}
 
-	public void setQueryParam(Map<String, List<String>> query) {
-		this.queryParam = query;
+	public Map<String, List<String>> getQueryParam() {
+		return queryParam;
 	}
 
 	public void setProtocol(String protocol) {
 		this.protocol = protocol;
+	}
+
+	public void addHeader(String name, String value) {
+		headers.computeIfAbsent(name, k -> new ArrayList<>(1)).add(value);
 	}
 
 	public void setHeaders(Map<String, List<String>> headers) {
@@ -128,14 +132,18 @@ public final class ServletRequestImpl implements HttpServletRequest {
 
 	public void setRequestUri(String path) {
 		this.requestUri = path;
+		int j, i = 1;
+		do {
+			j = path.indexOf('/', i);
+			if (j < 0)
+				j = path.length();
+			this.path.add(path.substring(i, j));
+			i = j;
+		} while (j < path.length());
 	}
 
 	public List<String> getPaths() {
 		return path;
-	}
-
-	public void addPath(String path) {
-		this.path.add(path);
 	}
 
 	public void setPathInfo(int index) {
@@ -166,33 +174,9 @@ public final class ServletRequestImpl implements HttpServletRequest {
 	 */
 	private void parseContentParam(Map<String, List<String>> p) throws IOException {
 		try (BufferedReader r = new BufferedReader(new InputStreamReader(co.createInput(), getCharacterEncoding()))) {
-			int c;
-			String key;
-			StringBuilder sb = new StringBuilder();
-			do {
-				c = readParam(sb, r, true);
-				key = sb.toString();
-				sb.setLength(0);
-				if (c == '=')
-					c = readParam(sb, r, false);
-
-				p.computeIfAbsent(key, k -> new ArrayList<>(1)).add(sb.toString());
-				sb.setLength(0);
-			} while (c != -1);
+			PathUtils.pathQuery(r, p);
 		}
 		contentLength = 0;
-	}
-
-	private int readParam(StringBuilder sb, Reader r, boolean key) throws IOException {
-		int c;
-		while ((c = r.read()) != -1) {
-			if (c == '&' || key && c == '=')
-				return c;
-			if (c == '%') // TODO decode
-				;
-			sb.append((char) c);
-		}
-		return c;
 	}
 
 	/**
@@ -674,25 +658,6 @@ public final class ServletRequestImpl implements HttpServletRequest {
 		return co.ctx();
 	}
 
-//	private ServletInputStream createInput() {
-//		String tr = getHeader("transfer-encoding");
-//		if ("chunked".equalsIgnoreCase(tr))
-//			return new ChunckedInputStream(co.getIn());
-//		long l = getContentLengthLong();
-//		if (l > 0)
-//			return new LengthInputStream(co.getIn(), l);
-//		return EmptyInputStream.INSTANCE;
-//	}
-
-	private static String getAddr(InetSocketAddress a) {
-		if (a == null)
-			return "127.0.0.1";
-		InetAddress address = a.getAddress();
-		if (address == null)
-			return "127.0.0.1";
-		return address.getHostAddress();
-	}
-
 	@Override
 	public String getRequestId() { // TODO add value for keep-alive connection
 		return getServletConnection().getConnectionId();
@@ -707,5 +672,14 @@ public final class ServletRequestImpl implements HttpServletRequest {
 	public ServletConnection getServletConnection() {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	private static String getAddr(InetSocketAddress a) {
+		if (a == null)
+			return "127.0.0.1";
+		InetAddress address = a.getAddress();
+		if (address == null)
+			return "127.0.0.1";
+		return address.getHostAddress();
 	}
 }

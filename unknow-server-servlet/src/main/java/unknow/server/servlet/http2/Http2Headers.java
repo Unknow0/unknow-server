@@ -1,18 +1,23 @@
 package unknow.server.servlet.http2;
 
+import java.io.EOFException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 
 import unknow.server.util.io.Buffers;
-import unknow.server.util.io.BuffersUtils;
 
 /**
  * Manage header encoded in HPACK
  * implements https://httpwg.org/specs/rfc7541.html
  */
 public class Http2Headers {
+	private static final int[] MASK = { 0b00000000, 0b00000001, 0b00000011, 0b00000111, 0b00001111, 0b00011111, 0b00111111, 0b01111111, 0b11111111 };
+	private static final int[] MAX = { 0, 1, 3, 7, 15, 31, 63, 127, 255 };
+
 	protected static final Entry[] TABLE = new Entry[] { //@formatter:off
 			new Entry(":authority", null),
 			new Entry(":method", "GET"),
@@ -90,44 +95,132 @@ public class Http2Headers {
 		this.size = 0;
 	}
 
-	public void readHeaders(Buffers b, BiConsumer<String, String> h) throws InterruptedException, IOException {
-		while (!b.isEmpty())
-			readHeader(b, h);
+	/**
+	 * read an int
+	 * @param in the data
+	 * @param i the first byte
+	 * @param n the prefix
+	 * @return
+	 * @throws IOException 
+	 */
+	public static int readInt(InputStream in, int i, int n) throws IOException {
+		i = i & MASK[n];
+		if (i == MAX[n]) {
+			int m = 0;
+			int j;
+			do {
+				j = in.read();
+				if (j == -1)
+					throw new EOFException();
+				i += (j & 0x7F) << m;
+				m += 7;
+			} while ((j & 0x10) == 0x10);
+		}
+		return i;
 	}
 
-	private void readHeader(Buffers b, BiConsumer<String, String> h) throws InterruptedException, IOException {
-		int i = b.read(false);
+	/**
+	* write an int
+	* @param out the data
+	* @param p the prefix value
+	* @param n the prefix length
+	* @param v the value
+	* @throws InterruptedException 
+	*/
+	public static void writeInt(Buffers out, int p, int n, int v) throws InterruptedException {
+		int m = MAX[n];
+		if (v < m) {
+			out.write(v | p);
+			return;
+		}
+		out.write(p | m);
+		v -= m;
+		while (v >= 0x80) {
+			out.write((v & 0x7F) | 0x80);
+			v >>= 7;
+		}
+		out.write(v);
+	}
+
+	/**
+	 * write a header to the output
+	 * @param out the output
+	 * @param name the header name
+	 * @param value the header value
+	 * @throws InterruptedException 
+	 */
+	public void writeHeader(Buffers out, String name, String value) throws InterruptedException {
+		int o = 0;
+		for (int i = 0; i < TABLE.length; i++) {
+			Entry e = TABLE[i];
+			if (e.name.equals(name)) {
+				if (e.value != null && e.value.equals(value)) {
+					writeInt(out, 0b10000000, 7, i + 1);
+					return;
+				}
+				if (o == 0)
+					o = i;
+			}
+		}
+		int i = TABLE.length;
+		for (Entry e : dynamic) {
+			i++;
+			if (e.name.equals(name)) {
+				if (e.value.equals(value)) {
+					writeInt(out, 0b10000000, 7, i + 1);
+					return;
+				}
+				if (o == 0)
+					o = i;
+			}
+		}
+
+		writeInt(out, 0b01000000, 6, o < 0 ? 0 : o);
+		if (o < 0)
+			writeData(out, name);
+		writeData(out, value);
+		add(new Entry(name, value));
+	}
+
+	/**
+	 * read one header
+	 * @param in the input
+	 * @param h the header key/value
+	 * @throws IOException in case of error
+	 */
+	public void readHeader(InputStream in, BiConsumer<String, String> h) throws IOException {
+		int i = in.read();
 		if (i == -1)
-			throw new IOException("EOF");
+			throw new EOFException();
 
 		if ((i & 0b10000000) != 0) { // indexed
-			Entry e = get(readInt(b, i, 7));
+			Entry e = get(readInt(in, i, 7));
 			h.accept(e.name(), e.value());
 		} else if ((i & 0b01000000) != 0) { // literal indexed
-			i = readInt(b, i, 6);
+			i = readInt(in, i, 6);
 			String n;
 			if (i == 0) {  // new name
-				n = readData(b);
+				n = readData(in);
 			} else
 				n = get(i).name;
-			String v = readData(b);
+			String v = readData(in);
 
 			h.accept(n, v);
 			add(new Entry(n, v));
 		} else if ((i & 0b00100000) != 0) { // update size
-			i = readInt(b, i, 5);
+			i = readInt(in, i, 5);
 			if (i > settingsSize)
 				; // TODO error
 			max = i;
 			ensureMax();
 		} else { // literal non indexed
-			i = readInt(b, i, 4);
+			i = readInt(in, i, 4);
 			String n;
 			if (i == 0) {  // new name
-				n = readData(b);
+				n = readData(in);
 			} else
 				n = get(i).name;
-			String v = readData(b);
+			String v = readData(in);
 			h.accept(n, v);
 		}
 	}
@@ -137,21 +230,38 @@ public class Http2Headers {
 		this.max = Math.min(size, max);
 	}
 
-	private String readData(Buffers b) throws InterruptedException, IOException {
-		int i = b.read(false);
+	private static String readData(InputStream in) throws IOException {
+		int i = in.read();
 		if (i == -1)
-			throw new IOException("EOF");
+			throw new EOFException();
 		boolean huffman = (i & 0x80) == 0x80;
-		i = readInt(b, i, 7);
+		i = readInt(in, i, 7);
 
 		StringBuilder sb = new StringBuilder();
-		if (!huffman) {
-			BuffersUtils.toString(sb, b, 0, i);
-			b.skip(i);
-		} else
-			Http2Huffman.decode(b, i, sb);
-//		return new EntryData(sb.toString(), i);
+		if (!huffman)
+			toString(sb, in, i);
+		else
+			Http2Huffman.decode(in, i, sb);
 		return sb.toString();
+	}
+
+	private static void writeData(Buffers out, String value) throws InterruptedException {
+		byte[] bytes = value.getBytes(StandardCharsets.US_ASCII);
+		writeInt(out, 0, 7, bytes.length);
+		out.write(bytes);
+
+//		int i = in.read();
+//		if (i == -1)
+//			throw new EOFException();
+//		boolean huffman = (i & 0x80) == 0x80;
+//		i = readInt(in, i, 7);
+//
+//		StringBuilder sb = new StringBuilder();
+//		if (!huffman)
+//			toString(sb, in, i);
+//		else
+//			Http2Huffman.decode(in, i, sb);
+//		return sb.toString();
 	}
 
 	protected Entry get(int i) {
@@ -172,33 +282,14 @@ public class Http2Headers {
 			size -= e.size();
 	}
 
-	/**
-	 * read an int
-	 * @param b the data
-	 * @param i the first byte
-	 * @param n the prefix
-	 * @return
-	 * @throws InterruptedException 
-	 * @throws IOException 
-	 */
-	public static int readInt(Buffers b, int i, int n) throws InterruptedException, IOException {
-		i = i & MASK[n];
-		if (i == MAX[n]) {
-			int m = 0;
-			int j;
-			do {
-				j = b.read(false);
-				if (j == -1)
-					throw new IOException("EOF");
-				i += (j & 0x7F) << m;
-				m += 7;
-			} while ((j & 0x10) == 0x10);
+	public static void toString(StringBuilder sb, InputStream in, int l) throws IOException {
+		while (l-- > 0) {
+			int i = in.read();
+			if (i < 0)
+				throw new EOFException();
+			sb.append((char) i);
 		}
-		return i;
 	}
-
-	private static final int[] MASK = { 0b00000000, 0b00000001, 0b00000011, 0b00000111, 0b00001111, 0b00011111, 0b00111111, 0b01111111, 0b11111111 };
-	private static final int[] MAX = { 0, 1, 3, 7, 15, 31, 63, 127, 255 };
 
 	public static class Entry {
 		final String name;
@@ -208,10 +299,6 @@ public class Http2Headers {
 			this.name = name;
 			this.value = value;
 		}
-
-//		public Entry(String name, String value) {
-//			this(new EntryData(name, name.length()), value == null ? null : new EntryData(value, value.length()));
-//		}
 
 		public int size() {
 			return (value == null ? name.length() : name.length() + value.length()) + 32;

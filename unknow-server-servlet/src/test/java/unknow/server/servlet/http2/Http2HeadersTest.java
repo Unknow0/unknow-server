@@ -3,6 +3,7 @@ package unknow.server.servlet.http2;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -13,6 +14,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import unknow.server.servlet.http2.Http2Headers.Entry;
 import unknow.server.util.io.Buffers;
+import unknow.server.util.io.BuffersInputStream;
 
 public class Http2HeadersTest {
 
@@ -20,7 +22,7 @@ public class Http2HeadersTest {
 		assertEquals(61, Http2Headers.TABLE.length);
 	}
 
-	public static Stream<Arguments> readInt() {
+	public static Stream<Arguments> integer() {
 		//@formatter:off
 		return Stream.of(
 				Arguments.of(new byte[] { b(0b00001010) }, 5, 10),
@@ -29,13 +31,30 @@ public class Http2HeadersTest {
 	}
 
 	@ParameterizedTest
-	@MethodSource
+	@MethodSource("integer")
 	public void readInt(byte[] data, int prefix, int expected) throws InterruptedException, IOException {
 		Buffers b = new Buffers();
 		b.write(data);
 
-		int value = Http2Headers.readInt(b, b.read(false), prefix);
-		assertEquals(expected, value);
+		try (InputStream in = new BuffersInputStream(b)) {
+			int value = Http2Headers.readInt(in, b.read(false), prefix);
+			assertEquals(expected, value);
+		}
+	}
+
+	@ParameterizedTest
+	@MethodSource("integer")
+	public void writeInt(byte[] expected, int prefix, int value) throws InterruptedException {
+		Buffers b = new Buffers();
+		Http2Headers.writeInt(b, 0, prefix, value);
+
+		assertEquals(expected.length, b.length());
+		for (int i = 0; i < expected.length; i++)
+			assertEquals(expected[i]&0xFF, b.get(i));
+	}
+
+	public static final byte b(int i) {
+		return (byte) (i & 0xFF);
 	}
 
 	public static Stream<Arguments> readHeaders() {
@@ -145,8 +164,10 @@ public class Http2HeadersTest {
 		b.write(data);
 
 		Map<String, String> r = new HashMap<>();
-		while (b.length() > 0)
-			h.readHeaders(b, r::put);
+		try (InputStream in = new BuffersInputStream(b)) {
+			while (b.length() > 0)
+				h.readHeader(in, r::put);
+		}
 
 		assertEquals(table.length, h.dynamic.size());
 		int i = 0;
@@ -156,10 +177,6 @@ public class Http2HeadersTest {
 		assertEquals(headers.length, r.size());
 		for (Entry e : headers)
 			assertEquals(e.value(), r.get(e.name()));
-	}
-
-	private static final byte b(int i) {
-		return (byte) (i & 0xFF);
 	}
 
 	private static final Entry e(String n, String v) {

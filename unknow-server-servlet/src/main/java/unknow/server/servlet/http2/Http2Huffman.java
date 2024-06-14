@@ -1,6 +1,8 @@
 package unknow.server.servlet.http2;
 
+import java.io.EOFException;
 import java.io.IOException;
+import java.io.InputStream;
 
 import unknow.server.util.io.Buffers;
 
@@ -37,17 +39,17 @@ public class Http2Huffman {
 			10, 13, 22, 256 // 29, 30
 	};
 
-	private static int bits(S s, int need) throws InterruptedException, IOException {
+	private static int bits(S s, int need) throws IOException {
 		int val = s.bit;
 		while (s.cnt < need) {
 			if (--s.max < 0) {
 				if (s.bit != (1 << s.cnt) - 1)
-					throw new IOException("EOF");
+					throw new EOFException();
 				return -1;
 			}
 
 			val <<= 8;
-			val |= s.b.read(false); /* load eight bits */
+			val |= s.b.read(); /* load eight bits */
 			s.cnt += 8;
 		}
 
@@ -60,7 +62,7 @@ public class Http2Huffman {
 		return (val & m) >> s.cnt;
 	}
 
-	public static String decode(Buffers b, int max, StringBuilder sb) throws InterruptedException, IOException {
+	public static String decode(InputStream b, int max, StringBuilder sb) throws IOException {
 		S s = new S(b, max);
 		char c;
 		while ((s.max > 0 || s.cnt > 0) && (c = read(s)) != 256)
@@ -68,7 +70,11 @@ public class Http2Huffman {
 		return sb.toString();
 	}
 
-	private static final char read(S s) throws InterruptedException, IOException {
+//	public static void encode(Buffers b, String value) {
+//		
+//	}
+
+	private static final char read(S s) throws IOException {
 		int first = 0; /* first code of length len */
 		int index = 0; /* index of first code of length len in symbol table */
 
@@ -95,35 +101,15 @@ public class Http2Huffman {
 	}
 
 	static final class S {
-		final Buffers b;
+		final InputStream b;
 		int max;
 
 		int bit;
 		int cnt;
 
-		public S(Buffers b, int max) {
+		public S(InputStream b, int max) {
 			this.b = b;
 			this.max = max;
 		}
-	}
-
-	public static void main(String[] arg) throws Exception {
-//		System.out.println(
-		Buffers b = new Buffers();
-		b.write(0xae);
-		b.write(0xc3);
-		b.write(0x77);
-		b.write(0x1a);
-		b.write(0x4b);
-
-		b.walk((d, o, l) -> {
-			for (int i = 0; i < l; i++)
-				System.out.println("	" + Integer.toString(d[i + o] & 0xFF, 2));
-			return true;
-		}, 0, -1);
-
-		StringBuilder sb = new StringBuilder();
-		decode(b, b.length(), sb);
-		System.out.println(sb);
 	}
 }
