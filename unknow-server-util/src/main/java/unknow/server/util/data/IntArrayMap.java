@@ -69,15 +69,19 @@ public class IntArrayMap<T> {
 	public T set(int key, T value) {
 		int i = Arrays.binarySearch(keys, 0, len, key);
 		if (i >= 0) {
+			T old = values[i];
 			values[i] = value;
-			return null;
+			return old;
 		}
 		ensure(++len);
 		i = -i - 1;
-		T old = values[i];
+		if (i < len - 1) {
+			System.arraycopy(keys, i, keys, i + 1, len - i - 1);
+			System.arraycopy(values, i, values, i + 1, len - i - 1);
+		}
 		keys[i] = key;
 		values[i] = value;
-		return old;
+		return null;
 	}
 
 	/**
@@ -91,12 +95,12 @@ public class IntArrayMap<T> {
 		int i = Arrays.binarySearch(keys, 0, len, key);
 		if (i >= 0)
 			return false;
-		if (i < len) {
-			System.arraycopy(keys, i, keys, i + 1, len - i);
-			System.arraycopy(values, i, values, i + 1, len - i);
-		}
 		ensure(++len);
 		i = -i - 1;
+		if (i < len - 1) {
+			System.arraycopy(keys, i, keys, i + 1, len - i - 1);
+			System.arraycopy(values, i, values, i + 1, len - i - 1);
+		}
 		keys[i] = key;
 		values[i] = value;
 		return true;
@@ -107,7 +111,24 @@ public class IntArrayMap<T> {
 	 * @return the removed value
 	 */
 	public T remove(int key) {
-		return set(key, null);
+		int i = Arrays.binarySearch(keys, 0, len, key);
+		if (i < 0)
+			return null;
+		T old = values[i];
+		len--;
+		System.arraycopy(keys, i + 1, keys, i, len - i);
+		System.arraycopy(values, i + 1, values, i, len - i);
+		values[len] = null;
+		return old;
+	}
+
+	/**
+	 * empty the map
+	 */
+	public void clear() {
+		for (int i = 0; i < len; i++)
+			values[i] = null;
+		len = 0;
 	}
 
 	/**

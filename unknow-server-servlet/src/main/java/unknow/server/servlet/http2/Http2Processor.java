@@ -98,6 +98,7 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 	public void close() {
 		for (Http2Stream s : streams.values())
 			s.close(true);
+		streams.clear();
 	}
 
 	/**
@@ -146,10 +147,12 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 					return;
 				}
 
-				streams.set(id, s = new Http2Stream(co, id, this, initialWindow));
+				s = new Http2Stream(co, id, this, initialWindow);
 
 				if ((flags & 0x1) == 1) // END_STREAM 
 					s.close(false);
+				else
+					streams.set(id, s);
 				if ((flags & 0x8) == 1) {
 					pad = buf.read(false);
 					if (pad >= size) {
@@ -162,7 +165,7 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 					buf.skip(5);
 				}
 
-				r = new FrameHeader(size, flags, id, pad).process(buf);
+				r = new FrameHeader(size, flags, id, pad, s).process(buf);
 				return;
 			case 2: // priority
 				r = new FrameReader(size, flags, id).process(buf);
@@ -238,11 +241,7 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 					return;
 				}
 
-				r = new FrameHeader(size, flags, id, pad).process(buf);
-
-				wantContinuation = (flags & 0x4) == 0;
-				if (!wantContinuation)
-					s.start();
+				r = new FrameHeader(size, flags, id, pad, s).process(buf);
 				return;
 			default:
 				goaway(PROTOCOL_ERROR);
@@ -502,6 +501,7 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 			b = new byte[4];
 		}
 
+		@Override
 		public FrameReader process(Buffers buf) throws InterruptedException {
 			if (lastId >= 0)
 				return super.process(buf);
@@ -552,9 +552,9 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 		private final Buffers remain;
 		private int pad;
 
-		protected FrameHeader(int size, int flags, int id, int pad) {
+		protected FrameHeader(int size, int flags, int id, int pad, Http2Stream s) {
 			super(size, flags, id);
-			this.s = streams.get(id);
+			this.s = s;
 			this.remain = new Buffers();
 			this.pad = pad;
 		}
