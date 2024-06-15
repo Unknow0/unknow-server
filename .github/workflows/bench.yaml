@@ -60,7 +60,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        t: ['cxf', 'tomcat', 'unknow', 'native']
+        t: ['cxf', 'tomcat', 'unknow']
     needs: build
     steps:
     - uses: actions/checkout@v4
