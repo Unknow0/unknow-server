@@ -138,8 +138,8 @@ public final class ServletRequestImpl implements HttpServletRequest {
 			if (j < 0)
 				j = path.length();
 			this.path.add(path.substring(i, j));
-			i = j;
-		} while (j < path.length());
+			i = j + 1;
+		} while (i < path.length());
 	}
 
 	public List<String> getPaths() {
