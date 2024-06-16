@@ -25,7 +25,7 @@ public abstract class HttpWorker implements Runnable, HttpAdapter {
 	protected ServletRequestImpl req;
 	protected ServletResponseImpl res;
 
-	public HttpWorker(HttpConnection co) {
+	protected HttpWorker(HttpConnection co) {
 		this.co = co;
 		this.manager = co.manager;
 		this.req = new ServletRequestImpl(this, DispatcherType.REQUEST);
@@ -55,11 +55,6 @@ public abstract class HttpWorker implements Runnable, HttpAdapter {
 	protected abstract boolean doStart() throws IOException, InterruptedException;
 
 	protected abstract void doDone();
-
-	@Override
-	public void run() {
-		doRun();
-	}
 
 	@Override
 	public void sendError(int sc, Throwable t, String msg) throws IOException {
@@ -93,28 +88,15 @@ public abstract class HttpWorker implements Runnable, HttpAdapter {
 		}
 	}
 
-	protected final void doRun() {
+	@Override
+	public void run() {
 		try {
 			if (!doStart()) {
 				logger.warn("init req failed");
 				co.getOut().close();
 				return;
 			}
-			co.events.fireRequestInitialized(req);
-			FilterChain s = manager.find(req);
-			try {
-				s.doFilter(req, res);
-			} catch (UnavailableException e) {
-				// TODO add page with retry-after
-				sendError(503, e, null);
-			} catch (Exception e) {
-				logger.error("failed to service '{}'", s, e);
-				if (!res.isCommitted())
-					sendError(500, e, null);
-			}
-			co.events.fireRequestDestroyed(req);
-			req.clearInput();
-			res.close();
+			doRun();
 		} catch (Exception e) {
 			logger.error("processor error", e);
 			try {
@@ -122,9 +104,29 @@ public abstract class HttpWorker implements Runnable, HttpAdapter {
 					res.sendError(500);
 			} catch (@SuppressWarnings("unused") IOException e1) { //ok
 			}
+			if (e instanceof InterruptedException)
+				Thread.currentThread().interrupt();
 		} finally {
 			doDone();
 			co.flush();
 		}
+	}
+
+	private final void doRun() throws IOException {
+		co.events.fireRequestInitialized(req);
+		FilterChain s = manager.find(req);
+		try {
+			s.doFilter(req, res);
+		} catch (UnavailableException e) {
+			// TODO add page with retry-after
+			sendError(503, e, null);
+		} catch (Exception e) {
+			logger.error("failed to service '{}'", s, e);
+			if (!res.isCommitted())
+				sendError(500, e, null);
+		}
+		co.events.fireRequestDestroyed(req);
+		req.clearInput();
+		res.close();
 	}
 }

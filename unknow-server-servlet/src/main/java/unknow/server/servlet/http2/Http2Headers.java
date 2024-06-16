@@ -85,11 +85,11 @@ public class Http2Headers {
 
 	private int settingsSize;
 	private int size;
-	private int max;
+	private int maxSize;
 
 	public Http2Headers(int maxSize) {
 		this.settingsSize = maxSize;
-		this.max = settingsSize;
+		this.maxSize = settingsSize;
 
 		this.dynamic = new LinkedList<>();
 		this.size = 0;
@@ -210,8 +210,8 @@ public class Http2Headers {
 		} else if ((i & 0b00100000) != 0) { // update size
 			i = readInt(in, i, 5);
 			if (i > settingsSize)
-				; // TODO error
-			max = i;
+				throw new IOException("Update size > max size");
+			maxSize = i;
 			ensureMax();
 		} else { // literal non indexed
 			i = readInt(in, i, 4);
@@ -227,7 +227,7 @@ public class Http2Headers {
 
 	public void setMax(int size) {
 		this.settingsSize = size;
-		this.max = Math.min(size, max);
+		this.maxSize = Math.min(size, maxSize);
 	}
 
 	private static String readData(InputStream in) throws IOException {
@@ -249,19 +249,6 @@ public class Http2Headers {
 		byte[] bytes = value.getBytes(StandardCharsets.US_ASCII);
 		writeInt(out, 0, 7, bytes.length);
 		out.write(bytes);
-
-//		int i = in.read();
-//		if (i == -1)
-//			throw new EOFException();
-//		boolean huffman = (i & 0x80) == 0x80;
-//		i = readInt(in, i, 7);
-//
-//		StringBuilder sb = new StringBuilder();
-//		if (!huffman)
-//			toString(sb, in, i);
-//		else
-//			Http2Huffman.decode(in, i, sb);
-//		return sb.toString();
 	}
 
 	protected Entry get(int i) {
@@ -278,7 +265,7 @@ public class Http2Headers {
 
 	protected void ensureMax() {
 		Entry e;
-		while (size > max && (e = dynamic.pollLast()) != null)
+		while (size > maxSize && (e = dynamic.pollLast()) != null)
 			size -= e.size();
 	}
 

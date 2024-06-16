@@ -3,9 +3,6 @@ package unknow.server.servlet.http11;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import unknow.server.servlet.HttpConnection;
 import unknow.server.servlet.HttpProcessor;
 import unknow.server.util.io.BuffersUtils;
@@ -14,7 +11,7 @@ import unknow.server.util.io.BuffersUtils;
  * http/1.1 implementation
  */
 public class Http11Processor implements HttpProcessor {
-	private static final Logger logger = LoggerFactory.getLogger(Http11Processor.class);
+//	private static final Logger logger = LoggerFactory.getLogger(Http11Processor.class);
 
 	private static final byte[] END = new byte[] { '\r', '\n', '\r', '\n' };
 
@@ -39,7 +36,7 @@ public class Http11Processor implements HttpProcessor {
 	}
 
 	@Override
-	public final boolean isClosed() {
+	public final boolean isClosable(boolean stop) {
 		if (!exec.isDone())
 			return false;
 		if (co.pendingRead.isEmpty())

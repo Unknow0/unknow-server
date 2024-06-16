@@ -7,7 +7,7 @@ import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.EventListener;
 import java.util.Locale;
@@ -165,7 +165,7 @@ public class ServletContextImpl implements ServletContext {
 	@Override
 	public Set<String> getResourcePaths(String path) {
 		// TODO Auto-generated method stub
-		return null;
+		return Collections.emptySet();
 	}
 
 	@Override
@@ -269,7 +269,7 @@ public class ServletContextImpl implements ServletContext {
 	@Override
 	public Map<String, ? extends ServletRegistration> getServletRegistrations() {
 		// TODO Auto-generated method stub
-		return null;
+		return Collections.emptyMap();
 	}
 
 	@Override
@@ -305,7 +305,7 @@ public class ServletContextImpl implements ServletContext {
 	@Override
 	public Map<String, ? extends FilterRegistration> getFilterRegistrations() {
 		// TODO Auto-generated method stub
-		return null;
+		return Collections.emptyMap();
 	}
 
 	@Override
@@ -323,13 +323,13 @@ public class ServletContextImpl implements ServletContext {
 	@Override
 	public Set<SessionTrackingMode> getDefaultSessionTrackingModes() {
 		// TODO Auto-generated method stub
-		return null;
+		return Collections.emptySet();
 	}
 
 	@Override
 	public Set<SessionTrackingMode> getEffectiveSessionTrackingModes() {
 		// TODO Auto-generated method stub
-		return null;
+		return Collections.emptySet();
 	}
 
 	@SuppressWarnings("unchecked")

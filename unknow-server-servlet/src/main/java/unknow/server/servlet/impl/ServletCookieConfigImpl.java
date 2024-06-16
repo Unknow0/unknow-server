@@ -54,12 +54,14 @@ public class ServletCookieConfigImpl implements SessionCookieConfig {
 
 	@Deprecated(since = "Servlet 6.0", forRemoval = true)
 	@Override
+	/** @deprectated */
 	public String getComment() {
 		return null;
 	}
 
 	@Deprecated(since = "Servlet 6.0", forRemoval = true)
 	@Override
+	/** @deprectated */
 	public void setComment(String comment) { // OK
 	}
 

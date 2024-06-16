@@ -31,7 +31,7 @@ import unknow.server.util.io.BuffersUtils;
 public final class Http11Worker extends HttpWorker {
 	private static final Logger logger = LoggerFactory.getLogger(Http11Worker.class);
 
-	private static final byte[] END = new byte[] { '\r', '\n', '\r', '\n' };
+//	private static final byte[] END = new byte[] { '\r', '\n', '\r', '\n' };
 
 	private static final byte[] CRLF = { '\r', '\n' };
 	private static final byte[] PARAM_SEP = { '&', '=' };
@@ -42,22 +42,22 @@ public final class Http11Worker extends HttpWorker {
 	private static final byte[] CONTENT_LENGTH = new byte[] { 'c', 'o', 'n', 't', 'e', 'n', 't', '-', 'l', 'e', 'n', 'g', 't', 'h', ':', ' ' };
 	private static final byte[] CONTENT_LENGTH0 = new byte[] { 'c', 'o', 'n', 't', 'e', 'n', 't', '-', 'l', 'e', 'n', 'g', 't', 'h', ':', ' ', '0', '\r', '\n' };
 	private static final byte[] CONTENT_TYPE = new byte[] { 'c', 'o', 'n', 't', 'e', 'n', 't', '-', 't', 'y', 'p', 'e', ':', ' ' };
-	private static final byte[] CONTENT_HTML = new byte[] { 'c', 'o', 'n', 't', 'e', 'n', 't', '-', 't', 'y', 'p', 'e', ':', ' ', 't', 'e', 'x', 't', '/', 'h', 't', 'm', 'l',
-			';', 'c', 'h', 'a', 'r', 's', 'e', 't', '=', 'u', 't', 'f', '8', '\r', '\n' };
+//	private static final byte[] CONTENT_HTML = new byte[] { 'c', 'o', 'n', 't', 'e', 'n', 't', '-', 't', 'y', 'p', 'e', ':', ' ', 't', 'e', 'x', 't', '/', 'h', 't', 'm', 'l',
+//			';', 'c', 'h', 'a', 'r', 's', 'e', 't', '=', 'u', 't', 'f', '8', '\r', '\n' };
 	private static final byte[] COOKIE = new byte[] { 's', 'e', 't', '-', 'c', 'o', 'o', 'k', 'i', 'e', ':', ' ' };
 	private static final byte[] PATH = new byte[] { ';', 'p', 'a', 't', 'h', '=' };
 	private static final byte[] DOMAIN = new byte[] { ';', 'd', 'o', 'm', 'a', 'i', 'n', '=' };
 	private static final byte[] MAX_AGE = new byte[] { ';', 'm', 'a', 'x', '-', 'a', 'g', 'e' };
 	private static final byte[] SECURE = new byte[] { ';', 's', 'e', 'c', 'u', 'r', 'e' };
 	private static final byte[] HTTP_ONLY = new byte[] { ';', 'h', 't', 't', 'p', 'o', 'n', 'l', 'y' };
-	private static final byte[] ERROR_START = new byte[] { '<', 'h', 't', 'm', 'l', '>', '<', 'b', 'o', 'd', 'y', '>', '<', 'h', '1', '>' };
-	private static final byte[] ERROR_END = new byte[] { '<', '/', 'h', '1', '>', '<', '/', 'b', 'o', 'd', 'y', '>', '<', '/', 'h', 't', 'm', 'l', '>' };
+//	private static final byte[] ERROR_START = new byte[] { '<', 'h', 't', 'm', 'l', '>', '<', 'b', 'o', 'd', 'y', '>', '<', 'h', '1', '>' };
+//	private static final byte[] ERROR_END = new byte[] { '<', '/', 'h', '1', '>', '<', '/', 'b', 'o', 'd', 'y', '>', '<', '/', 'h', 't', 'm', 'l', '>' };
 
 	private static final byte SPACE = ' ';
 	private static final byte QUESTION = '?';
 	private static final byte COLON = ':';
-	private static final byte SEMICOLON = ';';
-	private static final byte SLASH = '/';
+//	private static final byte SEMICOLON = ';';
+//	private static final byte SLASH = '/';
 	private static final byte AMPERSAMP = '&';
 	private static final byte EQUAL = '=';
 
@@ -139,34 +139,13 @@ public final class Http11Worker extends HttpWorker {
 		out.write(CRLF);
 	}
 
-//	@SuppressWarnings("resource")
-//	public void sendError(HttpError e, Throwable t, String msg) throws IOException {
-//		Out out = co.getOut();
-//		if (msg == null) {
-//			out.write(e.empty());
-//			return;
-//		}
-//
-//		out.write(e.encoded);
-//		byte[] bytes = msg.getBytes(StandardCharsets.UTF_8);
-//
-//		out.write(CONTENT_HTML);
-//		out.write(CONTENT_LENGTH);
-//		out.write(Integer.toString(bytes.length + ERROR_START.length + ERROR_END.length).getBytes(StandardCharsets.US_ASCII));
-//		out.write(CRLF);
-//		out.write(CRLF);
-//		out.write(ERROR_START);
-//		out.write(bytes);
-//		out.write(ERROR_END);
-//	}
-
 	@Override
 	public void run() {
-		doRun();
+		super.run();
 		while (!co.pendingRead.isEmpty()) {
 			this.req = new ServletRequestImpl(this, DispatcherType.REQUEST);
 			this.res = new ServletResponseImpl(this);
-			doRun();
+			super.run();
 		}
 	}
 
@@ -265,7 +244,7 @@ public final class Http11Worker extends HttpWorker {
 			req.addHeader(k, v);
 			last = i + 2;
 		}
-		b.skip(last + 2);
+		b.skip(last + 2L);
 		return true;
 	}
 

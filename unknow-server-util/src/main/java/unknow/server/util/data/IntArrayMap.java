@@ -151,6 +151,13 @@ public class IntArrayMap<T> {
 	}
 
 	/**
+	 * @return true if map is empty
+	 */
+	public boolean isEmpty() {
+		return len == 0;
+	}
+
+	/**
 	 * @return set of all the keys
 	 */
 	public Set<Integer> keySet() {

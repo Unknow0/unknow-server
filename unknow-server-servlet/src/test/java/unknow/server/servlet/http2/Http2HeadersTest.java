@@ -50,7 +50,7 @@ public class Http2HeadersTest {
 
 		assertEquals(expected.length, b.length());
 		for (int i = 0; i < expected.length; i++)
-			assertEquals(expected[i]&0xFF, b.get(i));
+			assertEquals(expected[i] & 0xFF, b.get(i));
 	}
 
 	public static final byte b(int i) {
@@ -180,7 +180,6 @@ public class Http2HeadersTest {
 	}
 
 	private static final Entry e(String n, String v) {
-//		return new Entry(new EntryData(n, n.length()), new EntryData(v, v.length()));
 		return new Entry(n, v);
 	}
 }

@@ -4,8 +4,6 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 
-import unknow.server.util.io.Buffers;
-
 /**
  * HPACK static huffman table
  * https://httpwg.org/specs/rfc7541.html#huffman.code
@@ -39,6 +37,9 @@ public class Http2Huffman {
 			10, 13, 22, 256 // 29, 30
 	};
 
+	private Http2Huffman() {
+	}
+
 	private static int bits(S s, int need) throws IOException {
 		int val = s.bit;
 		while (s.cnt < need) {
@@ -69,10 +70,6 @@ public class Http2Huffman {
 			sb.append(c);
 		return sb.toString();
 	}
-
-//	public static void encode(Buffers b, String value) {
-//		
-//	}
 
 	private static final char read(S s) throws IOException {
 		int first = 0; /* first code of length len */

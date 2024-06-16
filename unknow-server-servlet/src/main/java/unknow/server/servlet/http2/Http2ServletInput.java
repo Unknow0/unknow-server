@@ -34,19 +34,19 @@ public class Http2ServletInput extends ServletInputStream {
 	}
 
 	@Override
-	public void setReadListener(ReadListener readListener) {
-		;
+	public void setReadListener(ReadListener readListener) { // ok
 	}
 
 	@Override
 	public int read() throws IOException {
 		try {
 			while (!closed && in.isEmpty())
-				in.wait();
+				in.awaitContent();
 			if (closed && in.isEmpty())
 				return -1;
 			return in.read(false);
 		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
 			throw new IOException(e);
 		}
 	}
@@ -60,6 +60,7 @@ public class Http2ServletInput extends ServletInputStream {
 				return -1;
 			return in.read(b, off, len, false);
 		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
 			throw new IOException(e);
 		}
 	}

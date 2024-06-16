@@ -17,25 +17,18 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import jakarta.servlet.DispatcherType;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import unknow.server.servlet.HttpAdapter;
 import unknow.server.servlet.HttpError;
 import unknow.server.servlet.impl.out.AbstractServletOutput;
-import unknow.server.servlet.utils.ServletManager;
 
 /**
  * @author unknow
  */
 public class ServletResponseImpl implements HttpServletResponse {
-	private static final Logger logger = LoggerFactory.getLogger(ServletResponseImpl.class);
+//	private static final Logger logger = LoggerFactory.getLogger(ServletResponseImpl.class);
 
 	private static final DateTimeFormatter RFC1123 = DateTimeFormatter.RFC_1123_DATE_TIME.withZone(ZoneOffset.UTC);
 

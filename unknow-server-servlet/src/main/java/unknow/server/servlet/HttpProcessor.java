@@ -8,8 +8,12 @@ public interface HttpProcessor {
 	 */
 	void process() throws InterruptedException;
 
-	/** @return true if the connection is closed */
-	boolean isClosed();
+	/** 
+	 * check if the connection can be closed
+	 * @param stop if true the server want to stop
+	 * @return true if the connection is closed
+	 */
+	boolean isClosable(boolean stop);
 
 	/** close the process */
 	void close();

@@ -95,19 +95,18 @@ public class Http2Stream extends HttpWorker implements Http2FlowControl {
 		try {
 			p.sendHeaders(id, res);
 		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
 			throw new IOException(e);
 		}
 	}
 
 	@Override
 	protected boolean doStart() throws IOException, InterruptedException {
-		// TODO Auto-generated method stub
 		return true;
 	}
 
 	@Override
-	protected void doDone() {
-		// TODO Auto-generated method stub
+	protected void doDone() { // ok
 	}
 
 	public final void close(boolean stop) {

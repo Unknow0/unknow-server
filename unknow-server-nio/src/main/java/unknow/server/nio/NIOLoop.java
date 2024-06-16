@@ -86,7 +86,7 @@ public class NIOLoop implements Runnable {
 			try {
 				logger.info("wait {} connection before close", selector.keys().size());
 				select(500, true);
-			} catch (Throwable e) {
+			} catch (Exception e) {
 				logger.error("failed to execute", e);
 			}
 		}

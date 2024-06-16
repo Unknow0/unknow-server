@@ -58,28 +58,27 @@ public class HttpConnection extends NIOConnection {
 	@Override
 	public boolean closed(long now, boolean stop) {
 		if (stop)
-			return p == null || p.isClosed();
+			return p == null || p.isClosable(stop);
 
 		if (isClosed())
 			return true;
 
-		if (p != null && !p.isClosed())
+		if (p != null && !p.isClosable(stop))
 			return false;
 
 		if (p == null && lastRead() < now - 1000) {
-			logger.warn("	request timeout");
+			logger.warn("request timeout {}", this);
 			return true;
 		}
 
 		if (pendingWrite.isEmpty() && keepAliveIdle > 0) {
 			long e = now - keepAliveIdle;
 			if (lastRead() <= e && lastWrite() <= e) {
-				logger.info("	keep alive idle reached");
+				logger.info("keep alive idle reached {}", this);
 				return true;
 			}
 		}
 
-		// TODO check request timeout
 		return false;
 	}
 
@@ -91,8 +90,9 @@ public class HttpConnection extends NIOConnection {
 		}
 	}
 
-	public Future<?> submit(Runnable r) {
-		return executor.submit(r);
+	@SuppressWarnings("unchecked")
+	public <T> Future<T> submit(Runnable r) {
+		return (Future<T>) executor.submit(r);
 	}
 
 	public ServletContext getCtx() {

@@ -132,9 +132,9 @@ public final class ServletRequestImpl implements HttpServletRequest {
 
 	public void setRequestUri(String path) {
 		this.requestUri = path;
-		int j, i = 1;
+		int i = 1;
 		do {
-			j = path.indexOf('/', i);
+			int j = path.indexOf('/', i);
 			if (j < 0)
 				j = path.length();
 			this.path.add(path.substring(i, j));
@@ -636,7 +636,7 @@ public final class ServletRequestImpl implements HttpServletRequest {
 		if (!getContentType().startsWith("multipart/form-data"))
 			throw new ServletException("not a multipart/form-data");
 		// TODO Auto-generated method stub
-		return null;
+		return Collections.emptyList();
 	}
 
 	@Override

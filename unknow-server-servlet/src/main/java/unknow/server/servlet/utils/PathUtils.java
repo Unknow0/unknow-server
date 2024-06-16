@@ -68,10 +68,20 @@ public class PathUtils {
 		while ((c = r.read()) != -1) {
 			if (c == '&' || key && c == '=')
 				return c;
-			if (c == '%') // TODO decode
-				;
+			if (c == '%')
+				c = decodeHex(r.read()) << 8 | decodeHex(r.read());
 			sb.append((char) c);
 		}
 		return c;
+	}
+
+	private static int decodeHex(int c) throws IOException {
+		if (c >= '0' && c <= '9')
+			return c - '0';
+		if (c >= 'A' && c <= 'F')
+			return 10 + c - 'A';
+		if (c >= 'a' && c <= 'f')
+			return 10 + c - 'A';
+		return 0;
 	}
 }
