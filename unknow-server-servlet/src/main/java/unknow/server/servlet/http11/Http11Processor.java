@@ -11,8 +11,6 @@ import unknow.server.util.io.BuffersUtils;
  * http/1.1 implementation
  */
 public class Http11Processor implements HttpProcessor {
-//	private static final Logger logger = LoggerFactory.getLogger(Http11Processor.class);
-
 	private static final byte[] END = new byte[] { '\r', '\n', '\r', '\n' };
 
 	private static final int MAX_START_SIZE = 8192;

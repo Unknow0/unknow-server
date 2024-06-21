@@ -1,7 +1,7 @@
 /**
  * 
  */
-package unknow.server.servlet.impl.in;
+package unknow.server.servlet.http11;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -15,7 +15,6 @@ import jakarta.servlet.ServletInputStream;
 public class LengthInputStream extends ServletInputStream {
 	private final InputStream in;
 	private long length;
-	private ReadListener listener;
 
 	/**
 	 * create new ServletInputLength
@@ -41,14 +40,13 @@ public class LengthInputStream extends ServletInputStream {
 	public boolean isReady() {
 		try {
 			return in.available() > 0;
-		} catch (IOException e) {
+		} catch (@SuppressWarnings("unused") IOException e) {
 			return true;
 		}
 	}
 
 	@Override
-	public void setReadListener(ReadListener readListener) {
-		this.listener = readListener;
+	public void setReadListener(ReadListener readListener) { // ok
 	}
 
 	@Override

@@ -18,20 +18,15 @@ import unknow.server.servlet.Decode;
 import unknow.server.servlet.HttpConnection;
 import unknow.server.servlet.HttpError;
 import unknow.server.servlet.HttpWorker;
+import unknow.server.servlet.impl.AbstractServletOutput;
 import unknow.server.servlet.impl.ServletRequestImpl;
 import unknow.server.servlet.impl.ServletResponseImpl;
-import unknow.server.servlet.impl.in.ChunckedInputStream;
-import unknow.server.servlet.impl.in.EmptyInputStream;
-import unknow.server.servlet.impl.in.LengthInputStream;
-import unknow.server.servlet.impl.out.AbstractServletOutput;
 import unknow.server.util.io.Buffers;
 import unknow.server.util.io.BuffersUtils;
 
 /** http/1.1 worker */
 public final class Http11Worker extends HttpWorker {
 	private static final Logger logger = LoggerFactory.getLogger(Http11Worker.class);
-
-//	private static final byte[] END = new byte[] { '\r', '\n', '\r', '\n' };
 
 	private static final byte[] CRLF = { '\r', '\n' };
 	private static final byte[] PARAM_SEP = { '&', '=' };
@@ -42,22 +37,16 @@ public final class Http11Worker extends HttpWorker {
 	private static final byte[] CONTENT_LENGTH = new byte[] { 'c', 'o', 'n', 't', 'e', 'n', 't', '-', 'l', 'e', 'n', 'g', 't', 'h', ':', ' ' };
 	private static final byte[] CONTENT_LENGTH0 = new byte[] { 'c', 'o', 'n', 't', 'e', 'n', 't', '-', 'l', 'e', 'n', 'g', 't', 'h', ':', ' ', '0', '\r', '\n' };
 	private static final byte[] CONTENT_TYPE = new byte[] { 'c', 'o', 'n', 't', 'e', 'n', 't', '-', 't', 'y', 'p', 'e', ':', ' ' };
-//	private static final byte[] CONTENT_HTML = new byte[] { 'c', 'o', 'n', 't', 'e', 'n', 't', '-', 't', 'y', 'p', 'e', ':', ' ', 't', 'e', 'x', 't', '/', 'h', 't', 'm', 'l',
-//			';', 'c', 'h', 'a', 'r', 's', 'e', 't', '=', 'u', 't', 'f', '8', '\r', '\n' };
 	private static final byte[] COOKIE = new byte[] { 's', 'e', 't', '-', 'c', 'o', 'o', 'k', 'i', 'e', ':', ' ' };
 	private static final byte[] PATH = new byte[] { ';', 'p', 'a', 't', 'h', '=' };
 	private static final byte[] DOMAIN = new byte[] { ';', 'd', 'o', 'm', 'a', 'i', 'n', '=' };
 	private static final byte[] MAX_AGE = new byte[] { ';', 'm', 'a', 'x', '-', 'a', 'g', 'e' };
 	private static final byte[] SECURE = new byte[] { ';', 's', 'e', 'c', 'u', 'r', 'e' };
 	private static final byte[] HTTP_ONLY = new byte[] { ';', 'h', 't', 't', 'p', 'o', 'n', 'l', 'y' };
-//	private static final byte[] ERROR_START = new byte[] { '<', 'h', 't', 'm', 'l', '>', '<', 'b', 'o', 'd', 'y', '>', '<', 'h', '1', '>' };
-//	private static final byte[] ERROR_END = new byte[] { '<', '/', 'h', '1', '>', '<', '/', 'b', 'o', 'd', 'y', '>', '<', '/', 'h', 't', 'm', 'l', '>' };
 
 	private static final byte SPACE = ' ';
 	private static final byte QUESTION = '?';
 	private static final byte COLON = ':';
-//	private static final byte SEMICOLON = ';';
-//	private static final byte SLASH = '/';
 	private static final byte AMPERSAMP = '&';
 	private static final byte EQUAL = '=';
 

@@ -1,7 +1,7 @@
 /**
  * 
  */
-package unknow.server.servlet.impl.in;
+package unknow.server.servlet.http11;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -22,8 +22,6 @@ public class ChunckedInputStream extends ServletInputStream {
 	private static final int DONE = 2;
 
 	private final InputStream in;
-
-	private ReadListener listener;
 
 	private int step = 0;
 	private int chunkLen;
@@ -68,8 +66,7 @@ public class ChunckedInputStream extends ServletInputStream {
 	}
 
 	@Override
-	public void setReadListener(ReadListener listener) {
-		this.listener = listener;
+	public void setReadListener(ReadListener listener) { // ok
 	}
 
 	private void readData() throws IOException {

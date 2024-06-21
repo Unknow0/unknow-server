@@ -6,8 +6,8 @@ package unknow.server.servlet.http11;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import unknow.server.servlet.impl.AbstractServletOutput;
 import unknow.server.servlet.impl.ServletResponseImpl;
-import unknow.server.servlet.impl.out.AbstractServletOutput;
 
 /**
  * Http chuncked entity

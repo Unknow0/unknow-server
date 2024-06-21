@@ -2,8 +2,8 @@ package unknow.server.servlet.http2;
 
 import java.io.IOException;
 
+import unknow.server.servlet.impl.AbstractServletOutput;
 import unknow.server.servlet.impl.ServletResponseImpl;
-import unknow.server.servlet.impl.out.AbstractServletOutput;
 
 public class Http2ServletOutput extends AbstractServletOutput {
 	private final Http2Processor p;

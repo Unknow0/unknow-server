@@ -1,61 +1,86 @@
 package unknow.server.servlet.http2;
 
-import java.io.EOFException;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import unknow.server.servlet.HttpConnection;
 import unknow.server.servlet.HttpProcessor;
+import unknow.server.servlet.http2.frame.FrameData;
+import unknow.server.servlet.http2.frame.FrameGoAway;
+import unknow.server.servlet.http2.frame.FrameHeader;
+import unknow.server.servlet.http2.frame.FramePing;
+import unknow.server.servlet.http2.frame.FrameReader;
+import unknow.server.servlet.http2.frame.FrameReader.FrameBuilder;
+import unknow.server.servlet.http2.frame.FrameRstStream;
+import unknow.server.servlet.http2.frame.FrameSettings;
+import unknow.server.servlet.http2.frame.FrameWindowUpdate;
 import unknow.server.servlet.impl.ServletResponseImpl;
 import unknow.server.util.data.IntArrayMap;
 import unknow.server.util.io.Buffers;
-import unknow.server.util.io.BuffersInputStream;
 import unknow.server.util.io.BuffersUtils;
 
 public class Http2Processor implements HttpProcessor, Http2FlowControl {
-	private static final Logger logger = LoggerFactory.getLogger(Http2Processor.class);
+	static final Logger logger = LoggerFactory.getLogger(Http2Processor.class);
 
 	private static final byte[] PRI = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes(StandardCharsets.US_ASCII);
 
-	private static final int NO_ERROR = 0;
-	private static final int PROTOCOL_ERROR = 1;
-//	private static final int INTERNAL_ERROR = 2;
-//	private static final int FLOW_CONTROL_ERROR = 3;
-//	private static final int SETTINGS_TIMEOUT = 4;
-//	private static final int STREAM_CLOSED = 5;
-	private static final int FRAME_SIZE_ERROR = 6;
-//	private static final int REFUSED_STREAM = 7;
-//	private static final int CANCEL = 8;
-//	private static final int COMPRESSION_ERROR = 9;
-//	private static final int CONNECT_ERROR = 10;
-//	private static final int ENHANCE_YOUR_CALM = 12;
-//	private static final int INADEQUATE_SECURITY = 13;
-//	private static final int HTTP_1_1_REQUIRED = 14;
+	public static final int NO_ERROR = 0;
+	public static final int PROTOCOL_ERROR = 1;
+	public static final int INTERNAL_ERROR = 2;
+	public static final int FLOW_CONTROL_ERROR = 3;
+	public static final int SETTINGS_TIMEOUT = 4;
+	public static final int STREAM_CLOSED = 5;
+	public static final int FRAME_SIZE_ERROR = 6;
+	public static final int REFUSED_STREAM = 7;
+	public static final int CANCEL = 8;
+	public static final int COMPRESSION_ERROR = 9;
+	public static final int CONNECT_ERROR = 10;
+	public static final int ENHANCE_YOUR_CALM = 12;
+	public static final int INADEQUATE_SECURITY = 13;
+	public static final int HTTP_1_1_REQUIRED = 14;
 
-	private final HttpConnection co;
-	private final IntArrayMap<Http2Stream> streams;
-	private final Http2Headers headers;
+	private static final IntArrayMap<FrameBuilder> BUILDERS = new IntArrayMap<>();
+
+	static {
+		BUILDERS.set(0, FrameData.BUILDER);
+		BUILDERS.set(1, FrameHeader.BUILDER);
+		BUILDERS.set(2, FrameReader.BUILDER);
+		BUILDERS.set(3, FrameRstStream.BUILDER);
+		BUILDERS.set(4, FrameSettings.BUILDER);
+		BUILDERS.set(6, FramePing.BUILDER);
+		BUILDERS.set(7, FrameGoAway.BUILDER);
+		BUILDERS.set(8, FrameWindowUpdate.BUILDER);
+		BUILDERS.set(9, FrameHeader.CONTINUATION);
+	}
+
+	public final HttpConnection co;
+	public final IntArrayMap<Http2Stream> streams;
+	public final List<Http2Stream> pending;
+	public final Http2Headers headers;
 	private final byte[] b;
 	private int window;
-	private boolean closing;
+	public boolean closing;
 
 //	private boolean allowPush;
 //	private int concurrent;
-	private int initialWindow;
-	private int frame;
+	public int initialWindow;
+	public int frame;
 //	private int headerList;
 	private FrameReader r;
 
 	private int lastId;
 
-	private boolean wantContinuation;
+	public boolean wantContinuation;
 
 	public Http2Processor(HttpConnection co) throws InterruptedException {
 		this.co = co;
 		this.streams = new IntArrayMap<>();
+		this.pending = new LinkedList<>();
 		this.headers = new Http2Headers(4096);
 		this.b = new byte[9];
 		this.closing = false;
@@ -98,10 +123,16 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 			try {
 				goaway(NO_ERROR);
 				closing = true;
-			} catch (@SuppressWarnings("unused") InterruptedException e) { // ok
+			} catch (@SuppressWarnings("unused") InterruptedException e) {
+				Thread.currentThread().interrupt();
 			}
 		}
-		return streams.isEmpty();
+		Iterator<Http2Stream> it = pending.iterator();
+		while (it.hasNext()) {
+			if (it.next().isClosed())
+				it.remove();
+		}
+		return pending.isEmpty() && streams.isEmpty();
 	}
 
 	@Override
@@ -131,131 +162,16 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 		}
 		wantContinuation = false;
 
-		Http2Stream s;
-		int pad = 0;
-		switch (type) {
-			case 0: // data
-				s = streams.get(id);
-				if (s == null) {
-					goaway(PROTOCOL_ERROR);
-					return;
-				}
-
-				if ((flags & 0x8) == 1) {
-					pad = buf.read(false);
-					if (pad >= size) {
-						goaway(PROTOCOL_ERROR);
-						return;
-					}
-				}
-
-				r = new FrameData(size, flags, id, pad).process(buf);
-				return;
-			case 1: // header
-				if (id == 0 || streams.contains(id)) {
-					goaway(PROTOCOL_ERROR);
-					return;
-				}
-
-				s = new Http2Stream(co, id, this, initialWindow);
-
-				if ((flags & 0x1) == 1) // END_STREAM 
-					s.close(false);
-				else
-					streams.set(id, s);
-				if ((flags & 0x8) == 1) {
-					pad = buf.read(false);
-					if (pad >= size) {
-						goaway(PROTOCOL_ERROR);
-						return;
-					}
-				}
-				if ((flags & 0x20) == 1) { // PRIORITY
-					buf.skip(5);
-				}
-
-				r = new FrameHeader(size, flags, id, pad, s).process(buf);
-				return;
-			case 2: // priority
-				r = new FrameReader(size, flags, id).process(buf);
-				return;
-			case 3: // rst_stream
-				s = streams.remove(id);
-				if (s == null) {
-					goaway(PROTOCOL_ERROR);
-					return;
-				}
-				if (size != 4) {
-					goaway(FRAME_SIZE_ERROR);
-					return;
-				}
-
-				buf.read(b, 0, 4, false);
-				int err = (b[0] & 0xff) << 24 | (b[1] & 0xff) << 16 | (b[2] & 0xff) << 8 | (b[3] & 0xff);
-				logger.info("close stream {}, err: {}", id, err);
-				s.close(true);
-				return;
-			case 4: // settings
-				if ((flags & 0x1) == 1) {
-					if (size != 0)
-						goaway(FRAME_SIZE_ERROR);
-					return;
-				}
-				if (id != 0) {
-					goaway(PROTOCOL_ERROR);
-					return;
-				}
-				if (size % 6 != 0) {
-					goaway(FRAME_SIZE_ERROR);
-					return;
-				}
-				r = new FrameSettings(size, flags, id).process(buf);
-				return;
-			case 5: // push promise
-				goaway(PROTOCOL_ERROR);
-				return;
-			case 6:	// ping
-				if (id != 0) {
-					goaway(PROTOCOL_ERROR);
-					return;
-				}
-				if (size != 8) {
-					goaway(FRAME_SIZE_ERROR);
-					return;
-				}
-				if ((flags & 0x1) == 1)
-					break;
-				r = new FramePing(size, flags, id).process(buf);
-				return;
-			case 7: // go away
-				if (id != 0) {
-					goaway(PROTOCOL_ERROR);
-					return;
-				}
-				r = new FrameGoAway(size, flags, id).process(buf);
-				return;
-			case 8: // window update
-				if (size != 4) {
-					goaway(FRAME_SIZE_ERROR);
-					return;
-				}
-				r = new FrameWindowUpdate(size, flags, id).process(buf);
-				return;
-			case 9: // continuation
-				s = streams.get(id);
-				if (s == null) {
-					goaway(PROTOCOL_ERROR);
-					return;
-				}
-
-				r = new FrameHeader(size, flags, id, pad, s).process(buf);
-				return;
-			default:
-				goaway(PROTOCOL_ERROR);
+		FrameBuilder b = BUILDERS.get(type);
+		if (b == null) {
+			goaway(PROTOCOL_ERROR);
+			return;
 		}
+
+		r = b.build(this, size, flags, id, buf);
 	}
 
-	private void goaway(int err) throws InterruptedException {
+	public void goaway(int err) throws InterruptedException {
 		byte[] f = new byte[17];
 		formatFrame(f, 8, 7, 0, 0);
 		f[9] = (byte) ((lastId >> 24) & 0x7f);
@@ -337,7 +253,7 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 		b[8] = (byte) (id & 0xff);
 	}
 
-	private static String error(int err) {
+	public static String error(int err) {
 		switch (err) {
 			case 0:
 				return "NO_ERROR";
@@ -379,263 +295,4 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 		}
 		return null;
 	};
-
-	private static class FrameReader {
-		protected int size;
-		protected int flags;
-		protected int id;
-
-		protected FrameReader(int size, int flags, int id) {
-			this.size = size;
-			this.flags = flags;
-			this.id = id;
-		}
-
-		/**
-		 * @param buf
-		 * @return this or null
-		 * @throws InterruptedException
-		 * @throws IOException 
-		 */
-		public FrameReader process(Buffers buf) throws InterruptedException {
-			size -= buf.skip(size);
-			return size == 0 ? null : this;
-		}
-	}
-
-	private class FrameSettings extends FrameReader {
-
-		private final byte[] b;
-
-		protected FrameSettings(int size, int flags, int id) {
-			super(size, flags, id);
-			b = new byte[9];
-		}
-
-		@Override
-		public final FrameReader process(Buffers buf) throws InterruptedException {
-			while (size > 0 && buf.length() > 6) {
-				buf.read(b, 0, 6, false);
-				size -= 6;
-
-				int i = (b[0] & 0xff) << 8 | (b[1] & 0xff);
-				int v = (b[2] & 0x7f) << 24 | (b[3] & 0xff) << 16 | (b[4] & 0xff) << 8 | (b[5] & 0xff);
-
-				switch (i) {
-					case 1:
-						synchronized (headers) {
-							headers.setMax(v);
-						}
-						break;
-					case 2:
-						if (v < 0 || v > 1) {
-							goaway(PROTOCOL_ERROR);
-							return null;
-						}
-//						allowPush = v == 1;
-						break;
-					case 3:
-//						concurrent = v;
-						break;
-					case 4:
-						initialWindow = v;
-						break;
-					case 5:
-						if (v < 16384 || v > 16777215) {
-							goaway(PROTOCOL_ERROR);
-							return null;
-						}
-						frame = v;
-						break;
-					case 6:
-//						headerList = v;
-						break;
-					default:
-						// ignore
-				}
-			}
-
-			if (size != 0)
-				return this;
-
-			formatFrame(b, 0, 4, 1, 0);
-			synchronized (co) {
-				co.pendingWrite.write(b);
-				co.flush();
-			}
-			return null;
-		}
-	}
-
-	private class FramePing extends FrameReader {
-
-		private final byte[] b;
-
-		protected FramePing(int size, int flags, int id) {
-			super(size, flags, id);
-			b = new byte[9 + 8];
-
-		}
-
-		@Override
-		public final FrameReader process(Buffers buf) throws InterruptedException {
-			if (buf.length() < 8)
-				return this;
-
-			buf.read(b, 9, 8, false);
-			formatFrame(b, 8, 8, 1, 0);
-			synchronized (co) {
-				co.pendingWrite.write(b);
-				co.flush();
-			}
-			return null;
-		}
-	}
-
-	private class FrameGoAway extends FrameReader {
-
-		private final byte[] b;
-
-		private int lastId = -1;
-
-		protected FrameGoAway(int size, int flags, int id) {
-			super(size, flags, id);
-			b = new byte[4];
-		}
-
-		@Override
-		public FrameReader process(Buffers buf) throws InterruptedException {
-			if (lastId >= 0)
-				return super.process(buf);
-			if (buf.length() < 8)
-				return this;
-
-			buf.read(b, 0, 4, false);
-			lastId = (b[0] & 0x7f) << 24 | (b[1] & 0xff) << 16 | (b[2] & 0xff) << 8 | (b[3] & 0xff);
-
-			buf.read(b, 0, 4, false);
-			int err = (b[0] & 0x7f) << 24 | (b[1] & 0xff) << 16 | (b[2] & 0xff) << 8 | (b[3] & 0xff);
-			logger.info("goaway last: {} err: {}", lastId, error(err));
-			size -= 8;
-			return super.process(buf);
-		}
-	}
-
-	private class FrameWindowUpdate extends FrameReader {
-		private final byte[] b;
-
-		protected FrameWindowUpdate(int size, int flags, int id) {
-			super(size, flags, id);
-			b = new byte[4];
-		}
-
-		@Override
-		public final FrameReader process(Buffers buf) throws InterruptedException {
-			if (buf.length() < 4)
-				return this;
-			buf.read(b, 0, 4, false);
-			int v = (b[0] & 0x7f) << 24 | (b[1] & 0xff) << 16 | (b[2] & 0xff) << 8 | (b[3] & 0xff);
-			if (v == 0) {
-				goaway(PROTOCOL_ERROR);
-				return null;
-			}
-
-			logger.debug("	window update {}", v);
-
-			Http2FlowControl f = id == 0 ? Http2Processor.this : streams.get(id);
-			if (f != null)
-				f.add(v);
-			return null;
-		}
-	}
-
-	private class FrameHeader extends FrameReader {
-		private final Http2Stream s;
-		private final Buffers remain;
-		private int pad;
-
-		protected FrameHeader(int size, int flags, int id, int pad, Http2Stream s) {
-			super(size, flags, id);
-			this.s = s;
-			this.remain = new Buffers();
-			this.pad = pad;
-		}
-
-		@SuppressWarnings("resource")
-		@Override
-		public final FrameReader process(Buffers buf) throws InterruptedException {
-			try {
-				buf.prepend(remain);
-				BuffersInputStream in = new BuffersInputStream(buf);
-				readHeaders(in);
-				if (size > pad)
-					return this;
-
-				if (pad > 0) {
-					pad -= in.skip(pad);
-					if (pad > 0)
-						return this;
-				}
-
-				wantContinuation = (flags & 0x4) == 0;
-				if (!wantContinuation)
-					s.start();
-
-				return null;
-			} catch (IOException e) {
-				logger.error("Failed to parse headers", e);
-				goaway(PROTOCOL_ERROR);
-				return null;
-			}
-		}
-
-		private void readHeaders(BuffersInputStream in) throws InterruptedException, IOException {
-			try {
-				synchronized (headers) {
-					while (in.readCount() < size - pad) {
-						in.mark(4096);
-						headers.readHeader(in, s::addHeader);
-					}
-				}
-			} catch (@SuppressWarnings("unused") EOFException e) {
-				in.writeMark(remain);
-				size += remain.length();
-			} finally {
-				size -= in.readCount();
-			}
-		}
-	}
-
-	private class FrameData extends FrameReader {
-		private final Http2Stream s;
-		private int pad;
-
-		protected FrameData(int size, int flags, int id, int pad) {
-			super(size - pad, flags, id);
-			this.s = streams.get(id);
-			this.pad = pad;
-		}
-
-		@Override
-		public FrameReader process(Buffers buf) throws InterruptedException {
-			int l = Math.min(buf.length(), size);
-			s.in.read(buf, l);
-			size -= l;
-			if (size > 0)
-				return this;
-
-			if (pad > 0) {
-				pad -= buf.skip(pad);
-				if (pad > 0)
-					return this;
-			}
-
-			if ((flags & 0x1) == 1) {
-				streams.remove(id);
-				s.close(false);
-			}
-			return null;
-		}
-
-	}
 }

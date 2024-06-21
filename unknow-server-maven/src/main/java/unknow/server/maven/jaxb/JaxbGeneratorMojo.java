@@ -79,7 +79,6 @@ import unknow.server.maven.model.TypeModel;
  */
 @Mojo(defaultPhase = LifecyclePhase.GENERATE_SOURCES, name = "jaxb-generator", requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME, requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
 public class JaxbGeneratorMojo extends AbstractGeneratorMojo {
-//	private static final Logger logger = LoggerFactory.getLogger(JaxbGeneratorMojo.class);
 
 	private static final HandlerBuilder HANDLER = new HandlerBuilder();
 

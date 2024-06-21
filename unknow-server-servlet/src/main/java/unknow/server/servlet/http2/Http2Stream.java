@@ -10,9 +10,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import jakarta.servlet.ServletInputStream;
-import unknow.server.servlet.HttpConnection;
 import unknow.server.servlet.HttpWorker;
-import unknow.server.servlet.impl.out.AbstractServletOutput;
+import unknow.server.servlet.impl.AbstractServletOutput;
 import unknow.server.servlet.utils.PathUtils;
 
 public class Http2Stream extends HttpWorker implements Http2FlowControl {
@@ -20,15 +19,15 @@ public class Http2Stream extends HttpWorker implements Http2FlowControl {
 
 	private final int id;
 	private final Http2Processor p;
-	final Http2ServletInput in;
+	public final Http2ServletInput in;
 	final Http2ServletOutput out;
 
 	private int window;
 
 	private volatile Future<?> exec;
 
-	protected Http2Stream(HttpConnection co, int id, Http2Processor p, int window) {
-		super(co);
+	public Http2Stream(Http2Processor p, int id, int window) {
+		super(p.co);
 		this.id = id;
 		this.p = p;
 		this.in = new Http2ServletInput();
@@ -113,5 +112,9 @@ public class Http2Stream extends HttpWorker implements Http2FlowControl {
 		in.close();
 		if (stop)
 			exec.cancel(true);
+	}
+
+	public boolean isClosed() {
+		return exec.isDone();
 	}
 }

@@ -22,14 +22,11 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import unknow.server.servlet.HttpAdapter;
 import unknow.server.servlet.HttpError;
-import unknow.server.servlet.impl.out.AbstractServletOutput;
 
 /**
  * @author unknow
  */
 public class ServletResponseImpl implements HttpServletResponse {
-//	private static final Logger logger = LoggerFactory.getLogger(ServletResponseImpl.class);
-
 	private static final DateTimeFormatter RFC1123 = DateTimeFormatter.RFC_1123_DATE_TIME.withZone(ZoneOffset.UTC);
 
 	private final HttpAdapter co;

@@ -75,7 +75,7 @@ public class PathUtils {
 		return c;
 	}
 
-	private static int decodeHex(int c) throws IOException {
+	private static int decodeHex(int c) {
 		if (c >= '0' && c <= '9')
 			return c - '0';
 		if (c >= 'A' && c <= 'F')

@@ -67,8 +67,6 @@ import unknow.server.maven.model.TypeModel;
  * @author unknow
  */
 public class JaxwsServletBuilder {
-//	private static final Logger logger = LoggerFactory.getLogger(JaxwsServletBuilder.class);
-
 	private final ClassModel serviceClass;
 
 	private final Service service;
