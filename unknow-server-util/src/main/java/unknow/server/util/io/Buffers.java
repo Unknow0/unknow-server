@@ -324,6 +324,30 @@ public class Buffers {
 	}
 
 	/**
+	 * wait for the signal (data added or signal is called)
+	 */
+	public void await() throws InterruptedException {
+		lock.lockInterruptibly();
+		try {
+			cond.await();
+		} finally {
+			lock.unlock();
+		}
+	}
+
+	/**
+	 * wake up all thread in await()
+	 */
+	public void signal() throws InterruptedException {
+		lock.lockInterruptibly();
+		try {
+			cond.signalAll();
+		} finally {
+			lock.unlock();
+		}
+	}
+
+	/**
 	 * append chunk
 	 * @param c chunk to add
 	 * @throws InterruptedException on interrupt
@@ -678,4 +702,5 @@ public class Buffers {
 			o = l = 0;
 		}
 	}
+
 }

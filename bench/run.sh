@@ -41,13 +41,14 @@ trap '[[ "$pid" ]] && kill -9 $pid' EXIT
 
 ${1}_start
 sleep 10
-echo "Warming up"
+echo -e "\nWarming up"
 $JMETER -n -t bench/test.jmx -Jhost=127.0.0.1 -Jt=20 -Jport=8080 -Jout=/dev/null
 sleep 10
-echo "Testing.."
+echo -e "\nTesting.."
 $JMETER -n -t bench/test.jmx -Jhost=127.0.0.1 -Jt=60 -Jc=10 -Jport=8080 -Jout=out/$1.csv
 
-h2load -c 10 -t 10 -m 10 -D 60 --warm-up-time=10 http://127.0.0.1:8080/test
+echo -e "\n launch http2 bench"
+h2load -v -c 10 -t 10 -m 10 -D 60 --warm-up-time=10 http://127.0.0.1:8080/test > out/$1.log
 
 ${1}_stop
 sleep 10

@@ -21,6 +21,11 @@ public class Http2ServletInput extends ServletInputStream {
 	@Override
 	public void close() {
 		closed = true;
+		try {
+			in.signal();
+		} catch (@SuppressWarnings("unused") InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
 	}
 
 	@Override
@@ -41,7 +46,7 @@ public class Http2ServletInput extends ServletInputStream {
 	public int read() throws IOException {
 		try {
 			while (!closed && in.isEmpty())
-				in.awaitContent();
+				in.await();
 			if (closed && in.isEmpty())
 				return -1;
 			return in.read(false);
@@ -55,7 +60,7 @@ public class Http2ServletInput extends ServletInputStream {
 	public int read(byte[] b, int off, int len) throws IOException {
 		try {
 			while (!closed && in.isEmpty())
-				in.awaitContent();
+				in.await();
 			if (closed && in.isEmpty())
 				return -1;
 			return in.read(b, off, len, false);
@@ -74,7 +79,7 @@ public class Http2ServletInput extends ServletInputStream {
 	public long skip(long n) throws IOException {
 		try {
 			while (!closed && in.isEmpty())
-				in.awaitContent();
+				in.await();
 			return in.skip(n);
 		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt();

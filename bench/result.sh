@@ -60,3 +60,12 @@ do
 	for n in "${!tests[@]}"; do printf ' %10s' "${error[$s:$n]:-0}"; done
 	echo
 done
+
+echo
+echo "Http2 result"
+
+for i in "${!servers[@]}"
+do
+	echo "$s"
+	tail -n 9 "$1/$i.log"
+done
