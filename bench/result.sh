@@ -64,8 +64,9 @@ done
 echo
 echo "Http2 result"
 
-for i in "${!servers[@]}"
+for s in "${!servers[@]}"
 do
+	echo
 	echo "$s"
-	tail -n 9 "$1/$i.log"
+	tail -n 9 "$1/$s.log"
 done
