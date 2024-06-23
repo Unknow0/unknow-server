@@ -247,10 +247,16 @@ public class Http2Headers {
 
 	private static void writeData(Buffers out, String value) throws InterruptedException {
 		byte[] bytes = value.getBytes(StandardCharsets.US_ASCII);
-		// TODO huffman
 
-		writeInt(out, 0, 7, bytes.length);
-		out.write(bytes);
+		Buffers b = new Buffers();
+		Http2Huffman.encode(b, bytes);
+		if (b.length() < bytes.length) {
+			writeInt(out, 0x80, 7, b.length());
+			b.read(out, -1, false);
+		} else {
+			writeInt(out, 0, 7, bytes.length);
+			out.write(bytes);
+		}
 	}
 
 	protected Entry get(int i) {
