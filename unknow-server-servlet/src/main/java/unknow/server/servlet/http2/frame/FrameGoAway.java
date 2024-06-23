@@ -37,7 +37,7 @@ public class FrameGoAway extends FrameReader {
 		lastId = (b[0] & 0x7f) << 24 | (b[1] & 0xff) << 16 | (b[2] & 0xff) << 8 | (b[3] & 0xff);
 
 		buf.read(b, 0, 4, false);
-		int err = (b[0] & 0x7f) << 24 | (b[1] & 0xff) << 16 | (b[2] & 0xff) << 8 | (b[3] & 0xff);
+		int err = (b[0] & 0xff) << 24 | (b[1] & 0xff) << 16 | (b[2] & 0xff) << 8 | (b[3] & 0xff);
 		logger.info("goaway last: {} err: {}", lastId, Http2Processor.error(err));
 		size -= 8;
 		p.closing = true;

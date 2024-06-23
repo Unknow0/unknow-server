@@ -48,7 +48,7 @@ echo -e "\nTesting.."
 $JMETER -n -t bench/test.jmx -Jhost=127.0.0.1 -Jt=60 -Jc=10 -Jport=8080 -Jout=out/$1.csv
 
 echo -e "\n launch http2 bench"
-h2load -v -c 10 -t 10 -m 10 -D 60 --warm-up-time=10 http://127.0.0.1:8080/test > out/$1.log
+h2load -c 10 -t 10 -m 10 -D 60 --warm-up-time=10 http://127.0.0.1:8080/test > out/$1.log
 
 ${1}_stop
 sleep 10

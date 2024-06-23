@@ -154,7 +154,6 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 		int type = b[3];
 		int flags = b[4];
 		int id = (b[5] & 0x7f) << 24 | (b[6] & 0xff) << 16 | (b[7] & 0xff) << 8 | (b[8] & 0xff);
-		logger.debug("{} {} {} {}", size, type, flags, id);
 
 		if (wantContinuation && type != 9 || !wantContinuation && type == 9) {
 			goaway(PROTOCOL_ERROR);
@@ -168,6 +167,7 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 			return;
 		}
 
+		logger.debug("{}: read {}", this, b.getClass().getSimpleName());
 		r = b.build(this, size, flags, id, buf);
 	}
 
@@ -186,37 +186,37 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 			co.pendingWrite.write(f);
 			co.flush();
 		}
+		logger.debug("{}: send GOAWAY {}", this, error(err));
 	}
 
-	@SuppressWarnings("resource")
 	public void sendHeaders(int id, ServletResponseImpl res) throws InterruptedException {
 		byte[] f = new byte[9];
 		Buffers out = new Buffers();
 		int type = 1;
-		synchronized (headers) {
-			headers.writeHeader(out, ":status", Integer.toString(res.getStatus()));
-			for (String n : res.getHeaderNames()) {
-				for (String v : res.getHeaders(n)) {
-					headers.writeHeader(out, n, v);
+		synchronized (co) {
+			synchronized (headers) {
+				headers.writeHeader(out, ":status", Integer.toString(res.getStatus()));
+				for (String n : res.getHeaderNames()) {
+					for (String v : res.getHeaders(n)) {
+						headers.writeHeader(out, n, v);
 
-					if (out.length() >= frame) {
-						formatFrame(f, out.length(), type, 0, id);
-						type = 9;
-						synchronized (co) {
-							co.pendingWrite.write(f);
-							out.read(co.pendingWrite, frame, false);
-							co.flush();
+						if (out.length() >= frame) {
+							formatFrame(f, out.length(), type, 0, id);
+							type = 9;
+							synchronized (co) {
+								co.pendingWrite.write(f);
+								out.read(co.pendingWrite, frame, false);
+								co.flush();
+							}
 						}
 					}
 				}
 			}
-		}
-		int flag = 0x4;
-		Http2ServletOutput sout = (Http2ServletOutput) res.getRawStream();
-		if (sout == null || sout.isDone())
-			flag |= 0x1;
-		formatFrame(f, out.length(), type, flag, id);
-		synchronized (co) {
+			int flag = 0x4;
+			Http2ServletOutput sout = (Http2ServletOutput) res.getRawStream();
+			if (sout == null || sout.isDone())
+				flag |= 0x1;
+			formatFrame(f, out.length(), type, flag, id);
 			co.pendingWrite.write(f);
 			out.read(co.pendingWrite, -1, false);
 			co.flush();

@@ -150,7 +150,7 @@ public class Http2Headers {
 	 * @throws InterruptedException 
 	 */
 	public void writeHeader(Buffers out, String name, String value) throws InterruptedException {
-		int o = 0;
+		int o = -1;
 		for (int i = 0; i < TABLE.length; i++) {
 			Entry e = TABLE[i];
 			if (e.name.equals(name)) {
@@ -158,24 +158,24 @@ public class Http2Headers {
 					writeInt(out, 0b10000000, 7, i + 1);
 					return;
 				}
-				if (o == 0)
+				if (o == -1)
 					o = i;
 			}
 		}
 		int i = TABLE.length;
 		for (Entry e : dynamic) {
-			i++;
 			if (e.name.equals(name)) {
 				if (e.value.equals(value)) {
 					writeInt(out, 0b10000000, 7, i + 1);
 					return;
 				}
-				if (o == 0)
+				if (o == -1)
 					o = i;
 			}
+			i++;
 		}
 
-		writeInt(out, 0b01000000, 6, o < 0 ? 0 : o);
+		writeInt(out, 0b01000000, 6, o < 0 ? 0 : o + 1);
 		if (o < 0)
 			writeData(out, name);
 		writeData(out, value);
@@ -247,6 +247,8 @@ public class Http2Headers {
 
 	private static void writeData(Buffers out, String value) throws InterruptedException {
 		byte[] bytes = value.getBytes(StandardCharsets.US_ASCII);
+		// TODO huffman
+
 		writeInt(out, 0, 7, bytes.length);
 		out.write(bytes);
 	}
