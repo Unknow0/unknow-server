@@ -21,6 +21,7 @@ import com.github.javaparser.ast.expr.ObjectCreationExpr;
 import com.github.javaparser.ast.stmt.BlockStmt;
 
 import jakarta.servlet.ServletContainerInitializer;
+import jakarta.servlet.ServletException;
 import unknow.server.maven.Utils;
 import unknow.server.maven.servlet.Builder;
 
@@ -34,7 +35,7 @@ public class LoadInitializer extends Builder {
 	public void add(BuilderContext ctx) {
 		List<String> clazz = new ArrayList<>(ctx.descriptor().initializer);
 		try {
-			Enumeration<URL> e = ClassLoader.getSystemResources("/META-INF/services/" + ServletContainerInitializer.class.getName());
+			Enumeration<URL> e = ctx.classLoader().getResources("META-INF/services/" + ServletContainerInitializer.class.getName());
 			while (e.hasMoreElements()) {
 				URL nextElement = e.nextElement();
 				try (BufferedReader br = new BufferedReader(new InputStreamReader(nextElement.openStream()))) {
@@ -46,7 +47,8 @@ public class LoadInitializer extends Builder {
 		} catch (Exception ex) {
 			logger.warn("Failed to process ServletContainerInitializer", ex);
 		}
-		BlockStmt b = ctx.self().addMethod("loadInitializer", Keyword.PROTECTED, Keyword.FINAL).addMarkerAnnotation(Override.class).createBody();
+		BlockStmt b = ctx.self().addMethod("loadInitializer", Keyword.PROTECTED, Keyword.FINAL).addThrownException(ctx.type().getClass(ServletException.class))
+				.addMarkerAnnotation(Override.class).createBody();
 		for (String s : clazz)
 			b.addStatement(new MethodCallExpr(new ObjectCreationExpr(null, ctx.type().getClass(s), Utils.list()), "onStartup",
 					Utils.list(new NullLiteralExpr(), new NameExpr("ctx"))));

@@ -18,6 +18,8 @@ public abstract class Builder {
 	public static interface BuilderContext {
 		ClassOrInterfaceDeclaration self();
 
+		ClassLoader classLoader();
+
 		Descriptor descriptor();
 
 		TypeCache type();
