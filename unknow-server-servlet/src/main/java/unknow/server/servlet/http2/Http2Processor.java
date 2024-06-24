@@ -99,7 +99,7 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 	}
 
 	@Override
-	public void process() throws InterruptedException {
+	public final void process() throws InterruptedException {
 		if (r != null) {
 			r = r.process(co.pendingRead);
 			if (r != null)
@@ -167,7 +167,7 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 			return;
 		}
 
-//		logger.debug("{}: read {}", this, b.getClass().getSimpleName());
+		logger.info("readFrame");
 		r = b.build(this, size, flags, id, buf);
 	}
 
