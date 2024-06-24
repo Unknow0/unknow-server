@@ -167,7 +167,8 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 			return;
 		}
 
-		logger.debug("{}: read {}", this, b.getClass().getSimpleName());
+		logger.info("{}: readFrame", this);
+//		logger.debug("{}: read {}", this, b.getClass().getSimpleName());
 		r = b.build(this, size, flags, id, buf);
 	}
 
