@@ -12,7 +12,7 @@ import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Supplier;
+import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,12 +65,14 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	 */
 	@SuppressWarnings("resource")
 	@Override
-	public final void register(SocketChannel socket, Supplier<NIOConnection> pool) throws IOException, InterruptedException {
+	public final void register(SocketChannel socket, Function<SelectionKey, ? extends NIOConnection> pool) throws IOException, InterruptedException {
 		socket.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.TRUE).configureBlocking(false);
 		mutex.lockInterruptibly();
 		try {
 			selector.wakeup();
-			init.add(socket.register(selector, SelectionKey.OP_READ, pool.get()));
+			SelectionKey key = socket.register(selector, SelectionKey.OP_READ);
+			init.add(key);
+			key.attach(pool.apply(key));
 		} finally {
 			mutex.unlock();
 		}
@@ -119,7 +121,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			SelectionKey k;
 			while ((k = init.poll()) != null) {
 				NIOConnection co = (NIOConnection) k.attachment();
-				co.init(k);
+				co.onInit();
 				listener.accepted(id, co);
 			}
 

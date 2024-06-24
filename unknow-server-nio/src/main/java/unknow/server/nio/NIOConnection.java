@@ -36,27 +36,40 @@ public class NIOConnection {
 	private final InputStream in = new BuffersInputStream(pendingRead);
 
 	/** Output stream */
-	private Out out;
+	protected final Out out;
 
 	/** selection key */
-	private SelectionKey key;
+	private final SelectionKey key;
+
+	protected final InetSocketAddress local;
+	protected final InetSocketAddress remote;
 
 	private long lastRead;
 	private long lastWrite;
 
-	/** create new connection */
-	protected NIOConnection() {
-	}
-
 	/**
-	 * bind this co on a selection key
-	 * @param key the key
+	 *  create new connection
+	 *  @param key the selectionKey
 	 */
-	final void init(SelectionKey key) {
+	@SuppressWarnings("resource")
+	protected NIOConnection(SelectionKey key) {
 		this.key = key;
 		this.out = new Out(this);
 		lastRead = lastWrite = System.currentTimeMillis();
-		onInit();
+		SocketChannel channel = (SocketChannel) key.channel();
+		InetSocketAddress a;
+		try {
+			a = (InetSocketAddress) channel.getLocalAddress();
+		} catch (@SuppressWarnings("unused") Exception e) {
+			a = DISCONECTED;
+		}
+		local = a;
+		try {
+			a = (InetSocketAddress) channel.getRemoteAddress();
+		} catch (@SuppressWarnings("unused") Exception e) {
+			a = DISCONECTED;
+		}
+		remote = a;
 	}
 
 	/**
@@ -202,13 +215,8 @@ public class NIOConnection {
 	 * 
 	 * @return the remote address
 	 */
-	@SuppressWarnings("resource")
 	public final InetSocketAddress getRemote() {
-		try {
-			return (InetSocketAddress) ((SocketChannel) key.channel()).getRemoteAddress();
-		} catch (@SuppressWarnings("unused") Exception e) {
-			return DISCONECTED;
-		}
+		return remote;
 	}
 
 	/**
@@ -216,13 +224,8 @@ public class NIOConnection {
 	 * 
 	 * @return the local address
 	 */
-	@SuppressWarnings("resource")
 	public final InetSocketAddress getLocal() {
-		try {
-			return (InetSocketAddress) ((SocketChannel) key.channel()).getLocalAddress();
-		} catch (@SuppressWarnings("unused") Exception e) {
-			return DISCONECTED;
-		}
+		return local;
 	}
 
 	/**
@@ -256,10 +259,9 @@ public class NIOConnection {
 		onFree();
 	}
 
-	@SuppressWarnings("resource")
 	@Override
 	public String toString() {
-		return key.channel().toString() + " closed: " + isClosed() + " pending: " + pendingWrite.length();
+		return getClass() + "[local=" + local + " remote=" + remote + "]";
 	}
 
 	/** output stream for this connection */

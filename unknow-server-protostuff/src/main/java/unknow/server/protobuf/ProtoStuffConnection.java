@@ -5,6 +5,7 @@ package unknow.server.protobuf;
  */
 
 import java.io.IOException;
+import java.nio.channels.SelectionKey;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,18 +30,17 @@ public abstract class ProtoStuffConnection<T> extends NIOConnection {
 	private final Schema<T> schema;
 	private final boolean protostuff;
 
-	protected Out out;
 	private LimitedInputStream in;
 	private CodedInput input;
 
-	protected ProtoStuffConnection(Schema<T> schema, boolean protostuff) {
+	protected ProtoStuffConnection(SelectionKey key, Schema<T> schema, boolean protostuff) {
+		super(key);
 		this.schema = schema;
 		this.protostuff = protostuff;
 	}
 
 	@Override
 	protected final void onInit() {
-		out = getOut();
 		in = new LimitedInputStream(getIn(), Integer.MAX_VALUE);
 		input = new CodedInput(in, protostuff);
 	}

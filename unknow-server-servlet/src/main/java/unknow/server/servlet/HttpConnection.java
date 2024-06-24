@@ -3,6 +3,7 @@
  */
 package unknow.server.servlet;
 
+import java.nio.channels.SelectionKey;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
@@ -38,7 +39,8 @@ public class HttpConnection extends NIOConnection {
 	 * @param events 
 	 * @param manager 
 	 */
-	protected HttpConnection(ExecutorService executor, ServletContextImpl ctx, ServletManager manager, EventManager events, int keepAliveIdle) {
+	protected HttpConnection(SelectionKey key, ExecutorService executor, ServletContextImpl ctx, ServletManager manager, EventManager events, int keepAliveIdle) {
+		super(key);
 		this.executor = executor;
 		this.ctx = ctx;
 		this.manager = manager;

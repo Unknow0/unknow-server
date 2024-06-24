@@ -94,7 +94,7 @@ public abstract class AbstractHttpServer extends NIOServerBuilder {
 					return t;
 				});
 		int keepAliveIdle = parseInt(cli, keepAlive, -1);
-		server.bind(address, () -> new HttpConnection(executor, ctx, manager, events, keepAliveIdle));
+		server.bind(address, key -> new HttpConnection(key,executor, ctx, manager, events, keepAliveIdle));
 	}
 
 	/**

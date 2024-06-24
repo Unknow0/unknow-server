@@ -1,7 +1,7 @@
 #!/bin/bash
 
 unknow_start() {
-	java -Dorg.slf4j.simpleLogger.defaultLogLevel=debug -jar unknow-server-test/unknow-server-test-jar/target/server.jar --listener=LOG> logs/unknow.log 2>&1 &
+	java -jar unknow-server-test/unknow-server-test-jar/target/server.jar --listener=LOG> logs/unknow.log 2>&1 &
 	pid=$!
 }
 unknow_stop() {

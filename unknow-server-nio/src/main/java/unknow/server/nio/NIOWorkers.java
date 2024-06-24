@@ -4,8 +4,9 @@
 package unknow.server.nio;
 
 import java.io.IOException;
+import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
-import java.util.function.Supplier;
+import java.util.function.Function;
 
 /**
  * @author unknow
@@ -15,11 +16,11 @@ public interface NIOWorkers {
 	 * register a socket to an IOWorker
 	 * 
 	 * @param socket  the socket to register
-	 * @param pool the connection factory
+	 * @param factory the connection factory
 	 * @throws IOException on ioexception
 	 * @throws InterruptedException  on interrupt
 	 */
-	void register(SocketChannel socket, Supplier<NIOConnection> pool) throws IOException, InterruptedException;
+	void register(SocketChannel socket, Function<SelectionKey, ? extends NIOConnection> factory) throws IOException, InterruptedException;
 
 	/**
 	 * start the IOWorker
@@ -52,8 +53,8 @@ public interface NIOWorkers {
 		}
 
 		@Override
-		public synchronized void register(SocketChannel socket, Supplier<NIOConnection> pool) throws IOException, InterruptedException {
-			w[o++].register(socket, pool);
+		public synchronized void register(SocketChannel socket, Function<SelectionKey, ? extends NIOConnection> factory) throws IOException, InterruptedException {
+			w[o++].register(socket, factory);
 			if (o == w.length)
 				o = 0;
 		}
