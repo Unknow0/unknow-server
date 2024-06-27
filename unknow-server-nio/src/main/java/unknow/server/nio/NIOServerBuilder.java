@@ -16,6 +16,7 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,6 +48,7 @@ public class NIOServerBuilder {
 
 	/**
 	 * add an option
+	 * 
 	 * @param name the option name
 	 * @return the new option
 	 */
@@ -63,6 +65,7 @@ public class NIOServerBuilder {
 
 	/**
 	 * parse an option to an int
+	 * 
 	 * @param cli the command line
 	 * @param o the option
 	 * @param min the min value
@@ -82,6 +85,7 @@ public class NIOServerBuilder {
 
 	/**
 	 * parse an option to a inetaddress in the format (port, :port or addr:port)
+	 * 
 	 * @param cli the command line
 	 * @param o the option
 	 * @param defaultHost the default host to use
@@ -112,6 +116,7 @@ public class NIOServerBuilder {
 
 	/**
 	 * run after the server is build
+	 * 
 	 * @param server the server
 	 * @param cli the cli
 	 * @throws Exception on error
@@ -123,6 +128,7 @@ public class NIOServerBuilder {
 
 	/**
 	 * build the server from the argument
+	 * 
 	 * @param arg the main args
 	 * @return the server build
 	 * @throws Exception on error
@@ -137,8 +143,14 @@ public class NIOServerBuilder {
 				opts.addOption(o.cli);
 		}
 
-		CommandLine cli = new DefaultParser().parse(opts, arg);
-		if (cli.hasOption(help)) {
+		CommandLine cli = null;
+		try {
+			cli = new DefaultParser().parse(opts, arg);
+
+		} catch (ParseException e) {
+			System.err.println(e.getMessage());
+		}
+		if (cli == null || cli.hasOption(help)) {
 			HelpFormatter helpFormatter = new HelpFormatter();
 			helpFormatter.setWidth(100);
 			helpFormatter.printHelp("nioserver", opts);

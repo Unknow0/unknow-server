@@ -24,8 +24,6 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.javaparser.ParseResult;
@@ -74,8 +72,6 @@ import unknow.server.maven.model.TypeModel;
  */
 @Mojo(defaultPhase = LifecyclePhase.GENERATE_SOURCES, name = "jaxrs-generator", requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME, requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
 public class JaxrsMojo extends AbstractGeneratorMojo {
-	private static final Logger logger = LoggerFactory.getLogger(JaxrsMojo.class);
-
 	private static final String VALUE = "value";
 
 	private JaxrsModel model;
