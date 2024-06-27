@@ -14,9 +14,6 @@ import javax.xml.namespace.QName;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.NodeList;
@@ -70,8 +67,6 @@ import unknow.server.maven.model.TypeModel;
  * @author unknow
  */
 public class JaxwsServletBuilder {
-	private static final Logger logger = LoggerFactory.getLogger(JaxwsServletBuilder.class);
-
 	private final ClassModel serviceClass;
 
 	private final Service service;

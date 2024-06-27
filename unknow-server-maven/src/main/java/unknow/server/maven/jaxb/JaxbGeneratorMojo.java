@@ -26,8 +26,6 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.ResolutionScope;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Modifier;
@@ -81,8 +79,6 @@ import unknow.server.maven.model.TypeModel;
  */
 @Mojo(defaultPhase = LifecyclePhase.GENERATE_SOURCES, name = "jaxb-generator", requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME, requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
 public class JaxbGeneratorMojo extends AbstractGeneratorMojo {
-	private static final Logger logger = LoggerFactory.getLogger(JaxbGeneratorMojo.class);
-
 	private static final HandlerBuilder HANDLER = new HandlerBuilder();
 
 	private final Map<XmlType, String> handlers = new HashMap<>();

@@ -114,7 +114,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 
 	@Override
 	protected void onSelect(boolean close) throws InterruptedException {
-		mutex.lockInterruptibly();
+		mutex.lock();
 		try {
 			SelectionKey k;
 			while ((k = init.poll()) != null) {

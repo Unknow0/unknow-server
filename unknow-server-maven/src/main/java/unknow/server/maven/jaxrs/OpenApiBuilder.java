@@ -191,7 +191,7 @@ public class OpenApiBuilder {
 				Content c = new Content();
 				for (String s : m.produce)
 					c.addMediaType(s, new MediaType().schema(schema(m.m.type())));
-				responses.setDefault(new ApiResponse().content(c));
+				responses.addApiResponse("default", new ApiResponse().content(c));
 			}
 
 			for (JaxrsParam<?> param : m.params)
