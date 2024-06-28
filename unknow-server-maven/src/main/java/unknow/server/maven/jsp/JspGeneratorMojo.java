@@ -139,6 +139,7 @@ public class JspGeneratorMojo {
 		sb.setLength(0);
 	}
 
+	@SuppressWarnings("unused")
 	private void processComment(Reader r) throws IOException {
 		int c;
 

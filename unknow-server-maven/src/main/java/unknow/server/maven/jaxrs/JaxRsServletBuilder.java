@@ -19,9 +19,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
@@ -82,7 +79,6 @@ import unknow.server.maven.model.jvm.JvmModelLoader;
  * @author unknow
  */
 public class JaxRsServletBuilder {
-	private static final Logger logger = LoggerFactory.getLogger(JaxRsServletBuilder.class);
 
 	static final Comparator<String> MIME = (a, b) -> {
 		String[] am = a.split("/");
@@ -185,7 +181,9 @@ public class JaxRsServletBuilder {
 						.addStatement(new AssignExpr(new NameExpr("ra"), Utils.array(types.getClass(Annotation.class), 0), AssignExpr.Operator.ASSIGN));
 			}
 
-			b.addStatement(new TryStmt(t, Utils.list(new CatchClause(new com.github.javaparser.ast.body.Parameter(types.getClass(Exception.class), "e"), ca)), null));
+			b.addStatement(new TryStmt(t, Utils.list(new CatchClause(
+					new com.github.javaparser.ast.body.Parameter(types.getClass(Exception.class), "e").addSingleMemberAnnotation(SuppressWarnings.class, Utils.text("unused")),
+					ca)), null));
 
 			int i = 0;
 			for (JaxrsParam<?> p : m.params)
@@ -537,8 +535,8 @@ public class JaxRsServletBuilder {
 		 * 
 		 * @param length
 		 * @param pattern
-		 * @param last 
-		 * @param parts 
+		 * @param last
+		 * @param parts
 		 */
 		public Path(int length, String pattern, List<String> parts, boolean last) {
 			this.length = length;

@@ -196,6 +196,11 @@ public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderCont
 	}
 
 	@Override
+	public ClassLoader classLoader() {
+		return classLoader;
+	}
+
+	@Override
 	public Descriptor descriptor() {
 		return descriptor;
 	}

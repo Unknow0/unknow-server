@@ -113,20 +113,21 @@ public class BeanParamBuilder {
 				t1 = JvmModelLoader.GLOBAL.get(Object.class.getName());
 		}
 
-		b.addStatement(
-				new TryStmt(
-						new BlockStmt()
-								.addStatement(Utils.assign(types.getClass(Field.class), "f",
-										new MethodCallExpr(new ClassExpr(types.get(p.parent.name())), "getDeclaredField", Utils.list(Utils.text(p.name)))))
-								.addStatement(new AssignExpr(new NameExpr("t"),
-										new MethodCallExpr(new TypeExpr(types.get(JaxrsContext.class)), "getParamType",
-												Utils.list(new MethodCallExpr(new NameExpr("f"), "getGenericType"))),
-										AssignExpr.Operator.ASSIGN))
-								.addStatement(new AssignExpr(new NameExpr("a"), new MethodCallExpr(new NameExpr("f"), "getAnnotations"), AssignExpr.Operator.ASSIGN)),
-						Utils.list(new CatchClause(new com.github.javaparser.ast.body.Parameter(types.getClass(Exception.class), "e"),
-								new BlockStmt().addStatement(new AssignExpr(new NameExpr("t"), new ClassExpr(types.get(t1.name())), AssignExpr.Operator.ASSIGN))
-										.addStatement(new AssignExpr(new NameExpr("a"), Utils.array(types.getClass(Annotation.class), 0), AssignExpr.Operator.ASSIGN)))),
-						null));
+		b.addStatement(new TryStmt(
+				new BlockStmt()
+						.addStatement(Utils.assign(types.getClass(Field.class), "f",
+								new MethodCallExpr(new ClassExpr(types.get(p.parent.name())), "getDeclaredField", Utils.list(Utils.text(p.name)))))
+						.addStatement(new AssignExpr(new NameExpr("t"),
+								new MethodCallExpr(new TypeExpr(types.get(JaxrsContext.class)), "getParamType",
+										Utils.list(new MethodCallExpr(new NameExpr("f"), "getGenericType"))),
+								AssignExpr.Operator.ASSIGN))
+						.addStatement(new AssignExpr(new NameExpr("a"), new MethodCallExpr(new NameExpr("f"), "getAnnotations"), AssignExpr.Operator.ASSIGN)),
+				Utils.list(new CatchClause(
+						new com.github.javaparser.ast.body.Parameter(types.getClass(Exception.class), "e").addSingleMemberAnnotation(SuppressWarnings.class,
+								Utils.text("unused")),
+						new BlockStmt().addStatement(new AssignExpr(new NameExpr("t"), new ClassExpr(types.get(t1.name())), AssignExpr.Operator.ASSIGN))
+								.addStatement(new AssignExpr(new NameExpr("a"), Utils.array(types.getClass(Annotation.class), 0), AssignExpr.Operator.ASSIGN)))),
+				null));
 
 		if (p instanceof JaxrsBodyParam) {
 			cl.addField(types.getClass(JaxrsEntityReader.class, types.getClass(p.type)), n, Utils.PSF);
