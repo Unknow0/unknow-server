@@ -167,7 +167,6 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 			return;
 		}
 
-		logger.info("readFrame");
 		r = b.build(this, size, flags, id, buf);
 	}
 
@@ -182,32 +181,47 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 		f[14] = (byte) ((err >> 16) & 0xff);
 		f[15] = (byte) ((err >> 8) & 0xff);
 		f[16] = (byte) (err & 0xff);
-		synchronized (co) {
-			co.pendingWrite.write(f);
-			co.flush();
+		Buffers b = co.pendingWrite;
+		b.lock();
+		try {
+			b.write(f);
+		} finally {
+			b.unlock();
 		}
+		co.flush();
 		logger.debug("{}: send GOAWAY {}", this, error(err));
+	}
+
+	public void sendFrame(byte[] b, int size, int type, int flags, int id, Buffers data) throws InterruptedException {
+		size = Math.min(size, data.length());
+		formatFrame(b, size, type, flags, id);
+		Buffers write = co.pendingWrite;
+		write.lock();
+		try {
+			write.write(b);
+			data.read(write, size, false);
+		} finally {
+			write.unlock();
+		}
+		co.toggleKeyOps();
 	}
 
 	public void sendHeaders(int id, ServletResponseImpl res) throws InterruptedException {
 		byte[] f = new byte[9];
 		Buffers out = new Buffers();
 		int type = 1;
-		synchronized (co) {
+		Buffers write = co.pendingWrite;
+		write.lock();
+		try {  // all headers frame should be together
 			synchronized (headers) {
 				headers.writeHeader(out, ":status", Integer.toString(res.getStatus()));
 				for (String n : res.getHeaderNames()) {
 					for (String v : res.getHeaders(n)) {
 						headers.writeHeader(out, n, v);
 
-						if (out.length() >= frame) {
-							formatFrame(f, out.length(), type, 0, id);
+						while (out.length() >= frame) {
+							sendFrame(f, frame, type, 0, id, out);
 							type = 9;
-							synchronized (co) {
-								co.pendingWrite.write(f);
-								out.read(co.pendingWrite, frame, false);
-								co.flush();
-							}
 						}
 					}
 				}
@@ -216,29 +230,20 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 			Http2ServletOutput sout = (Http2ServletOutput) res.getRawStream();
 			if (sout == null || sout.isDone())
 				flag |= 0x1;
-			formatFrame(f, out.length(), type, flag, id);
-			co.pendingWrite.write(f);
-			out.read(co.pendingWrite, -1, false);
-			co.flush();
+
+			sendFrame(f, out.length(), type, flag, id, out);
+		} finally {
+			write.unlock();
 		}
 	}
 
 	public void sendData(int id, Buffers data, boolean done) throws InterruptedException {
 		byte[] f = new byte[9];
 		int l = data.length();
-		while (l > frame) {
-			formatFrame(f, frame, 0, 0, id);
-			synchronized (co) {
-				co.pendingWrite.write(f);
-				data.read(co.pendingWrite, frame, false);
-			}
-		}
-		formatFrame(f, data.length(), 0, done ? 0x1 : 0, id);
-		synchronized (co) {
-			co.pendingWrite.write(f);
-			data.read(co.pendingWrite, l, false);
-			co.flush();
-		}
+		while (l > frame)
+			sendFrame(f, frame, 0, 0, id, data);
+		sendFrame(f, data.length(), 0, done ? 0x1 : 0, id, data);
+		co.flush();
 	}
 
 	public static void formatFrame(byte[] b, int size, int type, int flags, int id) {

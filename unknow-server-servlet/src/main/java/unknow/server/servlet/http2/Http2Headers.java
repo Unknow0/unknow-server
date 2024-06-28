@@ -329,36 +329,4 @@ public class Http2Headers {
 			return Objects.equals(name, other.name) && Objects.equals(value, other.value);
 		}
 	}
-
-	public static class EntryData {
-		final String v;
-		final int l;
-
-		public EntryData(String text, int len) {
-			this.v = text;
-			this.l = len;
-		}
-
-		@Override
-		public String toString() {
-			return v + "(" + l + ")";
-		}
-
-		@Override
-		public int hashCode() {
-			return Objects.hash(l, v);
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (obj == null)
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			EntryData other = (EntryData) obj;
-			return l == other.l && Objects.equals(v, other.v);
-		}
-	}
 }

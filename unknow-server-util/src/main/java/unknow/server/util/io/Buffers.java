@@ -323,6 +323,14 @@ public class Buffers {
 		}
 	}
 
+	public void lock() throws InterruptedException {
+		lock.lockInterruptibly();
+	}
+
+	public void unlock() {
+		lock.unlock();
+	}
+
 	/**
 	 * wait for the signal (data added or signal is called)
 	 */

@@ -16,7 +16,7 @@ public class Http2Stream extends HttpWorker implements Http2FlowControl {
 	private final int id;
 	private final Http2Processor p;
 	public final Http2ServletInput in;
-	final Http2ServletOutput out;
+	private final Http2ServletOutput out;
 
 	private int window;
 
@@ -84,8 +84,6 @@ public class Http2Stream extends HttpWorker implements Http2FlowControl {
 
 	@Override
 	public void commit() throws IOException {
-		// write header
-
 		try {
 			p.sendHeaders(id, res);
 		} catch (InterruptedException e) {

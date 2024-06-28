@@ -166,7 +166,7 @@ public class NIOConnection {
 		onWrite();
 	}
 
-	private void toggleKeyOps() {
+	public void toggleKeyOps() {
 		key.interestOps(pendingWrite.isEmpty() ? SelectionKey.OP_READ : SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 	}
 

@@ -89,9 +89,13 @@ public class FrameSettings extends FrameReader {
 		Http2Processor.formatFrame(b, 0, 4, 1, 0);
 
 		HttpConnection co = p.co;
-		synchronized (co) {
-			co.pendingWrite.write(b);
+		Buffers write = co.pendingWrite;
+		write.lock();
+		try {
+			write.write(b);
 			co.flush();
+		} finally {
+			write.unlock();
 		}
 		return null;
 	}

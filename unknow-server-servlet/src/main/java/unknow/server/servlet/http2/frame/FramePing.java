@@ -35,9 +35,13 @@ public class FramePing extends FrameReader {
 		buf.read(b, 9, 8, false);
 		Http2Processor.formatFrame(b, 8, 8, 1, 0);
 		HttpConnection co = p.co;
-		synchronized (co) {
-			co.pendingWrite.write(b);
+		Buffers write = co.pendingWrite;
+		write.lock();
+		try {
+			write.write(b);
 			co.flush();
+		} finally {
+			write.unlock();
 		}
 		return null;
 	}
