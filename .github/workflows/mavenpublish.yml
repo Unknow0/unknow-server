@@ -38,5 +38,5 @@ jobs:
       env:
         MVN_USER: ${{secrets.OSS_USER}}
         MVN_PASS: ${{secrets.OSS_PASS}}
-		MAVEN_GPG_KEY: ${{secrets.MAVEN_GPG_KEY}}
+        MAVEN_GPG_KEY: ${{secrets.MAVEN_GPG_KEY}}
 
