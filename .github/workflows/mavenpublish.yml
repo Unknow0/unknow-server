@@ -25,6 +25,8 @@ jobs:
 
     - name: build
       run: mvn -B -P deploy verify
+      env:
+        MAVEN_GPG_KEY: ${{secrets.MAVEN_GPG_KEY}}
 
     - name: install xmllint
       run: |-
@@ -38,5 +40,4 @@ jobs:
       env:
         MAVEN_USER: ${{secrets.MAVEN_CENTRAL_USER}}
         MAVEN_PASS: ${{secrets.MAVEN_CENTRAL_PASS}}
-        MAVEN_GPG_KEY: ${{secrets.MAVEN_GPG_KEY}}
 
