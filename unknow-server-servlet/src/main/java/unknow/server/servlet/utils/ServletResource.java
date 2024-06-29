@@ -49,8 +49,8 @@ public class ServletResource extends HttpServlet {
 		resp.setContentLengthLong(size);
 		resp.setContentType(mimeType);
 
-		if (!content)
-			return;
+		if (content)
+			writeContent(resp);
 	}
 
 	protected void writeContent(HttpServletResponse resp) throws IOException {

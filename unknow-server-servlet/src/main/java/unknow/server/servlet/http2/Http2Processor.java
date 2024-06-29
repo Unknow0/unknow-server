@@ -161,13 +161,13 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 		}
 		wantContinuation = false;
 
-		FrameBuilder b = BUILDERS.get(type);
-		if (b == null) {
+		FrameBuilder builder = BUILDERS.get(type);
+		if (builder == null) {
 			goaway(PROTOCOL_ERROR);
 			return;
 		}
 
-		r = b.build(this, size, flags, id, buf);
+		r = builder.build(this, size, flags, id, buf);
 	}
 
 	public void goaway(int err) throws InterruptedException {
@@ -181,12 +181,12 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 		f[14] = (byte) ((err >> 16) & 0xff);
 		f[15] = (byte) ((err >> 8) & 0xff);
 		f[16] = (byte) (err & 0xff);
-		Buffers b = co.pendingWrite;
-		b.lock();
+		Buffers buf = co.pendingWrite;
+		buf.lock();
 		try {
-			b.write(f);
+			buf.write(f);
 		} finally {
-			b.unlock();
+			buf.unlock();
 		}
 		co.flush();
 		logger.debug("{}: send GOAWAY {}", this, error(err));
@@ -238,6 +238,7 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 				}
 			}
 			int flag = 0x4;
+			@SuppressWarnings("resource")
 			Http2ServletOutput sout = (Http2ServletOutput) res.getRawStream();
 			if (sout == null || sout.isDone())
 				flag |= 0x1;
