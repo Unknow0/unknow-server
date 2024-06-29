@@ -4,10 +4,7 @@
 package unknow.server.servlet.impl;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.EnumSet;
-import java.util.Enumeration;
-import java.util.Map;
 import java.util.Set;
 
 import jakarta.servlet.DispatcherType;
@@ -22,13 +19,10 @@ import unknow.server.util.data.ArrayMap;
  * 
  * @author unknow
  */
-public class FilterConfigImpl implements FilterConfig, FilterRegistration {
-	private static final String ALREADY_INITIALIZED = "already initialized";
+public class FilterConfigImpl extends AbstractConfig implements FilterConfig, FilterRegistration {
 
-	private final String name;
 	private final Filter filter;
 	private final ServletContext context;
-	private final ArrayMap<String> parameters;
 	private final Set<String> servletMappings;
 	private final Set<String> urlMappings;
 	private final Set<DispatcherType> dispatcherTypes;
@@ -46,10 +40,9 @@ public class FilterConfigImpl implements FilterConfig, FilterRegistration {
 	 */
 	public FilterConfigImpl(String name, Filter filter, ServletContext context, ArrayMap<String> parameters, Set<String> servletMappings, Set<String> urlMappings,
 			Set<DispatcherType> dispatcherTypes) {
-		this.name = name;
+		super(name, parameters);
 		this.filter = filter;
 		this.context = context;
-		this.parameters = parameters;
 		this.servletMappings = servletMappings;
 		this.urlMappings = urlMappings;
 		this.dispatcherTypes = dispatcherTypes;
@@ -58,11 +51,6 @@ public class FilterConfigImpl implements FilterConfig, FilterRegistration {
 	@Override
 	public String getFilterName() {
 		return getName();
-	}
-
-	@Override
-	public String getName() {
-		return name;
 	}
 
 	/**
@@ -80,31 +68,6 @@ public class FilterConfigImpl implements FilterConfig, FilterRegistration {
 	@Override
 	public ServletContext getServletContext() {
 		return context;
-	}
-
-	@Override
-	public String getInitParameter(String name) {
-		return parameters.get(name);
-	}
-
-	@Override
-	public Enumeration<String> getInitParameterNames() {
-		return parameters.names();
-	}
-
-	@Override
-	public Map<String, String> getInitParameters() {
-		return Collections.unmodifiableMap(parameters);
-	}
-
-	@Override
-	public boolean setInitParameter(String name, String value) {
-		throw new IllegalStateException(ALREADY_INITIALIZED);
-	}
-
-	@Override
-	public Set<String> setInitParameters(Map<String, String> initParameters) {
-		throw new IllegalStateException(ALREADY_INITIALIZED);
 	}
 
 	@Override

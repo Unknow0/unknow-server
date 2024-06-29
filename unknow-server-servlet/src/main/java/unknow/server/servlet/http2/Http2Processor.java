@@ -206,6 +206,17 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 		co.toggleKeyOps();
 	}
 
+	public void rawWrite(byte[] b) throws InterruptedException {
+		Buffers write = co.pendingWrite;
+		write.lock();
+		try {
+			write.write(b);
+		} finally {
+			write.unlock();
+		}
+		co.toggleKeyOps();
+	}
+
 	public void sendHeaders(int id, ServletResponseImpl res) throws InterruptedException {
 		byte[] f = new byte[9];
 		Buffers out = new Buffers();

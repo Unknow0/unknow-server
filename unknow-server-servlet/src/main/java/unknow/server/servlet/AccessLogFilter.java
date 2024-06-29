@@ -71,25 +71,11 @@ public class AccessLogFilter implements Filter {
 			throw new ServletException("unknow remote type '" + t + "'");
 		});
 		builders.put("start", param -> {
-			String type = param.isEmpty() ? "iso" : param.get(0);
-			DateTimeFormatter f;
-			if (type.equals("iso"))
-				f = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
-			else if (type.equals("rfc"))
-				f = DateTimeFormatter.RFC_1123_DATE_TIME;
-			else
-				f = DateTimeFormatter.ofPattern(type);
+			DateTimeFormatter f = getFormater(param.isEmpty() ? "iso" : param.get(0));
 			return (sb, start, end, req, res) -> f.formatTo(start, sb);
 		});
 		builders.put("end", param -> {
-			String type = param.isEmpty() ? "iso" : param.get(0);
-			DateTimeFormatter f;
-			if (type.equals("iso"))
-				f = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
-			else if (type.equals("rfc"))
-				f = DateTimeFormatter.RFC_1123_DATE_TIME;
-			else
-				f = DateTimeFormatter.ofPattern(type);
+			DateTimeFormatter f = getFormater(param.isEmpty() ? "iso" : param.get(0));
 			return (sb, start, end, req, res) -> f.formatTo(end, sb);
 		});
 		builders.put("duration", param -> {
@@ -263,6 +249,14 @@ public class AccessLogFilter implements Filter {
 		}
 		param.add(template.substring(o, e));
 		return key;
+	}
+
+	private static DateTimeFormatter getFormater(String type) {
+		if (type.equals("iso"))
+			return DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+		if (type.equals("rfc"))
+			return DateTimeFormatter.RFC_1123_DATE_TIME;
+		return DateTimeFormatter.ofPattern(type);
 	}
 
 	/** a part */

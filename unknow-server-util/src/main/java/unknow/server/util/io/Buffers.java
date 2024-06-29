@@ -199,6 +199,7 @@ public class Buffers {
 			buf.head = buf.tail = null;
 			cond.signalAll();
 		} finally {
+			buf.lock.unlock();
 			lock.unlock();
 		}
 	}

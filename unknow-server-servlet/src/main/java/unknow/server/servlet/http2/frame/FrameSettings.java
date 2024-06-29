@@ -3,7 +3,6 @@ package unknow.server.servlet.http2.frame;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import unknow.server.servlet.HttpConnection;
 import unknow.server.servlet.http2.Http2Processor;
 import unknow.server.util.io.Buffers;
 
@@ -56,11 +55,9 @@ public class FrameSettings extends FrameReader {
 						p.goaway(Http2Processor.PROTOCOL_ERROR);
 						return null;
 					}
-//						allowPush = v == 1;
 					break;
 				case 3:
 					logger.trace("{}: SETTINGS_MAX_CONCURRENT_STREAMS {}", p, v);
-//						concurrent = v;
 					break;
 				case 4:
 					logger.trace("{}: SETTINGS_INITIAL_WINDOW_SIZE {}", p, v);
@@ -76,7 +73,6 @@ public class FrameSettings extends FrameReader {
 					break;
 				case 6:
 					logger.trace("{}: SETTINGS_MAX_HEADER_LIST_SIZE {}", p, v);
-//						headerList = v;
 					break;
 				default:
 					// ignore
@@ -87,16 +83,7 @@ public class FrameSettings extends FrameReader {
 			return this;
 
 		Http2Processor.formatFrame(b, 0, 4, 1, 0);
-
-		HttpConnection co = p.co;
-		Buffers write = co.pendingWrite;
-		write.lock();
-		try {
-			write.write(b);
-			co.flush();
-		} finally {
-			write.unlock();
-		}
+		p.rawWrite(b);
 		return null;
 	}
 }

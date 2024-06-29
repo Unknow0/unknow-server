@@ -4,9 +4,6 @@
 package unknow.server.servlet.impl;
 
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.Map;
 import java.util.Set;
 
 import jakarta.servlet.Servlet;
@@ -20,13 +17,10 @@ import unknow.server.util.data.ArrayMap;
  * 
  * @author unknow
  */
-public class ServletConfigImpl implements ServletConfig, ServletRegistration {
-	private static final String ALREADY_INITIALIZED = "already initialized";
+public class ServletConfigImpl extends AbstractConfig implements ServletConfig, ServletRegistration {
 
-	private final String name;
 	private final Servlet servlet;
 	private final ServletContext context;
-	private final ArrayMap<String> parameters;
 	private final Set<String> mappings;
 
 	/**
@@ -38,10 +32,9 @@ public class ServletConfigImpl implements ServletConfig, ServletRegistration {
 	 * @param mappings   the url mappings
 	 */
 	public ServletConfigImpl(String name, Servlet servlet, ServletContext context, ArrayMap<String> parameters, Set<String> mappings) {
-		this.name = name;
+		super(name, parameters);
 		this.servlet = servlet;
 		this.context = context;
-		this.parameters = parameters;
 		this.mappings = mappings;
 	}
 
@@ -60,36 +53,6 @@ public class ServletConfigImpl implements ServletConfig, ServletRegistration {
 	@Override
 	public ServletContext getServletContext() {
 		return context;
-	}
-
-	@Override
-	public String getInitParameter(String name) {
-		return parameters.get(name);
-	}
-
-	@Override
-	public Enumeration<String> getInitParameterNames() {
-		return parameters.names();
-	}
-
-	@Override
-	public Map<String, String> getInitParameters() {
-		return Collections.unmodifiableMap(parameters);
-	}
-
-	@Override
-	public boolean setInitParameter(String name, String value) {
-		throw new IllegalStateException(ALREADY_INITIALIZED);
-	}
-
-	@Override
-	public Set<String> setInitParameters(Map<String, String> initParameters) {
-		throw new IllegalStateException(ALREADY_INITIALIZED);
-	}
-
-	@Override
-	public String getName() {
-		return name;
 	}
 
 	@Override

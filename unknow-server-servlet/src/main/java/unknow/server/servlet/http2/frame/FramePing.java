@@ -1,6 +1,5 @@
 package unknow.server.servlet.http2.frame;
 
-import unknow.server.servlet.HttpConnection;
 import unknow.server.servlet.http2.Http2Processor;
 import unknow.server.util.io.Buffers;
 
@@ -34,15 +33,7 @@ public class FramePing extends FrameReader {
 
 		buf.read(b, 9, 8, false);
 		Http2Processor.formatFrame(b, 8, 8, 1, 0);
-		HttpConnection co = p.co;
-		Buffers write = co.pendingWrite;
-		write.lock();
-		try {
-			write.write(b);
-			co.flush();
-		} finally {
-			write.unlock();
-		}
+		p.rawWrite(b);
 		return null;
 	}
 }
