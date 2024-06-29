@@ -17,8 +17,8 @@ jobs:
         distribution: temurin
         java-version: 11
         server-id: central
-        server-username: MVN_CENTRAL_USER
-        server-password: MVN_CENTRAL_PASS
+        server-username: MAVEN_USER
+        server-password: MAVEN_PASS
 
     - name: set version
       run: mvn -B versions:set -DnewVersion=${GITHUB_REF##*/}
@@ -35,4 +35,8 @@ jobs:
 
     - name: publish
       run: mvn -B -P deploy deploy
+      env:
+        MAVEN_USER: ${{secrets.MAVEN_CENTRAL_USER}}
+        MAVEN_PASS: ${{secrets.MAVEN_CENTRAL_PASS}}
+        MAVEN_GPG_KEY: ${{secrets.MAVEN_GPG_KEY}}
 
