@@ -8,7 +8,7 @@ import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.function.Supplier;
+import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,7 +48,7 @@ public class NIOServer extends NIOLoop {
 	 * @throws IOException on ioException
 	 */
 	@SuppressWarnings("resource")
-	public void bind(SocketAddress a, Supplier<? extends NIOConnection> s) throws IOException {
+	public void bind(SocketAddress a, Function<SelectionKey, ? extends NIOConnection> s) throws IOException {
 		logger.info("Server bind to {}", a);
 		ServerSocketChannel open = ServerSocketChannel.open();
 		open.configureBlocking(false);
@@ -67,9 +67,9 @@ public class NIOServer extends NIOLoop {
 	protected void selected(SelectionKey key) throws IOException, InterruptedException {
 		try {
 			@SuppressWarnings("unchecked")
-			Supplier<NIOConnection> pool = (Supplier<NIOConnection>) key.attachment();
+			Function<SelectionKey, ? extends NIOConnection> factory = (Function<SelectionKey, ? extends NIOConnection>) key.attachment();
 			SocketChannel socket = ((ServerSocketChannel) key.channel()).accept();
-			workers.register(socket, pool);
+			workers.register(socket, factory);
 		} catch (IOException e) {
 			logger.warn("Failed to accept", e);
 		}

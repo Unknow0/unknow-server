@@ -5,6 +5,7 @@ package unknow.server.protobuf;
  */
 
 import java.io.IOException;
+import java.nio.channels.SelectionKey;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,23 +30,22 @@ public abstract class ProtoStuffConnection<T> extends NIOConnection {
 	private final Schema<T> schema;
 	private final boolean protostuff;
 
-	protected Out out;
 	private LimitedInputStream in;
 	private CodedInput input;
 
-	protected ProtoStuffConnection(Schema<T> schema, boolean protostuff) {
+	protected ProtoStuffConnection(SelectionKey key, Schema<T> schema, boolean protostuff) {
+		super(key);
 		this.schema = schema;
 		this.protostuff = protostuff;
 	}
 
 	@Override
-	protected void onInit() {
-		out = getOut();
+	protected final void onInit() {
 		in = new LimitedInputStream(getIn(), Integer.MAX_VALUE);
 		input = new CodedInput(in, protostuff);
 	}
 
-	protected <M extends Message<M>> void write(T o) throws IOException {
+	protected final <M extends Message<M>> void write(T o) throws IOException {
 		LinkedBuffer buffer = LinkedBuffer.allocate();
 		Output output = protostuff ? new ProtobufOutput(buffer) : new ProtostuffOutput(buffer);
 		schema.writeTo(output, o);
@@ -55,7 +55,7 @@ public abstract class ProtoStuffConnection<T> extends NIOConnection {
 		out.flush();
 	}
 
-	protected <M extends Message<M>> void writeMessage(M o) throws IOException {
+	protected final <M extends Message<M>> void writeMessage(M o) throws IOException {
 		LinkedBuffer buffer = LinkedBuffer.allocate();
 		Output output = protostuff ? new ProtobufOutput(buffer) : new ProtostuffOutput(buffer);
 		o.cachedSchema().writeTo(output, o);
@@ -80,7 +80,7 @@ public abstract class ProtoStuffConnection<T> extends NIOConnection {
 			process(m);
 		} catch (IOException e) {
 			logger.warn("", e);
-			getOut().close();
+			out.close();
 		}
 	}
 

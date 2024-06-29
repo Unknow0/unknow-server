@@ -32,7 +32,7 @@ parse()
 	done < <(sort -t , -r -k 3,1n "$1" | sort -t , -k 3 -u)
 	}
 
-for i in $1/*; do echo $i; time parse "$i"; done
+for i in $1/*.csv; do parse "$i"; done
 
 echo
 echo 'throughput:'
@@ -59,4 +59,14 @@ do
 	printf '%10s' "$s"
 	for n in "${!tests[@]}"; do printf ' %10s' "${error[$s:$n]:-0}"; done
 	echo
+done
+
+echo
+echo "Http2 result"
+
+for s in "${!servers[@]}"
+do
+	echo
+	echo "$s"
+	tail -n 9 "$1/$s.log"
 done

@@ -3,6 +3,8 @@
  */
 package unknow.server.util.io;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
@@ -11,7 +13,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * @author unknow
  */
 public class Buffers {
-	private static final int BUF_LEN = 4096;
+	public static final int BUF_LEN = 4096;
 	private final ReentrantLock lock = new ReentrantLock();
 	private final Condition cond = lock.newCondition();
 
@@ -47,7 +49,7 @@ public class Buffers {
 				tail.next = new Chunk();
 				tail = tail.next;
 			}
-			tail.b[tail.o + tail.l] = (byte) b;
+			tail.b[tail.o + tail.l] = (byte) (b & 0xFF);
 			tail.l++;
 			len++;
 			cond.signalAll();
@@ -178,6 +180,31 @@ public class Buffers {
 	}
 
 	/**
+	* add data in front of this buffers
+	* 
+	* @param buf data to append
+	* @throws InterruptedException on interrupt
+	*/
+	public void prepend(Buffers buf) throws InterruptedException {
+		lock.lockInterruptibly();
+		buf.lock.lockInterruptibly();
+		try {
+			if (buf.isEmpty())
+				return;
+			len += buf.len;
+			buf.tail.next = head;
+			head = buf.head;
+
+			buf.len = 0;
+			buf.head = buf.tail = null;
+			cond.signalAll();
+		} finally {
+			buf.lock.unlock();
+			lock.unlock();
+		}
+	}
+
+	/**
 	 * read one byte
 	 * 
 	 * @param wait if true wait for data
@@ -191,7 +218,7 @@ public class Buffers {
 				awaitContent();
 			if (len == 0)
 				return -1;
-			int r = head.b[head.o++];
+			int r = head.b[head.o++] & 0xFF;
 			if (--len == 0)
 				tail = null;
 			if (--head.l == 0)
@@ -283,9 +310,50 @@ public class Buffers {
 		}
 	}
 
-	private void awaitContent() throws InterruptedException {
-		while (len == 0)
+	/**
+	 * wait for more content to be written
+	 * @throws InterruptedException
+	 */
+	public void awaitContent() throws InterruptedException {
+		lock.lockInterruptibly();
+		try {
+			while (len == 0)
+				cond.await();
+		} finally {
+			lock.unlock();
+		}
+	}
+
+	public void lock() throws InterruptedException {
+		lock.lockInterruptibly();
+	}
+
+	public void unlock() {
+		lock.unlock();
+	}
+
+	/**
+	 * wait for the signal (data added or signal is called)
+	 */
+	public void await() throws InterruptedException {
+		lock.lockInterruptibly();
+		try {
 			cond.await();
+		} finally {
+			lock.unlock();
+		}
+	}
+
+	/**
+	 * wake up all thread in await()
+	 */
+	public void signal() throws InterruptedException {
+		lock.lockInterruptibly();
+		try {
+			cond.signalAll();
+		} finally {
+			lock.unlock();
+		}
 	}
 
 	/**
@@ -315,8 +383,8 @@ public class Buffers {
 	 * read a number amount of byte into the buffers
 	 * 
 	 * @param buf  where to read
-	 * @param wait if true wait for data
 	 * @param l    number of byte to read
+	 * @param wait if true wait for data
 	 * @throws InterruptedException on interrupt
 	 */
 	public void read(Buffers buf, int l, boolean wait) throws InterruptedException {
@@ -328,6 +396,8 @@ public class Buffers {
 				awaitContent();
 			if (len == 0 || head == null)
 				return;
+			if (l == -1)
+				l = len;
 
 			if (l >= len) { // move all content
 				buf.append(head);
@@ -371,29 +441,83 @@ public class Buffers {
 	}
 
 	/**
+	 * read a number amount of byte into the buffers
+	 * 
+	 * @param out  where to read
+	 * @param l    number of byte to read
+	 * @param wait if true wait for data
+	 * @throws InterruptedException on interrupt
+	 * @throws IOException 
+	 */
+	public void read(OutputStream out, int l, boolean wait) throws InterruptedException, IOException {
+		if (l == 0)
+			return;
+		lock.lockInterruptibly();
+		try {
+			if (wait)
+				awaitContent();
+			if (len == 0 || head == null)
+				return;
+			if (l == -1)
+				l = len;
+
+			Chunk last = null;
+			Chunk c = head;
+			// read whole chunk
+			while (c != null && l >= c.l) {
+				out.write(c.b, c.o, c.l);
+				l -= c.l;
+				len -= c.l;
+				last = c;
+				c = c.next;
+			}
+			if (last != null)
+				last.next = null;
+
+			if (c != null && l > 0) {
+				out.write(c.b, c.o, l);
+				c.o += l;
+				c.l -= l;
+				len -= l;
+				head = c;
+			}
+			head = c;
+			if (c == null)
+				tail = null;
+		} finally {
+			lock.unlock();
+		}
+	}
+
+	/**
 	 * skip l bytes
 	 * 
 	 * @param l number of byte to skip
+	 * @return actual number of byte skiped
 	 * @throws InterruptedException on interrupt
 	 */
-	public void skip(int l) throws InterruptedException {
+	public long skip(long l) throws InterruptedException {
 		if (l < 0)
 			throw new IllegalArgumentException("length < 0");
 		if (l == 0)
-			return;
+			return 0;
+		long s = 0;
 		lock.lockInterruptibly();
 		try {
 			while (head != null && l >= head.l) {
 				l -= head.l;
 				len -= head.l;
+				s += head.l;
 				head = head.next;
 			}
 			if (head != null) {
 				head.o += l;
 				head.l -= l;
 				len -= l;
+				s += l;
 			} else
 				tail = null;
+			return s;
 		} finally {
 			lock.unlock();
 		}
@@ -485,7 +609,7 @@ public class Buffers {
 				if (b == null)
 					return -1;
 			}
-			return b.b[b.o + off];
+			return b.b[b.o + off] & 0xFF;
 		} finally {
 			lock.unlock();
 		}
@@ -587,4 +711,5 @@ public class Buffers {
 			o = l = 0;
 		}
 	}
+
 }

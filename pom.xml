@@ -38,7 +38,7 @@
 		<module>unknow-server-bom</module>
 		<module>unknow-server-nio</module>
 		<module>unknow-server-maven</module>
-		<module>unknow-server-http</module>
+		<module>unknow-server-servlet</module>
 		<module>unknow-server-util</module>
 		<module>unknow-server-jaxb</module>
 		<module>unknow-server-jaxws</module>

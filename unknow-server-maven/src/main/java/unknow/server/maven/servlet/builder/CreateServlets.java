@@ -16,14 +16,14 @@ import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.stmt.ReturnStmt;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 
-import unknow.server.http.servlet.ServletConfigImpl;
-import unknow.server.http.utils.Resource;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
 import unknow.server.maven.servlet.Builder;
 import unknow.server.maven.servlet.Names;
 import unknow.server.maven.servlet.descriptor.Descriptor;
 import unknow.server.maven.servlet.descriptor.SD;
+import unknow.server.servlet.impl.ServletConfigImpl;
+import unknow.server.servlet.utils.Resource;
 
 /**
  * @author unknow

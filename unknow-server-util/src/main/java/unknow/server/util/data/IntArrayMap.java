@@ -44,6 +44,14 @@ public class IntArrayMap<T> {
 
 	/**
 	 * @param key the key
+	 * @return true if the key exists
+	 */
+	public boolean contains(int key) {
+		return Arrays.binarySearch(keys, 0, len, key) >= 0;
+	}
+
+	/**
+	 * @param key the key
 	 * @return the associated value
 	 */
 	public T get(int key) {
@@ -61,19 +69,19 @@ public class IntArrayMap<T> {
 	public T set(int key, T value) {
 		int i = Arrays.binarySearch(keys, 0, len, key);
 		if (i >= 0) {
+			T old = values[i];
 			values[i] = value;
-			return null;
-		}
-		if (i < len) {
-			System.arraycopy(keys, i, keys, i + 1, len - i);
-			System.arraycopy(values, i, values, i + 1, len - i);
+			return old;
 		}
 		ensure(++len);
 		i = -i - 1;
-		T old = values[i];
+		if (i < len - 1) {
+			System.arraycopy(keys, i, keys, i + 1, len - i - 1);
+			System.arraycopy(values, i, values, i + 1, len - i - 1);
+		}
 		keys[i] = key;
 		values[i] = value;
-		return old;
+		return null;
 	}
 
 	/**
@@ -87,12 +95,12 @@ public class IntArrayMap<T> {
 		int i = Arrays.binarySearch(keys, 0, len, key);
 		if (i >= 0)
 			return false;
-		if (i < len) {
-			System.arraycopy(keys, i, keys, i + 1, len - i);
-			System.arraycopy(values, i, values, i + 1, len - i);
-		}
 		ensure(++len);
 		i = -i - 1;
+		if (i < len - 1) {
+			System.arraycopy(keys, i, keys, i + 1, len - i - 1);
+			System.arraycopy(values, i, values, i + 1, len - i - 1);
+		}
 		keys[i] = key;
 		values[i] = value;
 		return true;
@@ -103,7 +111,24 @@ public class IntArrayMap<T> {
 	 * @return the removed value
 	 */
 	public T remove(int key) {
-		return set(key, null);
+		int i = Arrays.binarySearch(keys, 0, len, key);
+		if (i < 0)
+			return null;
+		T old = values[i];
+		len--;
+		System.arraycopy(keys, i + 1, keys, i, len - i);
+		System.arraycopy(values, i + 1, values, i, len - i);
+		values[len] = null;
+		return old;
+	}
+
+	/**
+	 * empty the map
+	 */
+	public void clear() {
+		for (int i = 0; i < len; i++)
+			values[i] = null;
+		len = 0;
 	}
 
 	/**
@@ -126,10 +151,21 @@ public class IntArrayMap<T> {
 	}
 
 	/**
+	 * @return true if map is empty
+	 */
+	public boolean isEmpty() {
+		return len == 0;
+	}
+
+	/**
 	 * @return set of all the keys
 	 */
 	public Set<Integer> keySet() {
 		return new KeySet();
+	}
+
+	public Collection<T> values() {
+		return new Values();
 	}
 
 	private class KeySet implements Set<Integer> {
@@ -213,6 +249,92 @@ public class IntArrayMap<T> {
 			if (i == len)
 				throw new NoSuchElementException();
 			return keys[i++];
+		}
+
+	}
+
+	private class Values implements Collection<T> {
+
+		@Override
+		public int size() {
+			return len;
+		}
+
+		@Override
+		public boolean isEmpty() {
+			return len == 0;
+		}
+
+		@Override
+		public boolean contains(Object o) {
+			// TODO Auto-generated method stub
+			return false;
+		}
+
+		@Override
+		public Iterator<T> iterator() {
+			return new ValuesIt();
+		}
+
+		@Override
+		public Object[] toArray() {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public <E> E[] toArray(E[] a) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public boolean add(T e) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public boolean remove(Object o) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public boolean containsAll(Collection<?> c) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public boolean addAll(Collection<? extends T> c) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public boolean removeAll(Collection<?> c) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public boolean retainAll(Collection<?> c) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public void clear() {
+			throw new UnsupportedOperationException();
+		}
+	}
+
+	private class ValuesIt implements Iterator<T> {
+		private int i = 0;
+
+		@Override
+		public boolean hasNext() {
+			return i < len;
+		}
+
+		@Override
+		public T next() {
+			if (i == len)
+				throw new NoSuchElementException();
+			return values[i++];
 		}
 
 	}
