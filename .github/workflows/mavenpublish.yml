@@ -24,9 +24,7 @@ jobs:
       run: mvn -B versions:set -DnewVersion=${GITHUB_REF##*/}
 
     - name: build
-      run: mvn -B -P deploy verify
-      env:
-        MAVEN_GPG_KEY: ${{secrets.MAVEN_GPG_KEY}}
+      run: mvn -B -P deploy package
 
     - name: install xmllint
       run: |-
@@ -40,4 +38,4 @@ jobs:
       env:
         MAVEN_USER: ${{secrets.MAVEN_CENTRAL_USER}}
         MAVEN_PASS: ${{secrets.MAVEN_CENTRAL_PASS}}
-
+        MAVEN_GPG_KEY: ${{secrets.MAVEN_GPG_KEY}}
