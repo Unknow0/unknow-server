@@ -5,9 +5,7 @@ package unknow.server.maven.servlet.descriptor;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import jakarta.servlet.DispatcherType;
 import unknow.server.maven.model.AnnotationModel;
@@ -18,14 +16,13 @@ import unknow.server.maven.model.TypeModel;
  * 
  * @author unknow
  */
-public class SD {
+public class SD extends WithParams {
 	public final int index;
 	public String clazz;
 	public String jsp;
 
 	public String name;
 	public final List<String> pattern = new ArrayList<>();
-	public final Map<String, String> param = new HashMap<>();
 	public int loadOnStartup = -1;
 	public final List<String> servletNames = new ArrayList<>(0);
 	public final List<DispatcherType> dispatcher = new ArrayList<>(0);

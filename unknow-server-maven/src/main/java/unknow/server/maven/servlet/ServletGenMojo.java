@@ -12,7 +12,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
 
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -22,8 +24,6 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.xml.sax.InputSource;
-import org.xml.sax.SAXException;
 
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Modifier;
@@ -32,7 +32,6 @@ import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.ServletContainerInitializer;
-import unknow.sax.SaxParser;
 import unknow.server.maven.AbstractGeneratorMojo;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.model.ModelLoader;
@@ -46,7 +45,6 @@ import unknow.server.maven.servlet.builder.LoadInitializer;
 import unknow.server.maven.servlet.builder.Main;
 import unknow.server.maven.servlet.descriptor.Descriptor;
 import unknow.server.maven.servlet.descriptor.SD;
-import unknow.server.maven.servlet.sax.Context;
 import unknow.server.servlet.AbstractHttpServer;
 import unknow.server.servlet.AccessLogFilter;
 import unknow.server.servlet.utils.Resource;
@@ -62,6 +60,8 @@ public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderCont
 
 	private static final List<Builder> BUILDER = Arrays.asList(new CreateEventManager(), new CreateServletManager(), new CreateContext(), new CreateServlets(),
 			new CreateFilters(), new LoadInitializer(), new Main());
+
+	private static final XMLInputFactory XML_IN = XMLInputFactory.newInstance();
 
 	private static final Path WEBXML = Paths.get("WEB-INF", "web.xml");
 	private static final Path INITIALIZER = Paths.get("META-INF", "services", ServletContainerInitializer.class.getName());
@@ -132,9 +132,11 @@ public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderCont
 
 	private void process(Path full, Path file) {
 		if (file.equals(WEBXML)) {
-			try (InputStream r = Files.newInputStream(full)) {
-				SaxParser.parse(new Context(descriptor, loader), new InputSource(r));
-			} catch (ParserConfigurationException | SAXException | IOException e) {
+			try (InputStream is = Files.newInputStream(full)) {
+				XMLStreamReader r = XML_IN.createXMLStreamReader(is);
+				WebXml.parse(loader, descriptor, r);
+				r.close();
+			} catch (XMLStreamException | IOException e) {
 				logger.warn("Failed to parse web.xml {}", full, e);
 			}
 			return;

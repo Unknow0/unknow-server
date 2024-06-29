@@ -90,10 +90,15 @@ public class UnmarshallerImpl implements Unmarshaller {
 
 	@Override
 	public Object unmarshal(InputSource source) throws JAXBException {
-		Reader r = source.getCharacterStream();
-		if (r != null)
-			return unmarshal(r);
-		return unmarshal(source.getByteStream());
+		try (Reader r = source.getCharacterStream()) {
+			if (r != null)
+				return unmarshal(r);
+			try (InputStream is = source.getByteStream()) {
+				return unmarshal(is);
+			}
+		} catch (IOException e) {
+			throw new JAXBException(e);
+		}
 	}
 
 	@Override

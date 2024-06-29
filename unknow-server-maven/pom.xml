@@ -78,10 +78,6 @@
 			<artifactId>unknow-server-jaxrs</artifactId>
 			<version>${project.version}</version>
 		</dependency>
-		<dependency>
-			<groupId>unknow.sax</groupId>
-			<artifactId>unknow-sax</artifactId>
-		</dependency>
 
 		<dependency>
 			<groupId>com.github.javaparser</groupId>

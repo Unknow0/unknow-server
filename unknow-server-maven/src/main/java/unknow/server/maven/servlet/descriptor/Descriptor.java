@@ -32,13 +32,11 @@ import unknow.server.servlet.utils.Resource;
 /**
  * @author unknow
  */
-public class Descriptor implements TypeConsumer {
+public class Descriptor extends WithParams implements TypeConsumer {
 	public static final List<Class<?>> LISTENERS = Arrays.asList(ServletContextListener.class, ServletContextAttributeListener.class, ServletRequestListener.class,
 			ServletRequestAttributeListener.class, HttpSessionListener.class, HttpSessionAttributeListener.class, HttpSessionIdListener.class);
 
 	public String name = "/";
-
-	public final Map<String, String> param = new HashMap<>();
 
 	public final List<LD> listeners = new ArrayList<>();
 	public final List<SD> servlets = new ArrayList<>();
