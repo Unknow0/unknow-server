@@ -16,15 +16,15 @@ jobs:
       with:
         distribution: temurin
         java-version: 11
-        server-id: ossrh
-        server-username: MVN_USER
-        server-password: MVN_PASS
+        server-id: central
+        server-username: MVN_CENTRAL_USER
+        server-password: MVN_CENTRAL_PASS
 
     - name: set version
       run: mvn -B versions:set -DnewVersion=${GITHUB_REF##*/}
 
     - name: build
-      run: mvn -B -P deploy package
+      run: mvn -B -P deploy verify
 
     - name: install xmllint
       run: |-
@@ -35,8 +35,4 @@ jobs:
 
     - name: publish
       run: mvn -B -P deploy deploy
-      env:
-        MVN_USER: ${{secrets.OSS_USER}}
-        MVN_PASS: ${{secrets.OSS_PASS}}
-        MAVEN_GPG_KEY: ${{secrets.MAVEN_GPG_KEY}}
 

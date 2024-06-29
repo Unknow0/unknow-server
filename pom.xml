@@ -130,8 +130,8 @@
 				</plugin>
 				<plugin>
 					<groupId>org.sonatype.plugins</groupId>
-					<artifactId>nexus-staging-maven-plugin</artifactId>
-					<version>1.6.7</version>
+					<artifactId>central-publishing-maven-plugin</artifactId>
+					<version>0.5.0</version>
 				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
@@ -193,11 +193,6 @@
 				<scope>test</scope>
 			</dependency>
 
-			<dependency>
-				<groupId>unknow.sax</groupId>
-				<artifactId>unknow-sax</artifactId>
-				<version>${unknow-sax.version}</version>
-			</dependency>
 			<dependency>
 				<groupId>jakarta.servlet</groupId>
 				<artifactId>jakarta.servlet-api</artifactId>
@@ -412,12 +407,12 @@
 					</plugin>
 					<plugin>
 						<groupId>org.sonatype.plugins</groupId>
-						<artifactId>nexus-staging-maven-plugin</artifactId>
+						<artifactId>central-publishing-maven-plugin</artifactId>
 						<extensions>true</extensions>
 						<configuration>
-							<serverId>ossrh</serverId>
-							<nexusUrl>https://s01.oss.sonatype.org/</nexusUrl>
-							<autoReleaseAfterClose>true</autoReleaseAfterClose>
+							<publishingServerId>central</publishingServerId>
+							<autoPublish>true</autoPublish>
+							<waitUntil>published</waitUntil>
 						</configuration>
 					</plugin>
 				</plugins>
