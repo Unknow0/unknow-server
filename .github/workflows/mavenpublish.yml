@@ -16,15 +16,15 @@ jobs:
       with:
         distribution: temurin
         java-version: 11
-        server-id: repsy
-        server-username: MVN_USER
-        server-password: MVN_PASS
+        server-id: central
+        server-username: MAVEN_USER
+        server-password: MAVEN_PASS
 
     - name: set version
       run: mvn -B versions:set -DnewVersion=${GITHUB_REF##*/}
 
     - name: build
-      run: mvn -B package
+      run: mvn -B -P deploy package
 
     - name: install xmllint
       run: |-
@@ -34,8 +34,8 @@ jobs:
       run: bash .github/validate.sh
 
     - name: publish
-      run: mvn -B deploy
+      run: mvn -B -P deploy deploy
       env:
-        MVN_USER: ${{secrets.REPSY_USER}}
-        MVN_PASS: ${{secrets.REPSY_PASS}}
-
+        MAVEN_USER: ${{secrets.MAVEN_CENTRAL_USER}}
+        MAVEN_PASS: ${{secrets.MAVEN_CENTRAL_PASS}}
+        MAVEN_GPG_KEY: ${{secrets.MAVEN_GPG_KEY}}

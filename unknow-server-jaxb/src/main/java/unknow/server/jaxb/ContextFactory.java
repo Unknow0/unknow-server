@@ -84,7 +84,7 @@ public abstract class ContextFactory implements JAXBContextFactory {
 		return null;
 	}
 
-	protected abstract Collection<Class<?>> getClasses(@SuppressWarnings("unused") String contextPackage);
+	protected abstract Collection<Class<?>> getClasses(String contextPackage);
 
 	@Override
 	public JAXBContext createContext(String contextPath, ClassLoader classLoader, Map<String, ?> properties) throws JAXBException {
