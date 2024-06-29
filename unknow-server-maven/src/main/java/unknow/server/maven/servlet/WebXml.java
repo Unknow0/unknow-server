@@ -18,6 +18,8 @@ import unknow.server.maven.servlet.descriptor.SD;
 import unknow.server.maven.servlet.descriptor.WithParams;
 
 public class WebXml {
+	private WebXml() {
+	}
 
 	public static void parse(ModelLoader loader, Descriptor descriptor, XMLStreamReader r) throws XMLStreamException {
 		while (r.hasNext()) {
@@ -72,10 +74,8 @@ public class WebXml {
 		int d = 1;
 		while (r.hasNext()) {
 			int n = r.next();
-			if (n == XMLStreamConstants.END_ELEMENT) {
-				if (--d == 0)
-					break;
-			}
+			if (n == XMLStreamConstants.END_ELEMENT && --d == 0)
+				break;
 			if (n == XMLStreamConstants.START_ELEMENT)
 				d++;
 		}
@@ -181,6 +181,7 @@ public class WebXml {
 					break;
 				case "enabled":
 					f.enabled = Boolean.parseBoolean(parseContent(r));
+					break;
 				default:
 					skipTag(r);
 			}

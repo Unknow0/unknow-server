@@ -410,7 +410,7 @@
 						<artifactId>central-publishing-maven-plugin</artifactId>
 						<extensions>true</extensions>
 						<configuration>
-							<publishingServerId>central</publishingServerId>
+							<deploymentName>${project.groupId}:${project.version}</deploymentName>
 							<autoPublish>true</autoPublish>
 							<waitUntil>published</waitUntil>
 						</configuration>
