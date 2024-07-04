@@ -315,6 +315,12 @@
 			</dependency>
 
 			<dependency>
+				<groupId>org.apache.xmlbeans</groupId>
+				<artifactId>xmlbeans</artifactId>
+				<version>5.2.1</version>
+			</dependency>
+
+			<dependency>
 				<groupId>io.protostuff</groupId>
 				<artifactId>protostuff-bom</artifactId>
 				<version>${protostuff.version}</version>
