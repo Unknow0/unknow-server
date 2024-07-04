@@ -37,7 +37,7 @@ public class Http11Processor implements HttpProcessor {
 	public final boolean isClosable(boolean stop) {
 		if (!exec.isDone())
 			return false;
-		if (co.pendingRead.isEmpty())
+		if (co.pendingRead().isEmpty())
 			return true;
 		exec = co.submit(new Http11Worker(co));
 		return false;
@@ -50,7 +50,7 @@ public class Http11Processor implements HttpProcessor {
 
 	/** the processor factory */
 	public static final HttpProcessorFactory Factory = co -> {
-		if (BuffersUtils.indexOf(co.pendingRead, END, 0, MAX_START_SIZE) > 0)
+		if (BuffersUtils.indexOf(co.pendingRead(), END, 0, MAX_START_SIZE) > 0)
 			return new Http11Processor(co);
 		return null;
 	};

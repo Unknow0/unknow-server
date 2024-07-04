@@ -1,12 +1,26 @@
 package unknow.server.servlet;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetSocketAddress;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
 import java.util.ServiceLoader;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
@@ -27,7 +41,10 @@ import unknow.server.servlet.utils.ServletManager;
  * @author unknow
  */
 public abstract class AbstractHttpServer extends NIOServerBuilder {
-	private Opt addr;
+	private Opt http;
+	private Opt https;
+	private Opt keystore;
+	private Opt keystorePass;
 	private Opt vhost;
 	private Opt execMin;
 	private Opt execMax;
@@ -61,7 +78,12 @@ public abstract class AbstractHttpServer extends NIOServerBuilder {
 
 	@Override
 	protected void beforeParse() {
-		addr = withOpt("addr").withCli(Option.builder("a").longOpt("addr").hasArg().desc("address to bind to").build()).withValue(":8080");
+		http = withOpt("http-addr").withCli(Option.builder("a").longOpt("http-addr").hasArg().desc("address to bind http to").build());
+		https = withOpt("https-addr").withCli(Option.builder().longOpt("https-addr").hasArg().desc("address to bind https to").build());
+
+		keystore = withOpt("keystore").withCli(Option.builder().longOpt("keystore").hasArg().desc("keystore to use for https").build());
+		keystorePass = withOpt("keystore-pass").withCli(Option.builder().longOpt("keystore-pass").hasArg().desc("passphrase for the keystore").build());
+
 		vhost = withOpt("vhost").withCli(Option.builder().longOpt("vhost").desc("public vhost seen by the servlet, default to the binded address").build());
 		execMin = withOpt("exec-min").withCli(Option.builder().longOpt("exec-min").desc("min number of exec thread to use").build()).withValue("0");
 		execMax = withOpt("exec-max").withCli(Option.builder().longOpt("exec-max").desc("max number of exec thread to use").build())
@@ -73,10 +95,18 @@ public abstract class AbstractHttpServer extends NIOServerBuilder {
 
 	@Override
 	protected void process(NIOServer server, CommandLine cli) throws Exception {
-		InetSocketAddress address = parseAddr(cli, addr, "");
+		String ks = keystore.value(cli);
+		if (ks == null)
+			http = http.withValue(":8080");
+		else
+			https = https.withValue(":8443");
+
+		InetSocketAddress addressHttp = parseAddr(cli, http, "");
+		InetSocketAddress addressHttps = parseAddr(cli, https, "");
+
 		String value = cli.getOptionValue(vhost.name());
 		if (value == null)
-			value = address.getHostString();
+			value = addressHttp == null ? addressHttps.getHostName() : addressHttp.getHostString();
 
 		manager = createServletManager();
 		events = createEventManager();
@@ -86,6 +116,8 @@ public abstract class AbstractHttpServer extends NIOServerBuilder {
 		manager.initialize(ctx, createServlets(), createFilters());
 		events.fireContextInitialized(ctx);
 
+		SSLContext sslContext = addressHttps == null ? null : sslContext(ks, keystorePass.value(cli));
+
 		AtomicInteger i = new AtomicInteger();
 		ExecutorService executor = new ThreadPoolExecutor(parseInt(cli, execMin, 0), parseInt(cli, execMax, 0), parseInt(cli, execIdle, 0), TimeUnit.SECONDS,
 				new SynchronousQueue<>(), r -> {
@@ -94,7 +126,28 @@ public abstract class AbstractHttpServer extends NIOServerBuilder {
 					return t;
 				});
 		int keepAliveIdle = parseInt(cli, keepAlive, -1);
-		server.bind(address, key -> new HttpConnection(key,executor, ctx, manager, events, keepAliveIdle));
+		if (addressHttps != null)
+			server.bind(addressHttps, key -> new HttpConnectionSSL(key, sslContext, executor, ctx, manager, events, keepAliveIdle));
+		if (addressHttp != null)
+			server.bind(addressHttp, key -> new HttpConnectionPlain(key, executor, ctx, manager, events, keepAliveIdle));
+	}
+
+	private final SSLContext sslContext(String keystore, String password)
+			throws NoSuchAlgorithmException, CertificateException, IOException, KeyStoreException, UnrecoverableKeyException, KeyManagementException {
+		KeyStore ks = KeyStore.getInstance("JKS");
+		try (InputStream is = Files.newInputStream(Paths.get(keystore))) {
+			ks.load(is, null);
+		}
+
+		KeyManagerFactory keyManager = KeyManagerFactory.getInstance("SunX509");
+		keyManager.init(ks, password == null ? null : password.toCharArray());
+
+		TrustManagerFactory trust = TrustManagerFactory.getInstance("SunX509");
+		trust.init(ks);
+
+		SSLContext sslContext = SSLContext.getInstance("TLS");
+		sslContext.init(keyManager.getKeyManagers(), trust.getTrustManagers(), null);
+		return sslContext;
 	}
 
 	/**

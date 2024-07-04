@@ -70,7 +70,7 @@ public abstract class ProtoStuffConnection<T> extends NIOConnection {
 		in.mark(48);
 		try {
 			int size = input.readUInt32();
-			if (pendingRead.length() < size) {
+			if (pendingRead().length() < size) {
 				in.reset();
 				return;
 			}

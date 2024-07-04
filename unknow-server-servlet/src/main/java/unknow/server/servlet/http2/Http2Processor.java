@@ -13,6 +13,7 @@ import unknow.server.servlet.HttpProcessor;
 import unknow.server.servlet.http2.frame.FrameData;
 import unknow.server.servlet.http2.frame.FrameGoAway;
 import unknow.server.servlet.http2.frame.FrameHeader;
+import unknow.server.servlet.http2.frame.FramePRI;
 import unknow.server.servlet.http2.frame.FramePing;
 import unknow.server.servlet.http2.frame.FrameReader;
 import unknow.server.servlet.http2.frame.FrameReader.FrameBuilder;
@@ -93,21 +94,23 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 		this.frame = 16384;
 //		this.headerList = Integer.MAX_VALUE;
 
+		this.r = FramePRI.INSTRANCE;
+
 		formatFrame(b, 0, 4, 0, 0);
-		co.pendingWrite.write(b, 0, 9);
+		co.pendingWrite().write(b, 0, 9);
 		co.flush();
 	}
 
 	@Override
 	public final void process() throws InterruptedException {
 		if (r != null) {
-			r = r.process(co.pendingRead);
+			r = r.process(co.pendingRead());
 			if (r != null)
 				return;
 		}
 
-		while (co.pendingRead.length() > 9 && r == null)
-			readFrame(co.pendingRead);
+		while (co.pendingRead().length() > 9 && r == null)
+			readFrame(co.pendingRead());
 	}
 
 	@Override
@@ -166,7 +169,7 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 			goaway(PROTOCOL_ERROR);
 			return;
 		}
-
+		logger.debug("process {}", builder);
 		r = builder.build(this, size, flags, id, buf);
 	}
 
@@ -181,7 +184,7 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 		f[14] = (byte) ((err >> 16) & 0xff);
 		f[15] = (byte) ((err >> 8) & 0xff);
 		f[16] = (byte) (err & 0xff);
-		Buffers buf = co.pendingWrite;
+		Buffers buf = co.pendingWrite();
 		buf.lock();
 		try {
 			buf.write(f);
@@ -195,7 +198,7 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 	public void sendFrame(byte[] b, int size, int type, int flags, int id, Buffers data) throws InterruptedException {
 		size = Math.min(size, data.length());
 		formatFrame(b, size, type, flags, id);
-		Buffers write = co.pendingWrite;
+		Buffers write = co.pendingWrite();
 		write.lock();
 		try {
 			write.write(b);
@@ -207,7 +210,7 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 	}
 
 	public void rawWrite(byte[] b) throws InterruptedException {
-		Buffers write = co.pendingWrite;
+		Buffers write = co.pendingWrite();
 		write.lock();
 		try {
 			write.write(b);
@@ -221,7 +224,7 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 		byte[] f = new byte[9];
 		Buffers out = new Buffers();
 		int type = 1;
-		Buffers write = co.pendingWrite;
+		Buffers write = co.pendingWrite();
 		write.lock();
 		try {  // all headers frame should be together
 			synchronized (headers) {
@@ -306,8 +309,7 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 	}
 
 	public static final HttpProcessorFactory Factory = co -> {
-		if (BuffersUtils.startsWith(co.pendingRead, PRI, 0, PRI.length)) {
-			co.pendingRead.skip(PRI.length);
+		if (BuffersUtils.startsWith(co.pendingRead(), PRI, 0, PRI.length)) {
 			return new Http2Processor(co);
 		}
 		return null;
