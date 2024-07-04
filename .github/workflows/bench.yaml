@@ -49,12 +49,7 @@ jobs:
         components: native-image
         github-token: ${{ secrets.GITHUB_TOKEN }}
     - name: bench
-      run: java -jar benchmark.jar
-    - uses: actions/upload-artifact@v4
-      if: always()
-      with: 
-        name: results-bench
-        path: bench.log
+      run: java -jar benchmark.jar $GITHUB_STEP_SUMMARY 
 
   test:
     runs-on: ubuntu-latest
@@ -103,5 +98,4 @@ jobs:
         merge-multiple: true
     - name: result
       run: |
-        cat out/bench.log
-        bash bench/result.sh out
+        bash bench/result.sh out >> $GITHUB_STEP_SUMMARY 

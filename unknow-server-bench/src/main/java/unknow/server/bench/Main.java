@@ -19,7 +19,7 @@ public class Main {
 	public static void main(String[] args) throws Exception {
 		Options o = new OptionsBuilder().forks(1).measurementIterations(10).verbosity(VerboseMode.NORMAL).warmupIterations(5).build();
 
-		try (PrintStream w = new PrintStream(Files.newOutputStream(Paths.get("bench.log")), false, StandardCharsets.UTF_8)) {
+		try (PrintStream w = args.length > 0 ? new PrintStream(Files.newOutputStream(Paths.get(args[0])), false, StandardCharsets.UTF_8) : System.out) {
 			for (Class<?> c : Arrays.asList(XmlBench.class)) {
 				w.println();
 				w.println(c.getSimpleName());
