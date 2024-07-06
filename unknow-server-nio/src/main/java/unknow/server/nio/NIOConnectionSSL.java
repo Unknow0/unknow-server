@@ -79,6 +79,7 @@ public class NIOConnectionSSL extends NIOConnection {
 		while (true) {
 			l = channel.read(rawIn);
 			if (l == -1) {
+				in.close();
 				return;
 			}
 			if (l == 0)

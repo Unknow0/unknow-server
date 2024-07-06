@@ -72,11 +72,15 @@ public class HttpConnectionPlain extends NIOConnection implements HttpConnection
 			return true;
 		}
 
-		if (pendingWrite().isEmpty() && keepAliveIdle > 0) {
-			long e = now - keepAliveIdle;
-			if (lastRead() <= e && lastWrite() <= e) {
-				logger.info("keep alive idle reached {}", this);
+		if (pendingWrite().isEmpty()) {
+			if (in.isClosed())
 				return true;
+			if (keepAliveIdle > 0) {
+				long e = now - keepAliveIdle;
+				if (lastRead() <= e && lastWrite() <= e) {
+					logger.info("keep alive idle reached {}", this);
+					return true;
+				}
 			}
 		}
 

@@ -91,11 +91,15 @@ public class HttpConnectionSSL extends NIOConnectionSSL implements HttpConnectio
 			return true;
 		}
 
-		if (pendingWrite().isEmpty() && keepAliveIdle > 0) {
-			long e = now - keepAliveIdle;
-			if (lastRead() <= e && lastWrite() <= e) {
-				logger.info("keep alive idle reached {}", this);
+		if (pendingWrite().isEmpty()) {
+			if (in.isClosed())
 				return true;
+			if (keepAliveIdle > 0) {
+				long e = now - keepAliveIdle;
+				if (lastRead() <= e && lastWrite() <= e) {
+					logger.info("keep alive idle reached {}", this);
+					return true;
+				}
 			}
 		}
 

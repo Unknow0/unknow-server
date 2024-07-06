@@ -4,7 +4,6 @@
 package unknow.server.nio;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -33,7 +32,7 @@ public class NIOConnection {
 	private final Buffers pendingRead = new Buffers();
 
 	/** Stream of pending data */
-	private final InputStream in = new BuffersInputStream(pendingRead);
+	protected final BuffersInputStream in = new BuffersInputStream(pendingRead);
 
 	/** Output stream */
 	protected final Out out;
@@ -207,7 +206,7 @@ public class NIOConnection {
 	/**
 	 * @return the current inputStream
 	 */
-	public final InputStream getIn() {
+	public final BuffersInputStream getIn() {
 		return in;
 	}
 
