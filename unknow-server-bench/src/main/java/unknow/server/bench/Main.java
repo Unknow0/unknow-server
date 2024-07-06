@@ -21,11 +21,11 @@ public class Main {
 
 		try (PrintStream w = args.length > 0 ? new PrintStream(Files.newOutputStream(Paths.get(args[0])), false, StandardCharsets.UTF_8) : System.out) {
 			for (Class<?> c : Arrays.asList(XmlBench.class)) {
-				w.println();
 				w.println(c.getSimpleName());
+				w.println("```");
 				Collection<RunResult> result = new Runner(new OptionsBuilder().parent(o).include(c.getName()).build()).run();
 				ResultFormatFactory.getInstance(ResultFormatType.TEXT, w).writeOut(result);
-				w.println();
+				w.println("```");
 			}
 		}
 	}

@@ -49,10 +49,7 @@ jobs:
         components: native-image
         github-token: ${{ secrets.GITHUB_TOKEN }}
     - name: bench
-      run: |
-        echo '```' >> $GITHUB_STEP_SUMMARY
-        java -jar benchmark.jar $GITHUB_STEP_SUMMARY 
-        echo '```' >> $GITHUB_STEP_SUMMARY
+      run: java -jar benchmark.jar $GITHUB_STEP_SUMMARY 
 
   test:
     runs-on: ubuntu-latest
@@ -91,7 +88,7 @@ jobs:
 
   result:
     runs-on: ubuntu-latest
-    needs: [test, bench]
+    needs: [test]
     steps:
     - uses: actions/checkout@v4
     - uses: actions/download-artifact@v4
