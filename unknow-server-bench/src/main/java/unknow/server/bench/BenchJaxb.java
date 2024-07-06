@@ -26,8 +26,8 @@ import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.JAXBException;
 import unknow.server.http.test.xml.Complex;
 
-public class XmlBench {
-	private static final ClassLoader cl = XmlBench.class.getClassLoader();
+public class BenchJaxb {
+	private static final ClassLoader cl = BenchJaxb.class.getClassLoader();
 	private static final Class<?>[] CLASS = { Complex.class };
 	static final JAXBContext UNKNOW;
 	static final JAXBContext JAXB;

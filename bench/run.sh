@@ -39,7 +39,7 @@ cxf_stop=tomcat_stop
 mkdir -p out
 trap '[[ "$pid" ]] && kill -9 $pid' EXIT
 
-keytool -genkey -alias server -keyalg RSA -validity 365 -keystore store.jks -keypass 123456 -storetype JKS -dname "C=FR"
+keytool -genkey -alias server -keyalg RSA -validity 365 -keystore store.jks -keystorepass 123456 -storetype JKS -dname "C=FR"
 
 ${1}_start
 sleep 10
