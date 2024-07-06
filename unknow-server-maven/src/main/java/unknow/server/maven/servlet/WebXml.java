@@ -30,6 +30,56 @@ public class WebXml {
 				continue;
 
 			switch (r.getLocalName()) {
+				case "web-app":
+					parseWebApp(loader, descriptor, r);
+					break;
+				default:
+					skipTag(r);
+			}
+		}
+	}
+
+	private static void skipTag(XMLStreamReader r) throws XMLStreamException {
+		int d = 1;
+		while (r.hasNext()) {
+			int n = r.next();
+			if (n == XMLStreamConstants.END_ELEMENT && --d == 0)
+				break;
+			if (n == XMLStreamConstants.START_ELEMENT)
+				d++;
+		}
+	}
+
+	private static String parseContent(XMLStreamReader r) throws XMLStreamException {
+		StringBuilder sb = new StringBuilder();
+		char[] buf = new char[1024];
+		while (r.hasNext()) {
+			int n = r.next();
+			if (n == XMLStreamConstants.END_ELEMENT)
+				break;
+			if (n != XMLStreamConstants.CHARACTERS)
+				continue;
+
+			int len = r.getTextLength();
+			int off = 0;
+			while (off < len) {
+				int l = r.getTextCharacters(off, buf, 0, buf.length);
+				sb.append(buf, 0, l);
+				off += l;
+			}
+		}
+		return sb.toString();
+	}
+
+	private static void parseWebApp(ModelLoader loader, Descriptor descriptor, XMLStreamReader r) throws XMLStreamException {
+		while (r.hasNext()) {
+			int n = r.next();
+			if (n == XMLStreamConstants.END_ELEMENT)
+				return;
+			if (n != XMLStreamConstants.START_ELEMENT)
+				continue;
+
+			switch (r.getLocalName()) {
 				case "context-param":
 					parseParam(descriptor, r);
 					break;
@@ -68,38 +118,6 @@ public class WebXml {
 					skipTag(r);
 			}
 		}
-	}
-
-	private static void skipTag(XMLStreamReader r) throws XMLStreamException {
-		int d = 1;
-		while (r.hasNext()) {
-			int n = r.next();
-			if (n == XMLStreamConstants.END_ELEMENT && --d == 0)
-				break;
-			if (n == XMLStreamConstants.START_ELEMENT)
-				d++;
-		}
-	}
-
-	private static String parseContent(XMLStreamReader r) throws XMLStreamException {
-		StringBuilder sb = new StringBuilder();
-		char[] buf = new char[1024];
-		while (r.hasNext()) {
-			int n = r.next();
-			if (n == XMLStreamConstants.END_ELEMENT)
-				break;
-			if (n != XMLStreamConstants.CHARACTERS)
-				continue;
-
-			int len = r.getTextLength();
-			int off = 0;
-			while (off < len) {
-				int l = r.getTextCharacters(off, buf, 0, buf.length);
-				sb.append(buf, 0, l);
-				off += l;
-			}
-		}
-		return sb.toString();
 	}
 
 	private static void parseParam(WithParams descriptor, XMLStreamReader r) throws XMLStreamException {
@@ -204,6 +222,7 @@ public class WebXml {
 				filter.pattern.addAll(urls);
 				filter.dispatcher.addAll(dispatchers);
 				filter.servletNames.addAll(servletNames);
+				return;
 			}
 			if (n != XMLStreamConstants.START_ELEMENT)
 				continue;
