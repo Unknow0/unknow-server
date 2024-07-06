@@ -49,7 +49,10 @@ jobs:
         components: native-image
         github-token: ${{ secrets.GITHUB_TOKEN }}
     - name: bench
-      run: java -jar benchmark.jar $GITHUB_STEP_SUMMARY 
+      run: |
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        java -jar benchmark.jar $GITHUB_STEP_SUMMARY 
+        echo '```' >> $GITHUB_STEP_SUMMARY
 
   test:
     runs-on: ubuntu-latest
@@ -98,4 +101,6 @@ jobs:
         merge-multiple: true
     - name: result
       run: |
+        echo '```' >> $GITHUB_STEP_SUMMARY
         bash bench/result.sh out >> $GITHUB_STEP_SUMMARY 
+        echo '```' >> $GITHUB_STEP_SUMMARY

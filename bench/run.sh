@@ -1,7 +1,7 @@
 #!/bin/bash
 
 unknow_start() {
-	java -jar unknow-server-test/unknow-server-test-jar/target/server.jar > logs/unknow.log 2>&1 &
+	java -jar unknow-server-test/unknow-server-test-jar/target/server.jar --http-addr :8080 --https-addr :8443 --keystore store.jks --keystore-pass 123456 > logs/unknow.log 2>&1 &
 	pid=$!
 }
 unknow_stop() {
@@ -10,7 +10,7 @@ unknow_stop() {
 }
 native_start() {
 	chmod a+x server-native
-	./server-native > logs/native.log 2>&1 &
+	./server-native --http-addr :8080 --https-addr :8443 --keystore store.jks --keystore-pass 123456 > logs/native.log 2>&1 &
 	pid=$!
 }
 native_stop() {
@@ -38,6 +38,8 @@ cxf_stop=tomcat_stop
 
 mkdir -p out
 trap '[[ "$pid" ]] && kill -9 $pid' EXIT
+
+keytool -genkey -alias server -keyalg RSA -validity 365 -keystore store.jks -keypass 123456 -storetype JKS -dname "C=FR"
 
 ${1}_start
 sleep 10
