@@ -82,7 +82,7 @@ public class NIOConnectionSSL extends NIOConnection {
 				in.close();
 				return;
 			}
-			if (l == 0)
+			if (l == 0 && rawIn.position() == 0)
 				return;
 			rawIn.flip();
 			SSLEngineResult r = sslEngine.unwrap(rawIn, app);
