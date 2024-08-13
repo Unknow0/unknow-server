@@ -38,7 +38,7 @@ public class ProcessResult {
 				boolean e = !"true".equals(l.get("success"));
 				double t = Long.parseLong(l.get("timeStamp")) / 1000.;
 				double v = Long.parseLong(l.get("elapsed")) / 1000.;
-				double c = Long.parseLong(l.get("Latency"));
+				double c = Long.parseLong(l.get("Latency")) * 1000.;
 
 				stats.computeIfAbsent(name, k -> new Result()).add(t, v, c, e);
 			}
@@ -61,6 +61,7 @@ public class ProcessResult {
 
 	private void printResult(Formatter out) {
 		Function<Result, String> thrpt = r -> Integer.toString((int) r.thrpt());
+		Function<Result, String> time = r -> r.time.cnt() == 0 ? "" : String.format("%.2f ± %.2f", r.time.avg(), r.time.err(.999));
 		Function<Result, String> lattency = r -> r.latency.cnt() == 0 ? "" : String.format("%.2f ± %.2f", r.latency.avg(), r.latency.err(.999));
 		Function<Result, String> error = r -> Long.toString(r.err());
 
@@ -68,6 +69,7 @@ public class ProcessResult {
 		for (String t : tests)
 			lengths.put(t, Math.max(10, t.length()));
 		computeLength(lengths, thrpt);
+		computeLength(lengths, time);
 		computeLength(lengths, lattency);
 		computeLength(lengths, error);
 
@@ -86,7 +88,9 @@ public class ProcessResult {
 
 		out.format("Throughput:\n");
 		printTable(out, fmt, thrpt);
-		out.format("\nLattency (ms before first byte):\n");
+		out.format("Response time (in ms):\n");
+		printTable(out, fmt, time);
+		out.format("\nLattency (µs before first byte):\n");
 		printTable(out, fmt, lattency);
 		out.format("\nErrors:\n");
 		printTable(out, fmt, error);
