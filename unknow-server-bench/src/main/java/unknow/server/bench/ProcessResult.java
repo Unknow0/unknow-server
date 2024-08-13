@@ -3,12 +3,9 @@ package unknow.server.bench;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Formatter;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -24,29 +21,12 @@ public class ProcessResult {
 	private static final CSVFormat JTL = CSVFormat.newFormat(',').builder().setHeader().setSkipHeaderRecord(true).setQuote('"').build();
 	private static final CSVFormat H2 = CSVFormat.newFormat('\t');
 
+	private final String[] servers;
 	private final Map<String, Map<String, Result>> results = new HashMap<>();
 	private final Set<String> tests = new TreeSet<>();
 
-	public static void main(String[] args) throws IOException {
-		ProcessResult process = new ProcessResult();
-		for (String s : args) {
-			Path path = Paths.get(s);
-			String string = path.getFileName().toString();
-			int i = string.lastIndexOf('.');
-			if (i < 0)
-				continue;
-			String ext = string.substring(i + 1);
-			string = string.substring(0, i);
-			try (BufferedReader r = Files.newBufferedReader(path)) {
-				if ("jtl".equals(ext))
-					process.readJtl(r, string);
-				else if ("h2".equals(ext))
-					process.readH2(r, string);
-			}
-		}
-		try (Formatter f = new Formatter(System.out)) {
-			process.printResult(f);
-		}
+	public ProcessResult(String[] servers) {
+		this.servers = servers;
 	}
 
 	private void readJtl(BufferedReader r, String n) throws IOException {
@@ -58,7 +38,7 @@ public class ProcessResult {
 				boolean e = !"true".equals(l.get("success"));
 				double t = Long.parseLong(l.get("timeStamp")) / 1000.;
 				double v = Long.parseLong(l.get("elapsed")) / 1000.;
-				double c = Long.parseLong(l.get("Latency")) / 1000.;
+				double c = Long.parseLong(l.get("Latency"));
 
 				stats.computeIfAbsent(name, k -> new Result()).add(t, v, c, e);
 			}
@@ -74,17 +54,14 @@ public class ProcessResult {
 				double t = Long.parseLong(l.get(0)) / 1000000.;
 				double v = Long.parseLong(l.get(2)) / 1000000.;
 
-				result.add(t, v, 0, e);
+				result.add(t, v, -1, e);
 			}
 		}
 	}
 
 	private void printResult(Formatter out) {
-		List<String> list = new ArrayList<>(results.keySet());
-		list.sort(null);
-
 		Function<Result, String> thrpt = r -> Integer.toString((int) r.thrpt());
-		Function<Result, String> lattency = r -> String.format("%.2f ± %.2f", r.latency.avg() * 1000, r.latency.err(.999) * 1000);
+		Function<Result, String> lattency = r -> r.latency.cnt() == 0 ? "" : String.format("%.2f ± %.2f", r.latency.avg(), r.latency.err(.999));
 		Function<Result, String> error = r -> Long.toString(r.err());
 
 		Map<String, Integer> lengths = new HashMap<>();
@@ -108,11 +85,11 @@ public class ProcessResult {
 		out.format(fmt, l);
 
 		out.format("Throughput:\n");
-		printTable(out, list, fmt, thrpt);
+		printTable(out, fmt, thrpt);
 		out.format("\nLattency (ms before first byte):\n");
-		printTable(out, list, fmt, lattency);
+		printTable(out, fmt, lattency);
 		out.format("\nErrors:\n");
-		printTable(out, list, fmt, error);
+		printTable(out, fmt, error);
 	}
 
 	private void computeLength(Map<String, Integer> lengths, Function<Result, String> v) {
@@ -122,7 +99,7 @@ public class ProcessResult {
 		}
 	}
 
-	private void printTable(Formatter out, List<String> servers, String fmt, Function<Result, String> v) {
+	private void printTable(Formatter out, String fmt, Function<Result, String> v) {
 		Object[] l = new String[tests.size() + 1];
 		for (String s : servers) {
 			l[0] = s;
@@ -133,6 +110,25 @@ public class ProcessResult {
 				l[++i] = r == null ? "" : v.apply(r);
 			}
 			out.format(fmt, l);
+		}
+	}
+
+	public static void main(String[] args) {
+		ProcessResult process = new ProcessResult(args);
+		for (String s : args) {
+			try (BufferedReader r = Files.newBufferedReader(Paths.get("out", s + ".jtl"))) {
+				process.readJtl(r, s);
+			} catch (IOException e) {
+				System.err.println(e.getMessage());
+			}
+			try (BufferedReader r = Files.newBufferedReader(Paths.get("out", s + ".h2"))) {
+				process.readH2(r, s);
+			} catch (IOException e) {
+				System.err.println(e.getMessage());
+			}
+		}
+		try (Formatter f = new Formatter(System.out)) {
+			process.printResult(f);
 		}
 	}
 
@@ -154,7 +150,8 @@ public class ProcessResult {
 			end = Math.max(this.end, t + v);
 
 			time.add(v);
-			latency.add(c);
+			if (c >= 0)
+				latency.add(c);
 
 			if (e)
 				this.err++;
