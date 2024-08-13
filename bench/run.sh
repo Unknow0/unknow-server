@@ -44,13 +44,13 @@ keytool -genkey -alias server -keyalg RSA -validity 365 -keystore store.jks -sto
 ${1}_start
 sleep 10
 echo -e "\nWarming up"
-$JMETER -n -t bench/test.jmx -Jhost=127.0.0.1 -Jt=20 -Jport=8080 -Jout=/dev/null
+$JMETER -n -t bench/test.jmx -Jhost=127.0.0.1 -Jt=20 -Jport=8080
 sleep 10
 echo -e "\nTesting.."
-$JMETER -n -t bench/test.jmx -Jhost=127.0.0.1 -Jt=60 -Jc=10 -Jport=8080 -Jout=out/$1.csv
+$JMETER -n -t bench/test.jmx -Jhost=127.0.0.1 -Jt=60 -Jc=10 -Jport=8080 -l out/$1.jtl
 
 echo -e "\n launch http2 bench"
-h2load -c 10 -t 10 -m 10 -D 60 --warm-up-time=10 http://127.0.0.1:8080/test > out/$1.log
+h2load -c 10 -t 10 -m 10 -D 60 --warm-up-time=10 http://127.0.0.1:8080/test --log-file=out/$1.h2
 
 ${1}_stop
 sleep 10

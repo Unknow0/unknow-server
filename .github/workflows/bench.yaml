@@ -90,14 +90,22 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test]
     steps:
-    - uses: actions/checkout@v4
+    - uses: graalvm/setup-graalvm@v1
+      with:
+        version: latest
+        java-version: 11
+        components: native-image
+        github-token: ${{ secrets.GITHUB_TOKEN }}
     - uses: actions/download-artifact@v4
       with:
         pattern: results-*
         path: out/
         merge-multiple: true
+    - uses: actions/download-artifact@v4
+      with:
+        name: bench
     - name: result
       run: |
         echo '```' >> $GITHUB_STEP_SUMMARY
-        bash bench/result.sh out >> $GITHUB_STEP_SUMMARY 
+		java -cp bench.jar unknow.server.bench.ProcessJtl out/*.jtl >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
