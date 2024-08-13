@@ -107,5 +107,5 @@ jobs:
     - name: result
       run: |
         echo '```' >> $GITHUB_STEP_SUMMARY
-        java -cp bench.jar unknow.server.bench.ProcessJtl out/*.jtl >> $GITHUB_STEP_SUMMARY
+        java -cp benchmark.jar unknow.server.bench.ProcessResult out/* >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY

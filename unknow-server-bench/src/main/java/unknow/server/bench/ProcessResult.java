@@ -20,22 +20,28 @@ import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.math3.distribution.TDistribution;
 
-public class ProcessJtl {
-	private static final CSVFormat FORMAT = CSVFormat.Builder.create().setDelimiter(',').setHeader().setSkipHeaderRecord(true).setQuote('"').build();
+public class ProcessResult {
+	private static final CSVFormat JTL = CSVFormat.newFormat(',').builder().setHeader().setSkipHeaderRecord(true).setQuote('"').build();
+	private static final CSVFormat H2 = CSVFormat.newFormat('\t');
 
 	private final Map<String, Map<String, Result>> results = new HashMap<>();
 	private final Set<String> tests = new TreeSet<>();
 
 	public static void main(String[] args) throws IOException {
-		ProcessJtl process = new ProcessJtl();
+		ProcessResult process = new ProcessResult();
 		for (String s : args) {
 			Path path = Paths.get(s);
 			String string = path.getFileName().toString();
 			int i = string.lastIndexOf('.');
-			if (i > 0)
-				string = string.substring(0, i);
+			if (i < 0)
+				continue;
+			String ext = string.substring(i + 1);
+			string = string.substring(0, i);
 			try (BufferedReader r = Files.newBufferedReader(path)) {
-				process.read(r, string);
+				if ("jtl".equals(ext))
+					process.readJtl(r, string);
+				else if ("h2".equals(ext))
+					process.readH2(r, string);
 			}
 		}
 		try (Formatter f = new Formatter(System.out)) {
@@ -43,18 +49,32 @@ public class ProcessJtl {
 		}
 	}
 
-	private void read(BufferedReader r, String n) throws IOException {
+	private void readJtl(BufferedReader r, String n) throws IOException {
 		Map<String, Result> stats = results.computeIfAbsent(n, k -> new HashMap<>());
-		try (CSVParser parser = CSVParser.parse(r, FORMAT)) {
+		try (CSVParser parser = CSVParser.parse(r, JTL)) {
 			for (CSVRecord l : parser) {
 				String name = l.get("label");
 				tests.add(name);
 				boolean e = !"true".equals(l.get("success"));
-				long t = Long.parseLong(l.get("timeStamp"));
-				long v = Long.parseLong(l.get("elapsed"));
-				long c = Long.parseLong(l.get("Latency"));
+				double t = Long.parseLong(l.get("timeStamp")) / 1000.;
+				double v = Long.parseLong(l.get("elapsed")) / 1000.;
+				double c = Long.parseLong(l.get("Latency")) / 1000.;
 
 				stats.computeIfAbsent(name, k -> new Result()).add(t, v, c, e);
+			}
+		}
+	}
+
+	private void readH2(BufferedReader r, String n) throws IOException {
+		Result result = results.computeIfAbsent(n, k -> new HashMap<>()).computeIfAbsent("http2", k -> new Result());
+		tests.add("http2");
+		try (CSVParser parser = CSVParser.parse(r, H2)) {
+			for (CSVRecord l : parser) {
+				boolean e = !"200".equals(l.get(1));
+				double t = Long.parseLong(l.get(0)) / 1000000.;
+				double v = Long.parseLong(l.get(2)) / 1000000.;
+
+				result.add(t, v, 0, e);
 			}
 		}
 	}
@@ -64,7 +84,7 @@ public class ProcessJtl {
 		list.sort(null);
 
 		Function<Result, String> thrpt = r -> Integer.toString((int) r.thrpt());
-		Function<Result, String> lattency = r -> String.format("%.2f ± %.2f", r.latency.avg(), r.latency.err(.999));
+		Function<Result, String> lattency = r -> String.format("%.2f ± %.2f", r.latency.avg() * 1000, r.latency.err(.999) * 1000);
 		Function<Result, String> error = r -> Long.toString(r.err());
 
 		Map<String, Integer> lengths = new HashMap<>();
@@ -89,7 +109,7 @@ public class ProcessJtl {
 
 		out.format("Throughput:\n");
 		printTable(out, list, fmt, thrpt);
-		out.format("\nLattency:\n");
+		out.format("\nLattency (ms before first byte):\n");
 		printTable(out, list, fmt, lattency);
 		out.format("\nErrors:\n");
 		printTable(out, list, fmt, error);
@@ -121,15 +141,15 @@ public class ProcessJtl {
 		private final Stat latency;
 
 		private long err;
-		private long start = Long.MAX_VALUE;
-		private long end = Long.MIN_VALUE;
+		private double start = Double.MAX_VALUE;
+		private double end = Double.MIN_VALUE;
 
 		public Result() {
 			this.time = new Stat();
 			this.latency = new Stat();
 		}
 
-		public void add(long t, long v, long c, boolean e) {
+		public void add(double t, double v, double c, boolean e) {
 			start = Math.min(this.start, t);
 			end = Math.max(this.end, t + v);
 
@@ -145,7 +165,7 @@ public class ProcessJtl {
 		}
 
 		public double duration() {
-			return (end - start) / 1000.;
+			return end - start;
 		}
 
 		public double thrpt() {
@@ -154,8 +174,7 @@ public class ProcessJtl {
 
 		@Override
 		public String toString() {
-			double d = (end - start) / 1000.;
-//			time.err(.999)
+			double d = duration();
 			return String.format("%.2f req/sec (lat: %.2f\u00B1%.2f)", time.cnt() / d, latency.avg(), latency.err(.999));
 
 		}
@@ -163,18 +182,14 @@ public class ProcessJtl {
 
 	private static class Stat {
 		private long cnt;
-		private long sum;
-		private long sum2;
+		private double sum;
+		private double sum2;
 
-		public void add(long v) {
+		public void add(double v) {
 			cnt++;
 			sum += v;
 			sum2 += v * v;
 
-		}
-
-		public long sum() {
-			return sum;
 		}
 
 		public long cnt() {
@@ -182,7 +197,7 @@ public class ProcessJtl {
 		}
 
 		public double avg() {
-			return 1. * sum / cnt;
+			return sum / cnt;
 		}
 
 		public double sdev() {
