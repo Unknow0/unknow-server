@@ -5,6 +5,7 @@ import java.util.concurrent.Future;
 
 import unknow.server.servlet.HttpConnection;
 import unknow.server.servlet.HttpProcessor;
+import unknow.server.util.io.Buffers;
 import unknow.server.util.io.BuffersUtils;
 
 /**
@@ -28,8 +29,8 @@ public class Http11Processor implements HttpProcessor {
 	}
 
 	@Override
-	public final void process() {
-		if (exec.isDone())
+	public final void process() throws InterruptedException {
+		if (exec.isDone() && isStart(co.pendingRead()))
 			exec = co.submit(new Http11Worker(co));
 	}
 
@@ -48,9 +49,13 @@ public class Http11Processor implements HttpProcessor {
 		exec.cancel(true);
 	}
 
+	public static final boolean isStart(Buffers b) throws InterruptedException {
+		return BuffersUtils.indexOf(b, END, 0, MAX_START_SIZE) > 0;
+	}
+
 	/** the processor factory */
 	public static final HttpProcessorFactory Factory = co -> {
-		if (BuffersUtils.indexOf(co.pendingRead(), END, 0, MAX_START_SIZE) > 0)
+		if (isStart(co.pendingRead()))
 			return new Http11Processor(co);
 		return null;
 	};
