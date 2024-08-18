@@ -27,19 +27,19 @@ public abstract class HttpWorker implements Runnable, HttpAdapter {
 
 	protected HttpWorker(HttpConnection co) {
 		this.co = co;
-		this.manager = co.manager;
+		this.manager = co.getServlet();
 		this.req = new ServletRequestImpl(this, DispatcherType.REQUEST);
 		this.res = new ServletResponseImpl(this);
 	}
 
 	@Override
 	public final ServletContextImpl ctx() {
-		return co.ctx;
+		return co.getCtx();
 	}
 
 	@Override
 	public final EventManager events() {
-		return co.events;
+		return co.getEvents();
 	}
 
 	@Override
@@ -113,7 +113,7 @@ public abstract class HttpWorker implements Runnable, HttpAdapter {
 	}
 
 	private final void doRun() throws IOException {
-		co.events.fireRequestInitialized(req);
+		co.getEvents().fireRequestInitialized(req);
 		FilterChain s = manager.find(req);
 		try {
 			s.doFilter(req, res);
@@ -125,7 +125,7 @@ public abstract class HttpWorker implements Runnable, HttpAdapter {
 			if (!res.isCommitted())
 				sendError(500, e, null);
 		}
-		co.events.fireRequestDestroyed(req);
+		co.getEvents().fireRequestDestroyed(req);
 		req.clearInput();
 		res.close();
 	}

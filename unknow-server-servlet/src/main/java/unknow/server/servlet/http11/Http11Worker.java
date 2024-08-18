@@ -131,7 +131,7 @@ public final class Http11Worker extends HttpWorker {
 	@Override
 	public void run() {
 		super.run();
-		while (!co.pendingRead.isEmpty()) {
+		while (!co.pendingRead().isEmpty()) {
 			this.req = new ServletRequestImpl(this, DispatcherType.REQUEST);
 			this.res = new ServletResponseImpl(this);
 			super.run();
@@ -169,7 +169,7 @@ public final class Http11Worker extends HttpWorker {
 	}
 
 	private boolean fillRequest(ServletRequestImpl req) throws InterruptedException, IOException {
-		Buffers b = co.pendingRead;
+		Buffers b = co.pendingRead();
 		int i = BuffersUtils.indexOf(b, SPACE_SLASH, 0, MAX_METHOD_SIZE);
 		if (i < 0) {
 			sendError(HttpError.BAD_REQUEST.code, null, null);

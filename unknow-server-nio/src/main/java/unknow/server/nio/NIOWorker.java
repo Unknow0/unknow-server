@@ -51,7 +51,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		this.listener = listener;
 
 		this.mutex = new ReentrantLock();
-		this.buf = ByteBuffer.allocateDirect(4096);
+		this.buf = ByteBuffer.allocateDirect(25000);
 		this.init = new ArrayDeque<>();
 	}
 
@@ -86,7 +86,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 
 		if (key.isValid() && key.isWritable()) {
 			try {
-				h.writeInto(channel, buf);
+				h.writeInto(buf);
 			} catch (InterruptedException e) {
 				logger.error("failed to write {}", h, e);
 				Thread.currentThread().interrupt();
@@ -101,7 +101,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		// Tests whether this key's channel is ready to accept a new socket connection
 		if (key.isValid() && key.isReadable()) {
 			try {
-				h.readFrom(channel, buf);
+				h.readFrom(buf);
 			} catch (InterruptedException e) {
 				logger.error("failed to read {}", h, e);
 				Thread.currentThread().interrupt();
@@ -121,8 +121,8 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			SelectionKey k;
 			while ((k = init.poll()) != null) {
 				NIOConnection co = (NIOConnection) k.attachment();
-				co.onInit();
 				listener.accepted(id, co);
+				co.onInit();
 			}
 
 			long now = System.currentTimeMillis();

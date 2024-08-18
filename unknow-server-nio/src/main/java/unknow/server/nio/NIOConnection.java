@@ -4,7 +4,6 @@
 package unknow.server.nio;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -28,35 +27,35 @@ public class NIOConnection {
 	private static final InetSocketAddress DISCONECTED = InetSocketAddress.createUnresolved("", 0);
 
 	/** the data waiting to be wrote */
-	public final Buffers pendingWrite = new Buffers();
+	private final Buffers pendingWrite = new Buffers();
 	/** the data waiting to be handled */
-	public final Buffers pendingRead = new Buffers();
+	private final Buffers pendingRead = new Buffers();
 
 	/** Stream of pending data */
-	private final InputStream in = new BuffersInputStream(pendingRead);
+	protected final BuffersInputStream in = new BuffersInputStream(pendingRead);
 
 	/** Output stream */
 	protected final Out out;
 
 	/** selection key */
-	private final SelectionKey key;
+	protected final SelectionKey key;
+	protected final SocketChannel channel;
 
 	protected final InetSocketAddress local;
 	protected final InetSocketAddress remote;
 
-	private long lastRead;
-	private long lastWrite;
+	protected long lastRead;
+	protected long lastWrite;
 
 	/**
 	 *  create new connection
 	 *  @param key the selectionKey
 	 */
-	@SuppressWarnings("resource")
-	protected NIOConnection(SelectionKey key) {
+	public NIOConnection(SelectionKey key) {
 		this.key = key;
+		this.channel = (SocketChannel) key.channel();
 		this.out = new Out(this);
 		lastRead = lastWrite = System.currentTimeMillis();
-		SocketChannel channel = (SocketChannel) key.channel();
 		InetSocketAddress a;
 		try {
 			a = (InetSocketAddress) channel.getLocalAddress();
@@ -74,8 +73,9 @@ public class NIOConnection {
 
 	/**
 	 * called after the connection is initialized
+	 * @throws InterruptedException on interrupt
 	 */
-	protected void onInit() { // for override
+	protected void onInit() throws InterruptedException { // for override
 	}
 
 	/**
@@ -103,19 +103,18 @@ public class NIOConnection {
 
 	/**
 	 * read data from the channel and try to handles it
-	 * 
-	 * @param channel source channel
 	 * @param buf     output buffer
+	 * 
 	 * @throws InterruptedException on interrupt
 	 * @throws IOException on io exception
 	 */
-	protected final void readFrom(SocketChannel channel, ByteBuffer buf) throws InterruptedException, IOException {
+	protected void readFrom(ByteBuffer buf) throws InterruptedException, IOException {
 		int l;
 		lastRead = System.currentTimeMillis();
 		while (true) {
 			l = channel.read(buf);
 			if (l == -1) {
-				channel.close();
+				in.close();
 				return;
 			}
 			if (l == 0)
@@ -129,7 +128,6 @@ public class NIOConnection {
 				logger.trace("read {}", new String(bytes));
 				buf.reset();
 			}
-
 			pendingRead.write(buf);
 			onRead();
 		}
@@ -137,13 +135,12 @@ public class NIOConnection {
 
 	/**
 	 * write pending data to the channel
-	 * 
-	 * @param channel where to write
 	 * @param buf     local cache
+	 * 
 	 * @throws InterruptedException on interrupt
 	 * @throws IOException on io exception
 	 */
-	protected final void writeInto(SocketChannel channel, ByteBuffer buf) throws InterruptedException, IOException {
+	protected void writeInto(ByteBuffer buf) throws InterruptedException, IOException {
 		lastWrite = System.currentTimeMillis();
 		while (pendingWrite.read(buf, false)) {
 			buf.flip();
@@ -196,10 +193,18 @@ public class NIOConnection {
 		return lastWrite;
 	}
 
+	public Buffers pendingRead() {
+		return pendingRead;
+	}
+
+	public Buffers pendingWrite() {
+		return pendingWrite;
+	}
+
 	/**
 	 * @return the current inputStream
 	 */
-	public final InputStream getIn() {
+	public final BuffersInputStream getIn() {
 		return in;
 	}
 

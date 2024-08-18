@@ -13,6 +13,7 @@ import java.util.Arrays;
 public class BuffersInputStream extends InputStream {
 	private final Buffers buffers;
 	private final boolean wait;
+	private boolean close;
 
 	private long read;
 
@@ -47,9 +48,21 @@ public class BuffersInputStream extends InputStream {
 	}
 
 	@Override
+	public void close() throws IOException {
+		if (close)
+			return;
+		close = true;
+		try {
+			buffers.signal();
+		} catch (@SuppressWarnings("unused") InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
+	}
+
+	@Override
 	public int read() throws IOException {
 		try {
-			int b = buffers.read(wait);
+			int b = buffers.read(!close && wait);
 			if (b > 0) {
 				read++;
 				if (mark != null)
@@ -70,7 +83,7 @@ public class BuffersInputStream extends InputStream {
 	@Override
 	public int read(byte[] b, int off, int len) throws IOException {
 		try {
-			len = buffers.read(b, off, len, wait);
+			len = buffers.read(b, off, len, !close && wait);
 		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt();
 			throw new IOException(e);
@@ -123,5 +136,9 @@ public class BuffersInputStream extends InputStream {
 	@Override
 	public int available() throws IOException {
 		return buffers.length();
+	}
+
+	public boolean isClosed() {
+		return close;
 	}
 }
