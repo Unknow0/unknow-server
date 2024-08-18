@@ -30,7 +30,7 @@ public abstract class ProtoStuffConnection<T> extends NIOConnection {
 	private final Schema<T> schema;
 	private final boolean protostuff;
 
-	private LimitedInputStream in;
+	private LimitedInputStream lis;
 	private CodedInput input;
 
 	protected ProtoStuffConnection(SelectionKey key, Schema<T> schema, boolean protostuff) {
@@ -41,8 +41,8 @@ public abstract class ProtoStuffConnection<T> extends NIOConnection {
 
 	@Override
 	protected final void onInit() {
-		in = new LimitedInputStream(getIn(), Integer.MAX_VALUE);
-		input = new CodedInput(in, protostuff);
+		lis = new LimitedInputStream(getIn(), Integer.MAX_VALUE);
+		input = new CodedInput(lis, protostuff);
 	}
 
 	protected final <M extends Message<M>> void write(T o) throws IOException {
@@ -67,11 +67,11 @@ public abstract class ProtoStuffConnection<T> extends NIOConnection {
 
 	@Override
 	public final void onRead() {
-		in.mark(48);
+		lis.mark(48);
 		try {
 			int size = input.readUInt32();
 			if (pendingRead().length() < size) {
-				in.reset();
+				lis.reset();
 				return;
 			}
 

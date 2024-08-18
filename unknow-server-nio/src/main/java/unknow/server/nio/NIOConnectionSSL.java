@@ -177,7 +177,7 @@ public class NIOConnectionSSL extends NIOConnection {
 					break;
 				case FINISHED:
 					toggleKeyOps();
-					onHandshakeDone();
+					onHandshakeDone(); // fallthrough
 				default:
 					return false;
 			}

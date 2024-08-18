@@ -29,13 +29,10 @@ public class WebXml {
 			if (n != XMLStreamConstants.START_ELEMENT)
 				continue;
 
-			switch (r.getLocalName()) {
-				case "web-app":
-					parseWebApp(loader, descriptor, r);
-					break;
-				default:
-					skipTag(r);
-			}
+			if ("web-app".equals(r.getLocalName()))
+				parseWebApp(loader, descriptor, r);
+			else
+				skipTag(r);
 		}
 	}
 

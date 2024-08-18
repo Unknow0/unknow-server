@@ -60,13 +60,10 @@ public class HttpConnectionSSL extends NIOConnectionSSL implements HttpConnectio
 
 	@Override
 	protected void onHandshakeDone() throws InterruptedException {
-		switch (sslEngine.getApplicationProtocol()) {
-			case "h2":
-				p = new Http2Processor(this);
-				break;
-			default:
-				p = new Http11Processor(this);
-		}
+		if ("h2".equals(sslEngine.getApplicationProtocol()))
+			p = new Http2Processor(this);
+		else
+			p = new Http11Processor(this);
 		p.process();
 	}
 

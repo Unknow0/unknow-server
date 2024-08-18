@@ -21,6 +21,9 @@ public class ProcessResult {
 	private static final CSVFormat JTL = CSVFormat.newFormat(',').builder().setHeader().setSkipHeaderRecord(true).setQuote('"').build();
 	private static final CSVFormat H2 = CSVFormat.newFormat('\t');
 
+	private static final double ΜICRO = 1 / 10000.;
+	private static final double MILLI = 1 / 1000000.;
+
 	private final String[] servers;
 	private final Map<String, Map<String, Result>> results = new HashMap<>();
 	private final Set<String> tests = new TreeSet<>();
@@ -38,7 +41,7 @@ public class ProcessResult {
 				boolean e = !"true".equals(l.get("success"));
 				double t = Long.parseLong(l.get("timeStamp"));
 				double v = Long.parseLong(l.get("elapsed")) / 1000.;
-				double c = Long.parseLong(l.get("Latency")) * 1000.;
+				double c = Long.parseLong(l.get("Latency")) / 1000.;
 
 				stats.computeIfAbsent(name, k -> new Result()).add(t, v, c, e);
 			}
@@ -51,7 +54,7 @@ public class ProcessResult {
 		try (CSVParser parser = CSVParser.parse(r, H2)) {
 			for (CSVRecord l : parser) {
 				boolean e = !"200".equals(l.get(1));
-				double t = Long.parseLong(l.get(0)) / 1000.;
+				double t = Long.parseLong(l.get(0)) / 1000000.;
 				double v = Long.parseLong(l.get(2)) / 1000000.;
 
 				result.add(t, v, -1, e);
@@ -61,8 +64,8 @@ public class ProcessResult {
 
 	private void printResult(Formatter out) {
 		Function<Result, String> thrpt = r -> Integer.toString((int) r.thrpt());
-		Function<Result, String> time = r -> r.time.cnt() == 0 ? "" : String.format("%.2f ± %.2f", r.time.avg(), r.time.err(.999));
-		Function<Result, String> lattency = r -> r.latency.cnt() == 0 ? "" : String.format("%.2f ± %.2f", r.latency.avg(), r.latency.err(.999));
+		Function<Result, String> time = r -> r.time.cnt() == 0 ? "" : String.format("%.2f ± %.2f", r.time.avg(MILLI), r.time.err(MILLI, .999));
+		Function<Result, String> lattency = r -> r.latency.cnt() == 0 ? "" : String.format("%.2f ± %.2f", r.latency.avg(ΜICRO), r.latency.err(ΜICRO, .999));
 		Function<Result, String> error = r -> Long.toString(r.err());
 
 		Map<String, Integer> lengths = new HashMap<>();
@@ -76,7 +79,7 @@ public class ProcessResult {
 		StringBuilder sb = new StringBuilder("%10s");
 		for (String t : tests)
 			sb.append(" | %").append(lengths.get(t)).append('s');
-		sb.append('\n');
+		sb.append("%n");
 		String fmt = sb.toString();
 
 		Object[] l = new String[tests.size() + 1];
@@ -86,19 +89,19 @@ public class ProcessResult {
 			l[++i] = t;
 		out.format(fmt, l);
 
-		out.format("Throughput:\n");
+		out.format("Throughput:%n");
 		printTable(out, fmt, thrpt);
-		out.format("Response time (in ms):\n");
+		out.format("Response time (in ms):%n");
 		printTable(out, fmt, time);
-		out.format("\nLattency (µs before first byte):\n");
+		out.format("%nLattency (µs before first byte):%n");
 		printTable(out, fmt, lattency);
-		out.format("\nErrors:\n");
+		out.format("%nErrors:%n");
 		printTable(out, fmt, error);
 	}
 
 	private void computeLength(Map<String, Integer> lengths, Function<Result, String> v) {
-		for (String s : results.keySet()) {
-			for (Entry<String, Result> e : results.get(s).entrySet())
+		for (Map<String, Result> s : results.values()) {
+			for (Entry<String, Result> e : s.entrySet())
 				lengths.merge(e.getKey(), v.apply(e.getValue()).length(), Math::max);
 		}
 	}
@@ -176,7 +179,7 @@ public class ProcessResult {
 		@Override
 		public String toString() {
 			double d = duration();
-			return String.format("%.2f req/sec (lat: %.2f\u00B1%.2f)", time.cnt() / d, latency.avg(), latency.err(.999));
+			return String.format("%.2f req/sec (lat: %.2f\u00B1%.2f)", time.cnt() / d, latency.avg(ΜICRO), latency.err(ΜICRO, .999));
 
 		}
 	}
@@ -197,21 +200,22 @@ public class ProcessResult {
 			return cnt;
 		}
 
-		public double avg() {
-			return sum / cnt;
+		public double avg(double scale) {
+			return sum * scale / cnt;
 		}
 
-		public double sdev() {
-			double avg = avg();
-			return Math.sqrt(sum2 / cnt - avg * avg);
+		public double sdev(double scale) {
+			double avg = avg(scale);
+			scale *= scale;
+			return Math.sqrt(sum2 * scale / cnt - avg * avg);
 		}
 
-		public double err(double confidence) {
+		public double err(double scale, double confidence) {
 			if (cnt <= 2)
 				return Double.NaN;
-			TDistribution tDist = new TDistribution(cnt - 1);
+			TDistribution tDist = new TDistribution(cnt - 1.);
 			double a = tDist.inverseCumulativeProbability(1 - (1 - confidence) / 2);
-			return a * sdev() / Math.sqrt(cnt);
+			return a * sdev(scale) / Math.sqrt(cnt);
 		}
 	}
 }

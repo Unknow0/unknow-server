@@ -51,13 +51,11 @@ public class NIOConnection {
 	 *  create new connection
 	 *  @param key the selectionKey
 	 */
-	@SuppressWarnings("resource")
-	protected NIOConnection(SelectionKey key) {
+	public NIOConnection(SelectionKey key) {
 		this.key = key;
 		this.channel = (SocketChannel) key.channel();
 		this.out = new Out(this);
 		lastRead = lastWrite = System.currentTimeMillis();
-		SocketChannel channel = (SocketChannel) key.channel();
 		InetSocketAddress a;
 		try {
 			a = (InetSocketAddress) channel.getLocalAddress();

@@ -62,7 +62,7 @@ public class BuffersInputStream extends InputStream {
 	@Override
 	public int read() throws IOException {
 		try {
-			int b = buffers.read(close ? false : wait);
+			int b = buffers.read(!close && wait);
 			if (b > 0) {
 				read++;
 				if (mark != null)
@@ -83,7 +83,7 @@ public class BuffersInputStream extends InputStream {
 	@Override
 	public int read(byte[] b, int off, int len) throws IOException {
 		try {
-			len = buffers.read(b, off, len, close ? false : wait);
+			len = buffers.read(b, off, len, !close && wait);
 		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt();
 			throw new IOException(e);
