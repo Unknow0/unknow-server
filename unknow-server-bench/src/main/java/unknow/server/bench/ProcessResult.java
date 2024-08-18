@@ -39,7 +39,7 @@ public class ProcessResult {
 				String name = l.get("label");
 				tests.add(name);
 				boolean e = !"true".equals(l.get("success"));
-				double t = Long.parseLong(l.get("timeStamp"));
+				double t = Long.parseLong(l.get("timeStamp")) / 1000.;
 				double v = Long.parseLong(l.get("elapsed")) / 1000.;
 				double c = Long.parseLong(l.get("Latency")) / 1000.;
 
