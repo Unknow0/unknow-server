@@ -21,8 +21,8 @@ public class ProcessResult {
 	private static final CSVFormat JTL = CSVFormat.newFormat(',').builder().setHeader().setSkipHeaderRecord(true).setQuote('"').build();
 	private static final CSVFormat H2 = CSVFormat.newFormat('\t');
 
-	private static final double ΜICRO = 10000.;
-	private static final double MILLI = 1000000.;
+	private static final double MILLI = 1000.;
+	private static final double ΜICRO = 1000000.;
 
 	private final String[] servers;
 	private final Map<String, Map<String, Result>> results = new HashMap<>();
