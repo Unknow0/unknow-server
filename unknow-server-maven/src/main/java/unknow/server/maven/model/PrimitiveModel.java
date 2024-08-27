@@ -14,28 +14,28 @@ import unknow.server.maven.model.jvm.JvmModelLoader;
  * @author unknow
  */
 public class PrimitiveModel implements TypeModel {
-	@SuppressWarnings("javadoc")
+	/** void type */
 	public static final PrimitiveModel VOID = new PrimitiveModel("void", "Z", Void.class.getName()) {
 		@Override
 		public boolean isVoid() {
 			return true;
 		}
 	};
-	@SuppressWarnings("javadoc")
+	/** boolean type */
 	public static final PrimitiveModel BOOLEAN = new PrimitiveModel("boolean", "Z", Boolean.class.getName());
-	@SuppressWarnings("javadoc")
+	/** byte type */
 	public static final PrimitiveModel BYTE = new PrimitiveModel("byte", "B", Byte.class.getName());
-	@SuppressWarnings("javadoc")
+	/** char type */
 	public static final PrimitiveModel CHAR = new PrimitiveModel("char", "C", Character.class.getName());
-	@SuppressWarnings("javadoc")
+	/** short type */
 	public static final PrimitiveModel SHORT = new PrimitiveModel("short", "S", Short.class.getName());
-	@SuppressWarnings("javadoc")
+	/** int type */
 	public static final PrimitiveModel INT = new PrimitiveModel("int", "I", Integer.class.getName());
-	@SuppressWarnings("javadoc")
+	/** long type */
 	public static final PrimitiveModel LONG = new PrimitiveModel("long", "L", Long.class.getName());
-	@SuppressWarnings("javadoc")
+	/** float type */
 	public static final PrimitiveModel FLOAT = new PrimitiveModel("float", "F", Float.class.getName());
-	@SuppressWarnings("javadoc")
+	/** double type */
 	public static final PrimitiveModel DOUBLE = new PrimitiveModel("double", "D", Double.class.getName());
 
 	/** all primitives types */

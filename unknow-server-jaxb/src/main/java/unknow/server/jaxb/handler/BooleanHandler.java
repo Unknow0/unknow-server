@@ -21,7 +21,7 @@ public class BooleanHandler implements XmlSimpleHandler<Boolean> {
 	}
 
 	@Override
-	public Boolean toObject(String s) { // TODO validation
+	public Boolean toObject(String s) {
 		return "true".equalsIgnoreCase(s) || "1".equals(s);
 	}
 

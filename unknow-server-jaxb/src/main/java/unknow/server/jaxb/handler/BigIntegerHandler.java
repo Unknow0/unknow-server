@@ -5,6 +5,7 @@ package unknow.server.jaxb.handler;
 
 import java.math.BigInteger;
 
+import jakarta.xml.bind.JAXBException;
 import unknow.server.jaxb.XmlSimpleHandler;
 
 /**
@@ -23,7 +24,7 @@ public class BigIntegerHandler implements XmlSimpleHandler<BigInteger> {
 	}
 
 	@Override
-	public BigInteger toObject(String s) {
+	public BigInteger toObject(String s) throws JAXBException {
 		return new BigInteger(s);
 	}
 

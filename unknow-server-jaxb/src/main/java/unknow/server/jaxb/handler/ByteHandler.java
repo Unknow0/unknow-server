@@ -24,5 +24,4 @@ public class ByteHandler implements XmlSimpleHandler<Byte> {
 	public Byte toObject(String s) {
 		return Byte.parseByte(s);
 	}
-
 }
