@@ -54,7 +54,7 @@ public class ServletResource extends HttpServlet {
 	}
 
 	protected void writeContent(HttpServletResponse resp) throws IOException {
-		try (InputStream is = getServletContext().getResourceAsStream(path); ServletOutputStream os = resp.getOutputStream()) {
+		try (InputStream is = ServletResource.class.getResourceAsStream(path); ServletOutputStream os = resp.getOutputStream()) {
 			byte[] b = new byte[4096];
 			int l;
 			while ((l = is.read(b)) > 0)

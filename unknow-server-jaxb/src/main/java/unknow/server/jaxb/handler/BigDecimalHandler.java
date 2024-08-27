@@ -5,6 +5,7 @@ package unknow.server.jaxb.handler;
 
 import java.math.BigDecimal;
 
+import jakarta.xml.bind.JAXBException;
 import unknow.server.jaxb.XmlSimpleHandler;
 
 /**
@@ -23,7 +24,7 @@ public class BigDecimalHandler implements XmlSimpleHandler<BigDecimal> {
 	}
 
 	@Override
-	public BigDecimal toObject(String s) {
+	public BigDecimal toObject(String s) throws JAXBException {
 		return new BigDecimal(s);
 	}
 }

@@ -3,7 +3,6 @@ package unknow.server.maven.jaxb.builder;
 import java.util.stream.Collectors;
 
 import javax.xml.namespace.QName;
-import javax.xml.stream.XMLStreamException;
 
 import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.NodeList;
@@ -57,17 +56,15 @@ public class HandlerEnum extends AbstractSourceBuilder<HandlerContext> {
 				.collect(Collectors.toCollection(() -> Utils.list()));
 		list.add(new SwitchEntry().addStatement(
 				new ThrowStmt(new ObjectCreationExpr(null, types.getClass(JAXBException.class), Utils.list(new StringLiteralExpr("Unsupported enum constant"))))));
-		cl.addMethod("toString", Utils.PUBLIC).addMarkerAnnotation(Override.class).addThrownException(types.getClass(XMLStreamException.class))
-				.addThrownException(types.getClass(JAXBException.class)).addParameter(types.get(xml.type()), "o").setType(types.get(String.class)).createBody()
-				.addStatement(new SwitchStmt(new NameExpr("o"), list));
+		cl.addMethod("toString", Utils.PUBLIC).addMarkerAnnotation(Override.class).addThrownException(types.getClass(JAXBException.class))
+				.addParameter(types.get(xml.type()), "o").setType(types.get(String.class)).createBody().addStatement(new SwitchStmt(new NameExpr("o"), list));
 
 		list = xml.entries().stream().map(e -> new SwitchEntry().setLabels(Utils.list(new StringLiteralExpr(e.value())))
 				.addStatement(new ReturnStmt(new FieldAccessExpr(new TypeExpr(types.get(t)), e.name())))).collect(Collectors.toCollection(() -> Utils.list()));
 		list.add(new SwitchEntry().addStatement(new ThrowStmt(new ObjectCreationExpr(null, types.getClass(JAXBException.class),
 				Utils.list(new BinaryExpr(new StringLiteralExpr("Unsupported enum value "), new NameExpr("s"), BinaryExpr.Operator.PLUS))))));
-		cl.addMethod("toObject", Utils.PUBLIC).addMarkerAnnotation(Override.class).addThrownException(types.getClass(XMLStreamException.class))
-				.addThrownException(types.getClass(JAXBException.class)).addParameter(types.get(String.class), "s").setType(types.get(xml.type())).createBody()
-				.addStatement(new SwitchStmt(new NameExpr("s"), list));
+		cl.addMethod("toObject", Utils.PUBLIC).addMarkerAnnotation(Override.class).addThrownException(types.getClass(JAXBException.class))
+				.addParameter(types.get(String.class), "s").setType(types.get(xml.type())).createBody().addStatement(new SwitchStmt(new NameExpr("s"), list));
 
 	}
 

@@ -79,6 +79,5 @@ public class PathTreeBuilderTest {
 		assertEquals(exact, n.exact.toString());
 		assertNotNull(n.def);
 		assertEquals(def, n.def.toString());
-
 	}
 }

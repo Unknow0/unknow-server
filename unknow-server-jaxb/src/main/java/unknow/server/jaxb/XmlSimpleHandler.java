@@ -43,7 +43,7 @@ public interface XmlSimpleHandler<T> extends XmlHandler<T> {
 		throw new XMLStreamException("EOF");
 	}
 
-	String toString(T t) throws XMLStreamException, JAXBException;
+	String toString(T t) throws JAXBException;
 
-	T toObject(String s) throws XMLStreamException, JAXBException;
+	T toObject(String s) throws JAXBException;
 }

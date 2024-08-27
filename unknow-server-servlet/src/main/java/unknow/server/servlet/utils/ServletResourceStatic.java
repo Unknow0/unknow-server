@@ -29,7 +29,7 @@ public final class ServletResourceStatic extends ServletResource {
 	public void init() throws ServletException {
 		super.init();
 
-		try (InputStream is = Thread.currentThread().getContextClassLoader().getResourceAsStream(path)) {
+		try (InputStream is = ServletResourceStatic.class.getResourceAsStream(path)) {
 			if (is == null)
 				throw new ServletException("resource " + path + " not found");
 			int i = 0;
