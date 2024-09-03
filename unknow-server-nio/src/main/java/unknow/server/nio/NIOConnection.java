@@ -48,8 +48,9 @@ public class NIOConnection {
 	protected long lastWrite;
 
 	/**
-	 *  create new connection
-	 *  @param key the selectionKey
+	 * create new connection
+	 * 
+	 * @param key the selectionKey
 	 */
 	public NIOConnection(SelectionKey key) {
 		this.key = key;
@@ -73,6 +74,7 @@ public class NIOConnection {
 
 	/**
 	 * called after the connection is initialized
+	 * 
 	 * @throws InterruptedException on interrupt
 	 */
 	protected void onInit() throws InterruptedException { // for override
@@ -80,6 +82,7 @@ public class NIOConnection {
 
 	/**
 	 * called after some data has been read
+	 * 
 	 * @throws InterruptedException on interrupt
 	 * @throws IOException on io exception
 	 */
@@ -88,6 +91,7 @@ public class NIOConnection {
 
 	/**
 	 * called after data has been written
+	 * 
 	 * @throws InterruptedException on interrupt
 	 * @throws IOException on io exception
 	 */
@@ -96,6 +100,7 @@ public class NIOConnection {
 
 	/**
 	 * called when the connection is free
+	 * 
 	 * @throws IOException on io exception
 	 */
 	protected void onFree() throws IOException { // for override
@@ -103,7 +108,8 @@ public class NIOConnection {
 
 	/**
 	 * read data from the channel and try to handles it
-	 * @param buf     output buffer
+	 * 
+	 * @param buf output buffer
 	 * 
 	 * @throws InterruptedException on interrupt
 	 * @throws IOException on io exception
@@ -111,31 +117,30 @@ public class NIOConnection {
 	protected void readFrom(ByteBuffer buf) throws InterruptedException, IOException {
 		int l;
 		lastRead = System.currentTimeMillis();
-		while (true) {
-			l = channel.read(buf);
-			if (l == -1) {
-				in.close();
-				return;
-			}
-			if (l == 0)
-				return;
-			buf.flip();
-
-			if (logger.isTraceEnabled()) {
-				buf.mark();
-				byte[] bytes = new byte[buf.remaining()];
-				buf.get(bytes);
-				logger.trace("read {}", new String(bytes));
-				buf.reset();
-			}
-			pendingRead.write(buf);
-			onRead();
+		l = channel.read(buf);
+		if (l == -1) {
+			in.close();
+			return;
 		}
+		if (l == 0)
+			return;
+		buf.flip();
+
+		if (logger.isTraceEnabled()) {
+			buf.mark();
+			byte[] bytes = new byte[buf.remaining()];
+			buf.get(bytes);
+			logger.trace("read {}", new String(bytes));
+			buf.reset();
+		}
+		pendingRead.write(buf);
+		onRead();
 	}
 
 	/**
 	 * write pending data to the channel
-	 * @param buf     local cache
+	 * 
+	 * @param buf local cache
 	 * 
 	 * @throws InterruptedException on interrupt
 	 * @throws IOException on io exception
@@ -244,6 +249,7 @@ public class NIOConnection {
 
 	/**
 	 * check if the connection is closed and should be stoped
+	 * 
 	 * @param now System.currentMillis()
 	 * @param stop if true the server is in stop phase
 	 * @return true is the collection is closed
@@ -255,6 +261,7 @@ public class NIOConnection {
 
 	/**
 	 * free the handler
+	 * 
 	 * @throws IOException on io error
 	 */
 	public final void free() throws IOException {
@@ -320,6 +327,7 @@ public class NIOConnection {
 
 		/**
 		 * check if this co is closed
+		 * 
 		 * @return true if the co is closed
 		 */
 		public synchronized boolean isClosed() {

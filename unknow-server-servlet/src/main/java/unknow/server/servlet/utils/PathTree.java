@@ -3,8 +3,6 @@
  */
 package unknow.server.servlet.utils;
 
-import java.util.List;
-
 import jakarta.servlet.FilterChain;
 import unknow.server.servlet.impl.ServletRequestImpl;
 import unknow.server.util.io.Buffers;
@@ -33,31 +31,34 @@ public class PathTree {
 	 * @return the chain
 	 */
 	public FilterChain find(ServletRequestImpl req) {
-		if (req.getPaths().isEmpty()) {
+		if (req.getRequestURI().equals("/")) {
 			req.setPathInfo(0);
 			return root.exact;
 		}
 
-		FilterChain f = tryFind(req, root, req.getPaths(), 0);
+		FilterChain f = tryFind(req, root, req.getRequestURI(), 1);
 		return f == null ? root.def : f;
 	}
 
-	private FilterChain tryFind(ServletRequestImpl req, PartNode last, List<String> part, int i) {
+	private FilterChain tryFind(ServletRequestImpl req, PartNode last, String path, int i) {
 		while (last.nexts != null) {
-			PartNode n = next(last.nexts, part.get(i));
+			int l = path.indexOf('/', i);
+			String part = path.substring(i, l == -1 ? path.length() : l);
+			PartNode n = next(last.nexts, part);
 			if (n == null)
 				break;
-			if (++i == part.size()) {
+			if (l < 0) {
 				req.setPathInfo(i);
 				return n.exact;
 			}
 			last = n;
+			i = l + 1;
 		}
 
 		if (last.ends != null) {
-			Node n = ends(last.ends, part.get(part.size() - 1));
+			Node n = ends(last.ends, path);
 			if (n != null) {
-				req.setPathInfo(part.size());
+				req.setPathInfo(path.length());
 				return n.exact;
 			}
 		}
@@ -163,8 +164,8 @@ public class PathTree {
 	/**
 	 * compare two part
 	 * 
-	 * @param a   one
-	 * @param b   two
+	 * @param a one
+	 * @param b two
 	 * @param max max number of char to compare
 	 * @return -1,1 or 0
 	 */
@@ -212,11 +213,11 @@ public class PathTree {
 		/**
 		 * create a new PartNode
 		 * 
-		 * @param part  the path part
+		 * @param part the path part
 		 * @param nexts the child part
-		 * @param ends  the end with pattern "*.jsp" pattern
+		 * @param ends the end with pattern "*.jsp" pattern
 		 * @param exact the "" pattern chains
-		 * @param def   the "/*" pattern
+		 * @param def the "/*" pattern
 		 */
 		public PartNode(String part, PartNode[] nexts, Node[] ends, FilterChain exact, FilterChain def) {
 			super(part, exact);
