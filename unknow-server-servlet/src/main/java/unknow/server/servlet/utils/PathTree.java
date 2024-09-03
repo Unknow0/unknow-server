@@ -44,11 +44,15 @@ public class PathTree {
 		while (last.nexts != null) {
 			int l = path.indexOf('/', i);
 			String part = path.substring(i, l == -1 ? path.length() : l);
+			if (part.isEmpty()) {
+				i = l + 1;
+				continue;
+			}
 			PartNode n = next(last.nexts, part);
 			if (n == null)
 				break;
 			if (l < 0) {
-				req.setPathInfo(i);
+				req.setPathInfo(i - 1);
 				return n.exact;
 			}
 			last = n;
@@ -62,7 +66,7 @@ public class PathTree {
 				return n.exact;
 			}
 		}
-		req.setPathInfo(i);
+		req.setPathInfo(i - 1);
 		return last.def;
 	}
 
