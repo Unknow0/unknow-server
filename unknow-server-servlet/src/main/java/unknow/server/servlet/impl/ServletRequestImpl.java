@@ -474,7 +474,7 @@ public final class ServletRequestImpl implements HttpServletRequest {
 	@Override
 	public String getPathInfo() {
 		if (pathInfo == null)
-			pathInfo = requestUri.substring(pathInfoIndex + 1);
+			pathInfo = requestUri.substring(pathInfoIndex);
 		return pathInfo.isEmpty() ? null : pathInfo;
 	}
 
