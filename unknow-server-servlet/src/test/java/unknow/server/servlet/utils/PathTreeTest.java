@@ -7,9 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,18 +25,15 @@ import unknow.server.servlet.utils.PathTree.PartNode;
  * @author unknow
  */
 public class PathTreeTest {
-	List<String> path;
 	ServletRequestImpl mock;
 
 	@BeforeEach
 	public void init() {
-		path = new ArrayList<>();
 		ServletContextImpl ctx = new ServletContextImpl("", "", null, null, null, null, null);
 		HttpAdapter p = mock(HttpAdapter.class);
 		when(p.ctx()).thenReturn(ctx);
 
 		mock = mock(ServletRequestImpl.class, Mockito.withSettings().useConstructor(p, DispatcherType.REQUEST));
-		when(mock.getPaths()).thenReturn(path);
 	}
 
 	@Test
@@ -48,9 +43,10 @@ public class PathTreeTest {
 
 		PathTree tree = new PathTree(new PartNode(null, null, null, exacts, defaults));
 
+		when(mock.getRequestURI()).thenReturn("/");
 		assertEquals(exacts, tree.find(mock));
 
-		path.add("blabla");
+		when(mock.getRequestURI()).thenReturn("/blabla");
 		assertEquals(defaults, tree.find(mock));
 	}
 
@@ -64,13 +60,13 @@ public class PathTreeTest {
 
 		PathTree tree = new PathTree(new PartNode(null, next, null, null, defaults));
 
-		path.add("toto");
+		when(mock.getRequestURI()).thenReturn("/toto");
 		assertEquals(defaults, tree.find(mock));
 
-		path.set(0, "first");
+		when(mock.getRequestURI()).thenReturn("/first");
 		assertEquals(first, tree.find(mock));
 
-		path.set(0, "second");
+		when(mock.getRequestURI()).thenReturn("/second");
 		assertEquals(second, tree.find(mock));
 	}
 
@@ -84,13 +80,13 @@ public class PathTreeTest {
 
 		PathTree tree = new PathTree(new PartNode(null, null, ends, null, defaults));
 
-		path.add("bla.txt");
+		when(mock.getRequestURI()).thenReturn("/bla.txt");
 		assertEquals(defaults, tree.find(mock));
 
-		path.set(0, "bla.jsp");
+		when(mock.getRequestURI()).thenReturn("/bla.jsp");
 		assertEquals(jsp, tree.find(mock));
 
-		path.set(0, "bla.html");
+		when(mock.getRequestURI()).thenReturn("/bla.html");
 		assertEquals(html, tree.find(mock));
 	}
 

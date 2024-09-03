@@ -61,7 +61,6 @@ public final class ServletRequestImpl implements HttpServletRequest {
 	private final DispatcherType type;
 
 	private String requestUri;
-	private final List<String> path;
 	private int pathInfoIndex;
 
 	private String protocol = null;
@@ -95,13 +94,12 @@ public final class ServletRequestImpl implements HttpServletRequest {
 	/**
 	 * create new ServletRequestImpl
 	 * 
-	 * @param co  the connection adapter
+	 * @param co the connection adapter
 	 * @param type dispatcher type of this request
 	 */
 	public ServletRequestImpl(HttpAdapter co, DispatcherType type) {
 		this.co = co;
 		this.type = type;
-		this.path = new ArrayList<>();
 
 		this.headers = new HashMap<>();
 	}
@@ -132,18 +130,6 @@ public final class ServletRequestImpl implements HttpServletRequest {
 
 	public void setRequestUri(String path) {
 		this.requestUri = path;
-		int i = 1;
-		do {
-			int j = path.indexOf('/', i);
-			if (j < 0)
-				j = path.length();
-			this.path.add(path.substring(i, j));
-			i = j + 1;
-		} while (i < path.length());
-	}
-
-	public List<String> getPaths() {
-		return path;
 	}
 
 	public void setPathInfo(int index) {
@@ -480,23 +466,15 @@ public final class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public String getServletPath() {
-		if (servletPath == null) {
-			StringBuilder sb = new StringBuilder();
-			for (int i = 0; i < pathInfoIndex; i++)
-				sb.append('/').append(path.get(i));
-			servletPath = sb.length() == 0 ? "/" : sb.toString();
-		}
+		if (servletPath == null)
+			servletPath = requestUri.substring(0, pathInfoIndex);
 		return servletPath;
 	}
 
 	@Override
 	public String getPathInfo() {
-		if (pathInfo == null) {
-			StringBuilder sb = new StringBuilder();
-			for (int i = pathInfoIndex; i < path.size(); i++)
-				sb.append('/').append(path.get(i));
-			pathInfo = sb.toString();
-		}
+		if (pathInfo == null)
+			pathInfo = requestUri.substring(pathInfoIndex + 1);
 		return pathInfo.isEmpty() ? null : pathInfo;
 	}
 

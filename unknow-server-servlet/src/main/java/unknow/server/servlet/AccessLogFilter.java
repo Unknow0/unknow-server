@@ -56,6 +56,8 @@ public class AccessLogFilter implements Filter {
 	private static final Logger logger = LoggerFactory.getLogger("access-log");
 	private static final String DEFAULT_FMT = "%{start} %{remote:host} - %{user} \"%{request}\" %{response:status} %{duration}.%{duration:msec_frac}";
 
+	private static final DateTimeFormatter ISO = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS");
+
 	private static final Part[] EMPTY = {};
 	private static final Map<String, PartBuilder> builders = new HashMap<>();
 	static {
@@ -88,9 +90,9 @@ public class AccessLogFilter implements Filter {
 			if (t.equals("usec"))
 				return (sb, start, end, req, res) -> sb.append(start.until(end, ChronoUnit.MICROS));
 			else if (t.equals("msec_frac"))
-				return (sb, start, end, req, res) -> sb.append(Duration.between(start, end).getNano() / 1000000);
+				return (sb, start, end, req, res) -> sb.append(String.format("%03d", Duration.between(start, end).getNano() / 1000000));
 			else if (t.equals("usec_frac"))
-				return (sb, start, end, req, res) -> sb.append(Duration.between(start, end).getNano() / 1000);
+				return (sb, start, end, req, res) -> sb.append(String.format("%06d", Duration.between(start, end).getNano() / 1000));
 			else
 				throw new ServletException("Unknow duration type '" + t + "'");
 		});
@@ -147,6 +149,7 @@ public class AccessLogFilter implements Filter {
 
 	/**
 	 * format used by the access log <br>
+	 * 
 	 * @param format the format
 	 * @throws ServletException on error
 	 */
@@ -196,6 +199,7 @@ public class AccessLogFilter implements Filter {
 
 	/**
 	 * parse the template
+	 * 
 	 * @param template the template
 	 * @return the part
 	 * @throws ServletException on error
@@ -231,6 +235,7 @@ public class AccessLogFilter implements Filter {
 
 	/**
 	 * parse a format
+	 * 
 	 * @param template the template
 	 * @param o start index for the format
 	 * @param e end index for the format
@@ -253,7 +258,7 @@ public class AccessLogFilter implements Filter {
 
 	private static DateTimeFormatter getFormater(String type) {
 		if (type.equals("iso"))
-			return DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+			return ISO;
 		if (type.equals("rfc"))
 			return DateTimeFormatter.RFC_1123_DATE_TIME;
 		return DateTimeFormatter.ofPattern(type);
@@ -261,7 +266,9 @@ public class AccessLogFilter implements Filter {
 
 	/** a part */
 	public static interface Part {
-		/** append this part
+		/**
+		 * append this part
+		 * 
 		 * @param sb where to
 		 * @param start start time
 		 * @param end end time
@@ -289,10 +296,12 @@ public class AccessLogFilter implements Filter {
 
 	/** part builder */
 	public static interface PartBuilder {
-		/** create a new part
+		/**
+		 * create a new part
+		 * 
 		 * @param param params
 		 * @return the part
-		 * @throws ServletException on error 
+		 * @throws ServletException on error
 		 */
 		Part apply(List<String> param) throws ServletException;
 	}
