@@ -86,7 +86,7 @@ public class Rest {
 		@QueryParam("d")
 		public List<? super E> d;
 
-		public Truc truc;
+		public Truc[] truc;
 
 		public Login getLogin() {
 			return login;
@@ -107,7 +107,7 @@ public class Rest {
 
 		@Override
 		public String toString() {
-			return "Bean [login=" + login + ", sid=" + sid + ", key=" + key + ", p=" + Arrays.toString(p) + ", d=" + d + ", truc=" + truc + "]";
+			return "Bean [login=" + login + ", sid=" + sid + ", key=" + key + ", p=" + Arrays.toString(p) + ", d=" + d + ", truc=" + Arrays.toString(truc) + "]";
 		}
 	}
 

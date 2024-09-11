@@ -34,6 +34,7 @@ import jakarta.xml.bind.annotation.XmlAccessOrder;
 import jakarta.xml.bind.annotation.XmlAccessType;
 import jakarta.xml.bind.annotation.XmlAccessorOrder;
 import jakarta.xml.bind.annotation.XmlAccessorType;
+import jakarta.xml.bind.annotation.XmlAnyAttribute;
 import jakarta.xml.bind.annotation.XmlSchema;
 import jakarta.xml.bind.annotation.XmlTransient;
 import jakarta.xml.bind.annotation.XmlValue;
@@ -58,7 +59,8 @@ public class XmlLoader {
 	public static final String XS = "http://www.w3.org/2001/XMLSchema";
 
 	public static final XmlType ANY = new XmlTypeComplex(new QName(XS, "any"), JvmModelLoader.GLOBAL.get("java.lang.Object").asClass(),
-			new Factory(JvmModelLoader.GLOBAL.get("java.lang.Object").asClass(), ""), Collections.emptyList(), new XmlElements(XmlGroup.SEQUENCE, Arrays.asList()), null);
+			new Factory(JvmModelLoader.GLOBAL.get("java.lang.Object").asClass(), ""), Collections.emptyList(), new XmlElements(XmlGroup.SEQUENCE, Arrays.asList()), null,
+			null);
 
 	public static final XmlTypeSimple BOOLEAN = new XmlTypeSimple(new QName(XS, "boolean"), PrimitiveModel.BOOLEAN);
 	public static final XmlTypeSimple BYTE = new XmlTypeSimple(new QName(XS, "byte"), PrimitiveModel.BYTE);
@@ -83,6 +85,8 @@ public class XmlLoader {
 	private static final List<XmlType> BUILTIN = Arrays.asList(ANY, BOOLEAN, BOOLEAN, BYTE, BYTE, SHORT, SHORT, INT, INT, LONG, LONG, FLOAT, FLOAT, DOUBLE, DOUBLE, CHAR, CHAR,
 			STRING, BIGINT, BIGDEC, LOCALDATE, LOCALDATETIME, LOCALTIME, OFFSETDATETIME, ZONEDDATETIME, DURATION);
 
+	private static final TypeModel ANY_ATR = JvmModelLoader.GLOBAL.get("java.util.Map<javax.xml.namespace.QName,java.lang.String>");
+
 	private final Map<String, XmlType> types = new HashMap<>();
 
 	public XmlLoader() {
@@ -99,6 +103,9 @@ public class XmlLoader {
 	}
 
 	public XmlType add(TypeModel type) {
+		if (type.isAssignableTo(Map.class))
+			return ANY;
+
 		XmlType xmlType = types.get(type.name());
 		if (xmlType == null) {
 			types.put(type.name(), xmlType = create(type));
@@ -153,14 +160,16 @@ public class XmlLoader {
 
 		List<XmlElement> attrs = new ArrayList<>();
 		List<XmlElement> elems = new ArrayList<>();
+		BeanProperty otherAttrs = null;
 		XmlElement value = null;
 		for (BeanProperty b : BeanProperty.properties(c)) {
 			Optional<AnnotationModel> choice = b.annotation(jakarta.xml.bind.annotation.XmlElements.class);
 			Optional<AnnotationModel> elem = b.annotation(jakarta.xml.bind.annotation.XmlElement.class);
 			Optional<AnnotationModel> attr = b.annotation(jakarta.xml.bind.annotation.XmlAttribute.class);
 			Optional<AnnotationModel> v = b.annotation(XmlValue.class);
+			Optional<AnnotationModel> anyAttr = b.annotation(XmlAnyAttribute.class);
 
-			if (choice.isEmpty() && elem.isEmpty() && attr.isEmpty() && v.isEmpty() && !isAccess(type, b))
+			if (choice.isEmpty() && elem.isEmpty() && attr.isEmpty() && v.isEmpty() && anyAttr.isEmpty() && !isAccess(type, b))
 				continue;
 
 			TypeModel t = b.type();
@@ -189,6 +198,12 @@ public class XmlLoader {
 					x = new XmlCollection(b.type(), x);
 				final XmlType xml = x;
 				elems.add(new XmlElement(new QName(b.name()), b, () -> xml));
+			} else if (anyAttr.isPresent()) {
+				if (otherAttrs != null)
+					throw new IllegalArgumentException("Multiple anyAttribute fo '" + c.name() + "'");
+				if (!b.type().equals(ANY_ATR))
+					throw new IllegalArgumentException("AnyAttribute sould be mapped on Map<QName,String> in '" + c.name() + "'");
+				otherAttrs = b;
 			} else
 				elems.add(getElems(elem, b.name(), defaultNs, b));
 		}
@@ -227,7 +242,7 @@ public class XmlLoader {
 				a.flatMap(v -> v.member("factoryClass")).filter(v -> v.isSet()).map(v -> v.asClass().asClass())
 						.filter(v -> !v.isAssignableTo(jakarta.xml.bind.annotation.XmlType.DEFAULT.class.getName())).orElse(c),
 				a.flatMap(v -> v.member("factoryMethod")).filter(v -> v.isSet()).map(v -> v.asLiteral()).orElse(""));
-		return new XmlTypeComplex(qname(c), c, f, attrs, elements, value);
+		return new XmlTypeComplex(qname(c), c, f, attrs, elements, value, otherAttrs);
 	}
 
 	public XmlElement getElems(Optional<AnnotationModel> elem, String name, String defaultNs, BeanProperty b) {

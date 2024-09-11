@@ -26,6 +26,7 @@ import com.github.javaparser.ast.expr.ObjectCreationExpr;
 import com.github.javaparser.ast.expr.StringLiteralExpr;
 import com.github.javaparser.ast.expr.TypeExpr;
 import com.github.javaparser.ast.expr.UnaryExpr;
+import com.github.javaparser.ast.expr.VariableDeclarationExpr;
 import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.stmt.ExpressionStmt;
 import com.github.javaparser.ast.stmt.ForStmt;
@@ -124,6 +125,13 @@ public class HandlerObjectReader extends AbstractSourceBuilder<HandlerContext> {
 			return;
 
 		Statement i = null;
+		if (xml.getOtherAttrs() != null) {
+			b.addStatement(new AssignExpr(new VariableDeclarationExpr(types.getClass(Map.class, types.get(QName.class), types.get(String.class)), "a"),
+					new ObjectCreationExpr(null, types.getClass(HashMap.class, TypeCache.EMPTY), Utils.list()), AssignExpr.Operator.ASSIGN));
+			i = new ExpressionStmt(new MethodCallExpr(new NameExpr("a"), "put",
+					Utils.list(new NameExpr("n"), new MethodCallExpr(new NameExpr("r"), "getAttributeName", Utils.list(new NameExpr("i"))))));
+		}
+
 		int c = 0;
 		for (XmlElement e : xml.getAttributes()) {
 			i = new IfStmt(new MethodCallExpr(new NameExpr(e.name() + "$a" + c++), "equals", Utils.list(new NameExpr("n"))),
@@ -138,6 +146,8 @@ public class HandlerObjectReader extends AbstractSourceBuilder<HandlerContext> {
 				new BlockStmt()
 						.addStatement(Utils.assign(types.get(QName.class), "n", new MethodCallExpr(new NameExpr("r"), "getAttributeName", Utils.list(new NameExpr("i")))))
 						.addStatement(i)));
+		if (xml.getOtherAttrs() != null)
+			b.addStatement(new MethodCallExpr(new NameExpr("o"), xml.getOtherAttrs().setter().toString(), Utils.list(new NameExpr("a"))));
 	}
 
 	private void processCollection(XmlElements elements, BlockStmt b, BlockStmt end) {

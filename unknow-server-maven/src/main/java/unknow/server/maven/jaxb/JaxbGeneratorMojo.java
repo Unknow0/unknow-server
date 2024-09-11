@@ -59,6 +59,7 @@ import unknow.server.jaxb.handler.LocalDateHandler;
 import unknow.server.jaxb.handler.LocalDateTimeHandler;
 import unknow.server.jaxb.handler.LocalTimeHandler;
 import unknow.server.jaxb.handler.LongHandler;
+import unknow.server.jaxb.handler.MapHandler;
 import unknow.server.jaxb.handler.OffsetDateTimeHandler;
 import unknow.server.jaxb.handler.PeriodHandler;
 import unknow.server.jaxb.handler.ShortHandler;
@@ -85,6 +86,8 @@ public class JaxbGeneratorMojo extends AbstractGeneratorMojo {
 	private final XmlLoader xmlLoader = new XmlLoader();
 
 	public JaxbGeneratorMojo() {
+		handlers.put(XmlLoader.ANY, MapHandler.class.getName()); // TODO
+
 		handlers.put(XmlLoader.BOOLEAN, BooleanHandler.class.getName());
 		handlers.put(XmlLoader.BYTE, ByteHandler.class.getName());
 		handlers.put(XmlLoader.SHORT, ShortHandler.class.getName());

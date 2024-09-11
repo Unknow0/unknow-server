@@ -9,6 +9,7 @@ import java.util.Set;
 
 import javax.xml.namespace.QName;
 
+import unknow.server.maven.model.BeanProperty;
 import unknow.server.maven.model.ClassModel;
 import unknow.server.maven.model.TypeModel;
 
@@ -22,6 +23,7 @@ public class XmlTypeComplex implements XmlType {
 	private final List<XmlElement> attrs;
 	private final XmlElements elements;
 	private final XmlElement value;
+	private final BeanProperty otherAttrs;
 
 	/**
 	 * create new XmlTypeComplex
@@ -29,13 +31,14 @@ public class XmlTypeComplex implements XmlType {
 	 * @param qname
 	 * @param type
 	 */
-	public XmlTypeComplex(QName qname, ClassModel type, Factory factory, List<XmlElement> attrs, XmlElements elements, XmlElement value) {
+	public XmlTypeComplex(QName qname, ClassModel type, Factory factory, List<XmlElement> attrs, XmlElements elements, XmlElement value, BeanProperty otherAttrs) {
 		this.qname = qname;
 		this.c = type;
 		this.factory = factory;
 		this.attrs = attrs;
 		this.elements = elements;
 		this.value = value;
+		this.otherAttrs = otherAttrs;
 	}
 
 	@Override
@@ -66,6 +69,10 @@ public class XmlTypeComplex implements XmlType {
 
 	public XmlElement getValue() {
 		return value;
+	}
+
+	public BeanProperty getOtherAttrs() {
+		return otherAttrs;
 	}
 
 	public static class Factory {

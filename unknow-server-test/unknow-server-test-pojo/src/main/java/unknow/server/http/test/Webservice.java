@@ -5,6 +5,8 @@ package unknow.server.http.test;
 
 import static jakarta.jws.soap.SOAPBinding.ParameterStyle.BARE;
 
+import java.util.Collections;
+
 import jakarta.jws.WebMethod;
 import jakarta.jws.WebParam;
 import jakarta.jws.WebService;
@@ -51,6 +53,7 @@ public class Webservice {
 
 	@WebMethod
 	public Complex complex(Complex param) {
+		param.setMapField(Collections.singletonMap("Key", "value"));
 		return param;
 	}
 }

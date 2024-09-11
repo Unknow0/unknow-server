@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.xml.namespace.QName;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
@@ -68,6 +69,17 @@ public class HandlerObjectWriter extends AbstractSourceBuilder<HandlerContext> {
 				new ExpressionStmt(new MethodCallExpr(LISTENER, "beforeMarshal", Utils.list(new NameExpr("t")))), null));
 
 		buildAttributes(xml.getAttributes(), b);
+		if (xml.getOtherAttrs() != null) {
+			b.addStatement(new IfStmt(
+					new BinaryExpr(new MethodCallExpr(new NameExpr("t"), xml.getOtherAttrs().getter().name()), new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS),
+					new ForEachStmt(new VariableDeclarationExpr(types.getClass(Map.Entry.class, types.get(QName.class), types.get(String.class)), "e"),
+							new MethodCallExpr(new MethodCallExpr(new NameExpr("t"), xml.getOtherAttrs().getter().name()), "entrySet"),
+							new BlockStmt().addStatement(new MethodCallExpr(new NameExpr("w"), "writeAttribute",
+									Utils.list(new MethodCallExpr(new MethodCallExpr(new NameExpr("e"), "getKey"), "getNamespaceURI"),
+											new MethodCallExpr(new MethodCallExpr(new NameExpr("e"), "getKey"), "getLocalPart"),
+											new MethodCallExpr(new NameExpr("e"), "getValue"))))),
+					null));
+		}
 
 		AtomicInteger i = new AtomicInteger(0);
 		for (XmlElement e : xml.getElements())
