@@ -80,10 +80,10 @@ public class NIOConnectionSSL extends NIOConnection {
 			l = channel.read(rawIn);
 			if (l == -1) {
 				in.close();
-				return;
+				break;
 			}
 			if (l == 0 && rawIn.position() == 0)
-				return;
+				break;
 			rawIn.flip();
 			SSLEngineResult r = sslEngine.unwrap(rawIn, app);
 			logger.debug("unwrap {}", r.getStatus());
@@ -92,8 +92,8 @@ public class NIOConnectionSSL extends NIOConnection {
 			app.flip();
 			pendingRead().write(app);
 			app.compact();
-			onRead();
 		}
+		onRead();
 	}
 
 	@Override

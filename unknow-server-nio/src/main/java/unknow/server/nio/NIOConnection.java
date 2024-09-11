@@ -117,23 +117,25 @@ public class NIOConnection {
 	protected void readFrom(ByteBuffer buf) throws InterruptedException, IOException {
 		int l;
 		lastRead = System.currentTimeMillis();
-		l = channel.read(buf);
-		if (l == -1) {
-			in.close();
-			return;
-		}
-		if (l == 0)
-			return;
-		buf.flip();
+		while (true) {
+			l = channel.read(buf);
+			if (l == -1) {
+				in.close();
+				break;
+			}
+			if (l == 0)
+				break;
+			buf.flip();
 
-		if (logger.isTraceEnabled()) {
-			buf.mark();
-			byte[] bytes = new byte[buf.remaining()];
-			buf.get(bytes);
-			logger.trace("read {}", new String(bytes));
-			buf.reset();
+			if (logger.isTraceEnabled()) {
+				buf.mark();
+				byte[] bytes = new byte[buf.remaining()];
+				buf.get(bytes);
+				logger.trace("read {}", new String(bytes));
+				buf.reset();
+			}
+			pendingRead.write(buf);
 		}
-		pendingRead.write(buf);
 		onRead();
 	}
 

@@ -154,7 +154,8 @@ public final class Http11Worker extends HttpWorker {
 			out.flush();
 		}
 
-		if (keepAliveIdle != 0 && "keep-alive".equalsIgnoreCase(req.getHeader("connection"))) {
+		String header = req.getHeader("connection");
+		if (keepAliveIdle != 0 && (header == null || "keep-alive".equalsIgnoreCase(header))) {
 			res.setHeader("connection", "keep-alive");
 			res.setHeader("keep-alive", "timeout=" + (keepAliveIdle / 1000));
 		} else
