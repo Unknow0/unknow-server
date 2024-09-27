@@ -64,6 +64,14 @@
 					</execution>
 				</executions>
 			</plugin>
+			<plugin>
+				<groupId>io.github.ascopes</groupId>
+  				<artifactId>protobuf-maven-plugin</artifactId>
+			</plugin>
+			<plugin>
+				<groupId>io.protostuff</groupId>
+				<artifactId>protostuff-maven-plugin</artifactId>
+			</plugin>
 		</plugins>
 	</build>
 
@@ -113,6 +121,10 @@
 		<dependency>
 			<groupId>io.protostuff</groupId>
 			<artifactId>protostuff-json</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.google.protobuf</groupId>
+			<artifactId>protobuf-javalite</artifactId>
 		</dependency>
 	</dependencies>
 </project>

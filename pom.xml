@@ -45,6 +45,7 @@
 		<prometheus.version>0.16.0</prometheus.version>
 		<jmh.version>1.37</jmh.version>
 		<protostuff.version>1.8.0</protostuff.version>
+		<protobuf.version>4.28.2</protobuf.version>
 	</properties>
 
 
@@ -179,6 +180,53 @@
 							</rules>
 						</ruleSet>
 					</configuration>
+				</plugin>
+				
+				<plugin>
+					<groupId>io.github.ascopes</groupId>
+					<artifactId>protobuf-maven-plugin</artifactId>
+					<version>2.6.1</version>
+					<executions>
+						<execution>
+							<phase>generate-sources</phase>
+							<goals>
+								<goal>generate</goal>
+							</goals>
+							<configuration>
+								<protocVersion>${protobuf.version}</protocVersion>
+								<liteOnly>true</liteOnly>
+								<outputDirectory>target/generated-sources/protobuf</outputDirectory>
+							</configuration>
+						</execution>
+					</executions>
+				</plugin>
+				<plugin>
+					<groupId>io.protostuff</groupId>
+					<artifactId>protostuff-maven-plugin</artifactId>
+					<version>${protostuff.version}</version>
+					<executions>
+						<execution>
+							<id>generate-sources</id>
+							<phase>generate-sources</phase>
+							<goals>
+								<goal>compile</goal>
+							</goals>
+							<configuration>
+								<protoModules>
+									<protoModule>
+										<source>src/main/protostuff</source>
+										<output>java_bean</output>
+										<outputDir>target/generated-sources/protostuff</outputDir>
+										<options>
+											<header_source_path>true</header_source_path>
+											<builder_pattern>true</builder_pattern>
+											<separate_schema>true</separate_schema>
+										</options>
+									</protoModule>
+								</protoModules>
+							</configuration>
+						</execution>
+					</executions>
 				</plugin>
 			</plugins>
 		</pluginManagement>
@@ -323,6 +371,12 @@
 				<groupId>org.apache.xmlbeans</groupId>
 				<artifactId>xmlbeans</artifactId>
 				<version>5.2.1</version>
+			</dependency>
+			
+			<dependency>
+				<groupId>com.google.protobuf</groupId>
+				<artifactId>protobuf-javalite</artifactId>
+				<version>${protobuf.version}</version>
 			</dependency>
 
 			<dependency>
