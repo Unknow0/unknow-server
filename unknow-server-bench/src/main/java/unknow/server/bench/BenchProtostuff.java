@@ -1,8 +1,8 @@
 package unknow.server.bench;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
 import java.io.Reader;
 import java.io.StringReader;
 
@@ -36,37 +36,37 @@ public class BenchProtostuff {
 
 	@Benchmark
 	public void jackson() throws IOException {
-		PipedInputStream in = new PipedInputStream();
-		PipedOutputStream out = new PipedOutputStream(in);
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		m.writeValue(out, TEST);
 		out.flush();
+
+		ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
 		m.readValue(in, Complex.class);
 	}
 
 	@Benchmark
 	public void protostuff() throws IOException {
-		PipedInputStream in = new PipedInputStream();
-		PipedOutputStream out = new PipedOutputStream(in);
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
 
 		LinkedBuffer buffer = LinkedBuffer.allocate(4096);
 		SCHEMA.writeTo(new ProtostuffOutput(buffer, out), TEST);
 		LinkedBuffer.writeTo(out, buffer);
 		out.flush();
-
+		ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
 		Complex t = SCHEMA.newMessage();
 		SCHEMA.mergeFrom(new CodedInput(in, true), t);
 	}
 
 	@Benchmark
 	public void protostuffJson() throws IOException {
-		PipedInputStream in = new PipedInputStream();
-		PipedOutputStream out = new PipedOutputStream(in);
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
 
 		LinkedBuffer buffer = LinkedBuffer.allocate(4096);
 		SCHEMA.writeTo(new JsonXOutput(buffer, out, false, SCHEMA), TEST);
 		LinkedBuffer.writeTo(out, buffer);
 		out.flush();
 
+		ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
 		Complex t = SCHEMA.newMessage();
 		SCHEMA.mergeFrom(new JsonInput(m.createParser(in), false), t);
 	}
