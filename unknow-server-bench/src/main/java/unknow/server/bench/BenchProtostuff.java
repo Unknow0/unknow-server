@@ -11,8 +11,8 @@ import org.openjdk.jmh.annotations.Benchmark;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.protostuff.CodedInput;
-import io.protostuff.JsonInput;
-import io.protostuff.JsonXOutput;
+import io.protostuff.JsonIOUtil;
+import io.protostuff.JsonXIOUtil;
 import io.protostuff.LinkedBuffer;
 import io.protostuff.ProtostuffOutput;
 import io.protostuff.Schema;
@@ -59,16 +59,12 @@ public class BenchProtostuff {
 
 	@Benchmark
 	public void protostuffJson() throws IOException {
-		ByteArrayOutputStream out = new ByteArrayOutputStream();
 
 		LinkedBuffer buffer = LinkedBuffer.allocate(4096);
-		SCHEMA.writeTo(new JsonXOutput(buffer, out, false, SCHEMA), TEST);
-		LinkedBuffer.writeTo(out, buffer);
-		out.flush();
+		byte[] byteArray = JsonXIOUtil.toByteArray(TEST, SCHEMA, false, buffer);
 
-		ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
 		Complex t = SCHEMA.newMessage();
-		SCHEMA.mergeFrom(new JsonInput(m.createParser(in), false), t);
+		JsonIOUtil.mergeFrom(byteArray, t, SCHEMA, false);
 	}
 
 }
