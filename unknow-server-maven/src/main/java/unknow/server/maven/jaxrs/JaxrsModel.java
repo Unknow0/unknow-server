@@ -136,6 +136,12 @@ public class JaxrsModel {
 
 		loadService(cl, MessageBodyReader.class, l -> {
 			ClassModel c = loader.get(l).asClass();
+			try {
+				Class.forName(c.name(), true, cl);
+			} catch (ClassNotFoundException e) {
+				logger.warn("Failed to load message hander " + c.name(), e);
+				return;
+			}
 			String[] v = c.annotation(Consumes.class).flatMap(a -> a.value()).filter(a -> a.isSet()).map(a -> a.asArrayLiteral()).orElse(ALL);
 			List<String> list = new ArrayList<>();
 			for (int i = 0; i < v.length; i++)
@@ -144,6 +150,12 @@ public class JaxrsModel {
 		});
 		loadService(cl, MessageBodyWriter.class, l -> {
 			ClassModel c = loader.get(l).asClass();
+			try {
+				Class.forName(c.name(), true, cl);
+			} catch (ClassNotFoundException e) {
+				logger.warn("Failed to load message hander " + c.name(), e);
+				return;
+			}
 			String[] v = c.annotation(Produces.class).flatMap(a -> a.value()).filter(a -> a.isSet()).map(a -> a.asArrayLiteral()).orElse(ALL);
 			List<String> list = new ArrayList<>();
 			for (int i = 0; i < v.length; i++)
