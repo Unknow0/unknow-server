@@ -41,7 +41,7 @@ public class Http11Processor implements HttpProcessor {
 
 	@Override
 	public final boolean isClosable(boolean stop) {
-		process();
+//		process();
 		return exec.isDone();
 	}
 
