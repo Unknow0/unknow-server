@@ -1,6 +1,5 @@
 package unknow.server.servlet.http11;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
 import unknow.server.servlet.HttpConnection;
@@ -22,7 +21,7 @@ public class Http11Processor implements HttpProcessor {
 
 	private final IndexOfBloc w;
 
-	private volatile Future<?> exec = CompletableFuture.completedFuture(null);
+	private volatile Future<?> exec;
 
 	/**
 	 * new http11 processor
@@ -31,6 +30,7 @@ public class Http11Processor implements HttpProcessor {
 	public Http11Processor(HttpConnection co) {
 		this.co = co;
 		this.w = new IndexOfBloc(END);
+		exec = co.submit(new Http11Worker(co));
 	}
 
 	@Override
@@ -41,7 +41,7 @@ public class Http11Processor implements HttpProcessor {
 
 	@Override
 	public final boolean isClosable(boolean stop) {
-//		process();
+		process();
 		return exec.isDone();
 	}
 
