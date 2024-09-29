@@ -1,7 +1,7 @@
 #!/bin/bash
 
 unknow_start() {
-	java -jar unknow-server-test/unknow-server-test-jar/target/server.jar --http-addr :8080 --https-addr :8443 --keystore store.jks --keystore-pass 123456 > logs/unknow.log 2>&1 &
+	time java -jar unknow-server-test/unknow-server-test-jar/target/server.jar --http-addr :8080 --https-addr :8443 --keystore store.jks --keystore-pass 123456 > logs/unknow.log &
 	pid=$!
 }
 unknow_stop() {
@@ -10,7 +10,7 @@ unknow_stop() {
 }
 native_start() {
 	chmod a+x server-native
-	./server-native --http-addr :8080 --https-addr :8443 --keystore store.jks --keystore-pass 123456 > logs/native.log 2>&1 &
+	time ./server-native --http-addr :8080 --https-addr :8443 --keystore store.jks --keystore-pass 123456 > logs/native.log &
 	pid=$!
 }
 native_stop() {
@@ -19,7 +19,7 @@ native_stop() {
 }
 tomcat_start() {
 	cp unknow-server-test/unknow-server-test-tomcat/target/*.war $CATALINA_HOME/webapps/ROOT.war || exit 1
-	$CATALINA_HOME/bin/catalina.sh run > logs/tomcat.log 2>&1 || exit 1 &
+	time $CATALINA_HOME/bin/catalina.sh run > logs/tomcat.log || exit 1 &
 	pid=$!
 }
 tomcat_stop() {
@@ -31,7 +31,7 @@ tomcat_stop() {
 
 cxf_start() {
 	cp unknow-server-test/unknow-server-test-cxf/target/*.war $CATALINA_HOME/webapps/ROOT.war || exit 1
-	$CATALINA_HOME/bin/catalina.sh run > logs/tomcat.log 2>&1 || exit 1 &
+	time $CATALINA_HOME/bin/catalina.sh run > logs/tomcat.log || exit 1 &
 	pid=$!
 }
 cxf_stop=tomcat_stop
