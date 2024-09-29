@@ -1,10 +1,12 @@
 #!/bin/bash
 
 unknow_start() {
-	java -jar unknow-server-test/unknow-server-test-jar/target/server.jar > logs/unknow.log 2>&1 &
+	time java -jar unknow-server-test/unknow-server-test-jar/target/server.jar --shutdown :8009 > logs/unknow.log 2>&1 &
 	pid=$!
 }
 unknow_stop() {
+	echo '' | nc  127.0.0.1 8009
+	sleep 10
 	kill -9 $pid
 	pid=
 }
