@@ -1,20 +1,24 @@
 #!/bin/bash
 
 unknow_start() {
-	time java -jar unknow-server-test/unknow-server-test-jar/target/server.jar --http-addr :8080 --https-addr :8443 --keystore store.jks --keystore-pass 123456 > logs/unknow.log 2>&1 &
+	time java -jar unknow-server-test/unknow-server-test-jar/target/server.jar --shutdown :8009 --http-addr :8080 --https-addr :8443 --keystore store.jks --keystore-pass 123456 > logs/unknow.log 2>&1 &
 	pid=$!
 }
 unknow_stop() {
-	kill -9 $pid
+	echo '' | nc 127.0.0.1 8009
+	sleep 10
+	kill -9 $pid 2>/dev/null
 	pid=
 }
 native_start() {
 	chmod a+x server-native
-	time ./server-native --http-addr :8080 --https-addr :8443 --keystore store.jks --keystore-pass 123456 > logs/native.log 2>&1 &
+	time ./server-native --shutdown :8009 --http-addr :8080 --https-addr :8443 --keystore store.jks --keystore-pass 123456 > logs/native.log 2>&1 &
 	pid=$!
 }
 native_stop() {
-	kill -9 $pid
+	echo '' | nc 127.0.0.1 8009
+	sleep 10
+	kill -9 $pid 2>/dev/null
 	pid=
 }
 tomcat_start() {
