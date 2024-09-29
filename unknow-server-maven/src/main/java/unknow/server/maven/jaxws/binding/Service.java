@@ -9,8 +9,6 @@ import java.util.Optional;
 
 import javax.xml.namespace.QName;
 
-import org.apache.maven.api.plugin.MojoException;
-
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.jws.WebMethod;
@@ -78,10 +76,10 @@ public class Service {
 		Optional<AnnotationModel> a = clazz.annotation(SOAPBinding.class);
 		Style style = a.flatMap(v -> v.member("style")).filter(v -> v.isSet()).map(v -> v.asEnum(Style.class)).orElse(Style.DOCUMENT);
 		if (style != Style.DOCUMENT)
-			throw new MojoException("Only Document style is managed " + clazz);
+			throw new RuntimeException("Only Document style is managed " + clazz);
 		Use use = a.flatMap(v -> v.member("use")).filter(v -> v.isSet()).map(v -> v.asEnum(Use.class)).orElse(Use.LITERAL);
 		if (use != Use.LITERAL)
-			throw new MojoException("Only literal use is managed " + clazz);
+			throw new RuntimeException("Only literal use is managed " + clazz);
 
 		ParameterStyle paramStyle = a.flatMap(v -> v.member("parameterStyle")).filter(v -> v.isSet()).map(s -> s.asEnum(ParameterStyle.class)).orElse(ParameterStyle.WRAPPED);
 
@@ -91,9 +89,9 @@ public class Service {
 		if (!inter.isEmpty()) {
 			TypeModel typeModel = loader.get(inter);
 			if (typeModel == null)
-				throw new MojoException("can't find endpointInterface '" + inter + "'");
+				throw new RuntimeException("can't find endpointInterface '" + inter + "'");
 			if (!typeModel.isClass())
-				throw new MojoException("endpointInterface isn't an class or interface'" + inter + "'");
+				throw new RuntimeException("endpointInterface isn't an class or interface'" + inter + "'");
 			clazz = typeModel.asClass();
 		}
 		service.collectOp(clazz.asClass(), xmlLoader);
@@ -101,16 +99,16 @@ public class Service {
 		for (MethodModel m : clazz.methods()) {
 			if (m.annotation(PostConstruct.class).isPresent()) {
 				if (!m.parameters().isEmpty())
-					throw new MojoException("PostConstruct method can't have parameters on " + clazz.name());
+					throw new RuntimeException("PostConstruct method can't have parameters on " + clazz.name());
 				if (service.postConstruct != null)
-					throw new MojoException("only one method can be annoted with @PostConstruct on " + clazz.name());
+					throw new RuntimeException("only one method can be annoted with @PostConstruct on " + clazz.name());
 				service.postConstruct = m.name();
 			}
 			if (m.annotation(PreDestroy.class).isPresent()) {
 				if (!m.parameters().isEmpty())
-					throw new MojoException("@PreDestroy method can't have parameters on " + clazz.name());
+					throw new RuntimeException("@PreDestroy method can't have parameters on " + clazz.name());
 				if (service.postConstruct != null)
-					throw new MojoException("only one method can be annoted with @PreDestroy on " + clazz.name());
+					throw new RuntimeException("only one method can be annoted with @PreDestroy on " + clazz.name());
 				service.preDestroy = m.name();
 			}
 		}
@@ -132,10 +130,10 @@ public class Service {
 			a = m.annotation(SOAPBinding.class);
 			Style style = a.flatMap(v -> v.member("style")).filter(v -> v.isSet()).map(v -> v.asEnum(Style.class)).orElse(Style.DOCUMENT);
 			if (style != Style.DOCUMENT)
-				throw new MojoException("Only Document style is managed " + m);
+				throw new RuntimeException("Only Document style is managed " + m);
 			Use use = a.flatMap(v -> v.member("use")).filter(v -> v.isSet()).map(v -> v.asEnum(Use.class)).orElse(Use.LITERAL);
 			if (use != Use.LITERAL)
-				throw new MojoException("Only literal use is managed " + m);
+				throw new RuntimeException("Only literal use is managed " + m);
 			ParameterStyle paramStyle = a.flatMap(v -> v.member("parameterStyle")).filter(v -> v.isSet()).map(v -> v.asEnum(ParameterStyle.class)).orElse(defaultParamStyle);
 
 			Parameter r = null;

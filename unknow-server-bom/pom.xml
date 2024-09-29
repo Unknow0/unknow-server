@@ -17,11 +17,6 @@
 			</dependency>
 			<dependency>
 				<groupId>${project.groupId}</groupId>
-				<artifactId>unknow-server-test-tomcat</artifactId>
-				<version>${project.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>${project.groupId}</groupId>
 				<artifactId>unknow-server-bench</artifactId>
 				<version>${project.version}</version>
 			</dependency>
