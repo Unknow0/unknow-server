@@ -131,10 +131,14 @@ public final class Http11Worker extends HttpWorker {
 	@Override
 	public void run() {
 		super.run();
-		while (!co.pendingRead().isEmpty()) {
-			this.req = new ServletRequestImpl(this, DispatcherType.REQUEST);
-			this.res = new ServletResponseImpl(this);
-			super.run();
+		try {
+			while (Http11Processor.isStart(co.pendingRead())) {
+				this.req = new ServletRequestImpl(this, DispatcherType.REQUEST);
+				this.res = new ServletResponseImpl(this);
+				super.run();
+			}
+		} catch (@SuppressWarnings("unused") InterruptedException e) {
+			Thread.currentThread().interrupt();
 		}
 	}
 
