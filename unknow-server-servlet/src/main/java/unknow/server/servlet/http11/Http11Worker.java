@@ -10,7 +10,6 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import jakarta.servlet.DispatcherType;
 import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.http.Cookie;
 import unknow.server.nio.NIOConnection.Out;
@@ -20,7 +19,6 @@ import unknow.server.servlet.HttpError;
 import unknow.server.servlet.HttpWorker;
 import unknow.server.servlet.impl.AbstractServletOutput;
 import unknow.server.servlet.impl.ServletRequestImpl;
-import unknow.server.servlet.impl.ServletResponseImpl;
 import unknow.server.util.io.Buffers;
 import unknow.server.util.io.BuffersUtils;
 
@@ -126,20 +124,6 @@ public final class Http11Worker extends HttpWorker {
 		for (Cookie c : res.getCookies())
 			writeCookie(out, c);
 		out.write(CRLF);
-	}
-
-	@Override
-	public void run() {
-		super.run();
-		try {
-			while (Http11Processor.isStart(co.pendingRead())) {
-				this.req = new ServletRequestImpl(this, DispatcherType.REQUEST);
-				this.res = new ServletResponseImpl(this);
-				super.run();
-			}
-		} catch (@SuppressWarnings("unused") InterruptedException e) {
-			Thread.currentThread().interrupt();
-		}
 	}
 
 	@SuppressWarnings("resource")
