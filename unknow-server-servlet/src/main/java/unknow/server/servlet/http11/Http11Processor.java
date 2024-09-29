@@ -5,9 +5,7 @@ import java.util.concurrent.Future;
 import unknow.server.servlet.HttpConnection;
 import unknow.server.servlet.HttpProcessor;
 import unknow.server.util.io.Buffers;
-import unknow.server.util.io.Buffers.WalkResult;
 import unknow.server.util.io.BuffersUtils;
-import unknow.server.util.io.BuffersUtils.IndexOfBloc;
 
 /**
  * http/1.1 implementation
@@ -19,8 +17,6 @@ public class Http11Processor implements HttpProcessor {
 
 	private final HttpConnection co;
 
-	private final IndexOfBloc w;
-
 	private volatile Future<?> exec;
 
 	/**
@@ -29,13 +25,12 @@ public class Http11Processor implements HttpProcessor {
 	 */
 	public Http11Processor(HttpConnection co) {
 		this.co = co;
-		this.w = new IndexOfBloc(END);
-		exec = co.submit(new Http11Worker(co));
+		this.exec = co.submit(new Http11Worker(co));
 	}
 
 	@Override
 	public final void process() {
-		if (exec.isDone() && canProcess())
+		if (exec.isDone() && isStart(co.pendingRead()))
 			exec = co.submit(new Http11Worker(co));
 	}
 
@@ -50,18 +45,13 @@ public class Http11Processor implements HttpProcessor {
 		exec.cancel(true);
 	}
 
-	private final boolean canProcess() {
-		this.w.reset();
+	public static final boolean isStart(Buffers b) {
 		try {
-			return co.pendingRead().walk(w, 0, MAX_START_SIZE) == WalkResult.STOPED;
+			return BuffersUtils.indexOf(b, END, 0, MAX_START_SIZE) > 0;
 		} catch (@SuppressWarnings("unused") InterruptedException e) {
 			Thread.currentThread().interrupt();
 			return false;
 		}
-	}
-
-	public static final boolean isStart(Buffers b) throws InterruptedException {
-		return BuffersUtils.indexOf(b, END, 0, MAX_START_SIZE) > 0;
 	}
 
 	/** the processor factory */

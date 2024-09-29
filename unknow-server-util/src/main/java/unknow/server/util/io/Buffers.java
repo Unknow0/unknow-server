@@ -571,20 +571,24 @@ public class Buffers {
 			while (c.l < o) {
 				o -= c.l;
 				c = c.next;
-				if (c == null)
-					return WalkResult.END;
 			}
 			int i = Math.min(l, c.l - o);
 			if (!w.apply(c.b, c.o + o, c.o + o + i))
 				return WalkResult.STOPED;
 			l -= i;
-			while (l > 0 && (c = c.next) != null) {
-				i = Math.min(l, c.l);
-				if (!w.apply(c.b, c.o, c.o + i))
+			while ((c = c.next) != null && l > c.l) {
+				if (!w.apply(c.b, c.o, c.o + c.l))
 					return WalkResult.STOPED;
-				l -= i;
+				l -= c.l;
 			}
-			return l == 0 ? WalkResult.MAX : WalkResult.END;
+			if (c == null || (c = c.next) == null)
+				return WalkResult.END;
+
+			if (l > 0) {
+				if (!w.apply(c.b, c.o, c.o + l))
+					return WalkResult.STOPED;
+			}
+			return WalkResult.MAX;
 		} finally {
 			lock.unlock();
 		}
