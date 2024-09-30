@@ -3,8 +3,6 @@ package unknow.server.nio;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
@@ -24,8 +22,6 @@ public class NIOConnectionSSL extends NIOConnection {
 	private final ByteBuffer rawOut;
 	private final ByteBuffer app;
 
-	private Future<?> handshake = CompletableFuture.completedFuture(null);
-
 	public NIOConnectionSSL(SelectionKey key, SSLContext sslContext) {
 		super(key);
 		this.sslEngine = sslContext.createSSLEngine(getRemote().getHostString(), getRemote().getPort());
@@ -40,7 +36,7 @@ public class NIOConnectionSSL extends NIOConnection {
 	public boolean closed(long now, boolean stop) {
 		if (sslEngine.getHandshakeStatus() != HandshakeStatus.NOT_HANDSHAKING)
 			return false;
-		return handshake.isDone() && isClosed();
+		return isClosed();
 	}
 
 	@Override
@@ -127,9 +123,6 @@ public class NIOConnectionSSL extends NIOConnection {
 	}
 
 	private boolean processHandshake() throws IOException, InterruptedException {
-		if (!handshake.isDone())
-			return true;
-
 		HandshakeStatus hs = sslEngine.getHandshakeStatus();
 		while (true) {
 			SSLEngineResult r;
