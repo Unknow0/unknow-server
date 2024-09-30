@@ -37,6 +37,8 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 
 	private final Queue<SelectionKey> init;
 
+	private long lastCheck;
+
 	/**
 	 * create new IOWorker
 	 * 
@@ -116,6 +118,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 
 	@Override
 	protected void onSelect(boolean close) throws InterruptedException {
+
 		mutex.lock();
 		try {
 			SelectionKey k;
@@ -126,6 +129,9 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			}
 
 			long now = System.currentTimeMillis();
+			if (now - lastCheck < timeout)
+				return;
+			lastCheck = now;
 			for (SelectionKey key : selector.keys()) {
 				NIOConnection co = (NIOConnection) key.attachment();
 				if (!key.isValid() || co.closed(now, close)) {

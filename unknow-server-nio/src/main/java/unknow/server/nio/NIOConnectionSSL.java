@@ -66,11 +66,6 @@ public class NIOConnectionSSL extends NIOConnection {
 	}
 
 	@Override
-	protected void onRead() throws InterruptedException, IOException {
-		logger.info("{}", pendingRead());
-	}
-
-	@Override
 	protected void readFrom(ByteBuffer buf) throws InterruptedException, IOException {
 		lastRead = System.currentTimeMillis();
 		if (processHandshake())
@@ -80,10 +75,10 @@ public class NIOConnectionSSL extends NIOConnection {
 			l = channel.read(rawIn);
 			if (l == -1) {
 				in.close();
-				break;
+				return;
 			}
 			if (l == 0 && rawIn.position() == 0)
-				break;
+				return;
 			rawIn.flip();
 			SSLEngineResult r = sslEngine.unwrap(rawIn, app);
 			logger.debug("unwrap {}", r.getStatus());
@@ -92,8 +87,8 @@ public class NIOConnectionSSL extends NIOConnection {
 			app.flip();
 			pendingRead().write(app);
 			app.compact();
+			onRead();
 		}
-		onRead();
 	}
 
 	@Override

@@ -121,10 +121,10 @@ public class NIOConnection {
 			l = channel.read(buf);
 			if (l == -1) {
 				in.close();
-				break;
+				return;
 			}
 			if (l == 0)
-				break;
+				return;
 			buf.flip();
 
 			if (logger.isTraceEnabled()) {
@@ -135,8 +135,8 @@ public class NIOConnection {
 				buf.reset();
 			}
 			pendingRead.write(buf);
+			onRead();
 		}
-		onRead();
 	}
 
 	/**
