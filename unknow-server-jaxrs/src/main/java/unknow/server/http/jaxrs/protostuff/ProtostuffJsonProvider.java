@@ -6,11 +6,12 @@ import java.io.OutputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 
-import io.protostuff.CodedInput;
+import io.protostuff.JsonIOUtil;
+import io.protostuff.JsonXIOUtil;
 import io.protostuff.LinkedBuffer;
 import io.protostuff.Message;
-import io.protostuff.ProtobufOutput;
 import io.protostuff.Schema;
+import jakarta.annotation.Priority;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.WebApplicationException;
@@ -21,8 +22,9 @@ import jakarta.ws.rs.ext.MessageBodyWriter;
 import jakarta.ws.rs.ext.Provider;
 
 @Provider
-@Consumes({ "application/json", "application/x-ndjson", "application/jsonl" })
-@Produces({ "application/json", "application/x-ndjson", "application/jsonl" })
+@Priority(4500)
+@Consumes({ "application/json"/*, "application/x-ndjson", "application/jsonl"*/ })
+@Produces({ "application/json"/*, "application/x-ndjson", "application/jsonl"*/ })
 @SuppressWarnings("rawtypes")
 public class ProtostuffJsonProvider<T extends Message> implements MessageBodyReader<T>, MessageBodyWriter<T> {
 
@@ -36,8 +38,7 @@ public class ProtostuffJsonProvider<T extends Message> implements MessageBodyRea
 	public void writeTo(T t, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, Object> httpHeaders, OutputStream out)
 			throws IOException, WebApplicationException {
 		LinkedBuffer buffer = LinkedBuffer.allocate(4096);
-		t.cachedSchema().writeTo(new ProtobufOutput(buffer, 4096), t);
-		LinkedBuffer.writeTo(out, buffer);
+		JsonXIOUtil.writeTo(out, t, false, buffer);
 	}
 
 	@Override
@@ -50,7 +51,7 @@ public class ProtostuffJsonProvider<T extends Message> implements MessageBodyRea
 			throws IOException, WebApplicationException {
 		Schema<T> schema = ProtostuffSchema.get(type);
 		T t = schema.newMessage();
-		schema.mergeFrom(new CodedInput(in, false), t);
+		JsonIOUtil.mergeFrom(in, t, schema, false);
 		return t;
 	}
 }

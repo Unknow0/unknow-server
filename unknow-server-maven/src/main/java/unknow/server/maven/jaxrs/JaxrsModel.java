@@ -61,6 +61,8 @@ import jakarta.ws.rs.ext.MessageBodyReader;
 import jakarta.ws.rs.ext.MessageBodyWriter;
 import jakarta.ws.rs.ext.ParamConverterProvider;
 import jakarta.ws.rs.ext.Provider;
+import unknow.server.http.jaxrs.protostuff.ProtostuffJsonProvider;
+import unknow.server.http.jaxrs.protostuff.ProtostuffProvider;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam;
@@ -134,34 +136,40 @@ public class JaxrsModel {
 		this.bodyWriter = loader.get(MessageBodyWriter.class.getName());
 		this.string = loader.get(String.class.getName());
 
-		loadService(cl, MessageBodyReader.class, l -> {
+		Consumer<String> reader = l -> {
 			ClassModel c = loader.get(l).asClass();
-			try {
-				Class.forName(c.name(), true, cl);
-			} catch (ClassNotFoundException | NoClassDefFoundError e) {
-				logger.warn("Failed to load message hander {}", c.name(), e);
-				return;
-			}
 			String[] v = c.annotation(Consumes.class).flatMap(a -> a.value()).filter(a -> a.isSet()).map(a -> a.asArrayLiteral()).orElse(ALL);
 			List<String> list = new ArrayList<>();
 			for (int i = 0; i < v.length; i++)
 				list.addAll(Arrays.asList(v[i].split(" *, *")));
 			readers.put(c, list);
-		});
-		loadService(cl, MessageBodyWriter.class, l -> {
+		};
+		Consumer<String> writer = l -> {
 			ClassModel c = loader.get(l).asClass();
-			try {
-				Class.forName(c.name(), false, cl);
-			} catch (ClassNotFoundException | NoClassDefFoundError e) {
-				logger.warn("Failed to load message hander {}", c.name(), e);
-				return;
-			}
 			String[] v = c.annotation(Produces.class).flatMap(a -> a.value()).filter(a -> a.isSet()).map(a -> a.asArrayLiteral()).orElse(ALL);
 			List<String> list = new ArrayList<>();
 			for (int i = 0; i < v.length; i++)
 				list.addAll(Arrays.asList(v[i].split(" *, *")));
 			writers.put(c, list);
-		});
+		};
+
+		try {
+			cl.loadClass("io.protostuff.ProtobufOutput");
+			reader.accept(ProtostuffProvider.class.getName());
+			writer.accept(ProtostuffProvider.class.getName());
+		} catch (@SuppressWarnings("unused") ClassNotFoundException e) {
+			logger.warn("No protostuff-core");
+		}
+		try {
+			cl.loadClass("io.protostuff.JsonInput");
+			reader.accept(ProtostuffJsonProvider.class.getName());
+			writer.accept(ProtostuffJsonProvider.class.getName());
+		} catch (@SuppressWarnings("unused") ClassNotFoundException e) {
+			logger.warn("No protostuff-json");
+		}
+
+		loadService(cl, MessageBodyReader.class, reader);
+		loadService(cl, MessageBodyWriter.class, writer);
 	}
 
 	private static void loadService(ClassLoader loader, Class<?> clazz, Consumer<String> v) {
