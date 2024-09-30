@@ -66,7 +66,7 @@
 			</plugin>
 			<plugin>
 				<groupId>io.github.ascopes</groupId>
-  				<artifactId>protobuf-maven-plugin</artifactId>
+				<artifactId>protobuf-maven-plugin</artifactId>
 			</plugin>
 			<plugin>
 				<groupId>io.protostuff</groupId>

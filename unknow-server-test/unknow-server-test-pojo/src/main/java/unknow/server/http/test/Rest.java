@@ -55,18 +55,10 @@ public class Rest {
 	}
 
 	@POST
-	public Truc call(Truc truc, @QueryParam("debug") String debug) {
-		logger.info("call>> truc: {}, debug: {}", truc, debug);
+	@Consumes({ "application/x-protobuf", "application/json" })
+	@Produces({ "application/x-protobuf", "application/json" })
+	public Truc call(Truc truc) {
 		return truc;
-	}
-
-	public static class Truc {
-		public String v;
-
-		@Override
-		public String toString() {
-			return "Truc [v=" + v + "]";
-		}
 	}
 
 	public enum E {

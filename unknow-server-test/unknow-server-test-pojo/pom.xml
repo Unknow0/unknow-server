@@ -30,6 +30,15 @@
 		<url>https://github.com/Unknow0/unknow-server</url>
 	</scm>
 
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>io.protostuff</groupId>
+				<artifactId>protostuff-maven-plugin</artifactId>
+			</plugin>
+		</plugins>
+	</build>
+
 	<dependencies>
 		<dependency>
 			<groupId>jakarta.servlet</groupId>
@@ -52,6 +61,18 @@
 			<groupId>jakarta.xml.bind</groupId>
 			<artifactId>jakarta.xml.bind-api</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>io.protostuff</groupId>
+			<artifactId>protostuff-runtime</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.protostuff</groupId>
+			<artifactId>protostuff-core</artifactId>
+		</dependency>
+		<!--dependency>
+			<groupId>io.protostuff</groupId>
+			<artifactId>protostuff-json</artifactId>
+		</dependency-->
 
 		<dependency>
 			<groupId>org.slf4j</groupId>
