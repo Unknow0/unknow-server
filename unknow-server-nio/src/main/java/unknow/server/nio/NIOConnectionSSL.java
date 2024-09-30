@@ -71,24 +71,22 @@ public class NIOConnectionSSL extends NIOConnection {
 		if (processHandshake())
 			return;
 		int l;
-		while (true) {
-			l = channel.read(rawIn);
-			if (l == -1) {
-				in.close();
-				return;
-			}
-			if (l == 0 && rawIn.position() == 0)
-				return;
-			rawIn.flip();
-			SSLEngineResult r = sslEngine.unwrap(rawIn, app);
-			logger.debug("unwrap {}", r.getStatus());
-			rawIn.compact();
-
-			app.flip();
-			pendingRead().write(app);
-			app.compact();
-			onRead();
+		l = channel.read(rawIn);
+		if (l == -1) {
+			in.close();
+			return;
 		}
+		if (l == 0 && rawIn.position() == 0)
+			return;
+		rawIn.flip();
+		SSLEngineResult r = sslEngine.unwrap(rawIn, app);
+		logger.debug("unwrap {}", r.getStatus());
+		rawIn.compact();
+
+		app.flip();
+		pendingRead().write(app);
+		app.compact();
+		onRead();
 	}
 
 	@Override
