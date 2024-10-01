@@ -23,8 +23,8 @@ import jakarta.ws.rs.ext.Provider;
 
 @Provider
 @Priority(4500)
-@Consumes({ "application/json"/*, "application/x-ndjson", "application/jsonl"*/ })
-@Produces({ "application/json"/*, "application/x-ndjson", "application/jsonl"*/ })
+@Consumes({ "application/json", "application/x-ndjson", "application/jsonl" })
+@Produces({ "application/json", "application/x-ndjson", "application/jsonl" })
 @SuppressWarnings("rawtypes")
 public class ProtostuffJsonProvider<T extends Message> implements MessageBodyReader<T>, MessageBodyWriter<T> {
 

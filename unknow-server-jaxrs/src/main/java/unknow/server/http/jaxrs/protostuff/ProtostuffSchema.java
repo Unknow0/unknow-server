@@ -1,5 +1,6 @@
 package unknow.server.http.jaxrs.protostuff;
 
+import java.lang.reflect.Type;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -10,8 +11,11 @@ import io.protostuff.Schema;
 public class ProtostuffSchema {
 	private static final Map<Class, Schema> SCHEMA = new ConcurrentHashMap<>();
 
-	public static <T extends Message> Schema<T> get(Class<T> clazz) {
-		return SCHEMA.computeIfAbsent(clazz, ProtostuffSchema::createSchema);
+	public static <T extends Message> Schema<T> get(Type type) {
+		if (!(type instanceof Class))
+			throw new RuntimeException("No schema for type " + type);
+		Class cl = (Class) type;
+		return SCHEMA.computeIfAbsent(cl, ProtostuffSchema::createSchema);
 	}
 
 	private static <S extends Message> Schema<S> createSchema(Class<S> clazz) {
