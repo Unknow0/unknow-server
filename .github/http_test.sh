@@ -74,3 +74,6 @@ cat out.xml | xml_parse | diff - .github/xml/bare_res.xml || die 'webservice bar
 cat out.xml | xml_parse | tee out | diff - .github/xml/wrapped_res.xml || die 'webservice wrapped content'
 
 curl -s -XGET "$URL/ws?wsdl" | xmllint --format - >/dev/null || die 'webservice wsdl'
+
+curl -s -XPOST --data-binary @.github/truc.binpb -H 'Accept:application/x-protobuf' -H 'Content-type: application/x-protobuf' -o out.binpb "$URL/rest/q" && diff -q .github/truc.binpb out.binpb
+

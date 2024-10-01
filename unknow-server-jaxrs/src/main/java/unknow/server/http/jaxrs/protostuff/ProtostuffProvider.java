@@ -6,10 +6,9 @@ import java.io.OutputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 
-import io.protostuff.CodedInput;
 import io.protostuff.LinkedBuffer;
 import io.protostuff.Message;
-import io.protostuff.ProtobufOutput;
+import io.protostuff.ProtobufIOUtil;
 import io.protostuff.Schema;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.Produces;
@@ -36,7 +35,7 @@ public class ProtostuffProvider<T extends Message> implements MessageBodyReader<
 	public void writeTo(T t, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, Object> httpHeaders, OutputStream out)
 			throws IOException, WebApplicationException {
 		LinkedBuffer buffer = LinkedBuffer.allocate(4096);
-		t.cachedSchema().writeTo(new ProtobufOutput(buffer, 4096), t);
+		ProtobufIOUtil.writeTo(buffer, t, t.cachedSchema());
 		LinkedBuffer.writeTo(out, buffer);
 	}
 
@@ -50,7 +49,7 @@ public class ProtostuffProvider<T extends Message> implements MessageBodyReader<
 			throws IOException, WebApplicationException {
 		Schema<T> schema = ProtostuffSchema.get(type);
 		T t = schema.newMessage();
-		schema.mergeFrom(new CodedInput(in, false), t);
+		ProtobufIOUtil.mergeFrom(in, t, schema);
 		return t;
 	}
 }

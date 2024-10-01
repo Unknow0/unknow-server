@@ -55,8 +55,8 @@ public class Rest {
 	}
 
 	@POST
-	@Consumes({ "application/x-protobuf", "application/json" })
-	@Produces({ "application/x-protobuf", "application/json" })
+	@Consumes({ "application/x-protobuf", "application/json", "application/x-ndjson" })
+	@Produces({ "application/x-protobuf", "application/json", "application/x-ndjson" })
 	public Truc call(Truc truc) {
 		return truc;
 	}
