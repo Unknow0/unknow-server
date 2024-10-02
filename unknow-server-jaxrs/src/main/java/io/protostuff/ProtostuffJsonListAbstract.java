@@ -8,46 +8,63 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 
-import jakarta.annotation.Priority;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.MultivaluedMap;
-import jakarta.ws.rs.ext.Provider;
+import unknow.server.http.jaxrs.protostuff.ProtostuffListAbstract;
 import unknow.server.http.jaxrs.protostuff.ProtostuffSchema;
 
-@Provider
-@Priority(4500)
-@Consumes({ "application/x-ndjson", "application/jsonl" })
-@Produces({ "application/x-ndjson", "application/jsonl" })
-public class ProtostuffJsonLineProvider<T extends Message<?>> extends ProtostuffJsonListAbstract<T> {
+public abstract class ProtostuffJsonListAbstract<T extends Message<?>> extends ProtostuffListAbstract<T> {
 	private static final JsonFactory FACTORY = JsonFactory.builder().build();
 
-	@Override
-	protected void writeEmpty(OutputStream out) {
-		// nothing
-	}
+	protected abstract void writeEmpty(OutputStream out) throws IOException;
+
+	protected abstract void writeEnd(JsonXOutput output) throws IOException;
+
+	protected abstract void writeSeparator(JsonXOutput output) throws IOException;
+
+	protected abstract void writeStart(JsonXOutput output) throws IOException;
 
 	@Override
-	protected void writeStart(JsonXOutput output) throws IOException {
-		// nothing
-	}
+	public final void writeTo(Collection<T> t, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, Object> httpHeaders,
+			OutputStream out) throws IOException, WebApplicationException {
+		if (t.isEmpty()) {
+			writeEmpty(out);
+			return;
+		}
 
-	@Override
-	protected void writeSeparator(JsonXOutput output) throws IOException {
-		output.tail = output.sink.writeByte((byte) '\n', output, output.tail);
-	}
+		Type p = ((ParameterizedType) genericType).getActualTypeArguments()[0];
 
-	@Override
-	protected void writeEnd(JsonXOutput output) throws IOException {
-		output.tail = output.sink.writeByte((byte) '\n', output, output.tail);
+		LinkedBuffer buffer = LinkedBuffer.allocate(4096);
+		Schema<T> schema = ProtostuffSchema.get(p);
+		final JsonXOutput output = new JsonXOutput(buffer, out, false, schema);
+
+		writeStart(output);
+
+		Iterator<T> it = t.iterator();
+		output.writeStartObject();
+		schema.writeTo(output, it.next());
+		if (output.isLastRepeated())
+			output.writeEndArray();
+		output.writeEndObject();
+		while (it.hasNext()) {
+			writeSeparator(output);
+			output.writeStartObject();
+			schema.writeTo(output, it.next());
+			if (output.isLastRepeated())
+				output.writeEndArray();
+			output.writeEndObject();
+		}
+
+		writeEnd(output);
+		LinkedBuffer.writeTo(out, buffer);
 	}
 
 	@Override

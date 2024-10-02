@@ -19,25 +19,15 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.MultivaluedMap;
-import jakarta.ws.rs.ext.MessageBodyReader;
-import jakarta.ws.rs.ext.MessageBodyWriter;
 import jakarta.ws.rs.ext.Provider;
 
 @Provider
 @Priority(4500)
 @Consumes({ "application/x-protobuf" })
 @Produces({ "application/x-protobuf" })
-public class ProtostuffListProvider<T extends Message<?>> implements MessageBodyReader<Collection<T>>, MessageBodyWriter<Collection<T>> {
+public class ProtostuffListProvider<T extends Message<?>> extends ProtostuffListAbstract<T> {
 
 	private static final byte[] EMPTY = { '[', ']' };
-
-	@Override
-	public boolean isWriteable(Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
-		if (!(genericType instanceof ParameterizedType))
-			return false;
-		Type p = ((ParameterizedType) genericType).getActualTypeArguments()[0];
-		return p instanceof Class && Message.class.isAssignableFrom((Class<?>) p);
-	}
 
 	@Override
 	public void writeTo(Collection<T> list, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, Object> httpHeaders,
@@ -60,11 +50,6 @@ public class ProtostuffListProvider<T extends Message<?>> implements MessageBody
 			LinkedBuffer.writeTo(out, buffer);
 			output.clear();
 		}
-	}
-
-	@Override
-	public boolean isReadable(Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
-		return isWriteable(type, genericType, annotations, mediaType);
 	}
 
 	@Override
