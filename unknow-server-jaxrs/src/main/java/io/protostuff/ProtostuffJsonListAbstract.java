@@ -67,29 +67,29 @@ public abstract class ProtostuffJsonListAbstract<T extends Message<?>> extends P
 		LinkedBuffer.writeTo(out, buffer);
 	}
 
+	protected abstract void readStart(JsonParser parser) throws IOException;
+
 	@Override
-	public Collection<T> readFrom(Class<Collection<T>> type, Type genericType, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, String> httpHeaders,
+	public final Collection<T> readFrom(Class<Collection<T>> type, Type genericType, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, String> httpHeaders,
 			InputStream in) throws IOException, WebApplicationException {
 		Type p = ((ParameterizedType) genericType).getActualTypeArguments()[0];
 
 		Schema<T> schema = ProtostuffSchema.get(p);
 		List<T> list = new ArrayList<T>();
 		try (JsonParser parser = FACTORY.createParser(in)) {
-			if (parser.nextToken() != JsonToken.START_ARRAY)
-				throw new JsonInputException("Expected token: [ but was " + parser.getCurrentToken() + " on message: " + schema.messageFullName());
+			readStart(parser);
 
 			JsonInput input = new JsonInput(parser, false);
 			JsonToken t;
-			while ((t = parser.nextToken()) != JsonToken.END_ARRAY) {
+			while ((t = parser.nextToken()) != JsonToken.END_ARRAY && t != null) {
 				if (t != JsonToken.START_OBJECT)
 					throw new JsonInputException("Expected token: { but was " + parser.getCurrentToken() + " on message " + schema.messageFullName());
 
 				final T message = schema.newMessage();
 				schema.mergeFrom(input, message);
 
-				if (parser.getCurrentToken() != JsonToken.END_OBJECT) {
+				if (parser.getCurrentToken() != JsonToken.END_OBJECT)
 					throw new JsonInputException("Expected token: } but was " + parser.getCurrentToken() + " on message " + schema.messageFullName());
-				}
 
 				list.add(message);
 				input.reset();
