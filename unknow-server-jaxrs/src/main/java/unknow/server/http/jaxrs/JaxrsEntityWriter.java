@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 
+import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.GenericEntity;
@@ -36,11 +37,11 @@ public interface JaxrsEntityWriter<T> {
 	/**
 	 * write the object
 	 * 
-	 * @param r   the request
-	 * @param e   the oject
+	 * @param r the request
+	 * @param e the oject
 	 * @param res the response
 	 * @throws WebApplicationException on application error
-	 * @throws IOException             on io error
+	 * @throws IOException on io error
 	 */
 	void write(JaxrsReq r, T e, HttpServletResponse res) throws WebApplicationException, IOException;
 
@@ -65,7 +66,9 @@ public interface JaxrsEntityWriter<T> {
 		public void write(JaxrsReq r, Object e, HttpServletResponse res) throws WebApplicationException, IOException {
 			MediaType mediaType = r.getAccept();
 			MultivaluedMap<String, Object> httpHeaders = new ResponseHeader(res);
-			JaxrsContext.writer(clazz, genericType, annotations, mediaType).writeTo(e, clazz, genericType, annotations, mediaType, httpHeaders, res.getOutputStream());
+			try (ServletOutputStream out = res.getOutputStream()) {
+				JaxrsContext.writer(clazz, genericType, annotations, mediaType).writeTo(e, clazz, genericType, annotations, mediaType, httpHeaders, out);
+			}
 		}
 	}
 
@@ -101,8 +104,11 @@ public interface JaxrsEntityWriter<T> {
 
 				if (o instanceof GenericEntity)
 					GenericWriter.write((GenericEntity<?>) o, mediaType, a, res);
-				else
-					JaxrsContext.writer(clazz, clazz, a, mediaType).writeTo(e.getEntity(), clazz, clazz, a, mediaType, httpHeaders, res.getOutputStream());
+				else {
+					try (ServletOutputStream out = res.getOutputStream()) {
+						JaxrsContext.writer(clazz, clazz, a, mediaType).writeTo(e.getEntity(), clazz, clazz, a, mediaType, httpHeaders, out);
+					}
+				}
 			}
 		}
 	}
@@ -130,7 +136,9 @@ public interface JaxrsEntityWriter<T> {
 			Object o = e.getEntity();
 
 			MultivaluedMap<String, Object> httpHeaders = new ResponseHeader(res);
-			JaxrsContext.writer(clazz, genericType, annotations, mediaType).writeTo(o, clazz, genericType, annotations, mediaType, httpHeaders, res.getOutputStream());
+			try (ServletOutputStream out = res.getOutputStream()) {
+				JaxrsContext.writer(clazz, genericType, annotations, mediaType).writeTo(o, clazz, genericType, annotations, mediaType, httpHeaders, out);
+			}
 		}
 	}
 }
