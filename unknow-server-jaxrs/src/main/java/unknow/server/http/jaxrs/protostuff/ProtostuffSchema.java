@@ -11,9 +11,12 @@ import io.protostuff.Schema;
 public class ProtostuffSchema {
 	private static final Map<Class, Schema> SCHEMA = new ConcurrentHashMap<>();
 
+	private ProtostuffSchema() {
+	}
+
 	public static <T extends Message> Schema<T> get(Type type) {
 		if (!(type instanceof Class))
-			throw new RuntimeException("No schema for type " + type);
+			throw new IllegalArgumentException("No schema for type " + type);
 		Class cl = (Class) type;
 		return SCHEMA.computeIfAbsent(cl, ProtostuffSchema::createSchema);
 	}
@@ -22,7 +25,7 @@ public class ProtostuffSchema {
 		try {
 			return clazz.getDeclaredConstructor().newInstance().cachedSchema();
 		} catch (Exception e) {
-			throw new RuntimeException(e);
+			throw new IllegalArgumentException(e);
 		}
 	}
 }
