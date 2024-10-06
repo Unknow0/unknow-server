@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory;
 
 import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.http.Cookie;
-import unknow.server.nio.NIOConnection.Out;
+import unknow.server.nio.NIOConnectionAbstract.Out;
 import unknow.server.servlet.Decode;
 import unknow.server.servlet.HttpConnection;
 import unknow.server.servlet.HttpError;

@@ -67,7 +67,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	 */
 	@SuppressWarnings("resource")
 	@Override
-	public final void register(SocketChannel socket, Function<SelectionKey, ? extends NIOConnection> pool) throws IOException, InterruptedException {
+	public final void register(SocketChannel socket, Function<SelectionKey, NIOConnectionAbstract> pool) throws IOException, InterruptedException {
 		socket.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.TRUE).configureBlocking(false);
 		mutex.lockInterruptibly();
 		try {
@@ -83,7 +83,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	@Override
 	@SuppressWarnings("resource")
 	protected final void selected(SelectionKey key) throws IOException, InterruptedException {
-		NIOConnection h = (NIOConnection) key.attachment();
+		NIOConnectionAbstract h = (NIOConnectionAbstract) key.attachment();
 		SocketChannel channel = (SocketChannel) key.channel();
 
 		if (key.isValid() && key.isWritable()) {
@@ -123,7 +123,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		try {
 			SelectionKey k;
 			while ((k = init.poll()) != null) {
-				NIOConnection co = (NIOConnection) k.attachment();
+				NIOConnectionAbstract co = (NIOConnectionAbstract) k.attachment();
 				listener.accepted(id, co);
 				co.onInit();
 			}
@@ -133,7 +133,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 				return;
 			lastCheck = now;
 			for (SelectionKey key : selector.keys()) {
-				NIOConnection co = (NIOConnection) key.attachment();
+				NIOConnectionAbstract co = (NIOConnectionAbstract) key.attachment();
 				if (!key.isValid() || co.closed(now, close)) {
 					listener.closed(id, co);
 					key.cancel();

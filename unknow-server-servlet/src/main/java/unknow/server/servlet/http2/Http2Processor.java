@@ -206,7 +206,7 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 		} finally {
 			write.unlock();
 		}
-		co.toggleKeyOps();
+		co.flush();
 	}
 
 	public void rawWrite(byte[] b) throws InterruptedException {
@@ -217,7 +217,7 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 		} finally {
 			write.unlock();
 		}
-		co.toggleKeyOps();
+		co.flush();
 	}
 
 	public void sendHeaders(int id, ServletResponseImpl res) throws InterruptedException {

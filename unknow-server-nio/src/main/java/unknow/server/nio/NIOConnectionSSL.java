@@ -13,7 +13,7 @@ import javax.net.ssl.SSLEngineResult.Status;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class NIOConnectionSSL extends NIOConnection {
+public class NIOConnectionSSL extends NIOConnectionAbstract {
 	private static final Logger logger = LoggerFactory.getLogger(NIOConnectionSSL.class);
 
 	protected final SSLEngine sslEngine;
@@ -22,8 +22,8 @@ public class NIOConnectionSSL extends NIOConnection {
 	private final ByteBuffer rawOut;
 	private final ByteBuffer app;
 
-	public NIOConnectionSSL(SelectionKey key, SSLContext sslContext) {
-		super(key);
+	public NIOConnectionSSL(SelectionKey key, NIOConnectionHandler handler, SSLContext sslContext) {
+		super(key, handler);
 		this.sslEngine = sslContext.createSSLEngine(getRemote().getHostString(), getRemote().getPort());
 		this.rawIn = ByteBuffer.allocate(sslEngine.getSession().getPacketBufferSize());
 		this.rawOut = ByteBuffer.allocate(sslEngine.getSession().getPacketBufferSize());
@@ -41,7 +41,7 @@ public class NIOConnectionSSL extends NIOConnection {
 
 	@Override
 	protected final void onInit() throws InterruptedException {
-		onInit(sslEngine);
+		handler.onInit(this, sslEngine);
 		try {
 			sslEngine.beginHandshake();
 			processHandshake();
@@ -51,18 +51,8 @@ public class NIOConnectionSSL extends NIOConnection {
 		}
 	}
 
-	protected void onInit(@SuppressWarnings("unused") SSLEngine sslEngine) { // for override
-	}
-
-	/**
-	 * called when the handshake process finish
-	 * @throws InterruptedException on interrupt
-	 */
-	protected void onHandshakeDone() throws InterruptedException { // for override
-	}
-
 	@Override
-	protected void readFrom(ByteBuffer buf) throws InterruptedException, IOException {
+	protected final void readFrom(ByteBuffer buf) throws InterruptedException, IOException {
 		lastRead = System.currentTimeMillis();
 		if (processHandshake())
 			return;
@@ -81,14 +71,14 @@ public class NIOConnectionSSL extends NIOConnection {
 			rawIn.compact();
 
 			app.flip();
-			pendingRead().write(app);
+			pendingRead.write(app);
 			app.compact();
-			onRead();
+			handler.onRead(pendingRead);
 		}
 	}
 
 	@Override
-	protected void writeInto(ByteBuffer buf) throws InterruptedException, IOException {
+	protected final void writeInto(ByteBuffer buf) throws InterruptedException, IOException {
 		lastWrite = System.currentTimeMillis();
 		if (rawOut.remaining() > 0) {
 			channel.write(rawOut);
@@ -121,7 +111,7 @@ public class NIOConnectionSSL extends NIOConnection {
 			app.compact();
 		}
 		toggleKeyOps();
-		onWrite();
+		handler.onWrite();
 	}
 
 	private boolean processHandshake() throws IOException, InterruptedException {
@@ -165,7 +155,7 @@ public class NIOConnectionSSL extends NIOConnection {
 					break;
 				case FINISHED:
 					toggleKeyOps();
-					onHandshakeDone(); // fallthrough
+					handler.onHandshakeDone(sslEngine); // fallthrough
 				default:
 					return false;
 			}
