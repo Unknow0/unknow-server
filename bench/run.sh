@@ -43,18 +43,18 @@ cxf_stop=tomcat_stop
 mkdir -p out
 trap '[[ "$pid" ]] && kill -9 $pid' EXIT
 
-keytool -genkey -alias server -keyalg RSA -validity 365 -keystore store.jks -storepass 123456 -storetype JKS -dname "C=FR"
+keytool -genkey -alias server -keyalg RSA -validity 365 -keystore store.jks -storepass 123456 -storetype JKS -keypass 123456 -dname "C=FR"
 
 mkdir -p out logs
 
 ${1}_start
 sleep 10
 echo -e "\nWarming up"
-sh bench/tests.sh 127.0.0.1 1 200000 > out/$1.csv 2>&1
+sh bench/tests.sh 127.0.0.1 1 200000 > /dev/null 2>&1
 
 sleep 10
 echo -e "\nTesting.."
-sh bench/tests.sh 127.0.0.1 10 12000000 > out/$1.csv 2>&1
+sh bench/tests.sh 127.0.0.1 10 1200000 > out/$1.csv 2>&1
 
 ${1}_stop
 sleep 10

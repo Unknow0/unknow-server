@@ -85,6 +85,7 @@ public final class HttpConnection implements NIOConnectionHandler {
 			p.process();
 	}
 
+	@SuppressWarnings("resource")
 	@Override
 	public boolean closed(long now, boolean stop) {
 		if (stop)
