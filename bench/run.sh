@@ -50,11 +50,11 @@ mkdir -p out logs
 ${1}_start
 sleep 10
 echo -e "\nWarming up"
-sh bench/tests.sh 127.0.0.1 1 200000  > out/$1.csv
+sh bench/tests.sh 127.0.0.1 1 200000 > out/$1.csv 2>&1
 
 sleep 10
 echo -e "\nTesting.."
-sh bench/tests.sh 127.0.0.1 1 1200000  > out/$1.csv
+sh bench/tests.sh 127.0.0.1 10 12000000 > out/$1.csv 2>&1
 
 ${1}_stop
 sleep 10

@@ -179,9 +179,8 @@ public abstract class NIOConnectionAbstract {
 	 * @param stop if true the server is in stop phase
 	 * @return true is the collection is closed
 	 */
-	@SuppressWarnings("unused")
 	public boolean closed(long now, boolean stop) {
-		return isClosed();
+		return handler.closed(now, stop);
 	}
 
 	/**
