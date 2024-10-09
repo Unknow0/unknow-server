@@ -19,6 +19,7 @@ import org.apache.commons.math3.distribution.TDistribution;
 
 public class ProcessResult {
 	private static final CSVFormat JTL = CSVFormat.newFormat(',').builder().setHeader().setSkipHeaderRecord(true).setQuote('"').build();
+	private static final CSVFormat CSV = CSVFormat.newFormat(' ');
 	private static final CSVFormat H2 = CSVFormat.newFormat('\t');
 
 	private static final double MILLI = 1000.;
@@ -30,6 +31,27 @@ public class ProcessResult {
 
 	public ProcessResult(String[] servers) {
 		this.servers = servers;
+	}
+
+	private void readCsv(BufferedReader r, String n) throws IOException {
+		Map<String, Result> stats = results.computeIfAbsent(n, k -> new HashMap<>());
+		try (CSVParser parser = CSVParser.parse(r, CSV)) {
+			for (CSVRecord l : parser) {
+				String name = l.get(0);
+				if ("duration".equals(name)) {
+					stats.computeIfAbsent(l.get(1), k -> new Result()).add(Double.parseDouble(l.get(2)), 0, -1, false);
+					continue;
+				}
+
+				tests.add(name);
+
+				boolean e = !("missing".equals(name) ? "404" : "200").equals(l.get(1));
+				double v = Double.parseDouble(l.get(2));
+				double c = Double.parseDouble(l.get(3));
+
+				stats.computeIfAbsent(name, k -> new Result()).add(0, v, c, e);
+			}
+		}
 	}
 
 	private void readJtl(BufferedReader r, String n) throws IOException {
@@ -112,6 +134,8 @@ public class ProcessResult {
 			l[0] = s;
 			int i = 0;
 			Map<String, Result> map = results.get(s);
+			if (map == null)
+				continue;
 			for (String t : tests) {
 				Result r = map.get(t);
 				l[++i] = r == null ? "" : v.apply(r);
@@ -123,6 +147,11 @@ public class ProcessResult {
 	public static void main(String[] args) {
 		ProcessResult process = new ProcessResult(args);
 		for (String s : args) {
+			try (BufferedReader r = Files.newBufferedReader(Paths.get("out", s + ".csv"))) {
+				process.readCsv(r, s);
+			} catch (IOException e) {
+				System.err.println(e.getMessage());
+			}
 			try (BufferedReader r = Files.newBufferedReader(Paths.get("out", s + ".jtl"))) {
 				process.readJtl(r, s);
 			} catch (IOException e) {
