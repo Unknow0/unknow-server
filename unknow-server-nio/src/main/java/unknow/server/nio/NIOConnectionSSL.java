@@ -36,7 +36,7 @@ public class NIOConnectionSSL extends NIOConnectionAbstract {
 	public boolean closed(long now, boolean stop) {
 		if (sslEngine.getHandshakeStatus() != HandshakeStatus.NOT_HANDSHAKING)
 			return false;
-		return isClosed();
+		return handler.closed(now, stop);
 	}
 
 	@Override
@@ -46,8 +46,12 @@ public class NIOConnectionSSL extends NIOConnectionAbstract {
 			sslEngine.beginHandshake();
 			processHandshake();
 		} catch (IOException e) {
+			try {
+				channel.close();
+			} catch (IOException e1) {
+				e.addSuppressed(e1);
+			}
 			logger.error("Failed to start connection", e);
-			key.cancel();
 		}
 	}
 

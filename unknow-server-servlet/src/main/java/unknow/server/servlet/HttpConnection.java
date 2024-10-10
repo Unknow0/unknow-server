@@ -42,10 +42,11 @@ public final class HttpConnection implements NIOConnectionHandler {
 
 	/**
 	 * create new RequestBuilder
+	 * 
 	 * @param executor the executor
 	 * @param ctx the servlet context
-	 * @param events 
-	 * @param manager 
+	 * @param events
+	 * @param manager
 	 */
 	protected HttpConnection(ExecutorService executor, ServletContextImpl ctx, ServletManager manager, EventManager events, int keepAliveIdle) {
 		this.executor = executor;
