@@ -1,5 +1,6 @@
 package unknow.server.servlet.http11;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
 import unknow.server.servlet.HttpConnection;
@@ -21,11 +22,12 @@ public class Http11Processor implements HttpProcessor {
 
 	/**
 	 * new http11 processor
+	 * 
 	 * @param co the connection
 	 */
-	public Http11Processor(HttpConnection co) {
+	public Http11Processor(HttpConnection co, boolean start) {
 		this.co = co;
-		this.exec = co.submit(new Http11Worker(co));
+		this.exec = start ? co.submit(new Http11Worker(co)) : CompletableFuture.completedFuture(null);
 	}
 
 	@Override
@@ -57,7 +59,7 @@ public class Http11Processor implements HttpProcessor {
 	/** the processor factory */
 	public static final HttpProcessorFactory Factory = co -> {
 		if (isStart(co.pendingRead()))
-			return new Http11Processor(co);
+			return new Http11Processor(co, true);
 		return null;
 	};
 }

@@ -73,7 +73,7 @@ public final class HttpConnection implements NIOConnectionHandler {
 		if ("h2".equals(sslEngine.getApplicationProtocol()))
 			p = new Http2Processor(this);
 		else
-			p = new Http11Processor(this);
+			p = new Http11Processor(this, false);
 		p.process();
 	}
 
