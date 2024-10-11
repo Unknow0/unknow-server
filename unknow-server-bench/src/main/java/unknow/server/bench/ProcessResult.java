@@ -2,7 +2,9 @@ package unknow.server.bench;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Formatter;
 import java.util.HashMap;
@@ -144,14 +146,20 @@ public class ProcessResult {
 		}
 	}
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException {
 		ProcessResult process = new ProcessResult(args);
+
 		for (String s : args) {
-			try (BufferedReader r = Files.newBufferedReader(Paths.get("out", s + ".csv"))) {
-				process.readCsv(r, s);
-			} catch (IOException e) {
-				System.err.println(e.getMessage());
+			try (DirectoryStream<Path> out = Files.newDirectoryStream(Paths.get("out", s))) {
+				for (Path p : out) {
+					try (BufferedReader r = Files.newBufferedReader(p)) {
+						process.readCsv(r, s);
+					} catch (IOException e) {
+						System.err.println(e.getMessage());
+					}
+				}
 			}
+
 			try (BufferedReader r = Files.newBufferedReader(Paths.get("out", s + ".jtl"))) {
 				process.readJtl(r, s);
 			} catch (IOException e) {

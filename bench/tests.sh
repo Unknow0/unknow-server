@@ -3,13 +3,24 @@
 h=$1
 p=$2
 c=$3
+out=$4
+
+out() {
+	if [[ -z $out ]]
+	then
+		cat - > /dev/null
+	else
+		mkdir -p $out
+		cat - > $out/$1.csv
+	fi
+}
 
 curls() {
 	n=$1
 	shift
 	for((i=0; i<$p; i++))
 	do
-		curl -s -o /dev/null --no-progress-meter -w "$n %{response_code} %{time_total} %{time_starttransfer} %{errormsg}\n" "$@" &
+		curl -s -o /dev/null --no-progress-meter -w "$n %{response_code} %{time_total} %{time_starttransfer} %{errormsg}\n" "$@" | out $i &
 	done
 	wait $(jobs -p)
 }
@@ -17,7 +28,7 @@ curls() {
 test() {
 	TIMEFORMAT="duration $1 %R"
 	echo "run $1" >&2
-	{ time curls "$@"; } 2> >(tee /dev/stderr)
+	{ time curls "$@"; } |& tee /dev/stderr | out times
 }
 
 cd "$(dirname "$0")"
