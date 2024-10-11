@@ -54,7 +54,7 @@ bash bench/tests.sh 127.0.0.1 1  100000 > /dev/null
 
 sleep 10
 echo -e "\nTesting.."
-bash bench/tests.sh 127.0.0.1 10 600000 > out/$1.csv
+bash bench/tests.sh 127.0.0.1 10 1000000 > out/$1.csv
 
 ${1}_stop
 sleep 10
