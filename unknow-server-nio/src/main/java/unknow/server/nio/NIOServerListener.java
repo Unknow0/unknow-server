@@ -28,7 +28,7 @@ public interface NIOServerListener {
 	 * @param id worker id
 	 * @param h  client handler
 	 */
-	void accepted(int id, NIOConnection h);
+	void accepted(int id, NIOConnectionAbstract h);
 
 	/**
 	 * a connection is closed
@@ -36,7 +36,7 @@ public interface NIOServerListener {
 	 * @param id worker id
 	 * @param h  client handler
 	 */
-	void closed(int id, NIOConnection h);
+	void closed(int id, NIOConnectionAbstract h);
 
 	/**
 	 * call before the server stop
@@ -55,11 +55,11 @@ public interface NIOServerListener {
 		}
 
 		@Override
-		public void accepted(int id, NIOConnection h) { // OK
+		public void accepted(int id, NIOConnectionAbstract h) { // OK
 		}
 
 		@Override
-		public void closed(int id, NIOConnection h) { // OK
+		public void closed(int id, NIOConnectionAbstract h) { // OK
 		}
 
 		@Override
@@ -86,12 +86,12 @@ public interface NIOServerListener {
 		}
 
 		@Override
-		public void accepted(int id, NIOConnection h) {
+		public void accepted(int id, NIOConnectionAbstract h) {
 			logger.info("Worker-{} accepted {} ({})", id, h, c.incrementAndGet());
 		}
 
 		@Override
-		public void closed(int id, NIOConnection h) {
+		public void closed(int id, NIOConnectionAbstract h) {
 			logger.info("Worker-{} closed {} ({})", id, h, c.decrementAndGet());
 		}
 
@@ -138,13 +138,13 @@ public interface NIOServerListener {
 		}
 
 		@Override
-		public void accepted(int id, NIOConnection h) {
+		public void accepted(int id, NIOConnectionAbstract h) {
 			for (int i = 0; i < listeners.length; i++)
 				listeners[i].accepted(id, h);
 		}
 
 		@Override
-		public void closed(int id, NIOConnection h) {
+		public void closed(int id, NIOConnectionAbstract h) {
 			for (int i = 0; i < listeners.length; i++)
 				listeners[i].closed(id, h);
 		}

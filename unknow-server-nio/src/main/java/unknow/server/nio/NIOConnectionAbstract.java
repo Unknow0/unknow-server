@@ -10,9 +10,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import unknow.server.util.io.Buffers;
 import unknow.server.util.io.BuffersInputStream;
 
@@ -21,15 +18,14 @@ import unknow.server.util.io.BuffersInputStream;
  * 
  * @author unknow
  */
-public class NIOConnection {
-	private static final Logger logger = LoggerFactory.getLogger(NIOConnection.class);
+public abstract class NIOConnectionAbstract {
 
 	private static final InetSocketAddress DISCONECTED = InetSocketAddress.createUnresolved("", 0);
 
 	/** the data waiting to be wrote */
-	private final Buffers pendingWrite = new Buffers();
+	protected final Buffers pendingWrite = new Buffers();
 	/** the data waiting to be handled */
-	private final Buffers pendingRead = new Buffers();
+	protected final Buffers pendingRead = new Buffers();
 
 	/** Stream of pending data */
 	protected final BuffersInputStream in = new BuffersInputStream(pendingRead);
@@ -40,6 +36,8 @@ public class NIOConnection {
 	/** selection key */
 	protected final SelectionKey key;
 	protected final SocketChannel channel;
+
+	protected final NIOConnectionHandler handler;
 
 	protected final InetSocketAddress local;
 	protected final InetSocketAddress remote;
@@ -52,9 +50,10 @@ public class NIOConnection {
 	 * 
 	 * @param key the selectionKey
 	 */
-	public NIOConnection(SelectionKey key) {
+	protected NIOConnectionAbstract(SelectionKey key, NIOConnectionHandler handler) {
 		this.key = key;
 		this.channel = (SocketChannel) key.channel();
+		this.handler = handler;
 		this.out = new Out(this);
 		lastRead = lastWrite = System.currentTimeMillis();
 		InetSocketAddress a;
@@ -72,39 +71,7 @@ public class NIOConnection {
 		remote = a;
 	}
 
-	/**
-	 * called after the connection is initialized
-	 * 
-	 * @throws InterruptedException on interrupt
-	 */
-	protected void onInit() throws InterruptedException { // for override
-	}
-
-	/**
-	 * called after some data has been read
-	 * 
-	 * @throws InterruptedException on interrupt
-	 * @throws IOException on io exception
-	 */
-	protected void onRead() throws InterruptedException, IOException { // for override
-	}
-
-	/**
-	 * called after data has been written
-	 * 
-	 * @throws InterruptedException on interrupt
-	 * @throws IOException on io exception
-	 */
-	protected void onWrite() throws InterruptedException, IOException { // for override
-	}
-
-	/**
-	 * called when the connection is free
-	 * 
-	 * @throws IOException on io exception
-	 */
-	protected void onFree() throws IOException { // for override
-	}
+	protected abstract void onInit() throws InterruptedException;
 
 	/**
 	 * read data from the channel and try to handles it
@@ -114,28 +81,7 @@ public class NIOConnection {
 	 * @throws InterruptedException on interrupt
 	 * @throws IOException on io exception
 	 */
-	protected void readFrom(ByteBuffer buf) throws InterruptedException, IOException {
-		int l;
-		lastRead = System.currentTimeMillis();
-		l = channel.read(buf);
-		if (l == -1) {
-			in.close();
-			return;
-		}
-		if (l == 0)
-			return;
-		buf.flip();
-
-		if (logger.isTraceEnabled()) {
-			buf.mark();
-			byte[] bytes = new byte[buf.remaining()];
-			buf.get(bytes);
-			logger.trace("read {}", new String(bytes));
-			buf.reset();
-		}
-		pendingRead.write(buf);
-		onRead();
-	}
+	protected abstract void readFrom(ByteBuffer buf) throws InterruptedException, IOException;
 
 	/**
 	 * write pending data to the channel
@@ -145,28 +91,7 @@ public class NIOConnection {
 	 * @throws InterruptedException on interrupt
 	 * @throws IOException on io exception
 	 */
-	protected void writeInto(ByteBuffer buf) throws InterruptedException, IOException {
-		lastWrite = System.currentTimeMillis();
-		while (pendingWrite.read(buf, false)) {
-			buf.flip();
-
-			if (logger.isTraceEnabled()) {
-				buf.mark();
-				byte[] bytes = new byte[buf.remaining()];
-				buf.get(bytes);
-				logger.trace("writ {}", new String(bytes));
-				buf.reset();
-			}
-
-			channel.write(buf);
-			if (buf.hasRemaining()) {
-				pendingWrite.prepend(buf);
-				break;
-			}
-		}
-		toggleKeyOps();
-		onWrite();
-	}
+	protected abstract void writeInto(ByteBuffer buf) throws InterruptedException, IOException;
 
 	public void toggleKeyOps() {
 		key.interestOps(pendingWrite.isEmpty() ? SelectionKey.OP_READ : SelectionKey.OP_READ | SelectionKey.OP_WRITE);
@@ -254,9 +179,8 @@ public class NIOConnection {
 	 * @param stop if true the server is in stop phase
 	 * @return true is the collection is closed
 	 */
-	@SuppressWarnings("unused")
 	public boolean closed(long now, boolean stop) {
-		return isClosed();
+		return handler.closed(now, stop);
 	}
 
 	/**
@@ -268,7 +192,7 @@ public class NIOConnection {
 		out.close();
 		pendingWrite.clear();
 		pendingRead.clear();
-		onFree();
+		handler.onFree();
 	}
 
 	@Override
@@ -278,9 +202,9 @@ public class NIOConnection {
 
 	/** output stream for this connection */
 	public static final class Out extends OutputStream {
-		private NIOConnection h;
+		private NIOConnectionAbstract h;
 
-		private Out(NIOConnection h) {
+		private Out(NIOConnectionAbstract h) {
 			this.h = h;
 		}
 
