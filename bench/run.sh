@@ -50,7 +50,7 @@ mkdir -p out logs
 ${1}_start
 sleep 10
 echo -e "\nWarming up"
-bash bench/tests.sh 127.0.0.1 1  50000 /dev/null
+bash bench/tests.sh 127.0.0.1 1  50000
 
 sleep 10
 echo -e "\nTesting.."
