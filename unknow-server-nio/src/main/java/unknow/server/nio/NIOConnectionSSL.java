@@ -3,8 +3,6 @@ package unknow.server.nio;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
@@ -15,7 +13,7 @@ import javax.net.ssl.SSLEngineResult.Status;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class NIOConnectionSSL extends NIOConnection {
+public class NIOConnectionSSL extends NIOConnectionAbstract {
 	private static final Logger logger = LoggerFactory.getLogger(NIOConnectionSSL.class);
 
 	protected final SSLEngine sslEngine;
@@ -24,10 +22,8 @@ public class NIOConnectionSSL extends NIOConnection {
 	private final ByteBuffer rawOut;
 	private final ByteBuffer app;
 
-	private Future<?> handshake = CompletableFuture.completedFuture(null);
-
-	public NIOConnectionSSL(SelectionKey key, SSLContext sslContext) {
-		super(key);
+	public NIOConnectionSSL(SelectionKey key, NIOConnectionHandler handler, SSLContext sslContext) {
+		super(key, handler);
 		this.sslEngine = sslContext.createSSLEngine(getRemote().getHostString(), getRemote().getPort());
 		this.rawIn = ByteBuffer.allocate(sslEngine.getSession().getPacketBufferSize());
 		this.rawOut = ByteBuffer.allocate(sslEngine.getSession().getPacketBufferSize());
@@ -40,38 +36,27 @@ public class NIOConnectionSSL extends NIOConnection {
 	public boolean closed(long now, boolean stop) {
 		if (sslEngine.getHandshakeStatus() != HandshakeStatus.NOT_HANDSHAKING)
 			return false;
-		return handshake.isDone() && isClosed();
+		return handler.closed(now, stop);
 	}
 
 	@Override
 	protected final void onInit() throws InterruptedException {
-		onInit(sslEngine);
+		handler.onInit(this, sslEngine);
 		try {
 			sslEngine.beginHandshake();
 			processHandshake();
 		} catch (IOException e) {
+			try {
+				channel.close();
+			} catch (IOException e1) {
+				e.addSuppressed(e1);
+			}
 			logger.error("Failed to start connection", e);
-			key.cancel();
 		}
 	}
 
-	protected void onInit(@SuppressWarnings("unused") SSLEngine sslEngine) { // for override
-	}
-
-	/**
-	 * called when the handshake process finish
-	 * @throws InterruptedException on interrupt
-	 */
-	protected void onHandshakeDone() throws InterruptedException { // for override
-	}
-
 	@Override
-	protected void onRead() throws InterruptedException, IOException {
-		logger.info("{}", pendingRead());
-	}
-
-	@Override
-	protected void readFrom(ByteBuffer buf) throws InterruptedException, IOException {
+	protected final void readFrom(ByteBuffer buf) throws InterruptedException, IOException {
 		lastRead = System.currentTimeMillis();
 		if (processHandshake())
 			return;
@@ -90,14 +75,14 @@ public class NIOConnectionSSL extends NIOConnection {
 			rawIn.compact();
 
 			app.flip();
-			pendingRead().write(app);
+			pendingRead.write(app);
 			app.compact();
-			onRead();
+			handler.onRead(pendingRead);
 		}
 	}
 
 	@Override
-	protected void writeInto(ByteBuffer buf) throws InterruptedException, IOException {
+	protected final void writeInto(ByteBuffer buf) throws InterruptedException, IOException {
 		lastWrite = System.currentTimeMillis();
 		if (rawOut.remaining() > 0) {
 			channel.write(rawOut);
@@ -130,13 +115,10 @@ public class NIOConnectionSSL extends NIOConnection {
 			app.compact();
 		}
 		toggleKeyOps();
-		onWrite();
+		handler.onWrite();
 	}
 
 	private boolean processHandshake() throws IOException, InterruptedException {
-		if (!handshake.isDone())
-			return true;
-
 		HandshakeStatus hs = sslEngine.getHandshakeStatus();
 		while (true) {
 			SSLEngineResult r;
@@ -177,7 +159,7 @@ public class NIOConnectionSSL extends NIOConnection {
 					break;
 				case FINISHED:
 					toggleKeyOps();
-					onHandshakeDone(); // fallthrough
+					handler.onHandshakeDone(sslEngine); // fallthrough
 				default:
 					return false;
 			}

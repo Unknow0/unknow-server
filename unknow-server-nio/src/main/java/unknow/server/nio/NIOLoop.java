@@ -20,7 +20,7 @@ public class NIOLoop implements Runnable {
 	/** the thread that will run the loop */
 	private final Thread t;
 	/** the selection timeout */
-	private final long timeout;
+	protected final long timeout;
 	/** the selector */
 	protected final Selector selector;
 

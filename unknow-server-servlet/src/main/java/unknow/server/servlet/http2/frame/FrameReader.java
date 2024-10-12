@@ -20,6 +20,7 @@ public class FrameReader {
 
 	/**
 	 * read the size of the padding field if the flags is set (and unset it)
+	 * 
 	 * @param buf where to read
 	 * @return the pad length or -1 is case of error
 	 * @throws InterruptedException

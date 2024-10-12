@@ -48,7 +48,7 @@ public class NIOServer extends NIOLoop {
 	 * @throws IOException on ioException
 	 */
 	@SuppressWarnings("resource")
-	public void bind(SocketAddress a, Function<SelectionKey, ? extends NIOConnection> s) throws IOException {
+	public void bind(SocketAddress a, Function<SelectionKey, NIOConnectionAbstract> s) throws IOException {
 		logger.info("Server bind to {}", a);
 		ServerSocketChannel open = ServerSocketChannel.open();
 		open.configureBlocking(false);
@@ -67,7 +67,7 @@ public class NIOServer extends NIOLoop {
 	protected void selected(SelectionKey key) throws IOException, InterruptedException {
 		try {
 			@SuppressWarnings("unchecked")
-			Function<SelectionKey, ? extends NIOConnection> factory = (Function<SelectionKey, ? extends NIOConnection>) key.attachment();
+			Function<SelectionKey, NIOConnectionAbstract> factory = (Function<SelectionKey, NIOConnectionAbstract>) key.attachment();
 			SocketChannel socket = ((ServerSocketChannel) key.channel()).accept();
 			workers.register(socket, factory);
 		} catch (IOException e) {

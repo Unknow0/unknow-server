@@ -62,7 +62,7 @@ public class FrameHeader extends FrameReader {
 
 		try {
 			buf.prepend(remain);
-			BuffersInputStream in = new BuffersInputStream(buf);
+			BuffersInputStream in = new BuffersInputStream(buf, false);
 			readHeaders(in);
 			if (size > pad)
 				return this;
