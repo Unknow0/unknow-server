@@ -50,7 +50,7 @@ public abstract class NIOConnectionAbstract {
 	 * 
 	 * @param key the selectionKey
 	 */
-	public NIOConnectionAbstract(SelectionKey key, NIOConnectionHandler handler) {
+	protected NIOConnectionAbstract(SelectionKey key, NIOConnectionHandler handler) {
 		this.key = key;
 		this.channel = (SocketChannel) key.channel();
 		this.handler = handler;
