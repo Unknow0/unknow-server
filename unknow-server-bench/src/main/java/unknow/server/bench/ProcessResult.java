@@ -150,12 +150,15 @@ public class ProcessResult {
 		ProcessResult process = new ProcessResult(args);
 
 		for (String s : args) {
-			try (DirectoryStream<Path> out = Files.newDirectoryStream(Paths.get("out", s))) {
-				for (Path p : out) {
-					try (BufferedReader r = Files.newBufferedReader(p)) {
-						process.readCsv(r, s);
-					} catch (IOException e) {
-						System.err.println(e.getMessage());
+			Path path = Paths.get("out", s);
+			if (Files.exists(path)) {
+				try (DirectoryStream<Path> out = Files.newDirectoryStream(path)) {
+					for (Path p : out) {
+						try (BufferedReader r = Files.newBufferedReader(p)) {
+							process.readCsv(r, s);
+						} catch (IOException e) {
+							System.err.println(e.getMessage());
+						}
 					}
 				}
 			}

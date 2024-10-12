@@ -11,12 +11,12 @@ out() {
 		cat - > /dev/null
 	else
 		mkdir -p $out
-		cat - > $out/$1.csv
+		cat - >> $out/$1.csv
 	fi
 }
 
 curls() {
-	n=$1
+	local n=$1
 	shift
 	for((i=0; i<$p; i++))
 	do
@@ -31,9 +31,9 @@ test() {
 	{ time curls "$@"; } |& tee /dev/stderr | out times
 }
 
-test missing -XGET http://$h:8080/missing?[0-$c]
-test simple -XGET  http://$h:8080/test?[0-$c]
-test ssl -k --http1.1 -XGET https://$h:8443/test?[0-$c]
-test ws -XPOST -d@bench/req/ws.xml  http://$h:8080/ws?[0-$c]
-test rest -XPOST -H 'Accept: application/json' -H 'Content-type: application/json' -d'{"v":"toto"}' http://$h:8080/rest/[0-$c]
-test http2 --http2-prior-knowledge -XGET http://$h:8080/test?[0-$c]
+test missing -XGET http://$h:8080/missing?[1-$c]
+test simple -XGET  http://$h:8080/test?[1-$c]
+test ssl -k --http1.1 -XGET https://$h:8443/test?[1-$c]
+test ws -XPOST -d@bench/req/ws.xml  http://$h:8080/ws?[1-$c]
+test rest -XPOST -H 'Accept: application/json' -H 'Content-type: application/json' -d'{"v":"toto"}' http://$h:8080/rest/[1-$c]
+test http2 --http2-prior-knowledge -XGET http://$h:8080/test?[1-$c]
