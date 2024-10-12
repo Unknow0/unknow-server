@@ -60,6 +60,16 @@ public class BenchProtostuff {
 	public void protostuffJson() throws IOException {
 
 		LinkedBuffer buffer = LinkedBuffer.allocate(4096);
+		byte[] byteArray = JsonIOUtil.toByteArray(TSTUFF, TSTUFF.cachedSchema(), false, buffer);
+
+		TestMsg t = new TestMsg();
+		JsonIOUtil.mergeFrom(byteArray, t, TSTUFF.cachedSchema(), false);
+	}
+
+	@Benchmark
+	public void protostuffXJson() throws IOException {
+
+		LinkedBuffer buffer = LinkedBuffer.allocate(4096);
 		byte[] byteArray = JsonXIOUtil.toByteArray(TSTUFF, TSTUFF.cachedSchema(), false, buffer);
 
 		TestMsg t = new TestMsg();
