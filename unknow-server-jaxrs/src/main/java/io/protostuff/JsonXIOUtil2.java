@@ -119,7 +119,6 @@ public class JsonXIOUtil2 {
 		JsonXInput in = new JsonXInput(reader, numeric);
 		in.readStartObject();
 		schema.mergeFrom(in, message);
-		in.readEndObject();
 	}
 
 	/**
