@@ -6,4 +6,6 @@ package unknow.server.http.test;
 
 message Truc {
 	optional string v = 1;
+	repeated int32 list=2;
+	optional Truc loop=3;
 }

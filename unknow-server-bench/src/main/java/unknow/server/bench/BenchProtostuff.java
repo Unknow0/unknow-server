@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.protostuff.CodedInput;
 import io.protostuff.JsonIOUtil;
 import io.protostuff.JsonXIOUtil;
+import io.protostuff.JsonXIOUtil2;
 import io.protostuff.LinkedBuffer;
 import io.protostuff.ProtostuffOutput;
 import unknow.server.bench.protobuf.TestMsg.Builder;
@@ -73,7 +74,7 @@ public class BenchProtostuff {
 		byte[] byteArray = JsonXIOUtil.toByteArray(TSTUFF, TSTUFF.cachedSchema(), false, buffer);
 
 		TestMsg t = new TestMsg();
-		JsonIOUtil.mergeFrom(byteArray, t, TSTUFF.cachedSchema(), false);
+		JsonXIOUtil2.mergeFrom(byteArray, t, TSTUFF.cachedSchema(), false);
 	}
 
 	@Benchmark

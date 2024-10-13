@@ -37,8 +37,6 @@ import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.NullLiteralExpr;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
 
-import io.protostuff.ProtostuffJsonLineProvider;
-import io.protostuff.ProtostuffJsonListProvider;
 import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.ws.rs.BeanParam;
 import jakarta.ws.rs.Consumes;
@@ -63,9 +61,6 @@ import jakarta.ws.rs.ext.MessageBodyReader;
 import jakarta.ws.rs.ext.MessageBodyWriter;
 import jakarta.ws.rs.ext.ParamConverterProvider;
 import jakarta.ws.rs.ext.Provider;
-import unknow.server.http.jaxrs.protostuff.ProtostuffJsonProvider;
-import unknow.server.http.jaxrs.protostuff.ProtostuffListProvider;
-import unknow.server.http.jaxrs.protostuff.ProtostuffProvider;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam;
@@ -106,7 +101,7 @@ public class JaxrsModel {
 
 	private final ModelLoader loader;
 	private final String path;
-
+	
 	private final TypeModel paramProvider;
 	private final TypeModel exceptionMapper;
 	private final TypeModel bodyReader;
@@ -156,26 +151,26 @@ public class JaxrsModel {
 			writers.put(c, list);
 		};
 
-		try {
-			cl.loadClass("io.protostuff.ProtobufOutput");
-			reader.accept(ProtostuffProvider.class.getName());
-			reader.accept(ProtostuffListProvider.class.getName());
-			writer.accept(ProtostuffProvider.class.getName());
-			writer.accept(ProtostuffListProvider.class.getName());
-		} catch (@SuppressWarnings("unused") ClassNotFoundException e) {
-			logger.warn("No protostuff-core");
-		}
-		try {
-			cl.loadClass("io.protostuff.JsonInput");
-			reader.accept(ProtostuffJsonProvider.class.getName());
-			reader.accept(ProtostuffJsonListProvider.class.getName());
-			reader.accept(ProtostuffJsonLineProvider.class.getName());
-			writer.accept(ProtostuffJsonProvider.class.getName());
-			writer.accept(ProtostuffJsonListProvider.class.getName());
-			writer.accept(ProtostuffJsonLineProvider.class.getName());
-		} catch (@SuppressWarnings("unused") ClassNotFoundException e) {
-			logger.warn("No protostuff-json");
-		}
+//		try { XXX
+//			cl.loadClass("io.protostuff.ProtobufOutput");
+//			reader.accept(ProtostuffProvider.class.getName());
+//			reader.accept(ProtostuffListProvider.class.getName());
+//			writer.accept(ProtostuffProvider.class.getName());
+//			writer.accept(ProtostuffListProvider.class.getName());
+//		} catch (@SuppressWarnings("unused") ClassNotFoundException e) {
+//			logger.warn("No protostuff-core");
+//		}
+//		try {
+//			cl.loadClass("io.protostuff.JsonInput");
+//			reader.accept(ProtostuffJsonProvider.class.getName());
+//			reader.accept(ProtostuffJsonListProvider.class.getName());
+//			reader.accept(ProtostuffJsonLineProvider.class.getName());
+//			writer.accept(ProtostuffJsonProvider.class.getName());
+//			writer.accept(ProtostuffJsonListProvider.class.getName());
+//			writer.accept(ProtostuffJsonLineProvider.class.getName());
+//		} catch (@SuppressWarnings("unused") ClassNotFoundException e) {
+//			logger.warn("No protostuff-json");
+//		}
 
 		loadService(cl, MessageBodyReader.class, reader);
 		loadService(cl, MessageBodyWriter.class, writer);

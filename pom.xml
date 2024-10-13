@@ -221,6 +221,7 @@
 											<header_source_path>true</header_source_path>
 											<builder_pattern>true</builder_pattern>
 											<separate_schema>true</separate_schema>
+											<generate_field_map>true</generate_field_map>
 										</options>
 									</protoModule>
 								</protoModules>
