@@ -3,10 +3,7 @@ package io.protostuff;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.Reader;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -109,30 +106,16 @@ public class JsonXIOUtil2 {
 	 * Merges the {@code message} from the {@link InputStream} using the given {@code schema}.
 	 */
 	public static <T> void mergeFrom(InputStream in, T message, Schema<T> schema, boolean numeric) throws IOException {
-		mergeFrom(new InputStreamReader(in, StandardCharsets.UTF_8), message, schema, numeric);
-	}
-
-	/**
-	 * Merges the {@code message} from the {@link Reader} using the given {@code schema}.
-	 */
-	public static <T> void mergeFrom(Reader reader, T message, Schema<T> schema, boolean numeric) throws IOException {
-		JsonXInput in = new JsonXInput(reader, numeric);
-		in.readStartObject();
-		schema.mergeFrom(in, message);
+		JsonXInput input = new JsonXInput(in, numeric);
+		input.readStartObject();
+		schema.mergeFrom(input, message);
 	}
 
 	/**
 	* Parses the {@code messages} from the stream using the given {@code schema}.
 	*/
 	public static <T> List<T> parseListFrom(InputStream in, Schema<T> schema, boolean numeric) throws IOException {
-		return parseListFrom(new InputStreamReader(in, StandardCharsets.UTF_8), schema, numeric);
-	}
-
-	/**
-	 * Parses the {@code messages} from the reader using the given {@code schema}.
-	 */
-	public static <T> List<T> parseListFrom(Reader reader, Schema<T> schema, boolean numeric) throws IOException {
-		final JsonXInput input = new JsonXInput(reader, numeric);
+		final JsonXInput input = new JsonXInput(in, numeric);
 		input.readStartArray();
 
 		final List<T> list = new ArrayList<T>();

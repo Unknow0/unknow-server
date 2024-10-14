@@ -28,10 +28,14 @@
 		<connection>scm:git:git://github.com/Unknow0/unknow-server.git</connection>
 		<developerConnection>scm:git:ssh://github.com:Unknow0/unknow-server.git</developerConnection>
 		<url>https://github.com/Unknow0/unknow-server</url>
-	</scm>
-
-
+	</scm> 
+	
 	<build>
+		<resources>
+        	<resource>
+         		<directory>src/main/protostuff</directory>                
+			</resource>
+		</resources>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -125,6 +129,10 @@
 		<dependency>
 			<groupId>com.google.protobuf</groupId>
 			<artifactId>protobuf-javalite</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.dataformat</groupId>
+  			<artifactId>jackson-dataformat-protobuf</artifactId>
 		</dependency>
 	</dependencies>
 </project>

@@ -1,33 +1,39 @@
 package io.protostuff;
 
 import java.io.IOException;
-import java.io.PushbackReader;
-import java.io.Reader;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 public class JsonXInput implements Input {
-
-	private final PushbackReader r;
-	/**
-	 * If true, the field number will be used on json keys.
-	 */
+	private static final byte[] NULL = { 'n', 'u', 'l', 'l' };
+	private static final byte BEL = '\b';
+	private static final byte TAB = '\t';
+	private static final byte FF = '\f';
+	private static final byte LF = '\n';
+	private static final byte CR = '\r';
+	private final InputStream in;
 	private final boolean numeric;
 
-	private final StringBuilder sb;
+	private final Utf8Decoder sb;
+	private final byte[] buf;
+	private int o;
+	private int l;
 
 	private boolean lastRepeated;
 	private Schema<?> lastSchema;
 	private String lastName;
 	private int lastNumber;
 
-	public JsonXInput(Reader r) {
-		this(r, false);
+	public JsonXInput(InputStream in) {
+		this(in, false);
 	}
 
-	public JsonXInput(Reader r, boolean numeric) {
-		this.r = new PushbackReader(r, 4);
+	public JsonXInput(InputStream in, boolean numeric) {
+		this.in = in;
 		this.numeric = numeric;
-		this.sb = new StringBuilder();
+		this.sb = new Utf8Decoder();
+		this.buf = new byte[4096];
 	}
 
 	/**
@@ -71,12 +77,11 @@ public class JsonXInput implements Input {
 	public <T> void handleUnknownField(int fieldNumber, Schema<T> schema) throws IOException {
 		int nestedObjects = 0;
 		while (true) {
-			int c = r.read();
-			if (c == -1)
-				throwEOF();
-			if (c == '{' || c == ']')
+			checkBuffer(1);
+			byte b = buf[o++];
+			if (b == '{' || b == ']')
 				nestedObjects++;
-			if (c == '}' || c == ']') {
+			if (b == '}' || b == ']') {
 				if (--nestedObjects == 0)
 					break;
 			}
@@ -87,9 +92,8 @@ public class JsonXInput implements Input {
 	@Override
 	public <T> int readFieldNumber(final Schema<T> schema) throws IOException {
 		lastSchema = schema;
-		int c;
-		if ((c = readNext()) != ',')
-			r.unread(c);
+		if (readNext() == ',')
+			o++;
 
 		while ((lastNumber = readFieldNumber()) == -1)
 			;
@@ -99,13 +103,13 @@ public class JsonXInput implements Input {
 	private int readFieldNumber() throws IOException {
 		if (lastRepeated) {
 			int i = readNext();
-			while (readNull(i))
+			while (readNull())
 				i = readNext();
 			if (i == ']') {
+				o++;
 				lastRepeated = false;
 				return -1;
 			}
-			r.unread(i);
 			return lastNumber;
 		}
 
@@ -123,16 +127,15 @@ public class JsonXInput implements Input {
 			throwEOF();
 		if (next == '[') {
 			next = readNext();
-			while (readNull(next))
+			while (readNull())
 				next = readNext();
 			if (next == ']')
 				return -1;
 			lastRepeated = true;
 		}
-		if (readNull(next))
+		if (readNull())
 			return -1;
 
-		r.unread(next);
 		return lastNumber = numeric ? Integer.parseInt(lastName) : lastSchema.getFieldNumber(lastName);
 	}
 
@@ -293,34 +296,44 @@ public class JsonXInput implements Input {
 		return ByteBuffer.wrap(readByteArray());
 	}
 
+	private void checkBuffer(int n) throws IOException {
+		if (o + n < l)
+			return;
+		if (o != l) {
+			l -= o;
+			System.arraycopy(buf, o, buf, o, l);
+			o = 0;
+		} else
+			o = l = 0;
+		do {
+			int i = in.read(buf, o, buf.length - l);
+			if (i == -1)
+				throwEOF();
+			l += i;
+		} while (o + n < l);
+	}
+
 	/**
 	 * read next meaningful char
 	 * @return char or -1 on eof
 	 * @throws IOException on read error
 	 */
 	private int readNext() throws IOException {
-		int i = r.read();
-		while (i == ' ' || i == '\t' || i == '\n' || i == '\r')
-			i = r.read();
-		return i;
+		checkBuffer(1);
+		byte b = buf[o];
+		while (b == ' ' || b == '\t' || b == '\n' || b == '\r') {
+			b = buf[++o];
+			checkBuffer(1);
+		}
+		return b;
 	}
 
-	private boolean readNull(int next) throws IOException {
-		if (next != 'n')
-			return false;
-
-		int c1 = r.read();
-		if (c1 == 'u') {
-			int c2 = r.read();
-			if (c2 == 'l') {
-				int c3 = r.read();
-				if (c3 == 'l')
-					return true;
-				r.unread(c3);
-			}
-			r.unread(c2);
+	private boolean readNull() throws IOException {
+		checkBuffer(4);
+		if (l - o > 4 && Arrays.equals(buf, o, o + 4, NULL, 0, 4)) {
+			o += 4;
+			return true;
 		}
-		r.unread(c1);
 		return false;
 	}
 
@@ -340,80 +353,71 @@ public class JsonXInput implements Input {
 	}
 
 	private void readNext(char expected) throws IOException {
-		int i = r.read();
-		while (i == ' ' || i == '\t' || i == '\n' || i == '\r')
-			i = r.read();
 
-		if (expected != i)
-			throwUnexpectedContent(expected, i);
+		byte b = buf[o];
+		while (b == ' ' || b == '\t' || b == '\n' || b == '\r')
+			b = buf[++o];
+
+		if (expected != b)
+			throwUnexpectedContent(expected, b);
 	}
 
 	public boolean isNext(char c) throws IOException {
-		int next = readNext();
-		r.unread(next);
-		return next == c;
+		return readNext() == c;
 	}
 
 	private String readRawString() throws IOException {
-		int i;
-		sb.setLength(0);
-		while ((i = r.read()) != '"') {
-			if (i == -1)
-				throwEOF();
+		byte i;
+		while ((i = buf[o++]) != '"') {
+			checkBuffer(1);
 			if (i == '\\') {
-				i = r.read();
-				if (i == -1)
-					throwEOF();
+				i = buf[o++];
 				if (i == '"' || i == '\\' || i == '/')
-					sb.append((char) i);
+					sb.append(i);
 				else if (i == 'b')
-					sb.append('\b');
+					sb.append(BEL);
 				else if (i == 'f')
-					sb.append('\f');
+					sb.append(FF);
 				else if (i == 'n')
-					sb.append('\n');
+					sb.append(LF);
 				else if (i == 'r')
-					sb.append('\r');
+					sb.append(CR);
 				else if (i == 't')
-					sb.append('\t');
+					sb.append(TAB);
 				else if (i == 'u') {
-					sb.append((char) (readHex() << 12 | readHex() << 8 | readHex() << 4 | readHex()));
+					checkBuffer(4);
+					sb.appendUnicode(readHex() << 12 | readHex() << 8 | readHex() << 4 | readHex());
 				}
 				break;
-
 			}
-			sb.append((char) i);
+			sb.append(i);
 		}
-		return sb.toString();
+		return sb.done();
 	}
 
 	private int readHex() throws IOException {
-		int i = r.read();
-		if (i == -1)
-			throwEOF();
-		if (i >= '0' && i <= '9')
-			return i - '0';
-		if (i >= 'a' && i <= 'f')
-			return 10 + i - 'a';
-		if (i >= 'A' && i <= 'F')
-			return 10 + i - 'A';
-		throwUnexpectedContent("hex digit", Character.toString(i));
+		byte b = buf[o++];
+		if (b >= '0' && b <= '9')
+			return b - '0';
+		if (b >= 'a' && b <= 'f')
+			return 10 + b - 'a';
+		if (b >= 'A' && b <= 'F')
+			return 10 + b - 'A';
+		throwUnexpectedContent("hex digit", Character.toString(b));
 		return 0; // will not happen
 	}
 
 	private String readValue() throws IOException {
-		int i = r.read();
+		byte i = buf[o++];
 		if (i == '"')
 			return readRawString();
-		sb.setLength(0);
 		while (i != ',' && i != '}' && i != ']') {
-			if (i == -1)
-				throwEOF();
-			sb.append((char) i);
-			i = r.read();
+			sb.append(i);
+			checkBuffer(1);
+			i = buf[o++];
 		}
-		r.unread(i);
-		return sb.toString();
+		o--;
+		return sb.done();
 	}
 
 	private void readRepeated() throws IOException {

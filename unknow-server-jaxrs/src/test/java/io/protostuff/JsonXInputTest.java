@@ -2,8 +2,9 @@ package io.protostuff;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.StringReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -39,7 +40,7 @@ public class JsonXInputTest {
 	@ParameterizedTest
 	@MethodSource
 	public void test(String json, Truc result) throws IOException {
-		JsonXInput in = new JsonXInput(new StringReader(json));
+		JsonXInput in = new JsonXInput(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
 		try {
 			in.readStartObject();
 			Truc truc = new Truc();
