@@ -61,6 +61,7 @@ import jakarta.ws.rs.ext.ParamConverterProvider;
 import jakarta.ws.rs.ext.RuntimeDelegate;
 import unknow.server.http.jaxrs.JaxrsContext;
 import unknow.server.http.jaxrs.JaxrsRuntime;
+import unknow.server.http.jaxrs.protostuff.ProtostuffSchema;
 import unknow.server.maven.AbstractGeneratorMojo;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
@@ -189,13 +190,18 @@ public class JaxrsMojo extends AbstractGeneratorMojo {
 				l.add(Utils.text(s));
 			b.addStatement(new MethodCallExpr(ctx, "registerWriter", l));
 		}
-
 		generateImplicitConverter(cu);
 
 		for (Entry<TypeModel, ClassModel> e : model.exceptions.entrySet()) {
 
 			b.addStatement(new MethodCallExpr(ctx, "registerException",
 					Utils.list(new ClassExpr(types.get(e.getKey())), new ObjectCreationExpr(null, types.getClass(e.getValue()), Utils.list()))));
+		}
+
+		for (String clazz : model.protostuffMessage) {
+			ClassOrInterfaceType type = types.getClass(clazz);
+			b.addStatement(new MethodCallExpr(new TypeExpr(types.get(ProtostuffSchema.class)), "register",
+					Utils.list(new ClassExpr(type), new MethodCallExpr(new ObjectCreationExpr(null, type, Utils.list()), "cachedSchema"))));
 		}
 
 		out.save(cu);

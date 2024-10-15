@@ -120,7 +120,9 @@ public class JaxrsContext {
 		do {
 			ExceptionMapper<Throwable> m = exceptions.get(c);
 			if (m != null) {
-				JaxrsEntityWriter.RESPONSE.write(r, m.toResponse(t), res);
+				try (Response response = m.toResponse(t)) {
+					JaxrsEntityWriter.RESPONSE.write(r, response, res);
+				}
 				return;
 			}
 		} while ((c = c.getSuperclass()) != Object.class);

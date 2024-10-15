@@ -1,0 +1,11 @@
+syntax = "proto2";
+
+option java_multiple_files = true;
+
+package unknow.server.http.test;
+
+message Truc {
+	optional string v = 1;
+	repeated int32 list=2;
+	optional Truc loop=3;
+}
