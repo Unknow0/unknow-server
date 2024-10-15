@@ -11,7 +11,6 @@ import jakarta.ws.rs.ext.MessageBodyReader;
 import jakarta.ws.rs.ext.MessageBodyWriter;
 
 public abstract class ProtostuffListAbstract<T> implements MessageBodyReader<Collection<T>>, MessageBodyWriter<Collection<T>> {
-
 	@Override
 	public final boolean isWriteable(Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
 		if (!(genericType instanceof ParameterizedType))

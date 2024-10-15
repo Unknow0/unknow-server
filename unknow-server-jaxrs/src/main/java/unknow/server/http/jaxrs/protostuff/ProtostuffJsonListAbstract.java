@@ -24,7 +24,7 @@ import jakarta.ws.rs.ext.Provider;
 public abstract class ProtostuffJsonListAbstract<T extends Message<?>> extends ProtostuffListAbstract<T> {
 	private final ListFormat fmt;
 
-	public ProtostuffJsonListAbstract(ListFormat fmt) {
+	protected ProtostuffJsonListAbstract(ListFormat fmt) {
 		this.fmt = fmt;
 	}
 

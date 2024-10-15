@@ -198,8 +198,8 @@ public class JaxrsMojo extends AbstractGeneratorMojo {
 					Utils.list(new ClassExpr(types.get(e.getKey())), new ObjectCreationExpr(null, types.getClass(e.getValue()), Utils.list()))));
 		}
 
-		for (String cl : model.protostuffMessage) {
-			ClassOrInterfaceType type = types.getClass(cl);
+		for (String clazz : model.protostuffMessage) {
+			ClassOrInterfaceType type = types.getClass(clazz);
 			b.addStatement(new MethodCallExpr(new TypeExpr(types.get(ProtostuffSchema.class)), "register",
 					Utils.list(new ClassExpr(type), new MethodCallExpr(new ObjectCreationExpr(null, type, Utils.list()), "cachedSchema"))));
 		}
