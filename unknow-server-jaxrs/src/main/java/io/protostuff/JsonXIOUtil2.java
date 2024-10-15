@@ -11,6 +11,9 @@ import java.util.List;
 public class JsonXIOUtil2 {
 	private static final byte[] EMPTY_ARRAY = { '[', ']' };
 
+	private JsonXIOUtil2() {
+	}
+
 	private static void write(JsonXOutput o, byte[] b) throws IOException {
 		if (b.length == 0)
 			return;
@@ -23,7 +26,7 @@ public class JsonXIOUtil2 {
 	/**
 	* Serializes the {@code messages} into the {@link LinkedBuffer} using the given schema.
 	*/
-	public static <T> void writeListTo(LinkedBuffer buffer, Collection<T> messages, Schema<T> schema, boolean numeric, byte[] start, byte[] delimiter, byte[] end) {
+	public static <T> void writeListTo(LinkedBuffer buffer, Collection<T> messages, Schema<T> schema, boolean numeric, ListFormat fmt) throws IOException {
 		if (buffer.start != buffer.offset)
 			throw new IllegalArgumentException("Buffer previously used and had not been reset.");
 
@@ -34,34 +37,29 @@ public class JsonXIOUtil2 {
 		}
 
 		final JsonXOutput output = new JsonXOutput(buffer, numeric, schema);
-		try {
-			boolean first = true;
-			for (T m : messages) {
-				if (first) {
-					first = false;
-					write(output, start);
-				} else
-					write(output, delimiter);
+		boolean first = true;
+		for (T m : messages) {
+			if (first) {
+				first = false;
+				write(output, fmt.start());
+			} else
+				write(output, fmt.delimiter());
 
-				output.writeStartObject();
-				schema.writeTo(output, m);
-				if (output.isLastRepeated())
-					output.writeEndArray();
+			output.writeStartObject();
+			schema.writeTo(output, m);
+			if (output.isLastRepeated())
+				output.writeEndArray();
 
-				output.writeEndObject().reset();
-			}
-
-			write(output, end);
-		} catch (IOException e) {
-			throw new RuntimeException("Serializing to a byte array threw an IOException (should never happen).", e);
+			output.writeEndObject().reset();
 		}
+
+		write(output, fmt.end());
 	}
 
 	/**
 	 * Serializes the {@code messages} into the stream using the given schema with the supplied buffer.
 	 */
-	public static <T> void writeListTo(OutputStream out, Collection<T> messages, Schema<T> schema, boolean numeric, LinkedBuffer buffer, byte[] start, byte[] delimiter,
-			byte[] end) throws IOException {
+	public static <T> void writeListTo(OutputStream out, Collection<T> messages, Schema<T> schema, boolean numeric, LinkedBuffer buffer, ListFormat fmt) throws IOException {
 		if (buffer.start != buffer.offset)
 			throw new IllegalArgumentException("Buffer previously used and had not been reset.");
 
@@ -77,9 +75,9 @@ public class JsonXIOUtil2 {
 		for (T m : messages) {
 			if (first) {
 				first = false;
-				write(output, start);
+				write(output, fmt.start());
 			} else
-				write(output, delimiter);
+				write(output, fmt.delimiter());
 
 			schema.writeTo(output, m);
 			if (output.isLastRepeated())
@@ -87,7 +85,7 @@ public class JsonXIOUtil2 {
 
 			output.writeEndObject().reset();
 		}
-		write(output, end);
+		write(output, fmt.end());
 		LinkedBuffer.writeTo(out, buffer);
 	}
 
@@ -132,5 +130,31 @@ public class JsonXIOUtil2 {
 		} while (input.isNext(','));
 		input.readEndArray();
 		return list;
+	}
+
+	public static enum ListFormat {
+		JSON(new byte[] { '[' }, new byte[] { ',' }, new byte[] { ']' }), NDJSON(new byte[] {}, new byte[] { '\n' }, new byte[] {});
+
+		private final byte[] start;
+		private final byte[] delimiter;
+		private final byte[] end;
+
+		private ListFormat(byte[] start, byte[] delimiter, byte[] end) {
+			this.start = start;
+			this.delimiter = delimiter;
+			this.end = end;
+		}
+
+		public byte[] start() {
+			return start;
+		}
+
+		public byte[] delimiter() {
+			return delimiter;
+		}
+
+		public byte[] end() {
+			return end;
+		}
 	}
 }

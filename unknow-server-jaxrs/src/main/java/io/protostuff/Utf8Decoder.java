@@ -18,6 +18,10 @@ public class Utf8Decoder {
 	}
 
 	public void append(byte b) {
+		append(b & 0xFF);
+	}
+
+	private void append(int b) {
 		if (r > 0) {
 			c = (c << 6) | (b & 0x3F);
 			if (--r == 0)

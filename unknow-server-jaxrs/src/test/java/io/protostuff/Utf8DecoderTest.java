@@ -11,7 +11,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 public class Utf8DecoderTest {
 	public static final Stream<Arguments> test() {
-		return Stream.of(Arguments.of("test", "ß»đßłµþæð丽􀀬😅𝐋j"));
+		return Stream.of(Arguments.of("test"), Arguments.of("ß»đßłµþæð丽􀀬😅𝐋j"), Arguments.of("val😜"));
 	}
 
 	@ParameterizedTest

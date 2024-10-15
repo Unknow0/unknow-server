@@ -116,9 +116,6 @@ public class BenchProtostuff {
 		Integer v;
 		List<Pojo> loop;
 
-		public Pojo() {
-		}
-
 		public String getTest() {
 			return test;
 		}

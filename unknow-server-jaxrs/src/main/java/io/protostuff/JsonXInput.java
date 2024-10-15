@@ -12,10 +12,11 @@ public class JsonXInput implements Input {
 	private static final byte FF = '\f';
 	private static final byte LF = '\n';
 	private static final byte CR = '\r';
-	private final InputStream in;
-	private final boolean numeric;
 
-	private final Utf8Decoder sb;
+	private final boolean numeric;
+	private InputStream in;
+
+	private final Utf8Decoder utf8;
 	private final byte[] buf;
 	private int o;
 	private int l;
@@ -32,7 +33,7 @@ public class JsonXInput implements Input {
 	public JsonXInput(InputStream in, boolean numeric) {
 		this.in = in;
 		this.numeric = numeric;
-		this.sb = new Utf8Decoder();
+		this.utf8 = new Utf8Decoder();
 		this.buf = new byte[4096];
 	}
 
@@ -81,10 +82,8 @@ public class JsonXInput implements Input {
 			byte b = buf[o++];
 			if (b == '{' || b == ']')
 				nestedObjects++;
-			if (b == '}' || b == ']') {
-				if (--nestedObjects == 0)
-					break;
-			}
+			if ((b == '}' || b == ']') && --nestedObjects == 0)
+				break;
 		}
 		readRepeated();
 	}
@@ -92,8 +91,8 @@ public class JsonXInput implements Input {
 	@Override
 	public <T> int readFieldNumber(final Schema<T> schema) throws IOException {
 		lastSchema = schema;
-		if (readNext() == ',')
-			o++;
+		if (readNext() != ',')
+			--o;
 
 		while ((lastNumber = readFieldNumber()) == -1)
 			;
@@ -102,40 +101,41 @@ public class JsonXInput implements Input {
 
 	private int readFieldNumber() throws IOException {
 		if (lastRepeated) {
-			int i = readNext();
-			while (readNull())
-				i = readNext();
-			if (i == ']') {
+			checkBuffer(5);
+			while (readNull() && buf[o] == ',')
+				o++;
+			if (buf[o] == ']') {
 				o++;
 				lastRepeated = false;
+				checkBuffer(5);
 				return -1;
 			}
 			return lastNumber;
 		}
 
 		int next = readNext();
-		if (next == -1)
-			throwEOF();
 		if (next == '}')
 			return lastNumber = 0;
 		if (next != '"')
 			throwUnexpectedContent('"', next);
 		lastName = readRawString();
 		readNext(':');
-		next = readNext();
-		if (next == -1)
-			throwEOF();
-		if (next == '[') {
-			next = readNext();
-			while (readNull())
-				next = readNext();
-			if (next == ']')
-				return -1;
-			lastRepeated = true;
-		}
 		if (readNull())
 			return -1;
 
+		checkBuffer(1);
+		if (readNext() == '[') {
+			checkBuffer(5);
+			while (readNull() && buf[o] == ',')
+				o++;
+			if (buf[o] == ']') {
+				o++;
+				lastRepeated = false;
+				return -1;
+			}
+			lastRepeated = true;
+		} else
+			--o;
 		return lastNumber = numeric ? Integer.parseInt(lastName) : lastSchema.getFieldNumber(lastName);
 	}
 
@@ -255,9 +255,9 @@ public class JsonXInput implements Input {
 	public <T> T mergeObject(T value, final Schema<T> schema) throws IOException {
 		readStartObject();
 
-		final int lastNumber = this.lastNumber;
-		final boolean lastRepeated = this.lastRepeated;
-		final String lastName = this.lastName;
+		final int previousNumber = this.lastNumber;
+		final boolean previousRepeated = this.lastRepeated;
+		final String previousName = this.lastName;
 
 		// reset
 		this.lastRepeated = false;
@@ -271,9 +271,9 @@ public class JsonXInput implements Input {
 			throw new UninitializedMessageException(value, schema);
 
 		// restore state
-		this.lastNumber = lastNumber;
-		this.lastRepeated = lastRepeated;
-		this.lastName = lastName;
+		this.lastNumber = previousNumber;
+		this.lastRepeated = previousRepeated;
+		this.lastName = previousName;
 
 		readRepeated();
 
@@ -297,20 +297,30 @@ public class JsonXInput implements Input {
 	}
 
 	private void checkBuffer(int n) throws IOException {
-		if (o + n < l)
+		if (n <= l - o)
 			return;
-		if (o != l) {
+
+		if (in == null) {
+			if (l - o == 0)
+				throwEOF();
+			return;
+		}
+
+		if (o != l && o > 2048) {
 			l -= o;
 			System.arraycopy(buf, o, buf, o, l);
 			o = 0;
-		} else
-			o = l = 0;
+		}
 		do {
-			int i = in.read(buf, o, buf.length - l);
-			if (i == -1)
-				throwEOF();
+			int i = in.read(buf, o, buf.length - l - o);
+			if (i == -1) {
+				in = null;
+				if (l - o == 0)
+					throwEOF();
+				return;
+			}
 			l += i;
-		} while (o + n < l);
+		} while (l < n);
 	}
 
 	/**
@@ -318,20 +328,26 @@ public class JsonXInput implements Input {
 	 * @return char or -1 on eof
 	 * @throws IOException on read error
 	 */
-	private int readNext() throws IOException {
+	private byte readNext() throws IOException {
 		checkBuffer(1);
-		byte b = buf[o];
+		byte b = buf[o++];
 		while (b == ' ' || b == '\t' || b == '\n' || b == '\r') {
-			b = buf[++o];
 			checkBuffer(1);
+			b = buf[o++];
 		}
 		return b;
 	}
 
 	private boolean readNull() throws IOException {
-		checkBuffer(4);
-		if (l - o > 4 && Arrays.equals(buf, o, o + 4, NULL, 0, 4)) {
-			o += 4;
+		byte next = readNext();
+		if (next != 'n') {
+			--o;
+			return false;
+		}
+
+		checkBuffer(3);
+		if (l - o > 3 && Arrays.equals(buf, o, o + 3, NULL, 1, 4)) {
+			o += 3;
 			return true;
 		}
 		return false;
@@ -353,17 +369,13 @@ public class JsonXInput implements Input {
 	}
 
 	private void readNext(char expected) throws IOException {
-
-		byte b = buf[o];
-		while (b == ' ' || b == '\t' || b == '\n' || b == '\r')
-			b = buf[++o];
-
+		byte b = readNext();
 		if (expected != b)
 			throwUnexpectedContent(expected, b);
 	}
 
-	public boolean isNext(char c) throws IOException {
-		return readNext() == c;
+	public boolean isNext(char c) {
+		return buf[o] == c;
 	}
 
 	private String readRawString() throws IOException {
@@ -373,26 +385,26 @@ public class JsonXInput implements Input {
 			if (i == '\\') {
 				i = buf[o++];
 				if (i == '"' || i == '\\' || i == '/')
-					sb.append(i);
+					utf8.append(i);
 				else if (i == 'b')
-					sb.append(BEL);
+					utf8.append(BEL);
 				else if (i == 'f')
-					sb.append(FF);
+					utf8.append(FF);
 				else if (i == 'n')
-					sb.append(LF);
+					utf8.append(LF);
 				else if (i == 'r')
-					sb.append(CR);
+					utf8.append(CR);
 				else if (i == 't')
-					sb.append(TAB);
+					utf8.append(TAB);
 				else if (i == 'u') {
 					checkBuffer(4);
-					sb.appendUnicode(readHex() << 12 | readHex() << 8 | readHex() << 4 | readHex());
+					utf8.appendUnicode(readHex() << 12 | readHex() << 8 | readHex() << 4 | readHex());
 				}
 				break;
 			}
-			sb.append(i);
+			utf8.append(i);
 		}
-		return sb.done();
+		return utf8.done();
 	}
 
 	private int readHex() throws IOException {
@@ -412,22 +424,21 @@ public class JsonXInput implements Input {
 		if (i == '"')
 			return readRawString();
 		while (i != ',' && i != '}' && i != ']') {
-			sb.append(i);
+			utf8.append(i);
 			checkBuffer(1);
 			i = buf[o++];
 		}
 		o--;
-		return sb.done();
+		return utf8.done();
 	}
 
 	private void readRepeated() throws IOException {
 		if (!lastRepeated)
 			return;
-		int next = readNext();
-		if (next == -1)
-			throwEOF();
-
-		if (next == ']')
+		checkBuffer(1);
+		if (buf[o] == ']') {
+			o++;
 			lastRepeated = false;
+		}
 	}
 }
