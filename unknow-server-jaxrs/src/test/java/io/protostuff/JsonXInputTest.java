@@ -43,7 +43,7 @@ public class JsonXInputTest {
 	public void test(String json, Truc result) throws IOException {
 		JsonXInput in = new JsonXInput(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
 		try {
-			in.readStartObject();
+			in.readNext('{');
 			Truc truc = new Truc();
 			Truc.getSchema().mergeFrom(in, truc);
 			assertEquals(result, truc);

@@ -10,7 +10,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.ext.MessageBodyReader;
 import jakarta.ws.rs.ext.MessageBodyWriter;
 
-public abstract class ProtostuffListAbstract<T extends Message<?>> implements MessageBodyReader<Collection<T>>, MessageBodyWriter<Collection<T>> {
+public abstract class ProtostuffListAbstract<T> implements MessageBodyReader<Collection<T>>, MessageBodyWriter<Collection<T>> {
 
 	@Override
 	public final boolean isWriteable(Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {

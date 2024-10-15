@@ -1,18 +1,14 @@
 package unknow.server.maven;
 
-import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import io.protostuff.JsonXInput;
-
 public class TestMaven {
 	private static final Pattern pa = Pattern.compile("\\{\\s*(\\w[\\w\\.\\-]*)\\s*(?::\\s*((?:[^\\{\\}]|\\{[^\\{\\}]*\\})*)\\s*)?\\}");
 
 	public static void main(String[] arg) {
-	
 
 		String path = "/{q}/list/{t}";
 

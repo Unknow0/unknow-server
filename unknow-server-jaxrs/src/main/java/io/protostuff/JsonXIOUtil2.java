@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 public class JsonXIOUtil2 {
@@ -64,13 +65,16 @@ public class JsonXIOUtil2 {
 			throw new IllegalArgumentException("Buffer previously used and had not been reset.");
 
 		if (messages.isEmpty()) {
-			System.arraycopy(EMPTY_ARRAY, 0, buffer.buffer, buffer.offset, EMPTY_ARRAY.length);
-			buffer.offset += EMPTY_ARRAY.length;
+			byte[] b = fmt.start();
+			System.arraycopy(b, 0, buffer.buffer, buffer.offset, b.length);
+			buffer.offset += b.length;
+			b = fmt.end();
+			System.arraycopy(b, 0, buffer.buffer, buffer.offset, b.length);
+			buffer.offset += b.length;
 			return;
 		}
 
 		final JsonXOutput output = new JsonXOutput(buffer, out, numeric, schema);
-
 		boolean first = true;
 		for (T m : messages) {
 			if (first) {
@@ -105,34 +109,34 @@ public class JsonXIOUtil2 {
 	 */
 	public static <T> void mergeFrom(InputStream in, T message, Schema<T> schema, boolean numeric) throws IOException {
 		JsonXInput input = new JsonXInput(in, numeric);
-		input.readStartObject();
+		input.readNext('{');
 		schema.mergeFrom(input, message);
 	}
 
 	/**
 	* Parses the {@code messages} from the stream using the given {@code schema}.
 	*/
-	public static <T> List<T> parseListFrom(InputStream in, Schema<T> schema, boolean numeric) throws IOException {
+	public static <T> List<T> parseListFrom(InputStream in, Schema<T> schema, boolean numeric, ListFormat fmt) throws IOException {
 		final JsonXInput input = new JsonXInput(in, numeric);
-		input.readStartArray();
+
+		input.readNext(fmt.start());
+
+		if (input.isNext(fmt.end()))
+			return Collections.emptyList();
 
 		final List<T> list = new ArrayList<T>();
-		if (input.isNext(']'))
-			return list;
-
 		do {
-			input.readStartObject();
-
+			input.readNext('{');
 			final T message = schema.newMessage();
 			schema.mergeFrom(input, message);
 			list.add(message);
 			input.reset();
-		} while (input.isNext(','));
-		input.readEndArray();
+		} while (input.isNext(fmt.delimiter));
+		input.readNext(fmt.end());
 		return list;
 	}
 
-	public static enum ListFormat {
+	public enum ListFormat {
 		JSON(new byte[] { '[' }, new byte[] { ',' }, new byte[] { ']' }), NDJSON(new byte[] {}, new byte[] { '\n' }, new byte[] {});
 
 		private final byte[] start;

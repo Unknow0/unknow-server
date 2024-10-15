@@ -37,6 +37,7 @@ import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.NullLiteralExpr;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
 
+import io.protostuff.Message;
 import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.ws.rs.BeanParam;
 import jakarta.ws.rs.Consumes;
@@ -61,6 +62,11 @@ import jakarta.ws.rs.ext.MessageBodyReader;
 import jakarta.ws.rs.ext.MessageBodyWriter;
 import jakarta.ws.rs.ext.ParamConverterProvider;
 import jakarta.ws.rs.ext.Provider;
+import unknow.server.http.jaxrs.protostuff.ProtostuffJsonListAbstract.ProtostuffJsonLineProvider;
+import unknow.server.http.jaxrs.protostuff.ProtostuffJsonListAbstract.ProtostuffJsonListProvider;
+import unknow.server.http.jaxrs.protostuff.ProtostuffJsonProvider;
+import unknow.server.http.jaxrs.protostuff.ProtostuffListProvider;
+import unknow.server.http.jaxrs.protostuff.ProtostuffProvider;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam;
@@ -101,7 +107,7 @@ public class JaxrsModel {
 
 	private final ModelLoader loader;
 	private final String path;
-	
+
 	private final TypeModel paramProvider;
 	private final TypeModel exceptionMapper;
 	private final TypeModel bodyReader;
@@ -116,6 +122,8 @@ public class JaxrsModel {
 	public final Set<String> implicitConstructor = new HashSet<>();
 	public final Set<String> implicitFromString = new HashSet<>();
 	public final Set<String> implicitValueOf = new HashSet<>();
+
+	public final Set<String> protostuffMessage = new HashSet<>();
 
 	/**
 	 * create new JaxrsModel
@@ -151,26 +159,26 @@ public class JaxrsModel {
 			writers.put(c, list);
 		};
 
-//		try { XXX
-//			cl.loadClass("io.protostuff.ProtobufOutput");
-//			reader.accept(ProtostuffProvider.class.getName());
-//			reader.accept(ProtostuffListProvider.class.getName());
-//			writer.accept(ProtostuffProvider.class.getName());
-//			writer.accept(ProtostuffListProvider.class.getName());
-//		} catch (@SuppressWarnings("unused") ClassNotFoundException e) {
-//			logger.warn("No protostuff-core");
-//		}
-//		try {
-//			cl.loadClass("io.protostuff.JsonInput");
-//			reader.accept(ProtostuffJsonProvider.class.getName());
-//			reader.accept(ProtostuffJsonListProvider.class.getName());
-//			reader.accept(ProtostuffJsonLineProvider.class.getName());
-//			writer.accept(ProtostuffJsonProvider.class.getName());
-//			writer.accept(ProtostuffJsonListProvider.class.getName());
-//			writer.accept(ProtostuffJsonLineProvider.class.getName());
-//		} catch (@SuppressWarnings("unused") ClassNotFoundException e) {
-//			logger.warn("No protostuff-json");
-//		}
+		try {
+			cl.loadClass("io.protostuff.ProtobufOutput");
+			reader.accept(ProtostuffProvider.class.getName());
+			reader.accept(ProtostuffListProvider.class.getName());
+			writer.accept(ProtostuffProvider.class.getName());
+			writer.accept(ProtostuffListProvider.class.getName());
+		} catch (@SuppressWarnings("unused") ClassNotFoundException e) {
+			logger.warn("No protostuff-core");
+		}
+		try {
+			cl.loadClass("io.protostuff.JsonXInput");
+			reader.accept(ProtostuffJsonProvider.class.getName());
+			reader.accept(ProtostuffJsonListProvider.class.getName());
+			reader.accept(ProtostuffJsonLineProvider.class.getName());
+			writer.accept(ProtostuffJsonProvider.class.getName());
+			writer.accept(ProtostuffJsonListProvider.class.getName());
+			writer.accept(ProtostuffJsonLineProvider.class.getName());
+		} catch (@SuppressWarnings("unused") ClassNotFoundException e) {
+			logger.warn("No protostuff-json");
+		}
 
 		loadService(cl, MessageBodyReader.class, reader);
 		loadService(cl, MessageBodyWriter.class, writer);
@@ -326,12 +334,21 @@ public class JaxrsModel {
 			if (l.size() > 1)
 				throw new RuntimeException("Duplicate parameter annotation on " + errorName + " " + param.name());
 			params.add(l.isEmpty() ? new JaxrsBodyParam<>(param) : buildParam(param, l.get(0)));
+			addProtostuffMessage(param.type());
 		}
+		addProtostuffMessage(m.type());
 
 		consume = m.annotation(Consumes.class).flatMap(v -> v.value()).filter(v -> v.isSet()).map(v -> v.asArrayLiteral()).orElse(consume);
 		produce = m.annotation(Produces.class).flatMap(v -> v.value()).filter(v -> v.isSet()).map(v -> v.asArrayLiteral()).orElse(produce);
 
 		mappings.add(new JaxrsMapping("m$" + mappings.size(), clazz, m, method, params, p, consume, produce));
+	}
+
+	private void addProtostuffMessage(TypeModel type) {
+		if (type.isAssignableTo(Collection.class))
+			type = type.asClass().parameter(0).type();
+		if (type.isAssignableTo(Message.class))
+			protostuffMessage.add(type.name());
 	}
 
 	private static Optional<MethodModel> getSetter(ClassModel cl, String name, TypeModel type) {

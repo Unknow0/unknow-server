@@ -51,22 +51,6 @@ public class JsonXInput implements Input {
 		return lastNumber;
 	}
 
-	public void readStartObject() throws IOException {
-		readNext('{');
-	}
-
-	public void readEndObject() throws IOException {
-		readNext('}');
-	}
-
-	public void readStartArray() throws IOException {
-		readNext('[');
-	}
-
-	public void readEndArray() throws IOException {
-		readNext(']');
-	}
-
 	public void reset() {
 		lastRepeated = false;
 		lastSchema = null;
@@ -253,7 +237,7 @@ public class JsonXInput implements Input {
 
 	@Override
 	public <T> T mergeObject(T value, final Schema<T> schema) throws IOException {
-		readStartObject();
+		readNext('{');
 
 		final int previousNumber = this.lastNumber;
 		final boolean previousRepeated = this.lastRepeated;
@@ -353,7 +337,7 @@ public class JsonXInput implements Input {
 		return false;
 	}
 
-	private void throwUnexpectedContent(char expected, int actual) throws JsonInputException {
+	private void throwUnexpectedContent(int expected, int actual) throws JsonInputException {
 		throwUnexpectedContent(Character.toString(expected), actual == -1 ? "EOF" : Character.toString(actual));
 	}
 
@@ -368,10 +352,32 @@ public class JsonXInput implements Input {
 		throwUnexpectedContent("data", "EOF");
 	}
 
-	private void readNext(char expected) throws IOException {
+	public void readNext(char expected) throws IOException {
 		byte b = readNext();
 		if (expected != b)
 			throwUnexpectedContent(expected, b);
+	}
+
+	public void readNext(byte[] expected) throws IOException {
+		byte b = readNext();
+		checkBuffer(expected.length);
+		for (int i = 0; i < expected.length; i++) {
+			if (b != expected[i])
+				throwUnexpectedContent(expected[i], b);
+			if (++o == l)
+				throwEOF();
+		}
+	}
+
+	public boolean isNext(byte[] c) throws IOException {
+		if (c.length == 0)
+			return false;
+		readNext();
+		--o;
+		checkBuffer(c.length);
+		if (l - o < c.length)
+			return false;
+		return Arrays.equals(c, 0, c.length, buf, o, c.length);
 	}
 
 	public boolean isNext(char c) {

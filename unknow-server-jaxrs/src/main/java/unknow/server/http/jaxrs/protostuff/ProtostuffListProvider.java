@@ -9,7 +9,6 @@ import java.lang.reflect.Type;
 import java.util.Collection;
 
 import io.protostuff.LinkedBuffer;
-import io.protostuff.Message;
 import io.protostuff.ProtobufIOUtil;
 import io.protostuff.ProtobufOutput;
 import io.protostuff.Schema;
@@ -25,7 +24,7 @@ import jakarta.ws.rs.ext.Provider;
 @Priority(4500)
 @Consumes({ "application/x-protobuf" })
 @Produces({ "application/x-protobuf" })
-public class ProtostuffListProvider<T extends Message<?>> extends ProtostuffListAbstract<T> {
+public class ProtostuffListProvider<T> extends ProtostuffListAbstract<T> {
 
 	private static final byte[] EMPTY = { '[', ']' };
 
