@@ -4,6 +4,7 @@
 package unknow.server.http.jaxrs;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 import java.util.Map;
@@ -31,7 +32,7 @@ public class JaxrsEntityReader<T> {
 	/**
 	 * create new JaxrsBodyReader
 	 * 
-	 * @param clazz       the class
+	 * @param clazz the class
 	 * @param genericType the class as a generix
 	 * @param annotations the annotation on the param
 	 */
@@ -59,6 +60,8 @@ public class JaxrsEntityReader<T> {
 		MessageBodyReader<T> reader = readers.computeIfAbsent(mediaType, k -> JaxrsContext.reader(clazz, genericType, annotations, mediaType));
 
 		MultivaluedMap<String, String> httpHeaders = r.getHeaders();
-		return reader.readFrom(clazz, genericType, annotations, mediaType, httpHeaders, req.getInputStream());
+		try (InputStream is = req.getInputStream()) {
+			return reader.readFrom(clazz, genericType, annotations, mediaType, httpHeaders, is);
+		}
 	}
 }

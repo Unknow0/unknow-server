@@ -4,6 +4,7 @@
 package unknow.server.http.test;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -55,18 +56,18 @@ public class Rest {
 	}
 
 	@POST
-	public Truc call(Truc truc, @QueryParam("debug") String debug) {
-		logger.info("call>> truc: {}, debug: {}", truc, debug);
+	@Consumes({ "application/x-protobuf", "application/json", "application/jsonl", "application/x-ndjson" })
+	@Produces({ "application/x-protobuf", "application/json", "application/jsonl", "application/x-ndjson" })
+	public Truc call(Truc truc) {
 		return truc;
 	}
 
-	public static class Truc {
-		public String v;
-
-		@Override
-		public String toString() {
-			return "Truc [v=" + v + "]";
-		}
+	@POST
+	@Path("list")
+	@Consumes({ "application/x-protobuf", "application/json", "application/jsonl", "application/x-ndjson" })
+	@Produces({ "application/x-protobuf", "application/json", "application/jsonl", "application/x-ndjson" })
+	public Collection<Truc> list(Collection<Truc> truc) {
+		return truc;
 	}
 
 	public enum E {
