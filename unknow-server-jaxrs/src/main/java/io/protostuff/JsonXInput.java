@@ -3,7 +3,6 @@ package io.protostuff;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 
 public class JsonXInput implements Input {
 	private static final byte[] NULL = { 'n', 'u', 'l', 'l' };
@@ -309,8 +308,10 @@ public class JsonXInput implements Input {
 
 	/**
 	 * read next meaningful char
+	 * 
 	 * @return char or -1 on eof
-	 * @throws IOException on read error
+	 * @throws IOException
+	 *             on read error
 	 */
 	private byte readNext() throws IOException {
 		checkBuffer(1);
@@ -330,7 +331,7 @@ public class JsonXInput implements Input {
 		}
 
 		checkBuffer(3);
-		if (l - o > 3 && Arrays.equals(buf, o, o + 3, NULL, 1, 4)) {
+		if (l - o > 3 && equals(buf, o, NULL, 1, 3)) {
 			o += 3;
 			return true;
 		}
@@ -338,7 +339,7 @@ public class JsonXInput implements Input {
 	}
 
 	private void throwUnexpectedContent(int expected, int actual) throws JsonInputException {
-		throwUnexpectedContent(Character.toString(expected), actual == -1 ? "EOF" : Character.toString(actual));
+		throwUnexpectedContent(toString(expected), actual == -1 ? "EOF" : toString(actual));
 	}
 
 	private void throwUnexpectedContent(String expected, String actual) throws JsonInputException {
@@ -359,17 +360,19 @@ public class JsonXInput implements Input {
 	}
 
 	public void readNext(byte[] expected) throws IOException {
-		byte b = readNext();
+		readNext();
+		--o;
 		checkBuffer(expected.length);
-		for (int i = 0; i < expected.length; i++) {
-			if (b != expected[i])
-				throwUnexpectedContent(expected[i], b);
-			if (++o == l)
-				throwEOF();
+		int i = 0;
+		while (i < expected.length && o < l) {
+			if (buf[o++] != expected[i++])
+				throwUnexpectedContent(expected[i - 1], buf[o - 1]);
 		}
+		if (o == l && i < expected.length)
+			throwEOF();
 	}
 
-	public boolean isNext(byte[] c) throws IOException {
+	public boolean tryNext(byte[] c) throws IOException {
 		if (c.length == 0)
 			return false;
 		readNext();
@@ -377,7 +380,10 @@ public class JsonXInput implements Input {
 		checkBuffer(c.length);
 		if (l - o < c.length)
 			return false;
-		return Arrays.equals(c, 0, c.length, buf, o, c.length);
+		if (!equals(c, 0, buf, o, c.length))
+			return false;
+		o += c.length;
+		return true;
 	}
 
 	public boolean isNext(char c) {
@@ -421,7 +427,7 @@ public class JsonXInput implements Input {
 			return 10 + b - 'a';
 		if (b >= 'A' && b <= 'F')
 			return 10 + b - 'A';
-		throwUnexpectedContent("hex digit", Character.toString(b));
+		throwUnexpectedContent("hex digit", toString(b));
 		return 0; // will not happen
 	}
 
@@ -446,5 +452,53 @@ public class JsonXInput implements Input {
 			o++;
 			lastRepeated = false;
 		}
+	}
+
+	/**
+	 * check array range equality
+	 * 
+	 * @param a
+	 *            first array
+	 * @param aIndex
+	 *            starting index in a
+	 * @param b
+	 *            second array
+	 * @param bIndex
+	 *            starting index in b
+	 * @param len
+	 *            max length to check
+	 * @return true if range are equals
+	 */
+	public static boolean equals(byte[] a, int aIndex, byte[] b, int bIndex, int len) {
+		if (a == null || b == null)
+			throw new IllegalArgumentException("a or b null");
+		if (len < 0)
+			throw new ArrayIndexOutOfBoundsException("len < 0");
+		if (aIndex < 0)
+			throw new ArrayIndexOutOfBoundsException("aIndex < 0");
+		if (aIndex + len > a.length)
+			throw new ArrayIndexOutOfBoundsException("aIndex +len > a.length");
+
+		if (bIndex < 0)
+			throw new ArrayIndexOutOfBoundsException("bIndex < 0");
+		if (bIndex + len > b.length)
+			throw new ArrayIndexOutOfBoundsException("bIndex +len > b.length");
+
+		while (len-- > 0) {
+			if (a[aIndex++] != b[bIndex++])
+				return false;
+		}
+		return true;
+	}
+
+	/**
+	 * convert unicode code point to String
+	 * 
+	 * @param c
+	 *            unicode code point
+	 * @return the string
+	 */
+	private static String toString(int c) {
+		return new String(Character.toChars(c));
 	}
 }
