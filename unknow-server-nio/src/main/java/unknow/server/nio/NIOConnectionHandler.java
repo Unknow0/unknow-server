@@ -11,6 +11,7 @@ public interface NIOConnectionHandler {
 	/**
 	 * called after the connection is initialized
 	 * 
+	 * @param co the connection
 	 * @param sslEngine the sslEngine for ssl connection null for other
 	 * @throws InterruptedException on interrupt
 	 */
@@ -18,6 +19,8 @@ public interface NIOConnectionHandler {
 
 	/**
 	 * called when the handshake process finish
+	 * 
+	 * @param sslEngine the sslEngine
 	 * @throws InterruptedException on interrupt
 	 */
 	void onHandshakeDone(SSLEngine sslEngine) throws InterruptedException;
@@ -25,6 +28,7 @@ public interface NIOConnectionHandler {
 	/**
 	 * called after some data has been read
 	 * 
+	 * @param b the read buffers
 	 * @throws InterruptedException on interrupt
 	 * @throws IOException on io exception
 	 */
