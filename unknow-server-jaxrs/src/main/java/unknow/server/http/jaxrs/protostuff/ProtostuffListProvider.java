@@ -12,7 +12,6 @@ import io.protostuff.LinkedBuffer;
 import io.protostuff.ProtobufIOUtil;
 import io.protostuff.ProtobufOutput;
 import io.protostuff.Schema;
-import jakarta.annotation.Priority;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.WebApplicationException;
@@ -21,20 +20,15 @@ import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.ext.Provider;
 
 @Provider
-@Priority(4500)
 @Consumes({ "application/x-protobuf" })
 @Produces({ "application/x-protobuf" })
 public class ProtostuffListProvider<T> extends ProtostuffListAbstract<T> {
 
-	private static final byte[] EMPTY = { '[', ']' };
-
 	@Override
 	public void writeTo(Collection<T> list, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, Object> httpHeaders,
 			OutputStream out) throws IOException, WebApplicationException {
-		if (list.isEmpty()) {
-			out.write(EMPTY);
+		if (list.isEmpty())
 			return;
-		}
 
 		Type p = ((ParameterizedType) genericType).getActualTypeArguments()[0];
 
