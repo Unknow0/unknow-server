@@ -49,6 +49,7 @@ public abstract class NIOConnectionAbstract {
 	 * create new connection
 	 * 
 	 * @param key the selectionKey
+	 * @param handler the handler
 	 */
 	protected NIOConnectionAbstract(SelectionKey key, NIOConnectionHandler handler) {
 		this.key = key;

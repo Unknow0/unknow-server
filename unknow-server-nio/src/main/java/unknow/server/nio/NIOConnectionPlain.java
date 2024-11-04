@@ -22,6 +22,7 @@ public class NIOConnectionPlain extends NIOConnectionAbstract {
 	 * create new connection
 	 * 
 	 * @param key the selectionKey
+	 * @param handler the connection handler
 	 */
 	public NIOConnectionPlain(SelectionKey key, NIOConnectionHandler handler) {
 		super(key, handler);

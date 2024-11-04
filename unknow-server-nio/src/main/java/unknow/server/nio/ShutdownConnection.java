@@ -16,7 +16,6 @@ public class ShutdownConnection implements NIOConnectionHandler {
 	private final NIOServer server;
 
 	/**
-	 * @param key the selection key 
 	 * @param server the server
 	 */
 	public ShutdownConnection(NIOServer server) {

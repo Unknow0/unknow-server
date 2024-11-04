@@ -44,10 +44,10 @@ public class ResponseImpl extends Response {
 	/**
 	 * create new ResponseBuilderImpl.ResponseImpl
 	 * 
-	 * @param status      the response status
-	 * @param entity      the entity
+	 * @param status the response status
+	 * @param entity the entity
 	 * @param annotations the default response annotations
-	 * @param headers     the headers
+	 * @param headers the headers
 	 */
 	public ResponseImpl(int status, Object entity, Annotation[] annotations, MultivaluedMap<String, Object> headers) {
 		this.status = status;
@@ -132,7 +132,7 @@ public class ResponseImpl extends Response {
 
 	@Override
 	public void close() {
-		if (!(entity instanceof InputStream))
+		if (entity instanceof InputStream)
 			try {
 				((InputStream) entity).close();
 			} catch (@SuppressWarnings("unused") IOException e) { // OK
