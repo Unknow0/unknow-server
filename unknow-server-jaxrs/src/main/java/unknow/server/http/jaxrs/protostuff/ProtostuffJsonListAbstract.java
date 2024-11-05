@@ -9,6 +9,7 @@ import java.lang.reflect.Type;
 import java.util.Collection;
 
 import io.protostuff.JsonXIOUtil2;
+import io.protostuff.JsonXIOUtil2.DefaultListFormat;
 import io.protostuff.JsonXIOUtil2.ListFormat;
 import io.protostuff.LinkedBuffer;
 import io.protostuff.Message;
@@ -50,7 +51,7 @@ public abstract class ProtostuffJsonListAbstract<T extends Message<?>> extends P
 	@Produces({ "application/x-ndjson", "application/jsonl" })
 	public static class ProtostuffJsonLineProvider<T extends Message<?>> extends ProtostuffJsonListAbstract<T> {
 		public ProtostuffJsonLineProvider() {
-			super(ListFormat.NDJSON);
+			super(DefaultListFormat.NDJSON);
 		}
 	}
 
@@ -60,7 +61,7 @@ public abstract class ProtostuffJsonListAbstract<T extends Message<?>> extends P
 	@Produces({ "application/json" })
 	public static class ProtostuffJsonListProvider<T extends Message<?>> extends ProtostuffJsonListAbstract<T> {
 		public ProtostuffJsonListProvider() {
-			super(ListFormat.JSON);
+			super(DefaultListFormat.JSON);
 		}
 	}
 }
