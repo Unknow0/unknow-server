@@ -72,7 +72,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		mutex.lockInterruptibly();
 		try {
 			selector.wakeup();
-			SelectionKey key = socket.register(selector, SelectionKey.OP_READ);
+			SelectionKey key = socket.register(selector, 0);
 			init.add(key);
 			key.attach(pool.apply(key));
 		} finally {
@@ -122,6 +122,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		try {
 			SelectionKey k;
 			while ((k = init.poll()) != null) {
+				k.interestOps(SelectionKey.OP_READ);
 				NIOConnectionAbstract co = (NIOConnectionAbstract) k.attachment();
 				listener.accepted(id, co);
 				co.onInit();
