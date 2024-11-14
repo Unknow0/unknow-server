@@ -169,7 +169,7 @@ public class JaxrsModel {
 			logger.warn("No protostuff-core");
 		}
 		try {
-			cl.loadClass("io.protostuff.JsonXInput");
+			cl.loadClass("io.protostuff.JsonXOutput");
 			reader.accept(ProtostuffJsonProvider.class.getName());
 			reader.accept(ProtostuffJsonListProvider.class.getName());
 			reader.accept(ProtostuffJsonLineProvider.class.getName());
