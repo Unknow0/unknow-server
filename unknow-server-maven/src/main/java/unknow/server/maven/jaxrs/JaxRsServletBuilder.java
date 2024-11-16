@@ -415,9 +415,8 @@ public class JaxRsServletBuilder {
 			Map<String, Integer> map = new HashMap<>();
 			StringBuilder sb = new StringBuilder("/");
 			List<String> parts = new ArrayList<>();
-			path = path.substring(1);
 			Matcher m = pa.matcher(path);
-			int i = 0;
+			int i = 1;
 			int l = 0;
 			boolean last = true;
 			while (m.find()) {
@@ -432,15 +431,16 @@ public class JaxRsServletBuilder {
 					parts = null;
 				} else
 					sb.append("([^/]+)");
-				i = m.end();
+				i = m.end() + 1;
 			}
-			l += path.length() - i;
-			sb.append(path.substring(i));
-			if (parts != null && path.length() != i) {
-				last = false;
-				parts.add(path.substring(i));
+			if (i < path.length()) {
+				l += path.length() - i;
+				sb.append('/').append(path.substring(i));
+				if (parts != null) {
+					last = false;
+					parts.add(path.substring(i));
+				}
 			}
-			// TODO simple split
 
 			pattern.computeIfAbsent(new Path(l, sb.toString(), parts, last), k -> new HashMap<>()).computeIfAbsent(mapping.httpMethod, k -> new ArrayList<>()).add(mapping);
 			NameExpr n = params.get(map);

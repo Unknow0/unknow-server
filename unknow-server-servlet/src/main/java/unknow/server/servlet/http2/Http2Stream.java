@@ -6,12 +6,16 @@ import java.io.StringReader;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import jakarta.servlet.ServletInputStream;
 import unknow.server.servlet.HttpWorker;
 import unknow.server.servlet.impl.AbstractServletOutput;
 import unknow.server.servlet.utils.PathUtils;
 
 public class Http2Stream extends HttpWorker implements Http2FlowControl {
+	private static final Logger logger = LoggerFactory.getLogger(Http2Stream.class);
 
 	private final int id;
 	private final Http2Processor p;
@@ -62,6 +66,7 @@ public class Http2Stream extends HttpWorker implements Http2FlowControl {
 	}
 
 	public void start() {
+		logger.debug("{}: Stream {} start", co, id);
 		exec = co.submit(this);
 	}
 

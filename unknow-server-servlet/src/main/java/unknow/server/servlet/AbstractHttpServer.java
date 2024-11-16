@@ -27,6 +27,8 @@ import org.apache.commons.cli.Option;
 
 import jakarta.servlet.ServletContainerInitializer;
 import jakarta.servlet.ServletException;
+import unknow.server.nio.NIOConnectionPlain;
+import unknow.server.nio.NIOConnectionSSL;
 import unknow.server.nio.NIOServer;
 import unknow.server.nio.NIOServerBuilder;
 import unknow.server.servlet.impl.FilterConfigImpl;
@@ -127,9 +129,9 @@ public abstract class AbstractHttpServer extends NIOServerBuilder {
 				});
 		int keepAliveIdle = parseInt(cli, keepAlive, -1);
 		if (addressHttps != null)
-			server.bind(addressHttps, key -> new HttpConnectionSSL(key, sslContext, executor, ctx, manager, events, keepAliveIdle));
+			server.bind(addressHttps, key -> new NIOConnectionSSL(key, new HttpConnection(executor, ctx, manager, events, keepAliveIdle), sslContext));
 		if (addressHttp != null)
-			server.bind(addressHttp, key -> new HttpConnectionPlain(key, executor, ctx, manager, events, keepAliveIdle));
+			server.bind(addressHttp, key -> new NIOConnectionPlain(key, new HttpConnection(executor, ctx, manager, events, keepAliveIdle)));
 	}
 
 	private final SSLContext sslContext(String keystore, String password)

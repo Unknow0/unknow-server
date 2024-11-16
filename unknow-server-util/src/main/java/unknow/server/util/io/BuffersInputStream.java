@@ -22,6 +22,7 @@ public class BuffersInputStream extends InputStream {
 
 	/**
 	 * create a new input stream
+	 * 
 	 * @param buffers the data to read
 	 */
 	public BuffersInputStream(Buffers buffers) {
@@ -30,6 +31,7 @@ public class BuffersInputStream extends InputStream {
 
 	/**
 	 * create a new input stream
+	 * 
 	 * @param buffers the data to read
 	 * @param wait if false read won't wait for more data
 	 */
@@ -63,7 +65,7 @@ public class BuffersInputStream extends InputStream {
 	public int read() throws IOException {
 		try {
 			int b = buffers.read(!close && wait);
-			if (b > 0) {
+			if (b >= 0) {
 				read++;
 				if (mark != null)
 					mark[l++] = (byte) b;
@@ -88,7 +90,7 @@ public class BuffersInputStream extends InputStream {
 			Thread.currentThread().interrupt();
 			throw new IOException(e);
 		}
-		if (len >= 0) {
+		if (len > 0) {
 			read += len;
 			if (mark != null) {
 				ensureMark(l + len);

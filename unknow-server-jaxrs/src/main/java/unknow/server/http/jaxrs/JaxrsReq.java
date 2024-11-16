@@ -244,7 +244,7 @@ public class JaxrsReq {
 			return;
 		for (int c$ = 0; c$ < rc.length; c$++) {
 			Cookie c = rc[c$];
-			cookies.add(URLDecoder.decode(c.getName(), StandardCharsets.UTF_8), c.getValue());
+			cookies.add(c.getName(), c.getValue());
 		}
 	}
 
@@ -279,7 +279,7 @@ public class JaxrsReq {
 				value = "";
 				q = e;
 			} else
-				value = query.substring(q + 1, e);
+				value = URLDecoder.decode(query.substring(q + 1, e), StandardCharsets.UTF_8);
 			map.add(URLDecoder.decode(query.substring(i, q), StandardCharsets.UTF_8), value);
 			i = e + 1;
 		}

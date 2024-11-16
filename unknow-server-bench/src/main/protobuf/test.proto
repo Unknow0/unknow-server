@@ -1,0 +1,11 @@
+syntax = "proto2";
+
+option java_multiple_files = true;
+
+package unknow.server.bench.protobuf;
+
+message TestMsg {
+	optional string test = 1;
+	optional uint32 v = 2;
+	repeated TestMsg loop = 3;
+}

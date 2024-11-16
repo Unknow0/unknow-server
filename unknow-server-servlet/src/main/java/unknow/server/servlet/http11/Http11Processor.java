@@ -18,30 +18,28 @@ public class Http11Processor implements HttpProcessor {
 
 	private final HttpConnection co;
 
-	private volatile Future<?> exec = CompletableFuture.completedFuture(null);
+	private volatile Future<?> exec;
 
 	/**
 	 * new http11 processor
+	 * 
 	 * @param co the connection
 	 */
-	public Http11Processor(HttpConnection co) {
+	public Http11Processor(HttpConnection co, boolean start) {
 		this.co = co;
+		this.exec = start ? co.submit(new Http11Worker(co)) : CompletableFuture.completedFuture(null);
 	}
 
 	@Override
-	public final void process() throws InterruptedException {
+	public final void process() {
 		if (exec.isDone() && isStart(co.pendingRead()))
 			exec = co.submit(new Http11Worker(co));
 	}
 
 	@Override
 	public final boolean isClosable(boolean stop) {
-		if (!exec.isDone())
-			return false;
-		if (co.pendingRead().isEmpty())
-			return true;
-		exec = co.submit(new Http11Worker(co));
-		return false;
+		process();
+		return exec.isDone();
 	}
 
 	@Override
@@ -49,14 +47,19 @@ public class Http11Processor implements HttpProcessor {
 		exec.cancel(true);
 	}
 
-	public static final boolean isStart(Buffers b) throws InterruptedException {
-		return BuffersUtils.indexOf(b, END, 0, MAX_START_SIZE) > 0;
+	public static final boolean isStart(Buffers b) {
+		try {
+			return BuffersUtils.indexOf(b, END, 0, MAX_START_SIZE) > 0;
+		} catch (@SuppressWarnings("unused") InterruptedException e) {
+			Thread.currentThread().interrupt();
+			return false;
+		}
 	}
 
 	/** the processor factory */
 	public static final HttpProcessorFactory Factory = co -> {
 		if (isStart(co.pendingRead()))
-			return new Http11Processor(co);
+			return new Http11Processor(co, true);
 		return null;
 	};
 }

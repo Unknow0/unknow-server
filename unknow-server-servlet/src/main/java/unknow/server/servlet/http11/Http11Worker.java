@@ -10,17 +10,15 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import jakarta.servlet.DispatcherType;
 import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.http.Cookie;
-import unknow.server.nio.NIOConnection.Out;
+import unknow.server.nio.NIOConnectionAbstract.Out;
 import unknow.server.servlet.Decode;
 import unknow.server.servlet.HttpConnection;
 import unknow.server.servlet.HttpError;
 import unknow.server.servlet.HttpWorker;
 import unknow.server.servlet.impl.AbstractServletOutput;
 import unknow.server.servlet.impl.ServletRequestImpl;
-import unknow.server.servlet.impl.ServletResponseImpl;
 import unknow.server.util.io.Buffers;
 import unknow.server.util.io.BuffersUtils;
 
@@ -128,16 +126,6 @@ public final class Http11Worker extends HttpWorker {
 		out.write(CRLF);
 	}
 
-	@Override
-	public void run() {
-		super.run();
-		while (!co.pendingRead().isEmpty()) {
-			this.req = new ServletRequestImpl(this, DispatcherType.REQUEST);
-			this.res = new ServletResponseImpl(this);
-			super.run();
-		}
-	}
-
 	@SuppressWarnings("resource")
 	@Override
 	public final boolean doStart() throws IOException, InterruptedException {
@@ -154,7 +142,8 @@ public final class Http11Worker extends HttpWorker {
 			out.flush();
 		}
 
-		if (keepAliveIdle != 0 && "keep-alive".equalsIgnoreCase(req.getHeader("connection"))) {
+		String header = req.getHeader("connection");
+		if (keepAliveIdle != 0 && (header == null || "keep-alive".equalsIgnoreCase(header))) {
 			res.setHeader("connection", "keep-alive");
 			res.setHeader("keep-alive", "timeout=" + (keepAliveIdle / 1000));
 		} else

@@ -189,7 +189,7 @@ public final class BuffersUtils {
 		private int i = 0;
 		private int r = 0;
 
-		/** @param lookup bytres to search */
+		/** @param lookup bytes to search */
 		public IndexOfBloc(byte[] lookup) {
 			this.lookup = lookup;
 		}

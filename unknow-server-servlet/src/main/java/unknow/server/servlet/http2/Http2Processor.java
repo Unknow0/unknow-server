@@ -147,6 +147,7 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 
 	/**
 	 * return true if the frame is done
+	 * 
 	 * @param buf
 	 * @return
 	 * @throws InterruptedException
@@ -164,12 +165,13 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 		}
 		wantContinuation = false;
 
+		if (logger.isDebugEnabled())
+			logger.debug(String.format("%s frame: %02x, size: %s, flags: %02x, id: %s", co, type, size, flags, id));
 		FrameBuilder builder = BUILDERS.get(type);
 		if (builder == null) {
 			goaway(PROTOCOL_ERROR);
 			return;
 		}
-		logger.debug("process {}", builder);
 		r = builder.build(this, size, flags, id, buf);
 	}
 
@@ -206,7 +208,9 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 		} finally {
 			write.unlock();
 		}
-		co.toggleKeyOps();
+		if (logger.isDebugEnabled())
+			logger.debug(String.format("%s: send %02x %02x", this, type, flags));
+		co.flush();
 	}
 
 	public void rawWrite(byte[] b) throws InterruptedException {
@@ -217,7 +221,7 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 		} finally {
 			write.unlock();
 		}
-		co.toggleKeyOps();
+		co.flush();
 	}
 
 	public void sendHeaders(int id, ServletResponseImpl res) throws InterruptedException {
