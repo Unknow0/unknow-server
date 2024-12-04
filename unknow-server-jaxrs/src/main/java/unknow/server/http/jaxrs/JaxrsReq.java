@@ -72,13 +72,11 @@ public class JaxrsReq {
 		return h == null ? MediaType.APPLICATION_OCTET_STREAM_TYPE : MediaTypeDelegate.INSTANCE.fromString(h);
 	}
 
-	public MediaType getAccepted(Predicate<MediaType> allowed) {
+	public MediaType getAccepted(Predicate<MediaType> allowed, MediaType def) {
+		accept = def;
 		String a = r.getHeader("accept");
-		if (a == null) {
-			if (allowed.test(MediaType.WILDCARD_TYPE))
-				return accept = MediaType.WILDCARD_TYPE;
-			return null;
-		}
+		if (a == null)
+			return accept;
 		int i;
 		int l = 0;
 		double lq = -1;

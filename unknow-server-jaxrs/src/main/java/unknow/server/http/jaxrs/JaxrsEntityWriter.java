@@ -14,6 +14,7 @@ import jakarta.ws.rs.core.GenericEntity;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.ext.MessageBodyWriter;
 import unknow.server.http.jaxrs.impl.ResponseImpl;
 
 /**
@@ -66,8 +67,9 @@ public interface JaxrsEntityWriter<T> {
 		public void write(JaxrsReq r, Object e, HttpServletResponse res) throws WebApplicationException, IOException {
 			MediaType mediaType = r.getAccept();
 			MultivaluedMap<String, Object> httpHeaders = new ResponseHeader(res);
+			MessageBodyWriter<Object> writer = JaxrsContext.writer(clazz, genericType, annotations, mediaType);
 			try (ServletOutputStream out = res.getOutputStream()) {
-				JaxrsContext.writer(clazz, genericType, annotations, mediaType).writeTo(e, clazz, genericType, annotations, mediaType, httpHeaders, out);
+				writer.writeTo(e, clazz, genericType, annotations, mediaType, httpHeaders, out);
 			}
 		}
 	}
@@ -105,8 +107,9 @@ public interface JaxrsEntityWriter<T> {
 				if (o instanceof GenericEntity)
 					GenericWriter.write((GenericEntity<?>) o, mediaType, a, res);
 				else {
+					MessageBodyWriter<Object> writer = JaxrsContext.writer(clazz, clazz, a, mediaType);
 					try (ServletOutputStream out = res.getOutputStream()) {
-						JaxrsContext.writer(clazz, clazz, a, mediaType).writeTo(e.getEntity(), clazz, clazz, a, mediaType, httpHeaders, out);
+						writer.writeTo(e.getEntity(), clazz, clazz, a, mediaType, httpHeaders, out);
 					}
 				}
 			}
@@ -136,8 +139,9 @@ public interface JaxrsEntityWriter<T> {
 			Object o = e.getEntity();
 
 			MultivaluedMap<String, Object> httpHeaders = new ResponseHeader(res);
+			MessageBodyWriter<Object> writer = JaxrsContext.writer(clazz, genericType, annotations, mediaType);
 			try (ServletOutputStream out = res.getOutputStream()) {
-				JaxrsContext.writer(clazz, genericType, annotations, mediaType).writeTo(o, clazz, genericType, annotations, mediaType, httpHeaders, out);
+				writer.writeTo(o, clazz, genericType, annotations, mediaType, httpHeaders, out);
 			}
 		}
 	}

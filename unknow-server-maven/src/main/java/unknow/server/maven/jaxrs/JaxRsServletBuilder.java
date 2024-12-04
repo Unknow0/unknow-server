@@ -10,6 +10,7 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -268,13 +269,13 @@ public class JaxRsServletBuilder {
 										Utils.list(new NameExpr("req"), new NameExpr("e"), new NameExpr("res")))))),
 						null));
 
-		Map<String, Map<String, JaxrsMapping>> consume = new HashMap<>();
+		Map<String, Map<String, JaxrsMapping>> consume = new LinkedHashMap<>();
 		for (JaxrsMapping mapping : list) {
 			for (int i = 0; i < mapping.consume.length; i++) {
 				String c = mapping.consume[i];
 				Map<String, JaxrsMapping> map = consume.get(c);
 				if (map == null)
-					consume.put(c, map = new HashMap<>());
+					consume.put(c, map = new LinkedHashMap<>());
 
 				for (int j = 0; j < mapping.produce.length; j++) {
 					String p = mapping.produce[j];
@@ -305,7 +306,8 @@ public class JaxRsServletBuilder {
 
 	private Statement buildProduces(BlockStmt b, Map<String, JaxrsMapping> produce) {
 
-		MethodCallExpr accept = new MethodCallExpr(new NameExpr("req"), "getAccepted", Utils.list(mt.predicate(produce.keySet())));
+		MethodCallExpr accept = new MethodCallExpr(new NameExpr("req"), "getAccepted",
+				Utils.list(mt.predicate(produce.keySet()), mt.type(produce.keySet().iterator().next())));
 
 		JaxrsMapping def = produce.remove("*/*");
 		Statement stmt = new ThrowStmt(new ObjectCreationExpr(null, types.getClass(NotAcceptableException.class), Utils.list()));
