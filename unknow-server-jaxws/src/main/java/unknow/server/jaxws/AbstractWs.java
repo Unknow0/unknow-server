@@ -131,7 +131,7 @@ public abstract class AbstractWs extends HttpServlet {
 					w.close();
 				}
 			} catch (Exception ex) {
-				logger.error("Failed to call operation " + sig, ex);
+				logger.error("Failed to call operation {}", sig, ex);
 				fault(res, ns, ex.getMessage());
 			}
 		} else
