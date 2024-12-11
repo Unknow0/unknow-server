@@ -27,8 +27,8 @@ public class MTPredicate implements Predicate<MediaType> {
 	}
 
 	public static boolean accept(MediaType t, MediaType y) {
-		if (!t.getType().equals(y.getType()) && t.isWildcardType())
+		if (!t.isWildcardType() && !t.getType().equals(y.getType()))
 			return false;
-		return !t.getSubtype().equals(y.getSubtype()) && t.isWildcardSubtype();
+		return !t.isWildcardSubtype() && !t.getSubtype().equals(y.getSubtype());
 	}
 }
