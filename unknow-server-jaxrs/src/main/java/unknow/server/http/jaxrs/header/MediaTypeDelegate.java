@@ -22,7 +22,11 @@ public class MediaTypeDelegate implements HeaderDelegate<MediaType> {
 
 	@Override
 	public MediaType fromString(String value) {
-		return fromString(value, 0, value.length());
+		MediaType mt = fromString(value, 0, value.length());
+		if (mt == null)
+			throw new IllegalArgumentException("invalid mediatype '" + value + "'");
+
+		return mt;
 	}
 
 	@Override
@@ -37,7 +41,7 @@ public class MediaTypeDelegate implements HeaderDelegate<MediaType> {
 		int semiColonIndex = value.indexOf(';', off);
 		int slashIndex = value.indexOf('/', off);
 		if (slashIndex < 0 || slashIndex >= end)
-			throw new IllegalArgumentException("invalid mediatype '" + value.substring(off, end) + "'");
+			return null;
 
 		String type = value.substring(off, slashIndex).trim();
 		String subtype = value.substring(slashIndex + 1, semiColonIndex > 0 && semiColonIndex < end ? semiColonIndex : end).trim();

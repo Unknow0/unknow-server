@@ -27,7 +27,7 @@ public class MediaTypeDelegateTest {
 		return Stream.of(Arguments.of(new MediaType("text", "xml"), "text/xml", 0, 8),
 				Arguments.of(new MediaType("text", "xml", Collections.singletonMap("q", "1")), "text/xml;q=1", 0, 12),
 				Arguments.of(new MediaType("text", "xml", Collections.singletonMap("q", "1")), "text/xml;q=1,text/plain;a=a;q=0.5", 0, 12),
-				Arguments.of(new MediaType("text", "plain", a), "text/xml;q=1,text/plain;a=a;q=0.5", 13, 33));
+				Arguments.of(new MediaType("text", "plain", a), "text/xml;q=1,text/plain;a=a;q=0.5", 13, 33), Arguments.of(null, " *; q=.2", 0, 8));
 	}
 
 	@ParameterizedTest

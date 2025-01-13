@@ -83,7 +83,7 @@ public class JaxrsReq {
 		do {
 			i = a.indexOf(',', l);
 			MediaType m = MediaTypeDelegate.fromString(a, l, i < 0 ? a.length() : i);
-			if (allowed.test(m)) {
+			if (m != null && allowed.test(m)) {
 				double q = Double.parseDouble(m.getParameters().getOrDefault("q", "1"));
 				if (q > lq) {
 					lq = q;
