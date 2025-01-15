@@ -25,6 +25,7 @@ public class PathPatternTest {
 				Arguments.of(null, new PathSimple(false, "t"), "/a/ta"),
 				Arguments.of(null, new PathSimple(true, "t/"), "/a/t/"),
 				Arguments.of(Arrays.asList("a", "b"), new PathSimple(true, "t/"), "/a/t/b"),
+				Arguments.of(Arrays.asList("a", "b"), new PathSimple(true, ""), "/a/b"),
 				
 				Arguments.of(Arrays.asList("t/b"), new PathRegexp("/a/(.*)"), "/a/t/b")
 				);

@@ -3,32 +3,45 @@
  */
 package unknow.server.http.jaxrs;
 
-import java.util.function.Predicate;
-
 import jakarta.ws.rs.core.MediaType;
 
 /**
  * @author unknow
  */
-public class MTPredicate implements Predicate<MediaType> {
-	private final MediaType[] mts;
+public interface MTPredicate {
+	MediaType getMatching(MediaType t);
 
-	public MTPredicate(MediaType... mts) {
-		this.mts = mts;
-	}
+	public static MTPredicate ANY = t -> t;
 
-	@Override
-	public boolean test(MediaType t) {
-		for (int i = 0; i < mts.length; i++) {
-			if (accept(mts[i], t))
-				return true;
+	public static class OneOf implements MTPredicate {
+		private final MediaType[] mts;
+
+		public OneOf(MediaType... mts) {
+			this.mts = mts;
 		}
-		return false;
-	}
 
-	public static boolean accept(MediaType t, MediaType y) {
-		if (!t.isWildcardType() && !t.getType().equals(y.getType()))
-			return false;
-		return !t.isWildcardSubtype() && !t.getSubtype().equals(y.getSubtype());
+		@Override
+		public MediaType getMatching(MediaType t) {
+			String charset = t.getParameters().get(MediaType.CHARSET_PARAMETER);
+			for (int i = 0; i < mts.length; i++) {
+				MediaType m = mts[i];
+				if (t.isWildcardType()) {
+					if (t.isWildcardSubtype() || t.getSubtype().equals(m.getSubtype())) {
+						if (charset == null)
+							return m;
+						return new MediaType(m.getType(), m.getSubtype(), charset);
+					}
+				} else if (t.getType().equals(m.getType())) {
+					if (t.isWildcardSubtype()) {
+						if (charset == null)
+							return m;
+						return new MediaType(m.getType(), m.getSubtype(), charset);
+					}
+					if (t.getSubtype().equals(m.getSubtype()))
+						return t;
+				}
+			}
+			return null;
+		}
 	}
 }

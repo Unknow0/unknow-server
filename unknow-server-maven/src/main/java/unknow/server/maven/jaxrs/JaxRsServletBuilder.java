@@ -129,7 +129,7 @@ public class JaxRsServletBuilder {
 				.addExtendedType(HttpServlet.class);
 		cl.addFieldWithInitializer(long.class, "serialVersionUID", new LongLiteralExpr("1L"), Utils.PSF);
 
-		b = path.endsWith("*") ? new PatternService(path.length() - 2) : new SimpleService();
+		b = path.endsWith("*") ? new PatternService(path.length() - 1) : new SimpleService();
 
 		for (JaxrsMapping m : mappings) {
 			ClassModel c = m.clazz;
@@ -418,7 +418,7 @@ public class JaxRsServletBuilder {
 			StringBuilder sb = new StringBuilder("/");
 			List<String> parts = new ArrayList<>();
 			Matcher m = pa.matcher(path);
-			int i = 1;
+			int i = 0;
 			int l = 0;
 			boolean last = true;
 			while (m.find()) {
@@ -426,21 +426,21 @@ public class JaxRsServletBuilder {
 				String s = path.substring(i, m.start());
 				sb.append(s.replaceAll("([\\\\.+*\\[\\{])", "\\$1"));
 				if (parts != null && !s.isEmpty())
-					parts.add(s);
+					parts.add(s.substring(1));
 				map.put(m.group(1), map.size());
 				if (m.group(2) != null) {
 					sb.append('(').append(m.group(2)).append(')');
 					parts = null;
 				} else
 					sb.append("([^/]+)");
-				i = m.end() + 1;
+				i = m.end();
 			}
 			if (i < path.length()) {
 				l += path.length() - i;
-				sb.append('/').append(path.substring(i));
+				sb.append(path.substring(i));
 				if (parts != null) {
 					last = false;
-					parts.add(path.substring(i));
+					parts.add(path.substring(i + 1));
 				}
 			}
 
@@ -539,6 +539,7 @@ public class JaxRsServletBuilder {
 		 * @param pattern
 		 * @param last
 		 * @param parts
+		 * @param count
 		 */
 		public Path(int length, String pattern, List<String> parts, boolean last) {
 			this.length = length;
