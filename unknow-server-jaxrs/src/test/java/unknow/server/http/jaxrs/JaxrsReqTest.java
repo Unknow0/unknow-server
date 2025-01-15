@@ -6,7 +6,6 @@ package unknow.server.http.jaxrs;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Collections;
-import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.params.ParameterizedTest;
@@ -55,18 +54,18 @@ public class JaxrsReqTest {
 	public static final Stream<Arguments> accept() {
 		//@formatter:off
 		return Stream.of(
-				Arguments.of(MediaType.WILDCARD_TYPE, "*/*", (Predicate<MediaType>) m -> false),
-				Arguments.of(MediaType.WILDCARD_TYPE, "*/*", (Predicate<MediaType>) m -> true),
-				Arguments.of(MediaType.TEXT_XML_TYPE, "text/plain,text/xml", (Predicate<MediaType>) m -> m.getSubtype().equals("xml")),
-				Arguments.of(MediaType.WILDCARD_TYPE, null, (Predicate<MediaType>) m -> m.getSubtype().equals("xml")),
-				Arguments.of(MediaType.WILDCARD_TYPE, "*/*", (Predicate<MediaType>) m -> m.getSubtype().equals("xml")),
-				Arguments.of(new MediaType("text", "json"), "text/xml;q=.5,text/json", (Predicate<MediaType>) m -> true));
+				Arguments.of(MediaType.WILDCARD_TYPE, "*/*", (MTPredicate) m -> null),
+				Arguments.of(MediaType.WILDCARD_TYPE, "*/*", MTPredicate.ANY),
+				Arguments.of(MediaType.TEXT_XML_TYPE, "text/plain,text/xml", new MTPredicate.OneOf(MediaType.TEXT_XML_TYPE)),
+				Arguments.of(MediaType.WILDCARD_TYPE, null, new MTPredicate.OneOf(MediaType.TEXT_XML_TYPE)),
+				Arguments.of(MediaType.TEXT_XML_TYPE, "*/*",new MTPredicate.OneOf(MediaType.TEXT_XML_TYPE)),
+				Arguments.of(new MediaType("text", "json"), "text/xml;q=.5,text/json", MTPredicate.ANY));
 		//@formatter:on
 	}
 
 	@ParameterizedTest(name = "accept {1}")
 	@MethodSource
-	void accept(MediaType expected, String accept, Predicate<MediaType> allowed) {
+	void accept(MediaType expected, String accept, MTPredicate allowed) {
 		RuntimeDelegate.setInstance(new JaxrsRuntime());
 		HttpServletRequest r = Mockito.mock(HttpServletRequest.class);
 		Mockito.when(r.getHeader("accept")).thenReturn(accept);

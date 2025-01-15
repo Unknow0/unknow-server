@@ -9,25 +9,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
-import java.util.function.Predicate;
 
 import org.apache.maven.plugin.MojoExecutionException;
 
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
-import com.github.javaparser.ast.body.Parameter;
-import com.github.javaparser.ast.expr.BooleanLiteralExpr;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.FieldAccessExpr;
-import com.github.javaparser.ast.expr.LambdaExpr;
-import com.github.javaparser.ast.expr.MethodCallExpr;
-import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
 import com.github.javaparser.ast.expr.StringLiteralExpr;
 import com.github.javaparser.ast.expr.TypeExpr;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
-import com.github.javaparser.ast.type.UnknownType;
 
 import jakarta.ws.rs.core.MediaType;
 import unknow.server.http.jaxrs.MTPredicate;
@@ -113,20 +106,14 @@ public class MediaTypesBuilder {
 
 		Expression e = null;
 		if (!mediaTypes.contains("*/*")) {
-			if (mediaTypes.size() > 1) {
-				NodeList<Expression> l = new NodeList<>();
-				for (String s : mediaTypes) {
-					if (!"*/*".equals(s))
-						l.add(type(s));
-				}
-				e = new ObjectCreationExpr(null, types.getClass(MTPredicate.class), l);
-			} else
-				e = new LambdaExpr(new Parameter(new UnknownType(), "t"),
-						new MethodCallExpr(new NameExpr("t"), "isCompatible", Utils.list(type(mediaTypes.iterator().next()))));
+			NodeList<Expression> l = new NodeList<>();
+			for (String s : mediaTypes)
+				l.add(type(s));
+			e = new ObjectCreationExpr(null, types.getClass(MTPredicate.OneOf.class), l);
 		} else
-			e = new LambdaExpr(new Parameter(new UnknownType(), "t"), new BooleanLiteralExpr(true));
+			e = new FieldAccessExpr(new TypeExpr(types.get(MTPredicate.class)), "ANY");
 
-		cl.addFieldWithInitializer(types.getClass(Predicate.class, mt), name, e, Utils.PUBLIC_STATIC);
+		cl.addFieldWithInitializer(types.getClass(MTPredicate.class), name, e, Utils.PUBLIC_STATIC);
 		predicates.put(k, n = new FieldAccessExpr(new TypeExpr(types.getClass(cl)), name));
 		return n;
 	}

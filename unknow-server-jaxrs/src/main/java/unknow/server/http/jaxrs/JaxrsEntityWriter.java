@@ -66,6 +66,7 @@ public interface JaxrsEntityWriter<T> {
 		@Override
 		public void write(JaxrsReq r, Object e, HttpServletResponse res) throws WebApplicationException, IOException {
 			MediaType mediaType = r.getAccept();
+			res.setContentType(mediaType.toString());
 			MultivaluedMap<String, Object> httpHeaders = new ResponseHeader(res);
 			MessageBodyWriter<Object> writer = JaxrsContext.writer(clazz, genericType, annotations, mediaType);
 			try (ServletOutputStream out = res.getOutputStream()) {
@@ -98,6 +99,7 @@ public interface JaxrsEntityWriter<T> {
 				MediaType mediaType = e.getMediaType();
 				if (mediaType == null)
 					mediaType = r.getAccept();
+				res.setContentType(mediaType.toString());
 
 				Class<?> clazz = o.getClass();
 				Annotation[] a = e instanceof ResponseImpl ? ((ResponseImpl) e).getAnnotations() : null;
@@ -130,6 +132,7 @@ public interface JaxrsEntityWriter<T> {
 
 		@Override
 		public void write(JaxrsReq r, GenericEntity<?> e, HttpServletResponse res) throws WebApplicationException, IOException {
+			res.setContentType(r.getAccept().toString());
 			write(e, r.getAccept(), annotations, res);
 		}
 

@@ -14,7 +14,6 @@ import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Predicate;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -72,7 +71,7 @@ public class JaxrsReq {
 		return h == null ? MediaType.APPLICATION_OCTET_STREAM_TYPE : MediaTypeDelegate.INSTANCE.fromString(h);
 	}
 
-	public MediaType getAccepted(Predicate<MediaType> allowed, MediaType def) {
+	public MediaType getAccepted(MTPredicate allowed, MediaType def) {
 		accept = def;
 		String a = r.getHeader("accept");
 		if (a == null)
@@ -83,7 +82,7 @@ public class JaxrsReq {
 		do {
 			i = a.indexOf(',', l);
 			MediaType m = MediaTypeDelegate.fromString(a, l, i < 0 ? a.length() : i);
-			if (m != null && allowed.test(m)) {
+			if (m != null && (m = allowed.getMatching(m)) != null) {
 				double q = Double.parseDouble(m.getParameters().getOrDefault("q", "1"));
 				if (q > lq) {
 					lq = q;
@@ -93,6 +92,7 @@ public class JaxrsReq {
 			l = i + 1;
 		} while (i > 0);
 		return accept;
+
 	}
 
 	public <T> T getPath(String path, String def, ParamConverter<T> c) {
