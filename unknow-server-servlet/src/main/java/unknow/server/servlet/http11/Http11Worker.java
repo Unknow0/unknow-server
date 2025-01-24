@@ -61,11 +61,12 @@ public final class Http11Worker extends HttpWorker {
 
 	/**
 	 * new worker
+	 * 
 	 * @param co the connection
 	 */
 	public Http11Worker(HttpConnection co) {
 		super(co);
-		this.keepAliveIdle = co.getkeepAlive();
+		this.keepAliveIdle = co.getkeepAlive() / 1000;
 
 		sb = new StringBuilder();
 		decode = new Decode(sb);
@@ -143,9 +144,10 @@ public final class Http11Worker extends HttpWorker {
 		}
 
 		String header = req.getHeader("connection");
-		if (keepAliveIdle != 0 && (header == null || "keep-alive".equalsIgnoreCase(header))) {
+		if (keepAliveIdle >= 0 && (header == null || "keep-alive".equalsIgnoreCase(header))) {
 			res.setHeader("connection", "keep-alive");
-			res.setHeader("keep-alive", "timeout=" + (keepAliveIdle / 1000));
+			if (keepAliveIdle > 0)
+				res.setHeader("keep-alive", "timeout=" + keepAliveIdle);
 		} else
 			res.setHeader("connection", "close");
 		return true;

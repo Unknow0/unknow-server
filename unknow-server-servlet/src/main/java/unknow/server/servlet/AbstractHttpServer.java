@@ -66,7 +66,7 @@ public abstract class AbstractHttpServer extends NIOServerBuilder {
 	/** @return the event manager */
 	protected abstract EventManager createEventManager();
 
-	/** 
+	/**
 	 * @param vhost the vhost
 	 * @return the context
 	 */
@@ -86,13 +86,14 @@ public abstract class AbstractHttpServer extends NIOServerBuilder {
 		keystore = withOpt("keystore").withCli(Option.builder().longOpt("keystore").hasArg().desc("keystore to use for https").build());
 		keystorePass = withOpt("keystore-pass").withCli(Option.builder().longOpt("keystore-pass").hasArg().desc("passphrase for the keystore").build());
 
-		vhost = withOpt("vhost").withCli(Option.builder().longOpt("vhost").desc("public vhost seen by the servlet, default to the binded address").build());
-		execMin = withOpt("exec-min").withCli(Option.builder().longOpt("exec-min").desc("min number of exec thread to use").build()).withValue("0");
-		execMax = withOpt("exec-max").withCli(Option.builder().longOpt("exec-max").desc("max number of exec thread to use").build())
+		vhost = withOpt("vhost").withCli(Option.builder().longOpt("vhost").hasArg().desc("public vhost seen by the servlet, default to the binded address").build());
+		execMin = withOpt("exec-min").withCli(Option.builder().longOpt("exec-min").hasArg().desc("min number of exec thread to use").build()).withValue("0");
+		execMax = withOpt("exec-max").withCli(Option.builder().longOpt("exec-max").hasArg().desc("max number of exec thread to use").build())
 				.withValue(Integer.toString(Integer.MAX_VALUE));
-		execIdle = withOpt("exec-idle").withCli(Option.builder().longOpt("exec-idle").desc("max idle time for exec thread in seconds").build()).withValue("60");
+		execIdle = withOpt("exec-idle").withCli(Option.builder().longOpt("exec-idle").hasArg().desc("max idle time for exec thread in seconds").build()).withValue("60");
 		keepAlive = withOpt("keepalive")
-				.withCli(Option.builder().longOpt("keepalive").desc("max time to keep idle keepalive connection, -1: infinite, 0: no keep alive").build()).withValue("2000");
+				.withCli(Option.builder().longOpt("keepalive").hasArg().desc("max time to keep idle keepalive connection in seconds, -1: no keep alive, 0: infinite").build())
+				.withValue("2");
 	}
 
 	@Override
@@ -127,7 +128,7 @@ public abstract class AbstractHttpServer extends NIOServerBuilder {
 					t.setDaemon(true);
 					return t;
 				});
-		int keepAliveIdle = parseInt(cli, keepAlive, -1);
+		int keepAliveIdle = parseInt(cli, keepAlive, -1) * 1000;
 		if (addressHttps != null)
 			server.bind(addressHttps, key -> new NIOConnectionSSL(key, new HttpConnection(executor, ctx, manager, events, keepAliveIdle), sslContext));
 		if (addressHttp != null)
@@ -154,6 +155,7 @@ public abstract class AbstractHttpServer extends NIOServerBuilder {
 
 	/**
 	 * find and call initializer
+	 * 
 	 * @throws ServletException on error
 	 */
 	protected void loadInitializer() throws ServletException {
@@ -162,8 +164,9 @@ public abstract class AbstractHttpServer extends NIOServerBuilder {
 		}
 	}
 
-	/** 
+	/**
 	 * do build and run the server
+	 * 
 	 * @param arg the main arguments
 	 * @throws Exception on error
 	 */
