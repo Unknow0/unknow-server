@@ -35,7 +35,7 @@ public final class HttpConnection implements NIOConnectionHandler {
 	private final ServletContextImpl ctx;
 	private final ServletManager manager;
 	private final EventManager events;
-	private final int keepAliveIdle;
+	private final int keepAliveMs;
 
 	private NIOConnectionAbstract co;
 	private HttpProcessor p;
@@ -53,7 +53,7 @@ public final class HttpConnection implements NIOConnectionHandler {
 		this.ctx = ctx;
 		this.manager = manager;
 		this.events = events;
-		this.keepAliveIdle = keepAliveIdle;
+		this.keepAliveMs = keepAliveIdle;
 	}
 
 	@Override
@@ -106,8 +106,8 @@ public final class HttpConnection implements NIOConnectionHandler {
 		if (co.pendingWrite().isEmpty()) {
 			if (co.getIn().isClosed())
 				return true;
-			if (keepAliveIdle > 0) {
-				long e = now - keepAliveIdle;
+			if (keepAliveMs > 0) {
+				long e = now - keepAliveMs;
 				if (co.lastRead() <= e && co.lastWrite() <= e) {
 					logger.info("keep alive idle reached {}", this);
 					return true;
@@ -140,7 +140,7 @@ public final class HttpConnection implements NIOConnectionHandler {
 	}
 
 	public int getkeepAlive() {
-		return keepAliveIdle;
+		return keepAliveMs;
 	}
 
 	public ServletManager getServlet() {
