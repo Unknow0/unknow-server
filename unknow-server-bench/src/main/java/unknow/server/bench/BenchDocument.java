@@ -24,7 +24,7 @@ public class BenchDocument {
 	@Benchmark
 	public void xmlBean() throws XmlException, IOException {
 		XmlObject o;
-		try (InputStream is = cl.getResourceAsStream("complex.xml")) {
+		try (InputStream is = cl.getResourceAsStream("/complex.xml")) {
 			o = XmlObject.Factory.parse(is);
 		}
 
@@ -37,7 +37,7 @@ public class BenchDocument {
 	@Benchmark
 	public void document() throws SAXException, IOException, ParserConfigurationException, TransformerConfigurationException, TransformerException {
 		Document o;
-		try (InputStream is = cl.getResourceAsStream("complex.xml")) {
+		try (InputStream is = cl.getResourceAsStream("/complex.xml")) {
 			o = docFactory.newDocumentBuilder().parse(is);
 		}
 

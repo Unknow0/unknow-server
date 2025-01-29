@@ -30,7 +30,7 @@ public class BenchJaxb {
 			throw new ExceptionInInitializerError(e);
 		}
 
-		try (ByteArrayOutputStream out = new ByteArrayOutputStream(); InputStream is = cl.getResourceAsStream("complex.xml")) {
+		try (ByteArrayOutputStream out = new ByteArrayOutputStream(); InputStream is = cl.getResourceAsStream("/complex.xml")) {
 			byte[] b = new byte[4096];
 			int l = 0;
 			while ((l = is.read(b)) != -1)
