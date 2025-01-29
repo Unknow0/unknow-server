@@ -64,7 +64,7 @@ public class NIOServer extends NIOLoop {
 
 	@SuppressWarnings("resource")
 	@Override
-	protected void selected(SelectionKey key) throws IOException, InterruptedException {
+	protected void selected(SelectionKey key, long now) throws IOException, InterruptedException {
 		try {
 			@SuppressWarnings("unchecked")
 			Function<SelectionKey, NIOConnectionAbstract> factory = (Function<SelectionKey, NIOConnectionAbstract>) key.attachment();

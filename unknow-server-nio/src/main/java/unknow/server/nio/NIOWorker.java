@@ -80,13 +80,13 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	}
 
 	@Override
-	protected final void selected(SelectionKey key) throws IOException, InterruptedException {
+	protected final void selected(SelectionKey key, long now) throws IOException, InterruptedException {
 		NIOConnectionAbstract h = (NIOConnectionAbstract) key.attachment();
 		keys.remove(key);
 		keys.addLast(key);
 		if (key.isValid() && key.isWritable()) {
 			try {
-				h.writeInto(buf);
+				h.writeInto(buf, now);
 			} catch (InterruptedException e) {
 				logger.error("failed to write {}", h, e);
 				Thread.currentThread().interrupt();
@@ -101,7 +101,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		// Tests whether this key's channel is ready to accept a new socket connection
 		if (key.isValid() && key.isReadable()) {
 			try {
-				h.readFrom(buf);
+				h.readFrom(buf, now);
 			} catch (InterruptedException e) {
 				logger.error("failed to read {}", h, e);
 				Thread.currentThread().interrupt();
@@ -118,12 +118,14 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	protected void onSelect(boolean close) throws InterruptedException {
 		SelectionKey k;
 		int i = 0;
+		long now = System.currentTimeMillis();
 		while (i++ < 100 && (k = init.poll()) != null) {
 			k.interestOps(SelectionKey.OP_READ);
+			keys.addLast(k);
 			NIOConnectionAbstract co = (NIOConnectionAbstract) k.attachment();
 			listener.accepted(id, co);
 			try {
-				co.onInit();
+				co.onInit(now);
 			} catch (IOException e) {
 				logger.warn("{} Failed to init", co, e);
 				close(k);
@@ -134,7 +136,6 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		else
 			wakeup.set(true);
 
-		long now = System.currentTimeMillis();
 		if (now - lastCheck < 5000)
 			return;
 		lastCheck = now;

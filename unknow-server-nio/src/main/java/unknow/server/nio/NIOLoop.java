@@ -102,13 +102,15 @@ public class NIOLoop implements Runnable {
 		onSelect(close);
 		if (selector.select(timeout) == 0)
 			return;
+
+		long now = System.currentTimeMillis();
 		Iterator<SelectionKey> it = selector.selectedKeys().iterator();
 
 		while (it.hasNext()) {
 			SelectionKey next = it.next();
 			it.remove();
 			try {
-				selected(next);
+				selected(next, now);
 			} catch (IOException e) {
 				logger.warn("{}", next, e);
 				close(next);
@@ -130,11 +132,12 @@ public class NIOLoop implements Runnable {
 	 * call for each selected key
 	 * 
 	 * @param key the selected key
+	 * @param now now in ms
 	 * @throws IOException on ioexception
 	 * @throws InterruptedException on interrupt
 	 */
 	@SuppressWarnings("unused")
-	protected void selected(SelectionKey key) throws IOException, InterruptedException { // for override
+	protected void selected(SelectionKey key, long now) throws IOException, InterruptedException { // for override
 	}
 
 	/**

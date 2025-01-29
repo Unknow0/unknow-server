@@ -34,7 +34,7 @@ public class NIOConnectionPlain extends NIOConnectionAbstract {
 	 * @throws InterruptedException on interrupt
 	 */
 	@Override
-	protected final void onInit() throws InterruptedException { // for override
+	protected final void onInit(long now) throws InterruptedException {
 		handler.onInit(this, null);
 	}
 
@@ -47,9 +47,8 @@ public class NIOConnectionPlain extends NIOConnectionAbstract {
 	 * @throws IOException on io exception
 	 */
 	@Override
-	protected final void readFrom(ByteBuffer buf) throws InterruptedException, IOException {
+	protected final void readFrom(ByteBuffer buf, long now) throws InterruptedException, IOException {
 		int l;
-		lastRead = System.currentTimeMillis();
 		while (true) {
 			l = channel.read(buf);
 			if (l == -1) {
@@ -58,6 +57,7 @@ public class NIOConnectionPlain extends NIOConnectionAbstract {
 			}
 			if (l == 0)
 				return;
+			lastRead = now;
 			buf.flip();
 
 			if (logger.isTraceEnabled()) {
@@ -81,8 +81,8 @@ public class NIOConnectionPlain extends NIOConnectionAbstract {
 	 * @throws IOException on io exception
 	 */
 	@Override
-	protected final void writeInto(ByteBuffer buf) throws InterruptedException, IOException {
-		lastWrite = System.currentTimeMillis();
+	protected final void writeInto(ByteBuffer buf, long now) throws InterruptedException, IOException {
+		lastWrite = now;
 		while (pendingWrite.read(buf, false)) {
 			buf.flip();
 

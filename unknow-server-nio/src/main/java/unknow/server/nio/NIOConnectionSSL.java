@@ -40,16 +40,15 @@ public class NIOConnectionSSL extends NIOConnectionAbstract {
 	}
 
 	@Override
-	protected final void onInit() throws InterruptedException, IOException {
+	protected final void onInit(long now) throws InterruptedException, IOException {
 		handler.onInit(this, sslEngine);
 		sslEngine.beginHandshake();
-		processHandshake();
+		processHandshake(now);
 	}
 
 	@Override
-	protected final void readFrom(ByteBuffer buf) throws InterruptedException, IOException {
-		lastRead = System.currentTimeMillis();
-		if (processHandshake())
+	protected final void readFrom(ByteBuffer buf, long now) throws InterruptedException, IOException {
+		if (processHandshake(now))
 			return;
 		int l;
 		while (true) {
@@ -60,6 +59,7 @@ public class NIOConnectionSSL extends NIOConnectionAbstract {
 			}
 			if (l == 0 && rawIn.position() == 0)
 				return;
+			lastRead = now;
 			rawIn.flip();
 			SSLEngineResult r = sslEngine.unwrap(rawIn, app);
 			logger.debug("unwrap {}", r.getStatus());
@@ -73,14 +73,14 @@ public class NIOConnectionSSL extends NIOConnectionAbstract {
 	}
 
 	@Override
-	protected final void writeInto(ByteBuffer buf) throws InterruptedException, IOException {
-		lastWrite = System.currentTimeMillis();
+	protected final void writeInto(ByteBuffer buf, long now) throws InterruptedException, IOException {
+		lastWrite = now;
 		if (rawOut.remaining() > 0) {
 			channel.write(rawOut);
 			return;
 		}
 
-		if (processHandshake())
+		if (processHandshake(now))
 			return;
 
 		while (pendingWrite().read(app, false)) {
@@ -109,7 +109,7 @@ public class NIOConnectionSSL extends NIOConnectionAbstract {
 		handler.onWrite();
 	}
 
-	private boolean processHandshake() throws IOException, InterruptedException {
+	private boolean processHandshake(long now) throws IOException, InterruptedException {
 		HandshakeStatus hs = sslEngine.getHandshakeStatus();
 		while (true) {
 			SSLEngineResult r;
@@ -125,6 +125,7 @@ public class NIOConnectionSSL extends NIOConnectionAbstract {
 				case NEED_UNWRAP_AGAIN:
 					if (channel.read(rawIn) < 0)
 						throw new IOException("connection reset by peer");
+					lastRead = now;
 					rawIn.flip();
 					r = sslEngine.unwrap(rawIn, app);
 					logger.debug("unwrap {}", r);

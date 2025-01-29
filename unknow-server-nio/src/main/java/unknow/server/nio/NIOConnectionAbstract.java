@@ -72,27 +72,33 @@ public abstract class NIOConnectionAbstract {
 		remote = a;
 	}
 
-	protected abstract void onInit() throws InterruptedException, IOException;
+	/**
+	 * initialize the connection
+	 * @param now now in ms
+	 * @throws InterruptedException
+	 * @throws IOException
+	 */
+	protected abstract void onInit(long now) throws InterruptedException, IOException;
 
 	/**
 	 * read data from the channel and try to handles it
 	 * 
 	 * @param buf output buffer
-	 * 
+	 * @param now now in ms
 	 * @throws InterruptedException on interrupt
 	 * @throws IOException on io exception
 	 */
-	protected abstract void readFrom(ByteBuffer buf) throws InterruptedException, IOException;
+	protected abstract void readFrom(ByteBuffer buf, long now) throws InterruptedException, IOException;
 
 	/**
 	 * write pending data to the channel
 	 * 
 	 * @param buf local cache
-	 * 
+	 * @param now now in ms
 	 * @throws InterruptedException on interrupt
 	 * @throws IOException on io exception
 	 */
-	protected abstract void writeInto(ByteBuffer buf) throws InterruptedException, IOException;
+	protected abstract void writeInto(ByteBuffer buf, long now) throws InterruptedException, IOException;
 
 	public void toggleKeyOps() {
 		key.interestOps(pendingWrite.isEmpty() ? SelectionKey.OP_READ : SelectionKey.OP_READ | SelectionKey.OP_WRITE);
