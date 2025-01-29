@@ -108,8 +108,8 @@ public final class HttpConnection implements NIOConnectionHandler {
 				return true;
 			if (keepAliveMs > 0) {
 				long e = now - keepAliveMs - 500;
-				if (co.lastRead() <= e && co.lastWrite() <= e) {
-					logger.info("keep alive idle reached {}", this);
+				if (co.lastRead() < e && co.lastWrite() < e) {
+					logger.info("keep alive idle reached {}", co);
 					return true;
 				}
 			}

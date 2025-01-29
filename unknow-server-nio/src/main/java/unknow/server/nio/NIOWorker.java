@@ -73,8 +73,8 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	public final void register(SocketChannel socket, Function<SelectionKey, NIOConnectionAbstract> pool) throws IOException, InterruptedException {
 		socket.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.TRUE).configureBlocking(false);
 		SelectionKey key = socket.register(selector, 0);
-		init.add(key);
 		key.attach(pool.apply(key));
+		init.add(key);
 		if (wakeup.compareAndSet(true, false))
 			selector.wakeup();
 	}
