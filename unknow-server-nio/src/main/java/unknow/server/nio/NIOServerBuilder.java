@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import unknow.server.nio.NIOWorkers.RoundRobin;
+import unknow.server.nio.listener.CompositeListener;
 
 /** builder for the an NIOServer */
 public class NIOServerBuilder {
@@ -158,6 +159,11 @@ public class NIOServerBuilder {
 		}
 
 		NIOServerListener l = getListener(listener.value(cli));
+		try {
+			Class<?> clazz = Class.forName("unknow.server.nio.listener.PrometheusListener");
+			l = new CompositeListener(l, (NIOServerListener) clazz.getConstructor().newInstance());
+		} catch (@SuppressWarnings("unused") ClassNotFoundException | NoClassDefFoundError e) { // ok
+		}
 
 		NIOWorkers workers = createWorkers(parseInt(cli, iothread, 0), parseInt(cli, select, 0), l);
 

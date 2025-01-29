@@ -111,9 +111,13 @@ public class NIOLoop implements Runnable {
 				selected(next);
 			} catch (IOException e) {
 				logger.warn("{}", next, e);
-				next.cancel();
+				close(next);
 			}
 		}
+	}
+
+	protected void close(SelectionKey key) {
+		key.cancel();
 	}
 
 	/**
