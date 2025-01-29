@@ -4,13 +4,16 @@
 package unknow.server.maven.jaxws;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import javax.xml.namespace.QName;
+import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 
@@ -26,6 +29,7 @@ import com.github.javaparser.ast.expr.BinaryExpr;
 import com.github.javaparser.ast.expr.CastExpr;
 import com.github.javaparser.ast.expr.ClassExpr;
 import com.github.javaparser.ast.expr.Expression;
+import com.github.javaparser.ast.expr.FieldAccessExpr;
 import com.github.javaparser.ast.expr.IntegerLiteralExpr;
 import com.github.javaparser.ast.expr.LambdaExpr;
 import com.github.javaparser.ast.expr.LongLiteralExpr;
@@ -38,6 +42,7 @@ import com.github.javaparser.ast.expr.TypeExpr;
 import com.github.javaparser.ast.expr.VariableDeclarationExpr;
 import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.stmt.CatchClause;
+import com.github.javaparser.ast.stmt.ExpressionStmt;
 import com.github.javaparser.ast.stmt.IfStmt;
 import com.github.javaparser.ast.stmt.ReturnStmt;
 import com.github.javaparser.ast.stmt.Statement;
@@ -45,6 +50,7 @@ import com.github.javaparser.ast.stmt.SwitchEntry;
 import com.github.javaparser.ast.stmt.SwitchStmt;
 import com.github.javaparser.ast.stmt.ThrowStmt;
 import com.github.javaparser.ast.stmt.TryStmt;
+import com.github.javaparser.ast.stmt.WhileStmt;
 import com.github.javaparser.ast.type.UnknownType;
 
 import jakarta.servlet.annotation.WebServlet;
@@ -93,9 +99,9 @@ public class JaxwsServletBuilder {
 
 		Collections.sort(service.operations, (o1, o2) -> o1.sig().compareTo(o2.sig()));
 
+		List<Statement> wrapped = new ArrayList<>();
 		Set<TypeModel> clazz = new HashSet<>();
 		NodeList<SwitchEntry> entries = new NodeList<>();
-		Expression wrapped = null;
 		int w = 0;
 		for (Operation o : service.operations) {
 			BlockStmt b = new BlockStmt();
@@ -103,16 +109,7 @@ public class JaxwsServletBuilder {
 				b.addStatement(new AssignExpr(new VariableDeclarationExpr(types.getClass(OperationWrapper.class), "o"),
 						new CastExpr(types.getClass(OperationWrapper.class), new MethodCallExpr(new NameExpr("e"), "getBody", Utils.list(new IntegerLiteralExpr("0")))),
 						Operator.ASSIGN));
-
-				String n = "N$" + w;
-				servlet.addFieldWithInitializer(types.getClass(QName.class), n,
-						new ObjectCreationExpr(null, types.getClass(QName.class), Utils.list(Utils.text(o.name.getNamespaceURI()), Utils.text(o.name.getLocalPart()))),
-						Utils.PSF);
-				Expression e = new MethodCallExpr(new NameExpr(n), "equals", Utils.list(new NameExpr("n")));
-				if (wrapped != null)
-					wrapped = new BinaryExpr(wrapped, e, BinaryExpr.Operator.OR);
-				else
-					wrapped = e;
+				wrapped.add(buildReadWrapper(types, o, w));
 			}
 
 			NodeList<Expression> param = Utils.list();
@@ -184,25 +181,63 @@ public class JaxwsServletBuilder {
 		servlet.addMethod("getCall", Utils.PROTECT).addMarkerAnnotation(Override.class).setType(types.get(WSMethod.class))
 				.addParameter(new Parameter(types.get(String.class), "sig")).getBody().get().addStatement(new SwitchStmt(new NameExpr("sig"), entries));
 
-		Statement s = new IfStmt(wrapped,
-				new ReturnStmt(new MethodCallExpr(null, "read",
-						Utils.list(new NameExpr("r"), new NameExpr("u"),
-								new ObjectCreationExpr(null, types.getClass(OperationWrapper.class), Utils.list(new NameExpr("n")))))),
-				new ThrowStmt(new ObjectCreationExpr(null, types.getClass(IOException.class), Utils.list(Utils.text("Invalid request")))));
-		w = 0;
-		for (Operation o : service.operations) {
-			int i = 0;
-			for (unknow.server.maven.jaxws.binding.Parameter p : o.params)
-				s = new IfStmt(new MethodCallExpr(new NameExpr("P$" + w + "$" + i++), "equals", Utils.list(new NameExpr("n"))), new ReturnStmt(
-						new MethodCallExpr(new MethodCallExpr(new NameExpr("u"), "unmarshal", Utils.list(new NameExpr("r"), new ClassExpr(types.get(p.type)))), "getValue")),
-						s);
-			w++;
-		}
-
-		servlet.addMethod("read", Utils.PROTECT).addMarkerAnnotation(Override.class).setType(types.get(Object.class))
+		BlockStmt b = servlet.addMethod("read", Utils.PROTECT).addMarkerAnnotation(Override.class).setType(types.get(Object.class))
 				.addParameter(new Parameter(types.get(XMLStreamReader.class), "r")).addParameter(new Parameter(types.get(Unmarshaller.class), "u"))
 				.addThrownException(types.getClass(XMLStreamException.class)).addThrownException(types.getClass(JAXBException.class))
 				.addThrownException(types.getClass(IOException.class)).getBody().get()
-				.addStatement(Utils.assign(types.get(QName.class), "n", new MethodCallExpr(new NameExpr("r"), "getName"))).addStatement(s);
+				.addStatement(Utils.assign(types.get(QName.class), "n", new MethodCallExpr(new NameExpr("r"), "getName")));
+
+		w = 0;
+		for (Operation o : service.operations) {
+			if (o.wrapped) {
+				Expression r = new MethodCallExpr(null, "read$" + w, Utils.list(new NameExpr("r"), new NameExpr("u")));
+				b.addStatement(new IfStmt(new MethodCallExpr(new NameExpr("N$" + w), "equals", Utils.list(new NameExpr("n"))), new ReturnStmt(r), null));
+			} else
+				buildParam(types, w, o, b);
+			w++;
+		}
+		b.addStatement(new ThrowStmt(new ObjectCreationExpr(null, types.getClass(IOException.class), Utils.list(Utils.text("Invalid request")))));
+	}
+
+	private Statement buildReadWrapper(TypeCache types, Operation o, int w) {
+		String n = "N$" + w;
+		servlet.addFieldWithInitializer(types.getClass(QName.class), n,
+				new ObjectCreationExpr(null, types.getClass(QName.class), Utils.list(Utils.text(o.name.getNamespaceURI()), Utils.text(o.name.getLocalPart()))), Utils.PSF);
+
+		int i = 0;
+		Statement s = new ThrowStmt(new ObjectCreationExpr(null, types.getClass(IOException.class), Utils.list(Utils.text("Invalid request"))));
+		for (unknow.server.maven.jaxws.binding.Parameter p : o.params) {
+			Expression r = new MethodCallExpr(new MethodCallExpr(new NameExpr("u"), "unmarshal", Utils.list(new NameExpr("r"), new ClassExpr(types.get(p.type)))), "getValue");
+			s = new IfStmt(new MethodCallExpr(new NameExpr("P$" + w + "$" + i++), "equals", Utils.list(new NameExpr("n"))),
+					new ExpressionStmt(new MethodCallExpr(new NameExpr("o"), "add", Utils.list(r))), s);
+		}
+		BlockStmt b = new BlockStmt().addStatement(Utils.assign(types.get(QName.class), "n", new MethodCallExpr(new NameExpr("r"), "getName"))).addStatement(s);
+
+		servlet.addMethod("read$" + w, Utils.PSF).setType(types.get(OperationWrapper.class)).addParameter(new Parameter(types.get(XMLStreamReader.class), "r"))
+				.addParameter(new Parameter(types.get(Unmarshaller.class), "u")).addThrownException(types.getClass(XMLStreamException.class))
+				.addThrownException(types.getClass(JAXBException.class)).addThrownException(types.getClass(IOException.class)).getBody().get()
+				.addStatement(
+						Utils.create(types.getClass(OperationWrapper.class), "o", Utils.list(new NameExpr("N$" + w))))
+				.addStatement(new WhileStmt(new MethodCallExpr(new NameExpr("r"), "hasNext"),
+						new BlockStmt().addStatement(Utils.assign(types.get(int.class), "i", new MethodCallExpr(new NameExpr("r"), "next")))
+								.addStatement(new IfStmt(
+										new BinaryExpr(new NameExpr("i"), new FieldAccessExpr(new TypeExpr(types.get(XMLStreamConstants.class)), "START_ELEMENT"),
+												BinaryExpr.Operator.EQUALS),
+										b,
+										new IfStmt(new BinaryExpr(new NameExpr("i"), new FieldAccessExpr(new TypeExpr(types.get(XMLStreamConstants.class)), "END_ELEMENT"),
+												BinaryExpr.Operator.EQUALS), new ReturnStmt(new NameExpr("o")), null)))))
+				.addStatement(new ThrowStmt(new ObjectCreationExpr(null, types.getClass(IOException.class), Utils.list(Utils.text("EOF")))));
+
+		return new IfStmt(new MethodCallExpr(new NameExpr(n), "equals", Utils.list(new NameExpr("n"))),
+				new ReturnStmt(new MethodCallExpr(null, "read$" + w, Utils.list(new NameExpr("r"), new NameExpr("u")))), null);
+	}
+
+	private static BlockStmt buildParam(TypeCache types, int w, Operation o, BlockStmt b) {
+		int i = 0;
+		for (unknow.server.maven.jaxws.binding.Parameter p : o.params) {
+			Expression r = new MethodCallExpr(new MethodCallExpr(new NameExpr("u"), "unmarshal", Utils.list(new NameExpr("r"), new ClassExpr(types.get(p.type)))), "getValue");
+			b.addStatement(new IfStmt(new MethodCallExpr(new NameExpr("P$" + w + "$" + i++), "equals", Utils.list(new NameExpr("n"))), new ReturnStmt(r), null));
+		}
+		return b;
 	}
 }

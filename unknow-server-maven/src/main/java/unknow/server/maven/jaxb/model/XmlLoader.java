@@ -38,6 +38,7 @@ import jakarta.xml.bind.annotation.XmlAnyAttribute;
 import jakarta.xml.bind.annotation.XmlSchema;
 import jakarta.xml.bind.annotation.XmlTransient;
 import jakarta.xml.bind.annotation.XmlValue;
+import unknow.server.jaxb.handler.MapHandler;
 import unknow.server.maven.jaxb.model.XmlElements.XmlGroup;
 import unknow.server.maven.jaxb.model.XmlTypeComplex.Factory;
 import unknow.server.maven.model.AnnotationModel;
@@ -104,7 +105,7 @@ public class XmlLoader {
 
 	public XmlType add(TypeModel type) {
 		if (type.isAssignableTo(Map.class))
-			return ANY;
+			return createMap(type.asClass());
 
 		XmlType xmlType = types.get(type.name());
 		if (xmlType == null) {
@@ -243,6 +244,13 @@ public class XmlLoader {
 						.filter(v -> !v.isAssignableTo(jakarta.xml.bind.annotation.XmlType.DEFAULT.class.getName())).orElse(c),
 				a.flatMap(v -> v.member("factoryMethod")).filter(v -> v.isSet()).map(v -> v.asLiteral()).orElse(""));
 		return new XmlTypeComplex(qname(c), c, f, attrs, elements, value, otherAttrs);
+	}
+
+	private XmlType createMap(ClassModel c) {
+		// TODO
+		Factory f = new Factory(c, "");
+
+		return new XmlMap(qname(c), c, f);
 	}
 
 	public XmlElement getElems(Optional<AnnotationModel> elem, String name, String defaultNs, BeanProperty b) {

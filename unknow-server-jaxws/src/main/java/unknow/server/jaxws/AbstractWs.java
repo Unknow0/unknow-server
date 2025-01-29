@@ -107,6 +107,7 @@ public abstract class AbstractWs extends HttpServlet {
 			}
 			r.close();
 		} catch (IOException | XMLStreamException | JAXBException ex) {
+			logger.error("Failed to read request", ex);
 			fault(res, ns, ex.getMessage());
 		}
 

@@ -137,7 +137,10 @@ public class MarshallerImpl implements Marshaller {
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public final void write(JAXBElement e, XMLStreamWriter writer, Map<String, String> ns) throws JAXBException, XMLStreamException {
-		writer.writeStartElement(e.getName().getNamespaceURI(), e.getName().getLocalPart());
+		if (ns != null)
+			writer.writeStartElement(ns.get(e.getName().getNamespaceURI()), e.getName().getLocalPart(), e.getName().getNamespaceURI());
+		else
+			writer.writeStartElement(e.getName().getNamespaceURI(), e.getName().getLocalPart());
 		if (ns != null) {
 			for (Entry<String, String> n : ns.entrySet())
 				writer.writeNamespace(n.getValue(), n.getKey());
