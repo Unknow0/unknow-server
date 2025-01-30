@@ -47,7 +47,6 @@ public abstract class NIOConnectionAbstract {
 
 	/**
 	 * create new connection
-	 * 
 	 * @param key the selectionKey
 	 * @param handler the handler
 	 */
@@ -84,32 +83,40 @@ public abstract class NIOConnectionAbstract {
 	 * read data from the channel and try to handles it
 	 * 
 	 * @param buf output buffer
-	 * @param now now in ms
 	 * @throws InterruptedException on interrupt
 	 * @throws IOException on io exception
 	 */
-	protected abstract void readFrom(ByteBuffer buf, long now) throws InterruptedException, IOException;
+	protected abstract void readFrom(ByteBuffer buf) throws InterruptedException, IOException;
 
 	/**
 	 * write pending data to the channel
 	 * 
 	 * @param buf local cache
-	 * @param now now in ms
 	 * @throws InterruptedException on interrupt
 	 * @throws IOException on io exception
 	 */
-	protected abstract void writeInto(ByteBuffer buf, long now) throws InterruptedException, IOException;
+	protected abstract void writeInto(ByteBuffer buf) throws InterruptedException, IOException;
 
 	public void toggleKeyOps() {
-		key.interestOps(pendingWrite.isEmpty() ? SelectionKey.OP_READ : SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+		if (pendingWrite.isEmpty())
+			key.interestOpsAnd(~SelectionKey.OP_WRITE);
+		else
+			key.interestOpsOr(SelectionKey.OP_WRITE);
 	}
 
 	@SuppressWarnings("resource")
 	public void flush() {
-		if (pendingWrite.isEmpty())
+		if (pendingWrite.isEmpty() || !key.isValid())
 			return;
 		toggleKeyOps();
 		key.selector().wakeup();
+	}
+
+	public void close() {
+		flush();
+		synchronized (out) {
+			out.h = null;
+		}
 	}
 
 	/**
@@ -196,7 +203,6 @@ public abstract class NIOConnectionAbstract {
 	 * @throws IOException on io error
 	 */
 	public final void free() throws IOException {
-		out.close();
 		pendingWrite.clear();
 		pendingRead.clear();
 		handler.onFree();
@@ -252,8 +258,8 @@ public abstract class NIOConnectionAbstract {
 
 		@Override
 		public synchronized void close() {
-			flush();
-			h = null;
+			if (h != null)
+				h.close();
 		}
 
 		/**
@@ -265,15 +271,10 @@ public abstract class NIOConnectionAbstract {
 			return h == null;
 		}
 
-		@SuppressWarnings("resource")
 		@Override
 		public synchronized void flush() {
-			if (h == null)
-				return;
-			if (h.key.isValid())
-				h.toggleKeyOps();
-			if (!h.pendingWrite.isEmpty())
-				h.key.selector().wakeup();
+			if (h != null)
+				h.flush();
 		}
 	}
 }

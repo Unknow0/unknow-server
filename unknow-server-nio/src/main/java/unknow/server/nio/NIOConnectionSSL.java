@@ -43,23 +43,23 @@ public class NIOConnectionSSL extends NIOConnectionAbstract {
 	protected final void onInit(long now) throws InterruptedException, IOException {
 		handler.onInit(this, sslEngine);
 		sslEngine.beginHandshake();
-		processHandshake(now);
+		processHandshake();
 	}
 
 	@Override
-	protected final void readFrom(ByteBuffer buf, long now) throws InterruptedException, IOException {
-		if (processHandshake(now))
+	protected final void readFrom(ByteBuffer buf) throws InterruptedException, IOException {
+		if (processHandshake())
 			return;
 		int l;
 		while (true) {
 			l = channel.read(rawIn);
 			if (l == -1) {
 				in.close();
+				key.interestOpsAnd(~SelectionKey.OP_READ);
 				return;
 			}
 			if (l == 0 && rawIn.position() == 0)
 				return;
-			lastRead = now;
 			rawIn.flip();
 			SSLEngineResult r = sslEngine.unwrap(rawIn, app);
 			logger.debug("unwrap {}", r.getStatus());
@@ -73,14 +73,13 @@ public class NIOConnectionSSL extends NIOConnectionAbstract {
 	}
 
 	@Override
-	protected final void writeInto(ByteBuffer buf, long now) throws InterruptedException, IOException {
-		lastWrite = now;
+	protected final void writeInto(ByteBuffer buf) throws InterruptedException, IOException {
 		if (rawOut.remaining() > 0) {
 			channel.write(rawOut);
 			return;
 		}
 
-		if (processHandshake(now))
+		if (processHandshake())
 			return;
 
 		while (pendingWrite().read(app, false)) {
@@ -109,7 +108,7 @@ public class NIOConnectionSSL extends NIOConnectionAbstract {
 		handler.onWrite();
 	}
 
-	private boolean processHandshake(long now) throws IOException, InterruptedException {
+	private boolean processHandshake() throws IOException, InterruptedException {
 		HandshakeStatus hs = sslEngine.getHandshakeStatus();
 		while (true) {
 			SSLEngineResult r;
@@ -125,7 +124,6 @@ public class NIOConnectionSSL extends NIOConnectionAbstract {
 				case NEED_UNWRAP_AGAIN:
 					if (channel.read(rawIn) < 0)
 						throw new IOException("connection reset by peer");
-					lastRead = now;
 					rawIn.flip();
 					r = sslEngine.unwrap(rawIn, app);
 					logger.debug("unwrap {}", r);

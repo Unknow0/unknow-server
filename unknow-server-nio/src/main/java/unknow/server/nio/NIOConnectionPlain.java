@@ -47,17 +47,17 @@ public class NIOConnectionPlain extends NIOConnectionAbstract {
 	 * @throws IOException on io exception
 	 */
 	@Override
-	protected final void readFrom(ByteBuffer buf, long now) throws InterruptedException, IOException {
+	protected final void readFrom(ByteBuffer buf) throws InterruptedException, IOException {
 		int l;
 		while (true) {
 			l = channel.read(buf);
 			if (l == -1) {
 				in.close();
+				key.interestOpsAnd(~SelectionKey.OP_READ);
 				return;
 			}
 			if (l == 0)
 				return;
-			lastRead = now;
 			buf.flip();
 
 			if (logger.isTraceEnabled()) {
@@ -81,8 +81,7 @@ public class NIOConnectionPlain extends NIOConnectionAbstract {
 	 * @throws IOException on io exception
 	 */
 	@Override
-	protected final void writeInto(ByteBuffer buf, long now) throws InterruptedException, IOException {
-		lastWrite = now;
+	protected final void writeInto(ByteBuffer buf) throws InterruptedException, IOException {
 		while (pendingWrite.read(buf, false)) {
 			buf.flip();
 

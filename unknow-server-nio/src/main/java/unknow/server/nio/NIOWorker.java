@@ -8,9 +8,7 @@ import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
-import java.util.Deque;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -36,10 +34,8 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	private final ByteBuffer buf;
 
 	private final Queue<SelectionKey> init;
-	private final Deque<SelectionKey> keys;
+	private final Queue<SelectionKey> keys;
 	private final AtomicBoolean wakeup = new AtomicBoolean(true);
-
-	private long lastCheck;
 
 	/**
 	 * create new IOWorker
@@ -55,9 +51,9 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		this.listener = listener;
 
 		this.buf = ByteBuffer.allocateDirect(25000);
-		this.init = new ConcurrentLinkedDeque<>();
 
-		this.keys = new LinkedList<>();
+		this.init = new ConcurrentLinkedDeque<>();
+		this.keys = new ConcurrentLinkedDeque<>();
 	}
 
 	/**
@@ -73,7 +69,8 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	public final void register(SocketChannel socket, Function<SelectionKey, NIOConnectionAbstract> pool) throws IOException, InterruptedException {
 		socket.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.TRUE).configureBlocking(false);
 		SelectionKey key = socket.register(selector, 0);
-		key.attach(pool.apply(key));
+		NIOConnectionAbstract co = pool.apply(key);
+		key.attach(co);
 		init.add(key);
 		if (wakeup.compareAndSet(true, false))
 			selector.wakeup();
@@ -83,10 +80,11 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	protected final void selected(SelectionKey key, long now) throws IOException, InterruptedException {
 		NIOConnectionAbstract h = (NIOConnectionAbstract) key.attachment();
 		keys.remove(key);
-		keys.addLast(key);
+		keys.add(key);
 		if (key.isValid() && key.isWritable()) {
 			try {
-				h.writeInto(buf, now);
+				h.lastWrite = now;
+				h.writeInto(buf);
 			} catch (InterruptedException e) {
 				logger.error("failed to write {}", h, e);
 				Thread.currentThread().interrupt();
@@ -98,10 +96,10 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			}
 		}
 
-		// Tests whether this key's channel is ready to accept a new socket connection
 		if (key.isValid() && key.isReadable()) {
 			try {
-				h.readFrom(buf, now);
+				h.lastRead = now;
+				h.readFrom(buf);
 			} catch (InterruptedException e) {
 				logger.error("failed to read {}", h, e);
 				Thread.currentThread().interrupt();
@@ -116,12 +114,32 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 
 	@Override
 	protected void onSelect(boolean close) throws InterruptedException {
+		long now = System.currentTimeMillis();
+		initConnection(now);
+
+		long e = now - 1000;
+		Iterator<SelectionKey> it = keys.iterator();
+		while (it.hasNext()) {
+			SelectionKey next = it.next();
+			NIOConnectionAbstract co = (NIOConnectionAbstract) next.attachment();
+			if (co.lastRead < e || co.lastWrite < e)
+				break;
+			if (!next.isValid() || co.closed(now, close)) {
+				it.remove();
+				close(next);
+			}
+		}
+	}
+
+	private final void initConnection(long now) throws InterruptedException {
+		if (init.isEmpty())
+			return;
+
 		SelectionKey k;
 		int i = 0;
-		long now = System.currentTimeMillis();
 		while (i++ < 100 && (k = init.poll()) != null) {
 			k.interestOps(SelectionKey.OP_READ);
-			keys.addLast(k);
+			keys.add(k);
 			NIOConnectionAbstract co = (NIOConnectionAbstract) k.attachment();
 			listener.accepted(id, co);
 			try {
@@ -135,27 +153,10 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			selector.wakeup();
 		else
 			wakeup.set(true);
-
-		if (now - lastCheck < 5000)
-			return;
-		lastCheck = now;
-
-		long e = now - 5000;
-		Iterator<SelectionKey> it = keys.iterator();
-		while (it.hasNext()) {
-			SelectionKey next = it.next();
-			NIOConnectionAbstract co = (NIOConnectionAbstract) next.attachment();
-			if (co.lastRead() > e || co.lastWrite > e)
-				break;
-			if (!next.isValid() || co.closed(now, close)) {
-				it.remove();
-				close(next);
-			}
-		}
 	}
 
 	@Override
-	protected void close(SelectionKey key) {
+	protected final void close(SelectionKey key) {
 		NIOConnectionAbstract co = (NIOConnectionAbstract) key.attachment();
 		listener.closed(id, co);
 		keys.remove(key);
