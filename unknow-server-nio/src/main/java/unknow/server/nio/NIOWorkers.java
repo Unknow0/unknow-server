@@ -6,7 +6,7 @@ package unknow.server.nio;
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 
 /**
  * @author unknow
@@ -20,7 +20,7 @@ public interface NIOWorkers {
 	 * @throws IOException on ioexception
 	 * @throws InterruptedException  on interrupt
 	 */
-	void register(SocketChannel socket, Function<SelectionKey, NIOConnectionAbstract> factory) throws IOException, InterruptedException;
+	void register(SocketChannel socket, BiFunction<NIOWorker, SelectionKey, NIOConnectionAbstract> factory) throws IOException, InterruptedException;
 
 	/**
 	 * start the IOWorker
@@ -53,7 +53,7 @@ public interface NIOWorkers {
 		}
 
 		@Override
-		public synchronized void register(SocketChannel socket, Function<SelectionKey, NIOConnectionAbstract> factory) throws IOException, InterruptedException {
+		public synchronized void register(SocketChannel socket, BiFunction<NIOWorker, SelectionKey, NIOConnectionAbstract> factory) throws IOException, InterruptedException {
 			w[o++].register(socket, factory);
 			if (o == w.length)
 				o = 0;

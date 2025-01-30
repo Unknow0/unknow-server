@@ -33,6 +33,7 @@ public abstract class NIOConnectionAbstract {
 	/** Output stream */
 	protected final Out out;
 
+	protected final NIOWorker worker;
 	/** selection key */
 	protected final SelectionKey key;
 	protected final SocketChannel channel;
@@ -50,7 +51,8 @@ public abstract class NIOConnectionAbstract {
 	 * @param key the selectionKey
 	 * @param handler the handler
 	 */
-	protected NIOConnectionAbstract(SelectionKey key, NIOConnectionHandler handler) {
+	protected NIOConnectionAbstract(NIOWorker worker, SelectionKey key, NIOConnectionHandler handler) {
+		this.worker=worker;
 		this.key = key;
 		this.channel = (SocketChannel) key.channel();
 		this.handler = handler;
@@ -117,6 +119,12 @@ public abstract class NIOConnectionAbstract {
 		synchronized (out) {
 			out.h = null;
 		}
+		try {
+			pendingWrite.awaitEmpty();
+		} catch (@SuppressWarnings("unused") InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
+		worker.close(key);
 	}
 
 	/**

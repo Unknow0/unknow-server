@@ -12,7 +12,7 @@ import java.util.Iterator;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,10 +66,10 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	 */
 	@SuppressWarnings("resource")
 	@Override
-	public final void register(SocketChannel socket, Function<SelectionKey, NIOConnectionAbstract> pool) throws IOException, InterruptedException {
+	public final void register(SocketChannel socket, BiFunction<NIOWorker, SelectionKey, NIOConnectionAbstract> pool) throws IOException, InterruptedException {
 		socket.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.TRUE).configureBlocking(false);
 		SelectionKey key = socket.register(selector, 0);
-		NIOConnectionAbstract co = pool.apply(key);
+		NIOConnectionAbstract co = pool.apply(this, key);
 		key.attach(co);
 		init.add(key);
 		if (wakeup.compareAndSet(true, false))
@@ -122,12 +122,10 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		while (it.hasNext()) {
 			SelectionKey next = it.next();
 			NIOConnectionAbstract co = (NIOConnectionAbstract) next.attachment();
-			if (co.lastRead < e || co.lastWrite < e)
+			if (co.lastRead > e || co.lastWrite > e)
 				break;
-			if (!next.isValid() || co.closed(now, close)) {
-				it.remove();
+			if (!next.isValid() || co.closed(now, close))
 				close(next);
-			}
 		}
 	}
 
@@ -158,8 +156,10 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	@Override
 	protected final void close(SelectionKey key) {
 		NIOConnectionAbstract co = (NIOConnectionAbstract) key.attachment();
+		if (!keys.remove(key))
+			return;
 		listener.closed(id, co);
-		keys.remove(key);
+
 		key.cancel();
 		try {
 			key.channel().close();

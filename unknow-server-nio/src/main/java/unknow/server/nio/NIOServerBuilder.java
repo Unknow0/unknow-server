@@ -171,7 +171,7 @@ public class NIOServerBuilder {
 		process(server, cli);
 		InetSocketAddress addr = parseAddr(cli, shutdown, "127.0.0.1");
 		if (addr != null)
-			server.bind(addr, key -> new NIOConnectionPlain(key, new ShutdownConnection(server)));
+			server.bind(addr, (worker, key) -> new NIOConnectionPlain(worker, key, new ShutdownConnection(server)));
 		return server;
 	}
 

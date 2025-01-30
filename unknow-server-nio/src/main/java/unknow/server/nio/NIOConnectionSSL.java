@@ -22,8 +22,8 @@ public class NIOConnectionSSL extends NIOConnectionAbstract {
 	private final ByteBuffer rawOut;
 	private final ByteBuffer app;
 
-	public NIOConnectionSSL(SelectionKey key, NIOConnectionHandler handler, SSLContext sslContext) {
-		super(key, handler);
+	public NIOConnectionSSL(NIOWorker worker, SelectionKey key, NIOConnectionHandler handler, SSLContext sslContext) {
+		super(worker, key, handler);
 		this.sslEngine = sslContext.createSSLEngine(getRemote().getHostString(), getRemote().getPort());
 		this.rawIn = ByteBuffer.allocate(sslEngine.getSession().getPacketBufferSize());
 		this.rawOut = ByteBuffer.allocate(sslEngine.getSession().getPacketBufferSize());

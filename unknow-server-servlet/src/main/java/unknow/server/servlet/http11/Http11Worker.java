@@ -155,8 +155,10 @@ public final class Http11Worker extends HttpWorker {
 
 	@Override
 	protected void doDone() {
-		if (!"keep-alive".equalsIgnoreCase(res.getHeader("connection")))
-			co.getOut().close();
+		if ("keep-alive".equalsIgnoreCase(res.getHeader("connection")))
+			return;
+		co.getOut().close();
+		co.close();
 	}
 
 	private boolean fillRequest(ServletRequestImpl req) throws InterruptedException, IOException {

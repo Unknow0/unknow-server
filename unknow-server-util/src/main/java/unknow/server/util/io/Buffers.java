@@ -15,7 +15,8 @@ import java.util.concurrent.locks.ReentrantLock;
 public class Buffers {
 	public static final int BUF_LEN = 4096;
 	private final ReentrantLock lock = new ReentrantLock();
-	private final Condition cond = lock.newCondition();
+	private final Condition data = lock.newCondition();
+	private final Condition empty = lock.newCondition();
 
 	Chunk head;
 	Chunk tail;
@@ -52,7 +53,7 @@ public class Buffers {
 			tail.b[tail.o + tail.l] = (byte) (b & 0xFF);
 			tail.l++;
 			len++;
-			cond.signalAll();
+			data.signalAll();
 		} finally {
 			lock.unlock();
 		}
@@ -85,7 +86,7 @@ public class Buffers {
 				head = tail = new Chunk();
 			len += l;
 			tail = writeInto(tail, buf, o, l);
-			cond.signalAll();
+			data.signalAll();
 		} finally {
 			lock.unlock();
 		}
@@ -106,7 +107,7 @@ public class Buffers {
 				head = tail = new Chunk();
 			len += bb.remaining();
 			tail = writeInto(tail, bb);
-			cond.signalAll();
+			data.signalAll();
 		} finally {
 			lock.unlock();
 		}
@@ -141,7 +142,7 @@ public class Buffers {
 			else
 				t.next = head;
 			head = c;
-			cond.signalAll();
+			data.signalAll();
 		} finally {
 			lock.unlock();
 		}
@@ -173,7 +174,7 @@ public class Buffers {
 			else
 				t.next = head;
 			head = c;
-			cond.signalAll();
+			data.signalAll();
 		} finally {
 			lock.unlock();
 		}
@@ -197,7 +198,7 @@ public class Buffers {
 
 			buf.len = 0;
 			buf.head = buf.tail = null;
-			cond.signalAll();
+			data.signalAll();
 		} finally {
 			buf.lock.unlock();
 			lock.unlock();
@@ -223,6 +224,7 @@ public class Buffers {
 				tail = null;
 			if (--head.l == 0)
 				head = head.next;
+			empty.signalAll();
 			return r;
 		} finally {
 			lock.unlock();
@@ -266,6 +268,7 @@ public class Buffers {
 					head.l -= r;
 				}
 			}
+			empty.signalAll();
 			return v;
 		} finally {
 			lock.unlock();
@@ -304,6 +307,7 @@ public class Buffers {
 					head.l -= r;
 				}
 			}
+			empty.signalAll();
 			return true;
 		} finally {
 			lock.unlock();
@@ -318,7 +322,21 @@ public class Buffers {
 		lock.lockInterruptibly();
 		try {
 			while (len == 0)
-				cond.await();
+				data.await();
+		} finally {
+			lock.unlock();
+		}
+	}
+
+	/**
+	 * wait for more content to be written
+	 * @throws InterruptedException
+	 */
+	public void awaitEmpty() throws InterruptedException {
+		lock.lockInterruptibly();
+		try {
+			while (len > 0)
+				empty.await();
 		} finally {
 			lock.unlock();
 		}
@@ -338,7 +356,7 @@ public class Buffers {
 	public void await() throws InterruptedException {
 		lock.lockInterruptibly();
 		try {
-			cond.await();
+			data.await();
 		} finally {
 			lock.unlock();
 		}
@@ -350,7 +368,7 @@ public class Buffers {
 	public void signal() throws InterruptedException {
 		lock.lockInterruptibly();
 		try {
-			cond.signalAll();
+			data.signalAll();
 		} finally {
 			lock.unlock();
 		}
@@ -374,6 +392,7 @@ public class Buffers {
 				len += c.l;
 			}
 			tail = c;
+			data.signalAll();
 		} finally {
 			lock.unlock();
 		}
@@ -435,6 +454,7 @@ public class Buffers {
 			buf.append(h);
 
 			head = c;
+			empty.signalAll();
 		} finally {
 			lock.unlock();
 		}
@@ -484,6 +504,7 @@ public class Buffers {
 			head = c;
 			if (c == null)
 				tail = null;
+			empty.signalAll();
 		} finally {
 			lock.unlock();
 		}
@@ -517,6 +538,7 @@ public class Buffers {
 				s += l;
 			} else
 				tail = null;
+			empty.signalAll();
 			return s;
 		} finally {
 			lock.unlock();
@@ -532,6 +554,7 @@ public class Buffers {
 		try {
 			len = 0;
 			head = tail = null;
+			empty.signalAll();
 		} finally {
 			lock.unlock();
 		}

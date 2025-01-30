@@ -171,6 +171,10 @@ public final class HttpConnection implements NIOConnectionHandler {
 		co.flush();
 	}
 
+	public void close() {
+		co.close();
+	}
+
 	public Buffers pendingWrite() {
 		return co.pendingWrite();
 	}
