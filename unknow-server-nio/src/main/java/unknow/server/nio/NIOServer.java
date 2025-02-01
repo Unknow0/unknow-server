@@ -26,6 +26,8 @@ public class NIOServer extends NIOLoop {
 	/** the listener */
 	private final NIOServerListener listener;
 
+	private final NIOStaleWorker stale;
+
 	/**
 	 * create new Server
 	 * 
@@ -34,10 +36,11 @@ public class NIOServer extends NIOLoop {
 	 * 
 	 * @throws IOException on ioException
 	 */
-	public NIOServer(NIOWorkers workers, NIOServerListener listener) throws IOException {
+	public NIOServer(NIOWorkers workers, NIOStaleWorker stale, NIOServerListener listener) throws IOException {
 		super("NIOServer", 0);
 		this.workers = workers;
 		this.listener = listener == null ? NIOServerListener.NOP : listener;
+		this.stale = stale;
 	}
 
 	/**
@@ -58,6 +61,7 @@ public class NIOServer extends NIOLoop {
 
 	@Override
 	protected void onStartup() {
+		stale.start();
 		workers.start();
 		listener.starting(this);
 	}
@@ -78,6 +82,7 @@ public class NIOServer extends NIOLoop {
 	@Override
 	protected void beforeStop() {
 		workers.stop();
+		stale.stop();
 		workers.await();
 		try {
 			selector.close();

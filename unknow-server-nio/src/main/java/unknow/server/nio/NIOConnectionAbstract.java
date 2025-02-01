@@ -43,8 +43,7 @@ public abstract class NIOConnectionAbstract {
 	protected final InetSocketAddress local;
 	protected final InetSocketAddress remote;
 
-	protected long lastRead;
-	protected long lastWrite;
+	protected long lastAction;
 
 	/**
 	 * create new connection
@@ -52,12 +51,11 @@ public abstract class NIOConnectionAbstract {
 	 * @param handler the handler
 	 */
 	protected NIOConnectionAbstract(NIOWorker worker, SelectionKey key, NIOConnectionHandler handler) {
-		this.worker=worker;
+		this.worker = worker;
 		this.key = key;
 		this.channel = (SocketChannel) key.channel();
 		this.handler = handler;
 		this.out = new Out(this);
-		lastRead = lastWrite = System.currentTimeMillis();
 		InetSocketAddress a;
 		try {
 			a = (InetSocketAddress) channel.getLocalAddress();
@@ -127,24 +125,6 @@ public abstract class NIOConnectionAbstract {
 		worker.close(key);
 	}
 
-	/**
-	 * timestamp of the last read
-	 * 
-	 * @return timestamp in ms
-	 */
-	public final long lastRead() {
-		return lastRead;
-	}
-
-	/**
-	 * timestamp of the last write
-	 * 
-	 * @return timestamp in ms
-	 */
-	public final long lastWrite() {
-		return lastWrite;
-	}
-
 	public Buffers pendingRead() {
 		return pendingRead;
 	}
@@ -183,6 +163,14 @@ public abstract class NIOConnectionAbstract {
 	 */
 	public final InetSocketAddress getLocal() {
 		return local;
+	}
+
+	/**
+	 * the timestamp of the last read/write
+	 * @return the timestamp
+	 */
+	public final long lastAction() {
+		return lastAction;
 	}
 
 	/**

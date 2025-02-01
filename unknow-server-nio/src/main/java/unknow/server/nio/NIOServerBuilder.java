@@ -165,9 +165,10 @@ public class NIOServerBuilder {
 		} catch (@SuppressWarnings("unused") ClassNotFoundException | NoClassDefFoundError e) { // ok
 		}
 
-		NIOWorkers workers = createWorkers(parseInt(cli, iothread, 0), parseInt(cli, select, 0), l);
+		NIOStaleWorker stale = new NIOStaleWorker();
+		NIOWorkers workers = createWorkers(parseInt(cli, iothread, 0), parseInt(cli, select, 0), stale, l);
 
-		NIOServer server = new NIOServer(workers, l);
+		NIOServer server = new NIOServer(workers, stale, l);
 		process(server, cli);
 		InetSocketAddress addr = parseAddr(cli, shutdown, "127.0.0.1");
 		if (addr != null)
@@ -175,12 +176,12 @@ public class NIOServerBuilder {
 		return server;
 	}
 
-	private NIOWorkers createWorkers(int i, int selectTime, NIOServerListener l) throws IOException {
+	private NIOWorkers createWorkers(int i, int selectTime, NIOStaleWorker stale, NIOServerListener l) throws IOException {
 		if (i == 1)
-			return new NIOWorker(0, l, selectTime);
+			return new NIOWorker(0, stale, l, selectTime);
 		NIOWorker[] w = new NIOWorker[i];
 		while (i > 0)
-			w[--i] = new NIOWorker(i, l, selectTime);
+			w[--i] = new NIOWorker(i, stale, l, selectTime);
 		return new RoundRobin(w);
 	}
 

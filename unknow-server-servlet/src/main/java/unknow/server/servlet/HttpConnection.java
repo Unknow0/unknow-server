@@ -35,7 +35,8 @@ public final class HttpConnection implements NIOConnectionHandler {
 	private final ServletContextImpl ctx;
 	private final ServletManager manager;
 	private final EventManager events;
-	private final int keepAliveMs;
+	private final int keepAlive;
+	private final long keepAliveMs;
 
 	private NIOConnectionAbstract co;
 	private HttpProcessor p;
@@ -53,7 +54,8 @@ public final class HttpConnection implements NIOConnectionHandler {
 		this.ctx = ctx;
 		this.manager = manager;
 		this.events = events;
-		this.keepAliveMs = keepAliveIdle;
+		this.keepAlive = keepAliveIdle;
+		this.keepAliveMs = keepAliveIdle * 1000;
 	}
 
 	@Override
@@ -86,7 +88,10 @@ public final class HttpConnection implements NIOConnectionHandler {
 			p.process();
 	}
 
-	@SuppressWarnings("resource")
+	@Override
+	public void onWrite() throws InterruptedException, IOException { // ok
+	}
+
 	@Override
 	public boolean closed(long now, boolean stop) {
 		if (stop)
@@ -98,7 +103,7 @@ public final class HttpConnection implements NIOConnectionHandler {
 		if (p != null && !p.isClosable(stop))
 			return false;
 
-		if (p == null && co.lastRead() < now - 1000) {
+		if (p == null && co.lastAction() < now - 1000) {
 			logger.warn("request timeout {}", this);
 			return true;
 		}
@@ -107,19 +112,15 @@ public final class HttpConnection implements NIOConnectionHandler {
 			if (co.getIn().isClosed())
 				return true;
 			if (keepAliveMs > 0) {
-				long e = now - keepAliveMs - 500;
-				if (co.lastRead() < e && co.lastWrite() < e) {
-					logger.info("keep alive idle reached {} {} {}", co.lastRead(), co.lastWrite(), now);
+				long e = now - keepAliveMs;
+				if (co.lastAction() < e) {
+					logger.info("keep alive idle reached {} {} {}", co.lastAction(), now);
 					return true;
 				}
 			}
 		}
 
 		return false;
-	}
-
-	@Override
-	public void onWrite() throws InterruptedException, IOException { // ok
 	}
 
 	@Override
@@ -140,7 +141,7 @@ public final class HttpConnection implements NIOConnectionHandler {
 	}
 
 	public int getkeepAlive() {
-		return keepAliveMs;
+		return keepAlive;
 	}
 
 	public ServletManager getServlet() {

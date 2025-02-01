@@ -128,7 +128,7 @@ public abstract class AbstractHttpServer extends NIOServerBuilder {
 					t.setDaemon(true);
 					return t;
 				});
-		int keepAliveIdle = parseInt(cli, keepAlive, -1) * 1000;
+		int keepAliveIdle = parseInt(cli, keepAlive, -1);
 		if (addressHttps != null)
 			server.bind(addressHttps, (worker, key) -> new NIOConnectionSSL(worker, key, new HttpConnection(executor, ctx, manager, events, keepAliveIdle), sslContext));
 		if (addressHttp != null)

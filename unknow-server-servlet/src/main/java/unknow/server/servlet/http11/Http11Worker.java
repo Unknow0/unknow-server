@@ -66,7 +66,7 @@ public final class Http11Worker extends HttpWorker {
 	 */
 	public Http11Worker(HttpConnection co) {
 		super(co);
-		this.keepAliveIdle = co.getkeepAlive() / 1000;
+		this.keepAliveIdle = co.getkeepAlive();
 
 		sb = new StringBuilder();
 		decode = new Decode(sb);
@@ -155,10 +155,8 @@ public final class Http11Worker extends HttpWorker {
 
 	@Override
 	protected void doDone() {
-		if ("keep-alive".equalsIgnoreCase(res.getHeader("connection")))
-			return;
-		co.getOut().close();
-		co.close();
+		if (!"keep-alive".equalsIgnoreCase(res.getHeader("connection")))
+			co.close();
 	}
 
 	private boolean fillRequest(ServletRequestImpl req) throws InterruptedException, IOException {
