@@ -1,9 +1,8 @@
 package unknow.server.servlet.http2;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,7 +60,7 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 
 	public final HttpConnection co;
 	public final IntArrayMap<Http2Stream> streams;
-	public final List<Http2Stream> pending;
+	public final Queue<Http2Stream> pending;
 	public final Http2Headers headers;
 	private final byte[] b;
 	private int window;
@@ -81,7 +80,7 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 	public Http2Processor(HttpConnection co) throws InterruptedException {
 		this.co = co;
 		this.streams = new IntArrayMap<>();
-		this.pending = new LinkedList<>();
+		this.pending = new ConcurrentLinkedQueue<>();
 		this.headers = new Http2Headers(4096);
 		this.b = new byte[9];
 		this.closing = false;
@@ -130,11 +129,17 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 				Thread.currentThread().interrupt();
 			}
 		}
-		Iterator<Http2Stream> it = pending.iterator();
-		while (it.hasNext()) {
-			if (it.next().isClosed())
-				it.remove();
+
+		Http2Stream s = pending.poll();
+		Http2Stream first = s;
+		while (s != null) {
+			if (!s.isClosed())
+				pending.add(s);
+			s = pending.poll();
+			if (s == first)
+				break;
 		}
+
 		return pending.isEmpty() && streams.isEmpty();
 	}
 
