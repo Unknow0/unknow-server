@@ -1,24 +1,22 @@
 package unknow.server.nio;
 
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class NIOStaleWorker implements Runnable {
 	private final Thread t;
-	private final BlockingQueue<NIOConnectionAbstract> connections;
+	private final ConcurrentHashMap<NIOConnectionAbstract, Object> connections;
 
 	public NIOStaleWorker() {
 		this.t = new Thread(this, "NIOStaleWorker");
-		this.connections = new LinkedBlockingQueue<>();
+		this.connections = new ConcurrentHashMap<>();
 	}
 
 	public void start() {
 		t.start();
 	}
 
-	public void add(NIOConnectionAbstract co) throws InterruptedException {
-		connections.remove(co);
-		connections.put(co);
+	public void add(NIOConnectionAbstract co) {
+		connections.put(co, this);
 	}
 
 	public void remove(NIOConnectionAbstract co) {
@@ -48,18 +46,27 @@ public class NIOStaleWorker implements Runnable {
 		}
 	}
 
-	private final void checkConnections(boolean close) throws InterruptedException {
-		NIOConnectionAbstract first = connections.take();
-
+	private final void checkConnections(boolean close) {
+		if (connections.isEmpty())
+			return;
 		long now = System.currentTimeMillis();
-		int i = 0;
-		NIOConnectionAbstract co = first;
-		do {
+		for (NIOConnectionAbstract co : connections.keySet()) {
 			if (!co.key.isValid() || co.closed(now, close))
 				co.close();
-			else
-				connections.put(co);
-			co = connections.poll();
-		} while (i++ < 1000 && co != null && first != co);
+		}
+//		NIOConnectionAbstract first = connections.poll();
+//		if (first == null)
+//			return;
+//
+//		long now = System.currentTimeMillis();
+//		int i = 0;
+//		NIOConnectionAbstract co = first;
+//		do {
+//			if (!co.key.isValid() || co.closed(now, close))
+//				co.close();
+//			else
+//				connections.offer(co);
+//			co = connections.poll();
+//		} while (i++ < 1000 && co != null && first != co);
 	}
 }

@@ -9,6 +9,8 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.IntUnaryOperator;
 
 import unknow.server.util.io.Buffers;
 import unknow.server.util.io.BuffersInputStream;
@@ -19,6 +21,8 @@ import unknow.server.util.io.BuffersInputStream;
  * @author unknow
  */
 public abstract class NIOConnectionAbstract {
+	private static AtomicInteger COUNTER = new AtomicInteger(0);
+	private static final IntUnaryOperator UPDATE = value -> (value + 1) % 238328;
 
 	private static final InetSocketAddress DISCONECTED = InetSocketAddress.createUnresolved("", 0);
 
@@ -42,6 +46,8 @@ public abstract class NIOConnectionAbstract {
 
 	protected final InetSocketAddress local;
 	protected final InetSocketAddress remote;
+
+	protected final String id;
 
 	protected long lastAction;
 
@@ -69,15 +75,30 @@ public abstract class NIOConnectionAbstract {
 			a = DISCONECTED;
 		}
 		remote = a;
+
+		StringBuilder sb = new StringBuilder();
+		encode(sb, System.currentTimeMillis());
+		encode(sb, local.getPort());
+		encode(sb, local.getAddress().getAddress());
+		encode(sb, COUNTER.getAndUpdate(UPDATE));
+		id = sb.toString();
+	}
+
+	/** 
+	 * get the connection unique id
+	 * 
+	 * @return the co id
+	 */
+	public final String getId() {
+		return id;
 	}
 
 	/**
 	 * initialize the connection
-	 * @param now now in ms
 	 * @throws InterruptedException
 	 * @throws IOException
 	 */
-	protected abstract void onInit(long now) throws InterruptedException, IOException;
+	protected abstract void onInit() throws InterruptedException, IOException;
 
 	/**
 	 * read data from the channel and try to handles it
@@ -112,17 +133,8 @@ public abstract class NIOConnectionAbstract {
 		key.selector().wakeup();
 	}
 
-	public void close() {
-		flush();
-		synchronized (out) {
-			out.h = null;
-		}
-		try {
-			pendingWrite.awaitEmpty();
-		} catch (@SuppressWarnings("unused") InterruptedException e) {
-			Thread.currentThread().interrupt();
-		}
-		worker.close(key);
+	public final void close() {
+		worker.close(this);
 	}
 
 	public Buffers pendingRead() {
@@ -205,8 +217,45 @@ public abstract class NIOConnectionAbstract {
 	}
 
 	@Override
-	public String toString() {
-		return getClass() + "[local=" + local + " remote=" + remote + "]";
+	public final String toString() {
+		boolean closed = false;
+		try {
+			closed = closed(System.currentTimeMillis(), false);
+		} catch (@SuppressWarnings("unused") Exception e) { // ok
+		}
+		boolean valid = key == null ? false : key.isValid();
+		return getClass().getSimpleName() + "[id=" + id + " local=" + local + " remote=" + remote + " valid=" + valid + " closed=" + closed + "]";
+	}
+
+	private static final char[] CHAR = { //
+			'N', '1', 'l', 'A', 'x', 'b', 'n', 'q', '3', 'B', //
+			'j', 't', '6', 'O', 'e', 'R', 'J', '9', '2', 'm', //
+			'W', 'z', 'h', 'D', 'i', '0', '4', 'o', '5', 'T', //
+			'r', 'H', 'k', 'G', 'I', 'd', 'Z', 'U', 'C', 'Y', //
+			'S', 'p', 'L', 'K', 's', 'y', 'c', 'a', 'Q', 'F', //
+			'u', 'X', 'M', 'v', 'g', 'E', '7', 'w', 'f', '8', //
+			'P', 'V', };
+
+	private static void encode(StringBuilder sb, long value) {
+		do {
+			sb.append(CHAR[(int) (value % 62)]);
+			value /= 62;
+		} while (value > 0);
+	}
+
+	private static void encode(StringBuilder sb, byte[] value) {
+		long l = 0;
+		int b = 0;
+		for (int i = 0; i < value.length; i++) {
+			l += (value[i] & 0xFF) << b;
+			if ((b += 8) == 64) {
+				encode(sb, l);
+				l = 0;
+				b = 0;
+			}
+		}
+		if (b > 0)
+			encode(sb, l);
 	}
 
 	/** output stream for this connection */
@@ -254,8 +303,9 @@ public abstract class NIOConnectionAbstract {
 
 		@Override
 		public synchronized void close() {
+			flush();
 			if (h != null)
-				h.close();
+				h = null;
 		}
 
 		/**

@@ -40,7 +40,7 @@ public class NIOConnectionSSL extends NIOConnectionAbstract {
 	}
 
 	@Override
-	protected final void onInit(long now) throws InterruptedException, IOException {
+	protected final void onInit() throws InterruptedException, IOException {
 		handler.onInit(this, sslEngine);
 		sslEngine.beginHandshake();
 		processHandshake();

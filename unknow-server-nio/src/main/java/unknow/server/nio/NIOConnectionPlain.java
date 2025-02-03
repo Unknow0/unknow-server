@@ -25,16 +25,17 @@ public class NIOConnectionPlain extends NIOConnectionAbstract {
 	 * @param handler the connection handler
 	 */
 	public NIOConnectionPlain(NIOWorker worker, SelectionKey key, NIOConnectionHandler handler) {
-		super(worker,key, handler);
+		super(worker, key, handler);
 	}
 
 	/**
 	 * called after the connection is initialized
 	 * 
 	 * @throws InterruptedException on interrupt
+	 * @throws IOException 
 	 */
 	@Override
-	protected final void onInit(long now) throws InterruptedException {
+	protected final void onInit() throws InterruptedException, IOException {
 		handler.onInit(this, null);
 	}
 

@@ -144,6 +144,10 @@
 		</dependency>
 
 		<dependency>
+			<groupId>ch.qos.logback</groupId>
+    		<artifactId>logback-classic</artifactId>
+    	</dependency>
+		<dependency>
 			<groupId>com.fasterxml.jackson.jakarta.rs</groupId>
 			<artifactId>jackson-jakarta-rs-json-provider</artifactId>
 		</dependency>

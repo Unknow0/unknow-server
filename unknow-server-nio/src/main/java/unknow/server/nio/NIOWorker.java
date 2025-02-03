@@ -25,7 +25,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 
 	/** this worker id */
 	private final int id;
-	private final NIOStaleWorker stale;
+	private final NIOStaleWorker connections;
 	/** the listener */
 	private final NIOServerListener listener;
 
@@ -33,24 +33,27 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	private final ByteBuffer buf;
 
 	private final Queue<SelectionKey> init;
+	private final Queue<NIOConnectionAbstract> close;
 
 	/**
 	 * create new IOWorker
 	 * 
 	 * @param id the worker id
+	 * @param connections connection worker
 	 * @param listener listener to use
 	 * @param timeout the timeout on select
 	 * @throws IOException on ioexception
 	 */
-	public NIOWorker(int id, NIOStaleWorker stale, NIOServerListener listener, long timeout) throws IOException {
+	public NIOWorker(int id, NIOStaleWorker connections, NIOServerListener listener, long timeout) throws IOException {
 		super("NIOWorker-" + id, timeout);
 		this.id = id;
-		this.stale = stale;
+		this.connections = connections;
 		this.listener = listener;
 
 		this.buf = ByteBuffer.allocateDirect(25000);
 
 		this.init = new ConcurrentLinkedDeque<>();
+		this.close = new ConcurrentLinkedDeque<>();
 	}
 
 	/**
@@ -75,7 +78,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	@Override
 	protected final void selected(SelectionKey key, long now) throws IOException, InterruptedException {
 		NIOConnectionAbstract co = (NIOConnectionAbstract) key.attachment();
-		stale.add(co);
+		connections.add(co);
 
 		if (key.isValid() && key.isWritable()) {
 			try {
@@ -110,10 +113,15 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 
 	@Override
 	protected void onSelect(boolean close) throws InterruptedException {
-		long now = System.currentTimeMillis();
+		doInit();
+		doClose();
+	}
+
+	private final void doInit() throws InterruptedException {
 		if (init.isEmpty())
 			return;
 
+		long now = System.currentTimeMillis();
 		SelectionKey k;
 		int i = 0;
 		while (i++ < 100 && (k = init.poll()) != null) {
@@ -121,9 +129,9 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			NIOConnectionAbstract co = (NIOConnectionAbstract) k.attachment();
 			listener.accepted(id, co);
 			try {
-				co.onInit(now);
+				co.onInit();
 				co.lastAction = now;
-				stale.add(co);
+				connections.add(co);
 			} catch (IOException e) {
 				logger.warn("{} Failed to init", co, e);
 				close(k);
@@ -133,10 +141,24 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			selector.wakeup();
 	}
 
+	private final void doClose() {
+		if (close.isEmpty())
+			return;
+
+		NIOConnectionAbstract co;
+		int i = 0;
+		while (i++ < 1000 && (co = close.poll()) != null)
+			close(co.key);
+	}
+
+	protected final void close(NIOConnectionAbstract co) {
+		close.offer(co);
+	}
+
 	@Override
 	protected final void close(SelectionKey key) {
 		NIOConnectionAbstract co = (NIOConnectionAbstract) key.attachment();
-		stale.remove(co);
+		connections.remove(co);
 		listener.closed(id, co);
 
 		key.cancel();
