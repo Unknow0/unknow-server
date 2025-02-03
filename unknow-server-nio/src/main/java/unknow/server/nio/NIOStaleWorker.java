@@ -33,7 +33,7 @@ public class NIOStaleWorker implements Runnable {
 	public void run() {
 		try {
 			while (!Thread.interrupted()) {
-				Thread.sleep(1000);
+				Thread.sleep(500);
 				checkConnections(false);
 			}
 		} catch (@SuppressWarnings("unused") InterruptedException e) { // ok
@@ -41,7 +41,7 @@ public class NIOStaleWorker implements Runnable {
 
 		try {
 			while (!connections.isEmpty()) {
-				Thread.sleep(500);
+				Thread.sleep(100);
 				checkConnections(true);
 			}
 		} catch (@SuppressWarnings("unused") InterruptedException e) { // ok
@@ -59,6 +59,7 @@ public class NIOStaleWorker implements Runnable {
 				co.close();
 			else
 				connections.put(co);
-		} while (i++ < 1000 && first != co);
+			co = connections.poll();
+		} while (i++ < 1000 && co != null && first != co);
 	}
 }
