@@ -69,6 +69,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		NIOConnectionAbstract co = pool.apply(this, key);
 		key.attach(co);
 		init.add(key);
+		selector.wakeup();
 	}
 
 	@Override
