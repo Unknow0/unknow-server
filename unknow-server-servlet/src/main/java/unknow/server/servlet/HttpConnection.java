@@ -103,9 +103,14 @@ public final class HttpConnection implements NIOConnectionHandler {
 		if (p != null && !p.isClosable(stop))
 			return false;
 
-		if (p == null && co.lastAction() < now - 1000) {
-			logger.warn("request timeout {}", this);
-			return true;
+		if (p == null) {
+			if (co.lastAction() < now - 1000) {
+				logger.warn("request timeout {}", co);
+				return true;
+			} else if (pendingRead().length() > 8192) {
+				logger.warn("request too long or garbadge {}", co);
+				return true;
+			}
 		}
 
 		if (co.pendingWrite().isEmpty()) {
