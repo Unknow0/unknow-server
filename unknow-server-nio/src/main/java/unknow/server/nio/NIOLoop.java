@@ -111,7 +111,7 @@ public class NIOLoop implements Runnable {
 				selected(next);
 			} catch (IOException e) {
 				logger.warn("{}", next, e);
-				next.cancel();
+				close(next);
 			}
 		}
 	}
@@ -131,6 +131,14 @@ public class NIOLoop implements Runnable {
 	 */
 	@SuppressWarnings("unused")
 	protected void selected(SelectionKey key) throws IOException, InterruptedException { // for override
+	}
+
+	/**
+	* close a key
+	* @param key the key
+	*/
+	protected void close(SelectionKey key) {
+		key.cancel();
 	}
 
 	/**

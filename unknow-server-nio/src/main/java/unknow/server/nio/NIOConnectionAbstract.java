@@ -45,6 +45,9 @@ public abstract class NIOConnectionAbstract {
 	protected long lastRead;
 	protected long lastWrite;
 
+	protected NIOConnectionAbstract next;
+	protected NIOConnectionAbstract prev;
+
 	/**
 	 * create new connection
 	 * 

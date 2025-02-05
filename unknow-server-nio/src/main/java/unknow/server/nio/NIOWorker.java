@@ -8,11 +8,8 @@ import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
-import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 
 import org.slf4j.Logger;
@@ -35,7 +32,8 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	private final ByteBuffer buf;
 
 	private final Queue<SelectionKey> init;
-	private final Queue<NIOConnectionAbstract> connections;
+	private NIOConnectionAbstract head;
+	private NIOConnectionAbstract tail;
 
 	/**
 	 * create new IOWorker
@@ -53,7 +51,6 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		this.buf = ByteBuffer.allocateDirect(25000);
 
 		this.init = new ConcurrentLinkedQueue<>();
-		this.connections = new ConcurrentLinkedQueue<>();
 	}
 
 	/**
@@ -69,29 +66,63 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	public final void register(SocketChannel socket, Function<SelectionKey, NIOConnectionAbstract> pool) throws IOException, InterruptedException {
 		socket.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.TRUE).configureBlocking(false);
 		SelectionKey key = socket.register(selector, 0);
-		init.add(key);
 		key.attach(pool.apply(key));
+		init.add(key);
 		selector.wakeup();
 	}
 
-	@Override
-	@SuppressWarnings("resource")
-	protected final void selected(SelectionKey key) throws IOException, InterruptedException {
-		NIOConnectionAbstract h = (NIOConnectionAbstract) key.attachment();
-		SocketChannel channel = (SocketChannel) key.channel();
+	/**
+	 * remove co from the chain
+	 * @param co co to unlink
+	 */
+	private void unlink(NIOConnectionAbstract co) {
+		if (co.prev != null)
+			co.prev.next = co.next;
+		if (co.next != null)
+			co.next.prev = co.prev;
+		if (co == head)
+			head = co.next;
+		if (co == tail)
+			tail = co.prev;
+	}
 
-		connections.remove(h);
-		connections.add(h);
+	/**
+	 * move the co to the end of the chain
+	 * @param co co to move
+	 */
+	private void move(NIOConnectionAbstract co) {
+		unlink(co);
+		co.prev = tail;
+		co.next = null;
+		tail = co;
+		if (head == null)
+			head = co;
+	}
+
+	/**
+	 * remove co from the chain
+	 * @param co co to remove
+	 */
+	private void remove(NIOConnectionAbstract co) {
+		unlink(co);
+		co.next = null;
+		co.prev = null;
+	}
+
+	@Override
+	protected final void selected(SelectionKey key) throws IOException, InterruptedException {
+		NIOConnectionAbstract co = (NIOConnectionAbstract) key.attachment();
+		move(co);
 
 		if (key.isValid() && key.isWritable()) {
 			try {
-				h.writeInto(buf);
+				co.writeInto(buf);
 			} catch (InterruptedException e) {
-				logger.error("failed to write {}", h, e);
+				logger.error("failed to write {}", co, e);
 				Thread.currentThread().interrupt();
 			} catch (Exception e) {
-				logger.error("failed to write {}", h, e);
-				channel.close();
+				logger.error("failed to write {}", co, e);
+				close(key);
 			} finally {
 				buf.clear();
 			}
@@ -100,16 +131,34 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		// Tests whether this key's channel is ready to accept a new socket connection
 		if (key.isValid() && key.isReadable()) {
 			try {
-				h.readFrom(buf);
+				co.readFrom(buf);
 			} catch (InterruptedException e) {
-				logger.error("failed to read {}", h, e);
+				logger.error("failed to read {}", co, e);
 				Thread.currentThread().interrupt();
 			} catch (Exception e) {
-				logger.error("failed to read {}", h, e);
-				channel.close();
+				logger.error("failed to read {}", co, e);
+				close(key);
 			} finally {
 				buf.clear();
 			}
+		}
+	}
+
+	@Override
+	protected void close(SelectionKey key) {
+		NIOConnectionAbstract co = (NIOConnectionAbstract) key.attachment();
+		remove(co);
+		listener.closed(id, co);
+
+		key.cancel();
+		try {
+			key.channel().close();
+		} catch (@SuppressWarnings("unused") IOException e) { // ignore
+		}
+		try {
+			co.free();
+		} catch (Exception e) {
+			logger.warn("Failed to free connection {}", co, e);
 		}
 	}
 
@@ -121,23 +170,21 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			NIOConnectionAbstract co = (NIOConnectionAbstract) k.attachment();
 			listener.accepted(id, co);
 			co.onInit();
+			move(co);
 		}
+		checkConnections(close);
 	}
 
-	private final void checkConnections(boolean close) throws InterruptedException {
-		NIOConnectionAbstract first = connections.poll();
-		if (first == null)
-			return;
-
+	private final void checkConnections(boolean close) {
 		long now = System.currentTimeMillis();
-		int i = 0;
-		NIOConnectionAbstract co = first;
-		do {
-			if (!co.key.isValid() || co.closed(now, close))
-				co.close();
-			else
-				connections.put(co);
-			co = connections.poll();
-		} while (i++ < 1000 && co != null && first != co);
+		NIOConnectionAbstract co = head;
+		while (co != null) {
+			if (!co.key.isValid() || co.closed(now, close)) {
+				SelectionKey key = co.key;
+				co = co.next;
+				close(key);
+			} else
+				co = co.next;
+		}
 	}
 }
