@@ -103,7 +103,8 @@ public class Http2Stream extends HttpWorker implements Http2FlowControl {
 	}
 
 	@Override
-	protected void doDone() { // ok
+	protected void doDone() {
+		p.remove(this);
 	}
 
 	public final void close(boolean stop) {

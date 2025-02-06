@@ -129,10 +129,12 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 			}
 		}
 
-		Iterator<Http2Stream> it = pending.values().iterator();
-		while (it.hasNext()) {
-			if (it.next().isClosed())
-				it.remove();
+		synchronized (pending) {
+			Iterator<Http2Stream> it = pending.values().iterator();
+			while (it.hasNext()) {
+				if (it.next().isClosed())
+					it.remove();
+			}
 		}
 		return pending.isEmpty() && streams.isEmpty();
 	}
@@ -319,8 +321,16 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 	};
 
 	public void close(Http2Stream s) {
-		streams.remove(s.id);
-		pending.set(s.id, s);
-		s.close(false);
+		synchronized (pending) {
+			streams.remove(s.id);
+			pending.set(s.id, s);
+			s.close(false);
+		}
+	}
+
+	public void remove(Http2Stream s) {
+		synchronized (pending) {
+			pending.remove(s.id);
+		}
 	}
 }
