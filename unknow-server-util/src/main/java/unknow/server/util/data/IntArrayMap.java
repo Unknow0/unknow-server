@@ -324,6 +324,7 @@ public class IntArrayMap<T> {
 
 	private class ValuesIt implements Iterator<T> {
 		private int i = 0;
+		private Integer last = null;
 
 		@Override
 		public boolean hasNext() {
@@ -334,8 +335,16 @@ public class IntArrayMap<T> {
 		public T next() {
 			if (i == len)
 				throw new NoSuchElementException();
+			last = keys[i];
 			return values[i++];
 		}
 
+		@Override
+		public void remove() {
+			if (last == null)
+				throw new IllegalStateException();
+			IntArrayMap.this.remove(last);
+			last = null;
+		}
 	}
 }

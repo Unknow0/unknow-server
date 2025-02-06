@@ -70,8 +70,7 @@ public class NIOConnectionSSL extends NIOConnectionAbstract {
 			if (l == 0 && rawIn.position() == 0)
 				return;
 			rawIn.flip();
-			SSLEngineResult r = sslEngine.unwrap(rawIn, app);
-			logger.debug("unwrap {}", r.getStatus());
+			sslEngine.unwrap(rawIn, app);
 			rawIn.compact();
 
 			app.flip();

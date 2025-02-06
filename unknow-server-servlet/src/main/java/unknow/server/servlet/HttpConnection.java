@@ -130,9 +130,13 @@ public final class HttpConnection implements NIOConnectionHandler {
 		}
 	}
 
-	@SuppressWarnings("unchecked")
-	public <T> Future<T> submit(Runnable r) {
-		return (Future<T>) executor.submit(r);
+	public Future<?> submit(Runnable r) {
+		return executor.submit(r);
+	}
+
+	@Override
+	public final String toString() {
+		return co.toString();
 	}
 
 	public ServletContextImpl getCtx() {

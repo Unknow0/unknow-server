@@ -17,7 +17,7 @@ import unknow.server.servlet.utils.PathUtils;
 public class Http2Stream extends HttpWorker implements Http2FlowControl {
 	private static final Logger logger = LoggerFactory.getLogger(Http2Stream.class);
 
-	private final int id;
+	protected final int id;
 	private final Http2Processor p;
 	public final Http2ServletInput in;
 	private final Http2ServletOutput out;

@@ -46,9 +46,7 @@ public class FrameData extends FrameReader {
 		}
 
 		if ((flags & 0x1) == 1) {
-			p.streams.remove(id);
-			p.pending.add(s);
-			s.close(false);
+			p.close(s);
 		}
 		return null;
 	}

@@ -2,8 +2,6 @@ package unknow.server.servlet.http2;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,7 +59,7 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 
 	public final HttpConnection co;
 	public final IntArrayMap<Http2Stream> streams;
-	public final List<Http2Stream> pending;
+	private final IntArrayMap<Http2Stream> pending;
 	public final Http2Headers headers;
 	private final byte[] b;
 	private int window;
@@ -81,7 +79,7 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 	public Http2Processor(HttpConnection co) throws InterruptedException {
 		this.co = co;
 		this.streams = new IntArrayMap<>();
-		this.pending = new LinkedList<>();
+		this.pending = new IntArrayMap<>();
 		this.headers = new Http2Headers(4096);
 		this.b = new byte[9];
 		this.closing = false;
@@ -130,7 +128,8 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 				Thread.currentThread().interrupt();
 			}
 		}
-		Iterator<Http2Stream> it = pending.iterator();
+
+		Iterator<Http2Stream> it = pending.values().iterator();
 		while (it.hasNext()) {
 			if (it.next().isClosed())
 				it.remove();
@@ -318,4 +317,10 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 		}
 		return null;
 	};
+
+	public void close(Http2Stream s) {
+		streams.remove(s.id);
+		pending.set(s.id, s);
+		s.close(false);
+	}
 }

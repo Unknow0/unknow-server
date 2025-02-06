@@ -77,11 +77,8 @@ public class FrameHeader extends FrameReader {
 			if (!p.wantContinuation)
 				s.start();
 
-			if ((flags & 0x1) == 1) {
-				p.streams.remove(id);
-				p.pending.add(s);
-				s.close(false);
-			}
+			if ((flags & 0x1) == 1)
+				p.close(s);
 
 			return null;
 		} catch (IOException e) {
