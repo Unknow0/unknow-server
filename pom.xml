@@ -46,6 +46,7 @@
 		<jmh.version>1.37</jmh.version>
 		<protostuff.version>1.8.0</protostuff.version>
 		<protobuf.version>4.28.2</protobuf.version>
+		<netty.version>4.1.117.Final</netty.version>
 	</properties>
 
 
@@ -380,7 +381,13 @@
 				<version>${protobuf.version}</version>
 			</dependency>
 
-
+			<dependency>
+				<groupId>io.netty</groupId>
+				<artifactId>netty-bom</artifactId>
+				<version>${netty.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
 			<dependency>
 				<groupId>com.fasterxml.jackson</groupId>
 				<artifactId>jackson-bom</artifactId>

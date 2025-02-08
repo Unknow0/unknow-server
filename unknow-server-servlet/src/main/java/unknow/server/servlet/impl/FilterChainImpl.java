@@ -89,7 +89,7 @@ public final class FilterChainImpl implements FilterChain {
 
 		@Override
 		public void doFilter(ServletRequest request, ServletResponse response) throws IOException, ServletException {
-			((ServletRequestImpl) request).setServletPath(path);
+//			((ServletRequestImpl) request).setServletPath(path);
 			next.doFilter(request, response);
 		}
 

@@ -30,6 +30,7 @@ import jakarta.servlet.SessionTrackingMode;
 import jakarta.servlet.descriptor.JspConfigDescriptor;
 import unknow.server.servlet.impl.session.SessionFactory;
 import unknow.server.servlet.utils.EventManager;
+import unknow.server.servlet.utils.ServletManager;
 import unknow.server.util.data.ArrayMap;
 
 /**
@@ -45,6 +46,7 @@ public class ServletContextImpl implements ServletContext {
 	private final ArrayMap<String> parameters;
 	private final ArrayMap<Object> attributes;
 
+	private final ServletManager servlets;
 	private final EventManager events;
 	private final SessionFactory sessions;
 
@@ -65,11 +67,12 @@ public class ServletContextImpl implements ServletContext {
 	 * @param localeEncodings the encoding per locale
 	 * @param mimeTypes the mime type per file extentions
 	 */
-	public ServletContextImpl(String name, String vhost, ArrayMap<String> parameters, EventManager events, SessionFactory sessions, ArrayMap<String> localeEncodings,
-			ArrayMap<String> mimeTypes) {
+	public ServletContextImpl(String name, String vhost, ArrayMap<String> parameters, ServletManager servlets, EventManager events, SessionFactory sessions,
+			ArrayMap<String> localeEncodings, ArrayMap<String> mimeTypes) {
 		this.name = name;
 		this.vhost = vhost;
 		this.parameters = parameters;
+		this.servlets = servlets;
 		this.events = events;
 
 		this.sessions = sessions;
@@ -77,6 +80,14 @@ public class ServletContextImpl implements ServletContext {
 		this.mimeTypes = mimeTypes;
 
 		this.attributes = new ArrayMap<>();
+	}
+
+	public ServletManager servlets() {
+		return servlets;
+	}
+
+	public EventManager events() {
+		return events;
 	}
 
 	/**

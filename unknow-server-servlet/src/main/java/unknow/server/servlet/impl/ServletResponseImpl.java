@@ -12,72 +12,75 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import unknow.server.servlet.HttpAdapter;
-import unknow.server.servlet.HttpError;
 
 /**
  * @author unknow
  */
-public class ServletResponseImpl implements HttpServletResponse {
+public abstract class ServletResponseImpl implements HttpServletResponse {
 	private static final DateTimeFormatter RFC1123 = DateTimeFormatter.RFC_1123_DATE_TIME.withZone(ZoneOffset.UTC);
 
-	private final HttpAdapter co;
-	private AbstractServletOutput stream;
+	protected final ChannelHandlerContext out;
+	private final ServletContextImpl ctx;
+	private final HttpServletRequest req;
+
+	private final Collection<Cookie> cookies;
+
+	private AbstractServletOutput<?> stream;
 	private PrintWriter writer;
 
+	private int bufferSize;
 	private boolean commited = false;
 
-	private int status;
 	private Charset charset;
-	private String type;
-	private final Map<String, List<String>> headers;
-	private final List<Cookie> cookies;
-
-	private long contentLength = -1;
-	private int bufferSize = -1;
-
-	// Content-Language
-	private Locale locale = null;
 
 	/**
 	 * create new ServletResponseImpl
 	 * 
-	 * @param co the connection
+	 * @param ctx the servlet context
 	 */
-	public ServletResponseImpl(HttpAdapter co) {
-		this.co = co;
-		headers = new HashMap<>();
-		cookies = new ArrayList<>();
+	public ServletResponseImpl(ChannelHandlerContext out, ServletContextImpl ctx, HttpServletRequest req) {
+		this.out = out;
+		this.ctx = ctx;
+		this.req = req;
 
-		status = 200;
+		this.cookies = new ArrayList<>();
 	}
+
+	protected abstract AbstractServletOutput<?> rawOutput();
+
+	protected abstract void doCommit() throws IOException, InterruptedException;
+
+	protected abstract void doReset(boolean full);
 
 	/**
 	 * commit the response
 	 * 
 	 * @throws IOException
 	 */
-	public final void commit() throws IOException {
+	public final void commit() throws IOException, InterruptedException {
 		if (commited)
 			return;
 		commited = true;
-		co.commit();
+		doCommit();
 	}
 
-	public void close() throws IOException {
+	public void close() throws IOException, InterruptedException {
 		if (writer != null)
 			writer.close();
 		if (stream != null)
 			stream.close();
 		commit();
+		out.flush();
 	}
 
 	public void checkCommited() {
@@ -85,13 +88,36 @@ public class ServletResponseImpl implements HttpServletResponse {
 			throw new IllegalStateException("already commited");
 	}
 
-	public AbstractServletOutput getRawStream() {
-		return stream;
+	public void sendError(int sc, Throwable t, String msg) throws IOException {
+		reset(false);
+		FilterChain f = ctx.servlets().getError(sc, t);
+		if (f != null) {
+			try {
+				ServletRequestError r = new ServletRequestError(req, sc, t);
+				f.doFilter(r, this);
+				return;
+			} catch (ServletException e) {
+				ctx.log("Failed to send error", e);
+			}
+		}
+		setStatus(sc);
+		if (msg == null)
+			msg = HttpResponseStatus.valueOf(sc).reasonPhrase();
+		try (PrintWriter w = getWriter()) {
+			w.append("<html><body><p>Error ").append(Integer.toString(sc)).append(" ").append(msg.replace("<", "&lt;")).write("</p></body></html>");
+		}
+	}
+
+	public void reset(boolean full) {
+		resetBuffer();
+		stream = null;
+		writer = null;
+		doReset(full);
 	}
 
 	@Override
 	public String getCharacterEncoding() {
-		return charset == null ? co.ctx().getResponseCharacterEncoding() : charset.name();
+		return charset == null ? ctx.getResponseCharacterEncoding() : charset.name();
 	}
 
 	@Override
@@ -101,26 +127,20 @@ public class ServletResponseImpl implements HttpServletResponse {
 
 	@Override
 	public void setContentType(String type) {
-		int i = type.indexOf("charset=");
-		if (i > 0) {
-			String encoding = type.substring(i + 8);
-			i = encoding.indexOf(' ');
-			if (i > 0)
-				encoding = encoding.substring(0, i);
-			i = encoding.indexOf(';');
-			if (i > 0)
-				encoding = encoding.substring(0, i);
-			setCharacterEncoding(encoding);
-		}
-		this.type = type;
+		setHeader("content-type", type);
+//		int i = type.indexOf("charset="); TODO get charset
+//		if (i < 0)
+//			return;
+//		int l = type.indexOf(';', i);
 	}
 
 	@Override
 	public String getContentType() {
-		if (type == null)
-			return null;
-		if (!type.contains("charset="))
+		String type = getHeader("content-type");
+		if (!type.contains("charset=")) {
 			type += ";charset=" + getCharacterEncoding();
+			setHeader("content-type", type);
+		}
 		return type;
 	}
 
@@ -129,7 +149,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 		if (writer != null)
 			throw new IllegalStateException("output already got created with getWriter()");
 		if (stream == null)
-			stream = co.createOutput();
+			stream = rawOutput();
 		return stream;
 	}
 
@@ -139,22 +159,18 @@ public class ServletResponseImpl implements HttpServletResponse {
 			return writer;
 		if (stream != null)
 			throw new IllegalStateException("output already got created with getWriter()");
-		stream = co.createOutput();
-		return writer = new PrintWriter(new OutputStreamWriter(stream, charset == null ? Charset.forName(co.ctx().getResponseCharacterEncoding()) : charset), false);
-	}
-
-	public long getContentLength() {
-		return contentLength;
+		stream = rawOutput();
+		return writer = new PrintWriter(new OutputStreamWriter(stream, charset == null ? Charset.forName(ctx.getResponseCharacterEncoding()) : charset), false);
 	}
 
 	@Override
 	public void setContentLength(int len) {
-		contentLength = len;
+		setIntHeader("content-length", len);
 	}
 
 	@Override
 	public void setContentLengthLong(long len) {
-		contentLength = len;
+		setHeader("content-length", Long.toString(len));
 	}
 
 	@Override
@@ -172,7 +188,11 @@ public class ServletResponseImpl implements HttpServletResponse {
 
 	@Override
 	public void flushBuffer() throws IOException {
-		commit();
+		try {
+			commit();
+		} catch (InterruptedException e) {
+			throw new IOException(e);
+		}
 		if (stream != null)
 			stream.flush();
 	}
@@ -189,24 +209,6 @@ public class ServletResponseImpl implements HttpServletResponse {
 		reset(true);
 	}
 
-	public void reset(boolean full) {
-		resetBuffer();
-		status = 200;
-		stream = null;
-		writer = null;
-		if (full) {
-			List<String> list = headers.get("connection");
-			headers.clear();
-			if (list != null)
-				headers.put("connection", list);
-			charset = null;
-			type = null;
-			cookies.clear();
-			contentLength = -1;
-			locale = null;
-		}
-	}
-
 	@Override
 	public final boolean isCommitted() {
 		return commited;
@@ -215,13 +217,14 @@ public class ServletResponseImpl implements HttpServletResponse {
 	@Override
 	public void setLocale(Locale loc) {
 		if (charset == null)
-			setCharacterEncoding(co.ctx().getEncoding(loc));
-		this.locale = loc;
+			setCharacterEncoding(ctx.getEncoding(loc));
+		setHeader("Content-Language", loc.toLanguageTag());
 	}
 
 	@Override
 	public Locale getLocale() {
-		return locale;
+		String header = getHeader("Content-Language");
+		return header == null ? null : Locale.forLanguageTag(header);
 	}
 
 	public Collection<Cookie> getCookies() {
@@ -245,12 +248,12 @@ public class ServletResponseImpl implements HttpServletResponse {
 
 	@Override
 	public void sendError(int sc, String msg) throws IOException {
-		co.sendError(sc, null, msg);
+		sendError(sc, null, msg);
 	}
 
 	@Override
 	public void sendError(int sc) throws IOException {
-		co.sendError(sc, null, null);
+		sendError(sc, null, null);
 	}
 
 	@Override
@@ -258,52 +261,34 @@ public class ServletResponseImpl implements HttpServletResponse {
 		checkCommited();
 		reset();
 		commited = true;
-		status = HttpError.FOUND.code;
-		headers.computeIfAbsent("location", k -> new ArrayList<>(1)).add(location);
-		commit();
+		setStatus(302);
+		setContentLength(0);
+		out.close();
+		setHeader("location", location);
+		try {
+			commit();
+		} catch (InterruptedException e) {
+			throw new IOException(e);
+		}
 	}
 
 	@Override
-	public String getHeader(String name) {
-		List<String> list = headers.get(name.toLowerCase());
-		return list == null ? null : list.get(0);
-	}
+	public abstract String getHeader(String name);
 
 	@Override
-	public Collection<String> getHeaders(String name) {
-		return headers.get(name.toLowerCase());
-	}
+	public abstract Collection<String> getHeaders(String name);
 
 	@Override
-	public Collection<String> getHeaderNames() {
-		return headers.keySet();
-	}
+	public abstract Collection<String> getHeaderNames();
 
 	@Override
-	public boolean containsHeader(String name) {
-		return headers.containsKey(name.toLowerCase());
-	}
+	public abstract boolean containsHeader(String name);
 
 	@Override
-	public void setHeader(String name, String value) {
-		name = name.toLowerCase();
-		if ("content-type".equals(name))
-			setContentType(value);
-		List<String> list = headers.get(name);
-		if (list == null)
-			headers.put(name, list = new ArrayList<>(1));
-		else
-			list.clear();
-		list.add(value);
-	}
+	public abstract void setHeader(String name, String value);
 
 	@Override
-	public void addHeader(String name, String value) {
-		name = name.toLowerCase();
-		if ("content-type".equals(name))
-			setContentType(value);
-		headers.computeIfAbsent(name, k -> new ArrayList<>(1)).add(value);
-	}
+	public abstract void addHeader(String name, String value);
 
 	@Override
 	public void setDateHeader(String name, long date) {
@@ -326,12 +311,8 @@ public class ServletResponseImpl implements HttpServletResponse {
 	}
 
 	@Override
-	public void setStatus(int sc) {
-		this.status = sc;
-	}
+	public abstract void setStatus(int sc);
 
 	@Override
-	public int getStatus() {
-		return status;
-	}
+	public abstract int getStatus();
 }

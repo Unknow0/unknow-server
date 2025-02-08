@@ -1,103 +1,51 @@
 package unknow.server.servlet;
 
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.net.InetSocketAddress;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import jakarta.servlet.DispatcherType;
 import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.UnavailableException;
 import unknow.server.servlet.impl.ServletContextImpl;
 import unknow.server.servlet.impl.ServletRequestImpl;
 import unknow.server.servlet.impl.ServletResponseImpl;
-import unknow.server.servlet.utils.EventManager;
-import unknow.server.servlet.utils.ServletManager;
 
-public abstract class HttpWorker implements Runnable, HttpAdapter {
+public class HttpWorker implements Runnable {
 	private static final Logger logger = LoggerFactory.getLogger(HttpWorker.class);
 
-	protected final HttpConnection co;
-	protected final ServletManager manager;
-	protected ServletRequestImpl req;
-	protected ServletResponseImpl res;
+	private final ServletContextImpl ctx;
+	private final ServletRequestImpl req;
+	private final ServletResponseImpl res;
 
-	protected HttpWorker(HttpConnection co) {
-		this.co = co;
-		this.manager = co.getServlet();
-		this.req = new ServletRequestImpl(this, DispatcherType.REQUEST);
-		this.res = new ServletResponseImpl(this);
+	public HttpWorker(ServletContextImpl ctx, ServletRequestImpl req, ServletResponseImpl res) {
+		this.ctx = ctx;
+		this.req = req;
+		this.res = res;
 	}
 
-	@Override
-	public final ServletContextImpl ctx() {
-		return co.getCtx();
-	}
-
-	@Override
-	public final EventManager events() {
-		return co.getEvents();
-	}
-
-	@Override
-	public InetSocketAddress getRemote() {
-		return co.getRemote();
-	}
-
-	@Override
-	public InetSocketAddress getLocal() {
-		return co.getLocal();
-	}
-
-	protected abstract boolean doStart() throws IOException, InterruptedException;
-
-	protected abstract void doDone();
-
-	@Override
-	public void sendError(int sc, Throwable t, String msg) throws IOException {
-		res.reset(false);
-		FilterChain f = manager.getError(sc, t);
-		if (f != null) {
-			ServletRequestImpl r = new ServletRequestImpl(this, DispatcherType.ERROR);
-			r.setMethod("GET");
-			r.setAttribute("javax.servlet.error.status_code", sc);
-			if (t != null) {
-				r.setAttribute("javax.servlet.error.exception_type", t.getClass());
-				r.setAttribute("javax.servlet.error.message", t.getMessage());
-				r.setAttribute("javax.servlet.error.exception", t);
-			}
-			r.setAttribute("javax.servlet.error.request_uri", r.getRequestURI());
-			r.setAttribute("javax.servlet.error.servlet_name", "");
-			try {
-				f.doFilter(r, res);
-				return;
-			} catch (ServletException e) {
-				logger.error("failed to send error", e);
-			}
-		}
-		res.setStatus(sc);
-		if (msg == null) {
-			HttpError e = HttpError.fromStatus(sc);
-			msg = e == null ? "" : e.message;
-		}
-		try (PrintWriter w = res.getWriter()) {
-			w.append("<html><body><p>Error ").append(Integer.toString(sc)).append(" ").append(msg.replace("<", "&lt;")).write("</p></body></html>");
-		}
+	public ServletContextImpl ctx() {
+		return ctx;
 	}
 
 	@Override
 	public void run() {
 		try {
-			if (!doStart()) {
-				logger.warn("init req failed");
-				co.getOut().close();
-				return;
+			ctx.events().fireRequestInitialized(req);
+			FilterChain s = ctx.servlets().find(req);
+			try {
+				s.doFilter(req, res);
+			} catch (UnavailableException e) {
+				// TODO add page with retry-after
+				res.sendError(503, e, null);
+			} catch (Exception e) {
+				logger.error("failed to service '{}'", s, e);
+				if (!res.isCommitted())
+					res.sendError(500, e, null);
 			}
-			doRun();
-		} catch (Exception e) {
+			ctx.events().fireRequestDestroyed(req);
+			res.close();
+		} catch (Throwable e) {
 			logger.error("processor error", e);
 			try {
 				if (!res.isCommitted())
@@ -106,27 +54,6 @@ public abstract class HttpWorker implements Runnable, HttpAdapter {
 			}
 			if (e instanceof InterruptedException)
 				Thread.currentThread().interrupt();
-		} finally {
-			doDone();
-			co.flush();
 		}
-	}
-
-	private final void doRun() throws IOException {
-		co.getEvents().fireRequestInitialized(req);
-		FilterChain s = manager.find(req);
-		try {
-			s.doFilter(req, res);
-		} catch (UnavailableException e) {
-			// TODO add page with retry-after
-			sendError(503, e, null);
-		} catch (Exception e) {
-			logger.error("failed to service '{}'", s, e);
-			if (!res.isCommitted())
-				sendError(500, e, null);
-		}
-		co.getEvents().fireRequestDestroyed(req);
-		req.clearInput();
-		res.close();
 	}
 }

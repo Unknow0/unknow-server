@@ -2,6 +2,9 @@ package unknow.server.servlet.impl;
 
 import java.io.IOException;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandlerContext;
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.WriteListener;
 import unknow.server.util.io.Buffers;
@@ -9,11 +12,13 @@ import unknow.server.util.io.Buffers;
 /**
  * abstract implementation of ServlerOutputStream
  */
-public abstract class AbstractServletOutput extends ServletOutputStream {
-	/** the buffer */
-	protected final Buffers buffer;
+public abstract class AbstractServletOutput<T extends ServletResponseImpl> extends ServletOutputStream {
+	protected final ChannelHandlerContext out;
 	/** response that created this stream */
-	protected final ServletResponseImpl res;
+	protected final T res;
+
+	/** the buffer */
+	protected final ByteBuf buffer;
 	private int bufferSize;
 
 	private boolean closed;
@@ -22,17 +27,20 @@ public abstract class AbstractServletOutput extends ServletOutputStream {
 	 * create a new AbstractServlet
 	 * @param res the response
 	 */
-	protected AbstractServletOutput(ServletResponseImpl res) {
+	protected AbstractServletOutput(ChannelHandlerContext out, T res) {
+		this.out = out;
 		this.res = res;
 		if (res != null) {
-			this.buffer = new Buffers();
-			setBufferSize(res.getBufferSize());
+			bufferSize = res.getBufferSize();
+			this.buffer = Unpooled.buffer(bufferSize < 4096 ? 4096 : bufferSize);
 		} else {
 			this.buffer = null;
 			this.bufferSize = 0;
 		}
 		this.closed = false;
 	}
+
+	protected abstract void writebuffer() throws IOException;
 
 	/**
 	 * clear the buffer
@@ -53,7 +61,7 @@ public abstract class AbstractServletOutput extends ServletOutputStream {
 	 * @param bufferSize the size
 	 */
 	public final void setBufferSize(int bufferSize) {
-		if (!buffer.isEmpty())
+		if (buffer.writerIndex() > 0)
 			throw new IllegalStateException("data already written");
 
 		int r = bufferSize % Buffers.BUF_LEN; // make size a multiple of chunk size
@@ -91,12 +99,8 @@ public abstract class AbstractServletOutput extends ServletOutputStream {
 	@Override
 	public void write(int b) throws IOException {
 		ensureOpen();
-		try {
-			buffer.write(b);
-		} catch (@SuppressWarnings("unused") InterruptedException e) {
-			Thread.currentThread().interrupt();
-		}
-		if (buffer.length() >= bufferSize)
+		buffer.writeByte(b);
+		if (buffer.writerIndex() >= bufferSize)
 			flush();
 	}
 
@@ -110,13 +114,21 @@ public abstract class AbstractServletOutput extends ServletOutputStream {
 		if (len == 0)
 			return;
 		ensureOpen();
-		try {
-			buffer.write(b, off, len);
-		} catch (@SuppressWarnings("unused") InterruptedException e) {
-			Thread.currentThread().interrupt();
-		}
-		if (buffer.length() >= bufferSize)
+		buffer.writeBytes(b, off, len);
+		if (buffer.writerIndex() >= bufferSize)
 			flush();
+	}
+
+	@Override
+	public final void flush() throws IOException {
+		if (buffer.readableBytes() == 0)
+			return;
+		try {
+			res.commit();
+		} catch (InterruptedException e) {
+			throw new IOException(e);
+		}
+		writebuffer();
 	}
 
 	@Override
