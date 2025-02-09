@@ -56,6 +56,10 @@ public abstract class AbstractServletOutput<T extends ServletResponseImpl> exten
 		return bufferSize;
 	}
 
+	public int remaingSize() {
+		return buffer.readableBytes();
+	}
+
 	/**
 	 * set the buffer size
 	 * @param bufferSize the size

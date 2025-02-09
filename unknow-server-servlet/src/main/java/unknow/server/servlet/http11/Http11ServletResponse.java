@@ -6,30 +6,30 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import unknow.server.servlet.http11.HandlerHttp.OrderedLock;
+import unknow.server.servlet.http11.Http11Handler.OrderedLock;
 import unknow.server.servlet.impl.ServletContextImpl;
 import unknow.server.servlet.impl.ServletResponseImpl;
 
-public class ServletResponseHttp1 extends ServletResponseImpl {
+public class Http11ServletResponse extends ServletResponseImpl {
 
 	protected final OrderedLock lock;
 	private final int id;
 	private final HttpResponse res;
 
-	private ServletOutputHttp1 rawOutput;
+	private Http11ServletOutput rawOutput;
 
-	public ServletResponseHttp1(ChannelHandlerContext out, ServletContextImpl ctx, ServletRequestHttp1 req, OrderedLock lock, int id) {
+	public Http11ServletResponse(ChannelHandlerContext out, ServletContextImpl ctx, Http11ServletRequest req, OrderedLock lock, int id) {
 		super(out, ctx, req);
 
 		this.lock = lock;
 		this.id = id;
 
 		res = new DefaultHttpResponse(req.req().protocolVersion(), HttpResponseStatus.OK);
-		rawOutput = new ServletOutputHttp1(out, this);
+		rawOutput = new Http11ServletOutput(out, this);
 	}
 
 	@Override
-	protected ServletOutputHttp1 rawOutput() {
+	protected Http11ServletOutput rawOutput() {
 		return rawOutput;
 	}
 

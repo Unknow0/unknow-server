@@ -8,11 +8,11 @@ import io.netty.handler.codec.http.HttpRequest;
 import unknow.server.servlet.impl.ServletContextImpl;
 import unknow.server.servlet.impl.ServletRequestImpl;
 
-public class ServletRequestHttp1 extends ServletRequestImpl {
+public class Http11ServletRequest extends ServletRequestImpl {
 
 	private final HttpRequest req;
 
-	public ServletRequestHttp1(ServletContextImpl ctx, String scheme, HttpRequest req, InetSocketAddress remote, InetSocketAddress local) {
+	public Http11ServletRequest(ServletContextImpl ctx, String scheme, HttpRequest req, InetSocketAddress remote, InetSocketAddress local) {
 		super(ctx, scheme, req.method().name(), req.uri(), req.protocolVersion().text(), remote, local);
 		this.req = req;
 	}

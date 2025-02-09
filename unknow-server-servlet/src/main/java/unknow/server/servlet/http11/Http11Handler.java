@@ -22,8 +22,8 @@ import unknow.server.servlet.HttpWorker;
 import unknow.server.servlet.impl.ServletContextImpl;
 import unknow.server.servlet.impl.ServletInputStreamImpl;
 
-public final class HandlerHttp extends SimpleChannelInboundHandler<HttpObject> {
-	private static final Logger logger = LoggerFactory.getLogger(HandlerHttp.class);
+public final class Http11Handler extends SimpleChannelInboundHandler<HttpObject> {
+	private static final Logger logger = LoggerFactory.getLogger(Http11Handler.class);
 	private static final ExecutorService POOL = Executors.newCachedThreadPool();
 
 	private final ServletContextImpl servletContext;
@@ -31,7 +31,7 @@ public final class HandlerHttp extends SimpleChannelInboundHandler<HttpObject> {
 
 	private ServletInputStreamImpl input;
 
-	public HandlerHttp(ServletContextImpl servletContext) {
+	public Http11Handler(ServletContextImpl servletContext) {
 		this.servletContext = servletContext;
 		this.lock = new OrderedLock();
 	}
@@ -44,18 +44,19 @@ public final class HandlerHttp extends SimpleChannelInboundHandler<HttpObject> {
 
 	@Override
 	protected void channelRead0(ChannelHandlerContext ctx, HttpObject msg) {
-		Channel channel = ctx.channel();
 		logger.debug("{} {}", ctx, msg);
+
 		if (msg instanceof HttpRequest) {
 			if (msg.decoderResult().isFailure())
 				ctx.close();
 			else {
+				Channel channel = ctx.channel();
 				InetSocketAddress remote = (InetSocketAddress) channel.remoteAddress();
 				InetSocketAddress local = (InetSocketAddress) channel.localAddress();
 
 				String scheme = ctx.pipeline().get(SslHandler.class) == null ? "http" : "https";
-				ServletRequestHttp1 req = new ServletRequestHttp1(servletContext, scheme, (HttpRequest) msg, remote, local);
-				ServletResponseHttp1 res = new ServletResponseHttp1(ctx, servletContext, req, lock, lock.nextId());
+				Http11ServletRequest req = new Http11ServletRequest(servletContext, scheme, (HttpRequest) msg, remote, local);
+				Http11ServletResponse res = new Http11ServletResponse(ctx, servletContext, req, lock, lock.nextId());
 				input = req.rawInput();
 				POOL.submit(new HttpWorker(servletContext, req, res));
 			}
@@ -66,7 +67,6 @@ public final class HandlerHttp extends SimpleChannelInboundHandler<HttpObject> {
 			input.close();
 			input = null;
 		}
-
 	}
 
 	@Override

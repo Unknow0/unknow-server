@@ -9,9 +9,9 @@ import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.LastHttpContent;
 import unknow.server.servlet.impl.AbstractServletOutput;
 
-public class ServletOutputHttp1 extends AbstractServletOutput<ServletResponseHttp1> {
+public class Http11ServletOutput extends AbstractServletOutput<Http11ServletResponse> {
 
-	protected ServletOutputHttp1(ChannelHandlerContext out, ServletResponseHttp1 res) {
+	protected Http11ServletOutput(ChannelHandlerContext out, Http11ServletResponse res) {
 		super(out, res);
 	}
 

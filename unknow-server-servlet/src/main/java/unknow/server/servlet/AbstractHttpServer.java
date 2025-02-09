@@ -7,38 +7,20 @@ import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.util.Arrays;
-import java.util.Map.Entry;
 import java.util.ServiceLoader;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.codec.http.DefaultHttpRequest;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpServerCodec;
-import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.http2.DefaultHttp2DataFrame;
-import io.netty.handler.codec.http2.DefaultHttp2Headers;
-import io.netty.handler.codec.http2.DefaultHttp2HeadersFrame;
-import io.netty.handler.codec.http2.Http2Frame;
 import io.netty.handler.codec.http2.Http2FrameCodecBuilder;
-import io.netty.handler.codec.http2.Http2Headers;
-import io.netty.handler.codec.http2.Http2HeadersFrame;
 import io.netty.handler.codec.http2.Http2MultiplexHandler;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
@@ -51,15 +33,14 @@ import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
 import jakarta.servlet.ServletContainerInitializer;
 import jakarta.servlet.ServletException;
-import unknow.server.servlet.http11.HandlerHttp;
+import unknow.server.servlet.http11.Http11Handler;
+import unknow.server.servlet.http2.Http2Handler;
 import unknow.server.servlet.impl.FilterConfigImpl;
 import unknow.server.servlet.impl.ServletConfigImpl;
 import unknow.server.servlet.impl.ServletContextImpl;
-import unknow.server.servlet.impl.ServletRequestImpl;
 import unknow.server.servlet.impl.session.NoSessionFactory;
 import unknow.server.servlet.utils.EventManager;
 import unknow.server.servlet.utils.ServletManager;
@@ -271,7 +252,7 @@ public abstract class AbstractHttpServer /*extends NIOServerBuilder*/ {
 			if (ssl != null && ch.localAddress().getPort() == 8443)
 				p.addLast(ssl.newHandler(ch.alloc()), new APNLHandler(servletContext));
 			else
-				p.addLast(new HttpServerCodec(), new HandlerHttp(servletContext));
+				p.addLast(new HttpServerCodec(), new Http11Handler(servletContext));
 		}
 	}
 
@@ -286,61 +267,9 @@ public abstract class AbstractHttpServer /*extends NIOServerBuilder*/ {
 		@Override
 		protected void configurePipeline(ChannelHandlerContext ctx, String protocol) throws Exception {
 			if (ApplicationProtocolNames.HTTP_2.equals(protocol))
-				ctx.pipeline().addLast(Http2FrameCodecBuilder.forServer().autoAckPingFrame(true).autoAckSettingsFrame(true).build())
-						.addLast(new Http2MultiplexHandler(new Http2Frame2Http()));
+				ctx.pipeline().addLast(Http2FrameCodecBuilder.forServer().build()).addLast(new Http2MultiplexHandler(new Http2Handler(servletContext)));
 			else
-				ctx.pipeline().addLast(new HttpServerCodec(), new HandlerHttp(servletContext));
-		}
-	}
-
-	private static final class Http2Frame2Http extends SimpleChannelInboundHandler<Http2Frame> implements Runnable {
-		private static final ExecutorService POOL = Executors.newCachedThreadPool();
-		private static final HttpVersion HTTP_2 = new HttpVersion("HTTP", 2, 0, true);
-		private static final ByteBuf C = Unpooled.copiedBuffer("Hello Netty HTTP!".getBytes());
-
-		private ChannelHandlerContext ctx;
-		private ServletRequestImpl req;
-
-		@Override
-		public void handlerAdded(ChannelHandlerContext ctx) {
-			this.ctx = ctx;
-		}
-
-		@Override
-		public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-			System.out.println(evt);
-			if (evt instanceof IdleStateEvent)
-				ctx.close();
-		}
-
-		@Override
-		protected void channelRead0(ChannelHandlerContext ctx, Http2Frame msg) {
-			System.out.println(msg);
-			if (msg instanceof Http2HeadersFrame)
-				process(ctx, (Http2HeadersFrame) msg);
-		}
-
-		private void process(ChannelHandlerContext ctx, Http2HeadersFrame msg) {
-			Http2Headers headers = msg.headers();
-			HttpRequest req = new DefaultHttpRequest(HTTP_2, HttpMethod.valueOf(headers.method().toString()), headers.path().toString());
-
-			HttpHeaders h = req.headers();
-			for (Entry<CharSequence, CharSequence> e : headers) {
-				if (e.getKey().charAt(0) != ':')
-					h.add(e.getKey(), e.getValue());
-			}
-
-			POOL.submit(this);
-		}
-
-		@Override
-		public void run() {
-			DefaultHttp2Headers headers = new DefaultHttp2Headers();
-			headers.status("200");
-			headers.add(HttpHeaderNames.CONTENT_LENGTH, Integer.toString(C.capacity()));
-			ctx.write(new DefaultHttp2HeadersFrame(headers));
-
-			ctx.writeAndFlush(new DefaultHttp2DataFrame(C, true));
+				ctx.pipeline().addLast(new HttpServerCodec(), new Http11Handler(servletContext));
 		}
 	}
 }

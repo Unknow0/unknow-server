@@ -38,7 +38,7 @@ public abstract class ServletResponseImpl implements HttpServletResponse {
 	private AbstractServletOutput<?> stream;
 	private PrintWriter writer;
 
-	private int bufferSize;
+	private int bufferSize = 4096;
 	private boolean commited = false;
 
 	private Charset charset;
@@ -103,8 +103,11 @@ public abstract class ServletResponseImpl implements HttpServletResponse {
 		setStatus(sc);
 		if (msg == null)
 			msg = HttpResponseStatus.valueOf(sc).reasonPhrase();
-		try (PrintWriter w = getWriter()) {
-			w.append("<html><body><p>Error ").append(Integer.toString(sc)).append(" ").append(msg.replace("<", "&lt;")).write("</p></body></html>");
+		byte[] bytes = new StringBuilder("<html><body><p>Error ").append(sc).append(' ').append(msg.replace("<", "&lt;")).append("</p></body></html>").toString()
+				.getBytes(getCharacterEncoding());
+		setContentLength(bytes.length);
+		try (ServletOutputStream out = getOutputStream()) {
+			out.write(bytes);
 		}
 	}
 
