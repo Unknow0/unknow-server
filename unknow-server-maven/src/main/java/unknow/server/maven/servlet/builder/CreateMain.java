@@ -15,7 +15,7 @@ import unknow.server.maven.servlet.Builder;
 /**
  * @author unknow
  */
-public class Main extends Builder {
+public class CreateMain extends Builder {
 
 	@Override
 	public void add(BuilderContext ctx) {

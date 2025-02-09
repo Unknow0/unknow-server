@@ -1,16 +1,32 @@
 package unknow.server.servlet;
 
 import java.io.IOException;
-import java.security.KeyManagementException;
+import java.io.InputStream;
+import java.net.InetSocketAddress;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.ServiceLoader;
 
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.TrustManagerFactory;
+
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -51,23 +67,21 @@ import unknow.server.util.data.ArrayMap;
  * 
  * @author unknow
  */
-public abstract class AbstractHttpServer /*extends NIOServerBuilder*/ {
-//	private Opt http;
-//	private Opt https;
-//	private Opt keystore;
-//	private Opt keystorePass;
-//	private Opt vhost;
-//	private Opt execMin;
-//	private Opt execMax;
-//	private Opt execIdle;
-//	private Opt keepAlive;
+public abstract class AbstractHttpServer {
 
-	/** the servlet context */
-	protected ServletContextImpl ctx;
-	/** the servlet manager */
-	protected ServletManager manager;
-	/** the events */
-	protected EventManager events;
+	private static final Option help = Option.builder("h").longOpt("help").desc("show this help").build();
+	private static final Option shutdown = Option.builder().longOpt("shutdown").argName("port|addr:port").hasArg().type(Integer.class)
+			.desc("addr:port to gracefuly shutdown the server").build();
+	private static final Option http = Option.builder("a").longOpt("http-addr").argName("port|addr:port").hasArg().desc("addr:port to bind http to").build();
+	private static final Option https = Option.builder().longOpt("https-addr").argName("port|addr:port").hasArg().desc("addr:port to bind https to").build();
+	private static final Option vhost = Option.builder().longOpt("vhost").hasArg().desc("public vhost seen by the servlet, default to the binded address").build();
+	private static final Option keepAlive = Option.builder().longOpt("keepalive").hasArg()
+			.desc("max time to keep idle keepalive connection in seconds, -1: no keep alive, 0: infinite").build();
+	private static final Option keystore = Option.builder().longOpt("keystore").hasArg().desc("keystore to use for https").build();
+	private static final Option keypass = Option.builder().longOpt("keypass").hasArg().desc("passphrase for the keystore").build();
+
+	/** @return the contextName */
+	protected abstract String contextName();
 
 	/** @return the servlet manager */
 	protected abstract ServletManager createServletManager();
@@ -75,107 +89,41 @@ public abstract class AbstractHttpServer /*extends NIOServerBuilder*/ {
 	/** @return the event manager */
 	protected abstract EventManager createEventManager();
 
-	/**
-	 * @param vhost the vhost
-	 * @return the context
-	 */
-	protected abstract ServletContextImpl createContext(String vhost);
-
 	/** @return the servlets */
-	protected abstract ServletConfigImpl[] createServlets();
+	protected abstract ServletConfigImpl[] createServlets(ServletContextImpl ctx);
 
 	/** @return the filters */
-	protected abstract FilterConfigImpl[] createFilters();
+	protected abstract FilterConfigImpl[] createFilters(ServletContextImpl ctx);
 
-//	@Override
-//	protected void beforeParse() {
-//		http = withOpt("http-addr").withCli(Option.builder("a").longOpt("http-addr").hasArg().desc("address to bind http to").build());
-//		https = withOpt("https-addr").withCli(Option.builder().longOpt("https-addr").hasArg().desc("address to bind https to").build());
-//
-//		keystore = withOpt("keystore").withCli(Option.builder().longOpt("keystore").hasArg().desc("keystore to use for https").build());
-//		keystorePass = withOpt("keystore-pass").withCli(Option.builder().longOpt("keystore-pass").hasArg().desc("passphrase for the keystore").build());
-//
-//		vhost = withOpt("vhost").withCli(Option.builder().longOpt("vhost").hasArg().desc("public vhost seen by the servlet, default to the binded address").build());
-//		execMin = withOpt("exec-min").withCli(Option.builder().longOpt("exec-min").hasArg().desc("min number of exec thread to use").build()).withValue("0");
-//		execMax = withOpt("exec-max").withCli(Option.builder().longOpt("exec-max").hasArg().desc("max number of exec thread to use").build())
-//				.withValue(Integer.toString(Integer.MAX_VALUE));
-//		execIdle = withOpt("exec-idle").withCli(Option.builder().longOpt("exec-idle").hasArg().desc("max idle time for exec thread in seconds").build()).withValue("60");
-//		keepAlive = withOpt("keepalive")
-//				.withCli(Option.builder().longOpt("keepalive").hasArg().desc("max time to keep idle keepalive connection in seconds, -1: no keep alive, 0: infinite").build())
-//				.withValue("2");
-//	}
+	/** @return the context init params */
+	protected abstract ArrayMap<String> initParam();
 
-//	@Override
-//	protected void process(NIOServer server, CommandLine cli) throws Exception {
-//		String ks = keystore.value(cli);
-//		if (ks == null)
-//			http = http.withValue(":8080");
-//		else
-//			https = https.withValue(":8443");
-//
-//		InetSocketAddress addressHttp = parseAddr(cli, http, "");
-//		InetSocketAddress addressHttps = parseAddr(cli, https, "");
-//
-//		String value = cli.getOptionValue(vhost.name());
-//		if (value == null)
-//			value = addressHttp == null ? addressHttps.getHostName() : addressHttp.getHostString();
-//
-//		manager = createServletManager();
-//		events = createEventManager();
-//		ctx = createContext(value);
-//
-//		loadInitializer();
-//		manager.initialize(ctx, createServlets(), createFilters());
-//		events.fireContextInitialized(ctx);
-//
-//		SSLContext sslContext = addressHttps == null ? null : sslContext(ks, keystorePass.value(cli));
-//
-//		AtomicInteger i = new AtomicInteger();
-//		ExecutorService executor = new ThreadPoolExecutor(parseInt(cli, execMin, 0), parseInt(cli, execMax, 0), parseInt(cli, execIdle, 0), TimeUnit.SECONDS,
-//				new SynchronousQueue<>(), r -> {
-//					Thread t = new Thread(r, "exec-" + i.getAndIncrement());
-//					t.setDaemon(true);
-//					return t;
-//				});
-//		int keepAliveIdle = parseInt(cli, keepAlive, -1) * 1000;
-//		if (addressHttps != null)
-//			server.bind(addressHttps, key -> new NIOConnectionSSL(key, new HttpConnection(executor, ctx, manager, events, keepAliveIdle), sslContext));
-//		if (addressHttp != null)
-//			server.bind(addressHttp, key -> new NIOConnectionPlain(key, new HttpConnection(executor, ctx, manager, events, keepAliveIdle)));
-//	}
+	/** @return the locales to encoding mapping */
+	protected abstract ArrayMap<String> locales();
 
-	private final SslContext sslContext(String keystore, String password)
-			throws NoSuchAlgorithmException, CertificateException, IOException, KeyStoreException, UnrecoverableKeyException, KeyManagementException {
-//		KeyStore ks = KeyStore.getInstance("JKS");
-//		try (InputStream is = Files.newInputStream(Paths.get(keystore))) {
-//			ks.load(is, null);
-//		}
-//
-//		KeyManagerFactory keyManager = KeyManagerFactory.getInstance("SunX509");
-//		keyManager.init(ks, password == null ? null : password.toCharArray());
-//
-//		TrustManagerFactory trust = TrustManagerFactory.getInstance("SunX509");
-//		trust.init(ks);
-		ApplicationProtocolConfig alpn = new ApplicationProtocolConfig(Protocol.ALPN, SelectorFailureBehavior.NO_ADVERTISE, SelectedListenerFailureBehavior.ACCEPT,
-				Arrays.asList("h2", "http/1.1"));
-//		return SslContextBuilder.forServer(keyManager).trustManager(trust).applicationProtocolConfig(alpn).build();
-		SelfSignedCertificate cert = new SelfSignedCertificate();
-		return SslContextBuilder.forServer(cert.key(), cert.cert()).applicationProtocolConfig(alpn).build();
-
-//		SSLContext sslContext = SSLContext.getInstance("TLS");
-//		sslContext.init(keyManager.getKeyManagers(), trust.getTrustManagers(), null);
-//		return sslContext;
-	}
+	/** @return the extention to mime-type mapping */
+	protected abstract ArrayMap<String> mimeTypes();
 
 	/**
 	 * find and call initializer
 	 * 
 	 * @throws ServletException on error
 	 */
-	protected void loadInitializer() throws ServletException {
+	protected void loadInitializer(ServletContextImpl ctx) throws ServletException {
 		for (ServletContainerInitializer i : ServiceLoader.load(ServletContainerInitializer.class)) {
 			i.onStartup(null, ctx);
 		}
+	}
+
+	private ServletContextImpl initializeContext(String vhost) throws ServletException {
+		ServletManager manager = createServletManager();
+		EventManager events = createEventManager();
+		ServletContextImpl ctx = new ServletContextImpl(contextName(), vhost, initParam(), manager, events, new NoSessionFactory(), locales(), mimeTypes());
+
+		loadInitializer(ctx);
+		manager.initialize(ctx, createServlets(ctx), createFilters(ctx));
+		events.fireContextInitialized(ctx);
+		return ctx;
 	}
 
 	/**
@@ -186,26 +134,21 @@ public abstract class AbstractHttpServer /*extends NIOServerBuilder*/ {
 	 */
 	public void process(String[] arg) throws Exception {
 
-		manager = createServletManager();
-		events = createEventManager();
-		ctx = new ServletContextImpl("test", "vhost", new ArrayMap<>(new String[] { "ctx" }, new String[] { "value" }), manager, events, new NoSessionFactory(),
-				new ArrayMap<>(new String[] {}, new String[] {}),
-				new ArrayMap<>(
-						new String[] { "7z", "aac", "avi", "bmp", "bz", "bz2", "css", "csv", "gif", "htm", "html", "ico", "ics", "jar", "jpeg", "jpg", "js", "json", "jsp",
-								"mid", "midi", "mpeg", "oga", "ogv", "ogx", "otf", "pdf", "png", "rar", "rtf", "sh", "svg", "tar", "tif", "tiff", "ts", "ttf", "wav", "weba",
-								"webm", "webp", "woff", "woff2", "xhtml", "xml", "zip" },
-						new String[] { "application/x-7z-compressed", "audio/aac", "video/x-msvideo", "image/bmp", "application/x-bzip", "application/x-bzip2", "text/css",
-								"text/csc", "image/gif", "text/html", "text/html", "image/x-icon", "text/calendar", "application/java-archive", "image/jpeg", "image/jpeg",
-								"application/javascript", "application/json", "text/html", "audio/midi", "audio/midi", "video/mpeg", "audio/ogg", "video/ogg",
-								"application/ogg", "font/otf", "application/pdf", "image/png", "application/x-rar-compressed", "application/rtf", "application/x-sh",
-								"image/svg+xml", "application/x-tar", "image/tiff", "image/tiff", "application/typescript", "font/ttf", "audio/x-wav", "audio/webm",
-								"video/webm", "image/webp", "font/woff", "font/woff2", "application/xhtml+xml", "application/xml", "application/zip" }));
+		CommandLine cli = parseCli(arg);
 
-		loadInitializer();
-		manager.initialize(ctx, createServlets(), createFilters());
-		events.fireContextInitialized(ctx);
+		int keepAliveTime = Integer.parseInt(cli.getOptionValue(keepAlive, "2"));
 
-		SslContext ssl = sslContext(null, null);
+		InetSocketAddress addressHttp = parseAddr(cli, http, "");
+		InetSocketAddress addressHttps = parseAddr(cli, https, "");
+
+		if (addressHttp == null && addressHttps == null)
+			addressHttp = new InetSocketAddress(8080);
+
+		String vhostName = cli.getOptionValue(vhost, addressHttps != null ? addressHttps.getHostName() : addressHttp.getHostString());
+
+		SslContext ssl = sslContext(cli.getOptionValue(keystore), cli.getOptionValue(keypass));
+
+		ServletContextImpl ctx = initializeContext(vhostName);
 
 		EventLoopGroup bossGroup = new NioEventLoopGroup(1);
 		EventLoopGroup workerGroup = new NioEventLoopGroup();
@@ -213,42 +156,113 @@ public abstract class AbstractHttpServer /*extends NIOServerBuilder*/ {
 		try {
 			ServerBootstrap b = new ServerBootstrap();
 			b.option(ChannelOption.SO_BACKLOG, 1024);
-			b.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class).handler(new LoggingHandler(LogLevel.INFO)).childHandler(new Initialize(ctx, ssl));
+			b.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class).handler(new LoggingHandler(LogLevel.INFO))
+					.childHandler(new Initialize(ctx, ssl, keepAliveTime));
 
-			Channel ch = b.bind(8080).sync().channel();
-			b.bind(8443).sync();
-			System.out.println("Started " + ch);
-			ch.closeFuture().sync();
+			List<ChannelFuture> futures = new ArrayList<>();
+			if (addressHttp != null)
+				futures.add(b.bind(addressHttp).sync().channel().closeFuture());
+			if (addressHttps != null)
+				futures.add(b.bind(addressHttps).sync().channel().closeFuture());
+
+			for (ChannelFuture f : futures)
+				f.sync();
 		} finally {
 			bossGroup.shutdownGracefully();
 			workerGroup.shutdownGracefully();
 		}
+	}
 
-//		NIOServer nioServer = build(arg);
-//		try {
-//			nioServer.start();
-//			nioServer.await();
-//		} finally {
-//			nioServer.stop();
-//			nioServer.await();
-//			events.fireContextDestroyed();
-//		}
+	private static final CommandLine parseCli(String[] arg) {
+		Options opts = new Options().addOption(help).addOption(vhost).addOption(http).addOption(https).addOption(shutdown).addOption(vhost).addOption(keystore)
+				.addOption(keepAlive).addOption(keypass);
+
+		CommandLine cli = null;
+		try {
+			cli = new DefaultParser().parse(opts, arg);
+		} catch (ParseException e) {
+			System.err.println(e.getMessage());
+		}
+		if (cli == null || cli.hasOption(help)) {
+			HelpFormatter helpFormatter = new HelpFormatter();
+			helpFormatter.setWidth(100);
+			helpFormatter.printHelp("nioserver", opts);
+			System.exit(2);
+		}
+		return cli;
+	}
+
+	private static final SslContext sslContext(String keystore, String password)
+			throws NoSuchAlgorithmException, CertificateException, IOException, KeyStoreException, UnrecoverableKeyException {
+		ApplicationProtocolConfig alpn = new ApplicationProtocolConfig(Protocol.ALPN, SelectorFailureBehavior.NO_ADVERTISE, SelectedListenerFailureBehavior.ACCEPT,
+				Arrays.asList("h2", "http/1.1"));
+
+		if (keystore == null) {
+			SelfSignedCertificate cert = new SelfSignedCertificate();
+			return SslContextBuilder.forServer(cert.key(), cert.cert()).applicationProtocolConfig(alpn).build();
+		}
+
+		KeyStore ks = KeyStore.getInstance("JKS");
+		try (InputStream is = Files.newInputStream(Paths.get(keystore))) {
+			ks.load(is, null);
+		}
+
+		KeyManagerFactory keyManager = KeyManagerFactory.getInstance("SunX509");
+		keyManager.init(ks, password == null ? null : password.toCharArray());
+
+		TrustManagerFactory trust = TrustManagerFactory.getInstance("SunX509");
+		trust.init(ks);
+		return SslContextBuilder.forServer(keyManager).trustManager(trust).applicationProtocolConfig(alpn).build();
+	}
+
+	/**
+	 * parse an option to a inetaddress in the format (port, :port or addr:port)
+	 * 
+	 * @param cli the command line
+	 * @param o the option
+	 * @param defaultHost the default host to use
+	 * @return the value
+	 * @throws IllegalArgumentException if the value is malformed
+	 */
+	public static InetSocketAddress parseAddr(CommandLine cli, Option o, String defaultHost) {
+		String host = defaultHost;
+		String a = cli.getOptionValue(o);
+		if (a == null)
+			return null;
+		int i = a.indexOf(':');
+		if (i == 0)
+			a = a.substring(1);
+		else if (i > 0) {
+			host = a.substring(0, i);
+			a = a.substring(i + 1);
+		}
+		try {
+			int port = Integer.parseInt(a);
+			if (host == null || host.isEmpty())
+				return new InetSocketAddress(port);
+			return new InetSocketAddress(host, port);
+		} catch (@SuppressWarnings("unused") NumberFormatException e) {
+			throw new IllegalArgumentException(o + " invalid value " + cli.getOptionValue(o));
+		}
 	}
 
 	private static final class Initialize extends ChannelInitializer<SocketChannel> {
 		private final ServletContextImpl servletContext;
 		private final SslContext ssl;
+		private final int keepAlive;
 
-		public Initialize(ServletContextImpl servletContext, SslContext ssl) {
+		public Initialize(ServletContextImpl servletContext, SslContext ssl, int keepAlive) {
 			this.servletContext = servletContext;
 			this.ssl = ssl;
+			this.keepAlive = keepAlive;
 		}
 
 		@Override
 		protected void initChannel(SocketChannel ch) {
-			System.out.println(ch);
+			System.out.println(ch.localAddress());
 			ChannelPipeline p = ch.pipeline();
-			p.addLast("idle", new IdleStateHandler(0, 0, 10));
+			if (keepAlive > 0)
+				p.addLast("idle", new IdleStateHandler(0, 0, keepAlive));
 			if (ssl != null && ch.localAddress().getPort() == 8443)
 				p.addLast(ssl.newHandler(ch.alloc()), new APNLHandler(servletContext));
 			else

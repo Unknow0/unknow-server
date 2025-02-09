@@ -80,8 +80,13 @@ public abstract class ServletRequestImpl implements HttpServletRequest {
 	/**
 	 * create new ServletRequestImpl
 	 * 
-	 * @param co the connection adapter
-	 * @param type dispatcher type of this request
+	 * @param ctx the servlet context
+	 * @param scheme url scheme
+	 * @param method http method
+	 * @param uri the uri (with queryPath)
+	 * @param protocol the http protocol
+	 * @param remote the report address
+	 * @param local the local address
 	 */
 	public ServletRequestImpl(ServletContextImpl ctx, String scheme, String method, String uri, String protocol, InetSocketAddress remote, InetSocketAddress local) {
 		this.ctx = ctx;

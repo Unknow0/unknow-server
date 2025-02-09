@@ -36,13 +36,15 @@ import unknow.server.maven.AbstractGeneratorMojo;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.servlet.Builder.BuilderContext;
-import unknow.server.maven.servlet.builder.CreateContext;
 import unknow.server.maven.servlet.builder.CreateEventManager;
 import unknow.server.maven.servlet.builder.CreateFilters;
+import unknow.server.maven.servlet.builder.CreateInitParam;
+import unknow.server.maven.servlet.builder.CreateLocales;
+import unknow.server.maven.servlet.builder.CreateMain;
+import unknow.server.maven.servlet.builder.CreateMimeTypes;
 import unknow.server.maven.servlet.builder.CreateServletManager;
 import unknow.server.maven.servlet.builder.CreateServlets;
 import unknow.server.maven.servlet.builder.LoadInitializer;
-import unknow.server.maven.servlet.builder.Main;
 import unknow.server.maven.servlet.descriptor.Descriptor;
 import unknow.server.maven.servlet.descriptor.SD;
 import unknow.server.servlet.AbstractHttpServer;
@@ -58,8 +60,8 @@ import unknow.server.servlet.utils.ServletResourceStatic;
 public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderContext {
 	private static final Logger logger = LoggerFactory.getLogger(ServletGenMojo.class);
 
-	private static final List<Builder> BUILDER = Arrays.asList(new CreateEventManager(), new CreateServletManager(), new CreateContext(), new CreateServlets(),
-			new CreateFilters(), new LoadInitializer(), new Main());
+	private static final List<Builder> BUILDER = Arrays.asList(new CreateEventManager(), new CreateServletManager(), new CreateInitParam(), new CreateLocales(),
+			new CreateMimeTypes(), new CreateServlets(), new CreateFilters(), new LoadInitializer(), new CreateMain());
 
 	private static final XMLInputFactory XML_IN = XMLInputFactory.newInstance();
 

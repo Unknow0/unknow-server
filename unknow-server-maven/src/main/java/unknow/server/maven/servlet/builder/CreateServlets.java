@@ -23,6 +23,7 @@ import unknow.server.maven.servlet.Names;
 import unknow.server.maven.servlet.descriptor.Descriptor;
 import unknow.server.maven.servlet.descriptor.SD;
 import unknow.server.servlet.impl.ServletConfigImpl;
+import unknow.server.servlet.impl.ServletContextImpl;
 import unknow.server.servlet.utils.Resource;
 
 /**
@@ -35,7 +36,7 @@ public class CreateServlets extends Builder {
 		TypeCache types = ctx.type();
 		ClassOrInterfaceType t = types.getClass(ServletConfigImpl.class);
 		BlockStmt b = ctx.self().addMethod("createServlets", Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL).setType(types.array(ServletConfigImpl.class))
-				.addMarkerAnnotation(Override.class).createBody();
+				.addMarkerAnnotation(Override.class).addParameter(types.getClass(ServletContextImpl.class), "ctx").createBody();
 
 		NodeList<Expression> servlets = new NodeList<>();
 
