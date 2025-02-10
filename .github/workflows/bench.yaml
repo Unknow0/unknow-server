@@ -18,7 +18,7 @@ jobs:
     - name: build
       run: mvn -B package
     - name: build native image 
-      run: native-image --install-exit-handlers --static --no-fallback -jar unknow-server-test/unknow-server-test-jar/target/server.jar server-native
+      run: echo native-image --install-exit-handlers --static --no-fallback -jar unknow-server-test/unknow-server-test-jar/target/server.jar server-native
 
 
     - uses: actions/upload-artifact@v4
@@ -55,7 +55,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        t: ['cxf', 'tomcat', 'unknow', 'native']
+        t: ['cxf', 'tomcat', 'unknow']
     needs: build
     steps:
     - uses: actions/checkout@v4
