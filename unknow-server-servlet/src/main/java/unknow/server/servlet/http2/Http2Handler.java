@@ -2,7 +2,6 @@ package unknow.server.servlet.http2;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import org.slf4j.Logger;
@@ -25,14 +24,14 @@ import unknow.server.servlet.impl.ServletInputStreamImpl;
 public final class Http2Handler extends SimpleChannelInboundHandler<Http2StreamFrame> {
 	private static final Logger logger = LoggerFactory.getLogger(Http2Handler.class);
 
-	private static final ExecutorService POOL = Executors.newCachedThreadPool();
-
 	private static final AttributeKey<Future<?>> FUTURE = AttributeKey.valueOf(Http2Handler.class, "future");
 	private static final AttributeKey<ServletInputStreamImpl> INPUT = AttributeKey.valueOf(Http2Handler.class, "input");
 
+	private final ExecutorService pool;
 	private final ServletContextImpl servletContext;
 
-	public Http2Handler(ServletContextImpl servletContext) {
+	public Http2Handler(ExecutorService pool, ServletContextImpl servletContext) {
+		this.pool = pool;
 		this.servletContext = servletContext;
 	}
 
@@ -60,7 +59,7 @@ public final class Http2Handler extends SimpleChannelInboundHandler<Http2StreamF
 			Http2HeadersFrame h = (Http2HeadersFrame) msg;
 			Http2ServletRequest req = new Http2ServletRequest(servletContext, h.headers(), remote, local);
 			Http2ServletResponse res = new Http2ServletResponse(ctx, servletContext, req, h.stream().id());
-			channel.attr(FUTURE).set(POOL.submit(new HttpWorker(servletContext, req, res)));
+			channel.attr(FUTURE).set(pool.submit(new HttpWorker(servletContext, req, res)));
 			if (h.isEndStream())
 				req.rawInput().close();
 			else

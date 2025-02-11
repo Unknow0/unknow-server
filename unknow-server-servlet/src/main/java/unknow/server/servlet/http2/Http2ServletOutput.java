@@ -14,7 +14,6 @@ public class Http2ServletOutput extends AbstractServletOutput<Http2ServletRespon
 
 	@Override
 	protected void writebuffer() throws IOException {
-		System.out.println(isClosed());
 		out.write(new DefaultHttp2DataFrame(buffer.copy(), isClosed(), res.streamId));
 		buffer.clear();
 	}

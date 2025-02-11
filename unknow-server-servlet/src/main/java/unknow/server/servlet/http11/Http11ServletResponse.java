@@ -6,26 +6,31 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import unknow.server.servlet.http11.Http11Handler.OrderedLock;
 import unknow.server.servlet.impl.ServletContextImpl;
 import unknow.server.servlet.impl.ServletResponseImpl;
+import unknow.server.servlet.utils.OrderedLock;
 
 public class Http11ServletResponse extends ServletResponseImpl {
-
 	protected final OrderedLock lock;
 	private final int id;
 	private final HttpResponse res;
+	private boolean connectionClose;
 
 	private Http11ServletOutput rawOutput;
 
-	public Http11ServletResponse(ChannelHandlerContext out, ServletContextImpl ctx, Http11ServletRequest req, OrderedLock lock, int id) {
+	public Http11ServletResponse(ChannelHandlerContext out, ServletContextImpl ctx, Http11ServletRequest req, OrderedLock lock, int id, boolean connectionClose) {
 		super(out, ctx, req);
 
 		this.lock = lock;
 		this.id = id;
+		this.connectionClose = connectionClose;
 
 		res = new DefaultHttpResponse(req.req().protocolVersion(), HttpResponseStatus.OK);
 		rawOutput = new Http11ServletOutput(out, this);
+	}
+
+	public void setConnectionClose() {
+		connectionClose = true;
 	}
 
 	@Override
@@ -36,9 +41,10 @@ public class Http11ServletResponse extends ServletResponseImpl {
 	@Override
 	protected void doCommit() throws InterruptedException {
 		lock.waitUntil(id);
+		if (connectionClose)
+			res.headers().set("connection", "close");
 		if (!res.headers().contains("content-length") && !res.headers().contains("transfer-encoding"))
 			res.headers().set("transfer-encoding", "chunked");
-		System.out.println(res);
 		out.write(res);
 	}
 
@@ -71,17 +77,20 @@ public class Http11ServletResponse extends ServletResponseImpl {
 
 	@Override
 	public void setHeader(String name, String value) {
-		res.headers().set(name, value);
+		if (!isCommitted())
+			res.headers().set(name, value);
 	}
 
 	@Override
 	public void addHeader(String name, String value) {
-		res.headers().add(name, value);
+		if (!isCommitted())
+			res.headers().add(name, value);
 	}
 
 	@Override
 	public void setStatus(int sc) {
-		res.setStatus(HttpResponseStatus.valueOf(sc));
+		if (!isCommitted())
+			res.setStatus(HttpResponseStatus.valueOf(sc));
 	}
 
 	@Override

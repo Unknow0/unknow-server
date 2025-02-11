@@ -24,10 +24,6 @@ public class HttpWorker implements Runnable {
 		this.res = res;
 	}
 
-	public ServletContextImpl ctx() {
-		return ctx;
-	}
-
 	@Override
 	public void run() {
 		try {

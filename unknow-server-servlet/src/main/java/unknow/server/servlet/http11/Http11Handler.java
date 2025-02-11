@@ -1,50 +1,93 @@
 package unknow.server.servlet.http11;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.ssl.SslHandler;
-import io.netty.handler.timeout.IdleStateEvent;
+import io.netty.util.ReferenceCountUtil;
 import unknow.server.servlet.HttpWorker;
 import unknow.server.servlet.impl.ServletContextImpl;
 import unknow.server.servlet.impl.ServletInputStreamImpl;
+import unknow.server.servlet.utils.OrderedLock;
 
-public final class Http11Handler extends SimpleChannelInboundHandler<HttpObject> {
+public final class Http11Handler extends ChannelInboundHandlerAdapter {
 	private static final Logger logger = LoggerFactory.getLogger(Http11Handler.class);
-	private static final ExecutorService POOL = Executors.newCachedThreadPool();
 
+	private final ExecutorService pool;
 	private final ServletContextImpl servletContext;
 	private final OrderedLock lock;
 
-	private ServletInputStreamImpl input;
+	private final int keepAlive;
 
-	public Http11Handler(ServletContextImpl servletContext) {
+	private Http11ServletResponse res;
+	private ServletInputStreamImpl input;
+	private Future<?> f = CompletableFuture.completedFuture(null);
+	private Future<?> keepAliveTimeout = CompletableFuture.completedFuture(null);
+
+	public Http11Handler(ExecutorService pool, ServletContextImpl servletContext, int keepAlive) {
+		this.pool = pool;
 		this.servletContext = servletContext;
 		this.lock = new OrderedLock();
+
+		this.keepAlive = keepAlive;
+	}
+
+	@Override
+	public void channelActive(ChannelHandlerContext ctx) throws Exception {
+		ctx.pipeline().addBefore("http11", "http1outbound", new Outbound());
+		ctx.fireChannelActive();
+	}
+
+	@Override
+	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+		logger.debug("{} inactive", ctx.channel());
+		keepAliveTimeout.cancel(true);
+		f.cancel(true);
+		ctx.fireChannelInactive();
 	}
 
 	@Override
 	public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-		if (evt instanceof IdleStateEvent)
-			ctx.close();
+		ctx.fireUserEventTriggered(evt);
 	}
 
 	@Override
-	protected void channelRead0(ChannelHandlerContext ctx, HttpObject msg) {
-		logger.debug("{} {}", ctx, msg);
+	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+		boolean release = true;
+		try {
+			if (msg instanceof HttpObject)
+				channelRead0(ctx, (HttpObject) msg);
+			else {
+				release = false;
+				ctx.fireChannelRead(msg);
+			}
+		} catch (Exception e) {
+			logger.error("{} Failed to process", ctx.channel(), e);
+			ctx.close();
+		} finally {
+			if (release)
+				ReferenceCountUtil.release(msg);
+		}
+	}
+
+	private void channelRead0(ChannelHandlerContext ctx, HttpObject msg) {
+		logger.debug("{} read {}", ctx.channel(), msg);
+		keepAliveTimeout.cancel(true);
 
 		if (msg instanceof HttpRequest) {
 			if (msg.decoderResult().isFailure())
@@ -56,9 +99,10 @@ public final class Http11Handler extends SimpleChannelInboundHandler<HttpObject>
 
 				String scheme = ctx.pipeline().get(SslHandler.class) == null ? "http" : "https";
 				Http11ServletRequest req = new Http11ServletRequest(servletContext, scheme, (HttpRequest) msg, remote, local);
-				Http11ServletResponse res = new Http11ServletResponse(ctx, servletContext, req, lock, lock.nextId());
+				boolean connectionClose = keepAlive < 0 || "close".equals(req.getHeader("connection"));
+				res = new Http11ServletResponse(ctx, servletContext, req, lock, lock.nextId(), connectionClose);
 				input = req.rawInput();
-				POOL.submit(new HttpWorker(servletContext, req, res));
+				f = pool.submit(new HttpWorker(servletContext, req, res));
 			}
 		}
 		if (msg instanceof HttpContent)
@@ -71,44 +115,45 @@ public final class Http11Handler extends SimpleChannelInboundHandler<HttpObject>
 
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-		cause.printStackTrace();
+		logger.error("{}", ctx.channel(), cause);
 		ctx.close();
 	}
 
-	public static class OrderedLock {
-		private final ReentrantLock lock;
-		private final Condition cond;
+	public class Outbound extends ChannelOutboundHandlerAdapter implements Runnable {
+		private ChannelHandlerContext ctx;
+		private boolean closing = false;
 
-		private int id;
-		private int nextId;
-
-		public OrderedLock() {
-			lock = new ReentrantLock();
-			cond = lock.newCondition();
+		@Override
+		public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+			this.ctx = ctx;
 		}
 
-		public int nextId() {
-			return nextId++;
-		}
-
-		public void unlockNext() {
-			lock.lock();
-			try {
-				id++;
-				cond.signalAll();
-			} finally {
-				lock.unlock();
+		@Override
+		public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+			logger.debug("{} writ {}", ctx.channel(), msg);
+			if (msg instanceof LastHttpContent) {
+				if (closing)
+					ctx.close();
+				else if (keepAlive > 0)
+					keepAliveTimeout = ctx.executor().schedule(this, keepAlive, TimeUnit.SECONDS);
 			}
+			ctx.write(msg, promise);
 		}
 
-		public void waitUntil(int i) throws InterruptedException {
-			lock.lock();
-			try {
-				while (id < i)
-					cond.await();
-			} finally {
-				lock.unlock();
-			}
+		@Override
+		public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+			logger.debug("{} closing", ctx.channel());
+			closing = true;
+			if (f.isDone())
+				ctx.close(promise);
+			else
+				res.setConnectionClose();
+		}
+
+		@Override
+		public void run() {
+			logger.info("{} keep-alive reached", ctx.channel());
+			ctx.close();
 		}
 	}
 }
