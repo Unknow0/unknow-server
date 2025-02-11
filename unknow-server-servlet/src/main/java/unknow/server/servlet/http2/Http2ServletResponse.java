@@ -12,16 +12,12 @@ import unknow.server.servlet.impl.ServletResponseImpl;
 
 public class Http2ServletResponse extends ServletResponseImpl {
 
-	protected final int streamId;
 	private final Http2Headers headers;
 
 	private Http2ServletOutput rawOutput;
 
-	public Http2ServletResponse(ChannelHandlerContext out, ServletContextImpl ctx, Http2ServletRequest req, int streamId) {
+	public Http2ServletResponse(ChannelHandlerContext out, ServletContextImpl ctx, Http2ServletRequest req) {
 		super(out, ctx, req);
-
-		this.streamId = streamId;
-
 		headers = new DefaultHttp2Headers();
 		headers.status("200");
 		rawOutput = new Http2ServletOutput(out, this);
@@ -34,7 +30,7 @@ public class Http2ServletResponse extends ServletResponseImpl {
 
 	@Override
 	protected void doCommit() throws InterruptedException {
-		out.write(new DefaultHttp2HeadersFrame(headers, rawOutput.isClosed() && rawOutput.remaingSize() == 0, streamId));
+		out.write(new DefaultHttp2HeadersFrame(headers, rawOutput.isClosed() && rawOutput.remaingSize() == 0));
 	}
 
 	@Override

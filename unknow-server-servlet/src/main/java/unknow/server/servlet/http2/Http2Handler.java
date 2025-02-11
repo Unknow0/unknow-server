@@ -14,7 +14,6 @@ import io.netty.handler.codec.http2.Http2DataFrame;
 import io.netty.handler.codec.http2.Http2HeadersFrame;
 import io.netty.handler.codec.http2.Http2ResetFrame;
 import io.netty.handler.codec.http2.Http2StreamFrame;
-import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import unknow.server.servlet.HttpWorker;
@@ -36,10 +35,13 @@ public final class Http2Handler extends SimpleChannelInboundHandler<Http2StreamF
 	}
 
 	@Override
+	public boolean isSharable() {
+		return true;
+	}
+
+	@Override
 	public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
 		logger.debug("{} evt {}", ctx.channel(), evt);
-		if (evt instanceof IdleStateEvent)
-			ctx.close();
 		if (evt instanceof Http2ResetFrame) {
 			Channel channel = ctx.channel();
 			channel.attr(INPUT).set(null);
@@ -58,7 +60,7 @@ public final class Http2Handler extends SimpleChannelInboundHandler<Http2StreamF
 
 			Http2HeadersFrame h = (Http2HeadersFrame) msg;
 			Http2ServletRequest req = new Http2ServletRequest(servletContext, h.headers(), remote, local);
-			Http2ServletResponse res = new Http2ServletResponse(ctx, servletContext, req, h.stream().id());
+			Http2ServletResponse res = new Http2ServletResponse(ctx, servletContext, req);
 			channel.attr(FUTURE).set(pool.submit(new HttpWorker(servletContext, req, res)));
 			if (h.isEndStream())
 				req.rawInput().close();
