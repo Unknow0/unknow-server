@@ -10,7 +10,6 @@ jobs:
     - uses: actions/checkout@v4
     - uses: graalvm/setup-graalvm@v1
       with:
-        version: latest
         java-version: 17
         distribution: graalvm-community
         components: native-image
@@ -45,7 +44,6 @@ jobs:
         name: bench
     - uses: graalvm/setup-graalvm@v1
       with:
-        version: latest
         java-version: 17
         distribution: graalvm-community
         components: native-image
@@ -66,7 +64,6 @@ jobs:
         name: server
     - uses: graalvm/setup-graalvm@v1
       with:
-        version: latest
         java-version: 17
         distribution: graalvm-community
         components: native-image
@@ -95,7 +92,6 @@ jobs:
     steps:
     - uses: graalvm/setup-graalvm@v1
       with:
-        version: latest
         java-version: 17
         distribution: graalvm-community
         components: native-image

@@ -89,6 +89,11 @@ public final class Http11Handler extends ChannelInboundHandlerAdapter {
 		logger.debug("{} read {}", ctx.channel(), msg);
 		keepAliveTimeout.cancel(true);
 
+		if (msg.decoderResult().isFailure()) {
+			ctx.close();
+			return;
+		}
+
 		if (msg instanceof HttpRequest) {
 			if (msg.decoderResult().isFailure())
 				ctx.close();
@@ -105,6 +110,7 @@ public final class Http11Handler extends ChannelInboundHandlerAdapter {
 				f = pool.submit(new HttpWorker(servletContext, req, res));
 			}
 		}
+
 		if (msg instanceof HttpContent)
 			input.add(((HttpContent) msg).content());
 		if (msg instanceof LastHttpContent) {
