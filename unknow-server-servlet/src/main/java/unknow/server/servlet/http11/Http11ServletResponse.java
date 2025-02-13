@@ -43,8 +43,12 @@ public class Http11ServletResponse extends ServletResponseImpl {
 		lock.waitUntil(id);
 		if (connectionClose)
 			res.headers().set("connection", "close");
-		if (!res.headers().contains("content-length") && !res.headers().contains("transfer-encoding"))
-			res.headers().set("transfer-encoding", "chunked");
+		if (!res.headers().contains("content-length") && !res.headers().contains("transfer-encoding")) {
+			if (rawOutput.isClosed())
+				res.headers().set("content-length", rawOutput.remaingSize());
+			else
+				res.headers().set("transfer-encoding", "chunked");
+		}
 		out.write(res);
 	}
 

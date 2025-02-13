@@ -32,7 +32,7 @@ public abstract class AbstractServletOutput<T extends ServletResponseImpl> exten
 		this.res = res;
 		if (res != null) {
 			bufferSize = res.getBufferSize();
-			this.buffer = Unpooled.buffer(bufferSize < 4096 ? 4096 : bufferSize);
+			this.buffer = Unpooled.buffer(bufferSize < 8192 ? 8192 : bufferSize);
 		} else {
 			this.buffer = null;
 			this.bufferSize = 0;

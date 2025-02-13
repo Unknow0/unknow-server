@@ -38,7 +38,7 @@ public abstract class ServletResponseImpl implements HttpServletResponse {
 	private AbstractServletOutput<?> stream;
 	private PrintWriter writer;
 
-	private int bufferSize = 4096;
+	private int bufferSize = 8192;
 	private boolean commited = false;
 
 	private Charset charset;
