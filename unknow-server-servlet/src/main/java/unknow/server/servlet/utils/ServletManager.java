@@ -15,12 +15,11 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.Servlet;
 import jakarta.servlet.ServletException;
 import unknow.server.servlet.impl.FilterChainImpl;
+import unknow.server.servlet.impl.FilterChainImpl.ServletFilter;
 import unknow.server.servlet.impl.FilterConfigImpl;
 import unknow.server.servlet.impl.ServletConfigImpl;
 import unknow.server.servlet.impl.ServletContextImpl;
 import unknow.server.servlet.impl.ServletRequestImpl;
-import unknow.server.servlet.impl.FilterChainImpl.ChangePath;
-import unknow.server.servlet.impl.FilterChainImpl.ServletFilter;
 import unknow.server.util.data.IntArrayMap;
 import unknow.server.util.data.ObjectArrayMap;
 
@@ -150,7 +149,7 @@ public final class ServletManager {
 			}
 			chain = buildChain(f, chain, path);
 		}
-		return new ChangePath(path, chain);
+		return chain;
 	}
 
 	public FilterChain getError(int code, Throwable t) {

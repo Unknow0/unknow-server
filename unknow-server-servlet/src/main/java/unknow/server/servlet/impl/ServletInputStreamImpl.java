@@ -26,11 +26,18 @@ public class ServletInputStreamImpl extends ServletInputStream {
 	public void add(ByteBuf b) {
 		lock.lock();
 		try {
+			if (closed)
+				return;
 			buffers.addComponent(true, b.retain());
 			cond.signalAll();
 		} finally {
 			lock.unlock();
 		}
+	}
+
+	public void release() {
+		close();
+		buffers.release();
 	}
 
 	@Override

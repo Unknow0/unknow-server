@@ -138,6 +138,10 @@ public abstract class ServletRequestImpl implements HttpServletRequest {
 
 	}
 
+	public void release() {
+		rawInput.release();
+	}
+
 	public ServletInputStreamImpl rawInput() {
 		return rawInput;
 	}
@@ -586,4 +590,5 @@ public abstract class ServletRequestImpl implements HttpServletRequest {
 			return "127.0.0.1";
 		return address.getHostAddress();
 	}
+
 }

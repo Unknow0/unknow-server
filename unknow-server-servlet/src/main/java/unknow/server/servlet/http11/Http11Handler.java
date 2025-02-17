@@ -49,13 +49,14 @@ public final class Http11Handler extends ChannelInboundHandlerAdapter {
 
 	@Override
 	public void channelActive(ChannelHandlerContext ctx) throws Exception {
+		logger.info("{} active", ctx.channel());
 		ctx.pipeline().addBefore("http11", "http1outbound", new Outbound());
 		ctx.fireChannelActive();
 	}
 
 	@Override
 	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-		logger.debug("{} inactive", ctx.channel());
+		logger.info("{} inactive", ctx.channel());
 		keepAliveTimeout.cancel(true);
 		f.cancel(true);
 		ctx.fireChannelInactive();
@@ -63,6 +64,7 @@ public final class Http11Handler extends ChannelInboundHandlerAdapter {
 
 	@Override
 	public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+		logger.info("{} evt {}", ctx.channel(), evt);
 		ctx.fireUserEventTriggered(evt);
 	}
 
@@ -77,7 +79,7 @@ public final class Http11Handler extends ChannelInboundHandlerAdapter {
 				ctx.fireChannelRead(msg);
 			}
 		} catch (Exception e) {
-			logger.error("{} Failed to process", ctx.channel(), e);
+			logger.error("{} Failed to process {}", ctx.channel(), msg, e);
 			ctx.close();
 		} finally {
 			if (release)
@@ -148,7 +150,7 @@ public final class Http11Handler extends ChannelInboundHandlerAdapter {
 
 		@Override
 		public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-			logger.debug("{} closing", ctx.channel());
+			logger.info("{} closing", ctx.channel());
 			closing = true;
 			if (f.isDone())
 				ctx.close(promise);

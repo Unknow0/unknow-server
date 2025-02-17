@@ -40,7 +40,6 @@ public class HttpWorker implements Runnable {
 					res.sendError(500, e, null);
 			}
 			ctx.events().fireRequestDestroyed(req);
-			res.close();
 		} catch (Throwable e) {
 			logger.error("processor error", e);
 			try {
@@ -50,6 +49,14 @@ public class HttpWorker implements Runnable {
 			}
 			if (e instanceof InterruptedException)
 				Thread.currentThread().interrupt();
+		} finally {
+			req.release();
+			try {
+				res.close();
+			} catch (@SuppressWarnings("unused") InterruptedException e) {
+				Thread.currentThread().interrupt();
+			} catch (@SuppressWarnings("unused") IOException e) { // OK
+			}
 		}
 	}
 }

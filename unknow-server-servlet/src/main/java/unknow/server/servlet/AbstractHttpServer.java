@@ -45,6 +45,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http2.Http2FrameCodecBuilder;
 import io.netty.handler.codec.http2.Http2MultiplexHandler;
+import io.netty.handler.codec.http2.Http2StreamChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
@@ -319,21 +320,46 @@ public abstract class AbstractHttpServer {
 		private final ServletContextImpl servletContext;
 		private final int keepAlive;
 
+		private final Http2StreamInitializer http2Init;
+
 		public APNLHandler(ExecutorService pool, ServletContextImpl servletContext, int keepAlive) {
 			super(ApplicationProtocolNames.HTTP_1_1);
 			this.pool = pool;
 			this.servletContext = servletContext;
 			this.keepAlive = keepAlive;
+
+			this.http2Init = new Http2StreamInitializer(pool, servletContext);
 		}
 
 		@Override
 		protected void configurePipeline(ChannelHandlerContext ctx, String protocol) throws Exception {
 			if (ApplicationProtocolNames.HTTP_2.equals(protocol))
-				ctx.pipeline().addLast(Http2FrameCodecBuilder.forServer().build()).addLast(new Http2MultiplexHandler(new Http2Handler(pool, servletContext)));
+				ctx.pipeline().addLast(Http2FrameCodecBuilder.forServer().build()).addLast(new Http2MultiplexHandler(http2Init));
 			else
 				ctx.pipeline().addLast(new HttpServerCodec()).addLast("http11", new Http11Handler(pool, servletContext, keepAlive));
 
 		}
+	}
+
+	public static class Http2StreamInitializer extends ChannelInitializer<Http2StreamChannel> {
+		private final ExecutorService pool;
+		private final ServletContextImpl servletContext;
+
+		public Http2StreamInitializer(ExecutorService pool, ServletContextImpl servletContext) {
+			this.pool = pool;
+			this.servletContext = servletContext;
+		}
+
+		@Override
+		public boolean isSharable() {
+			return true;
+		}
+
+		@Override
+		protected void initChannel(Http2StreamChannel ch) throws Exception {
+			ch.pipeline().addLast(new Http2Handler(pool, servletContext));
+		}
+
 	}
 
 	public static final class ShutdownHandler extends SimpleChannelInboundHandler<ByteBuf> {

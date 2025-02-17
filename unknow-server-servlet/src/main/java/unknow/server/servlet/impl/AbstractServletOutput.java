@@ -142,5 +142,6 @@ public abstract class AbstractServletOutput<T extends ServletResponseImpl> exten
 		closed = true;
 		flush();
 		afterClose();
+		buffer.release();
 	}
 }
