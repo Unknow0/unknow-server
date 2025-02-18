@@ -17,6 +17,9 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.codec.http2.DefaultHttp2DataFrame;
+import io.netty.handler.codec.http2.DefaultHttp2HeadersFrame;
+import io.netty.handler.codec.http2.DefaultHttp2ResetFrame;
 import io.netty.handler.codec.http2.Http2DataFrame;
 import io.netty.handler.codec.http2.Http2Frame;
 import io.netty.handler.codec.http2.Http2HeadersFrame;
@@ -75,6 +78,7 @@ public final class Http2Handler extends SimpleChannelInboundHandler<Http2Frame> 
 	protected void channelRead0(ChannelHandlerContext ctx, Http2Frame msg) {
 		Channel channel = ctx.channel();
 		logger.debug("{} msg {}", channel, msg);
+		keepAliveTimeout.cancel(true);
 
 		if (msg instanceof Http2HeadersFrame) {
 			InetSocketAddress remote = (InetSocketAddress) channel.remoteAddress();
@@ -143,15 +147,15 @@ public final class Http2Handler extends SimpleChannelInboundHandler<Http2Frame> 
 		public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
 			logger.debug("{} writ {}", ctx.channel(), msg);
 
-			if (msg instanceof Http2DataFrame) {
+			if (msg instanceof DefaultHttp2DataFrame) {
 				Http2DataFrame f = (Http2DataFrame) msg;
 				if (f.isEndStream())
 					streams.remove(f.stream().id());
-			} else if (msg instanceof Http2HeadersFrame) {
+			} else if (msg instanceof DefaultHttp2HeadersFrame) {
 				Http2HeadersFrame f = (Http2HeadersFrame) msg;
 				if (f.isEndStream())
 					streams.remove(f.stream().id());
-			} else if (msg instanceof Http2ResetFrame)
+			} else if (msg instanceof DefaultHttp2ResetFrame)
 				streams.remove(((Http2ResetFrame) msg).stream().id());
 			ChannelFuture write = ctx.write(msg, promise);
 			if (streams.isEmpty()) {
