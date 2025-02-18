@@ -5,7 +5,7 @@ unknow_start() {
 	pid=$!
 }
 unknow_stop() {
-	echo 'shutdow' | nc 127.0.0.1 8009
+	echo 'shutdown' | nc 127.0.0.1 8009
 	sleep 10
 	kill -9 $pid 2>/dev/null
 	pid=
@@ -16,7 +16,7 @@ native_start() {
 	pid=$!
 }
 native_stop() {
-	echo 'shutdow' | nc 127.0.0.1 8009
+	echo 'shutdown' | nc 127.0.0.1 8009
 	sleep 10
 	kill -9 $pid 2>/dev/null
 	pid=

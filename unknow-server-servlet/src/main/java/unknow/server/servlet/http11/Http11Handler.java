@@ -10,6 +10,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
@@ -48,10 +50,9 @@ public final class Http11Handler extends ChannelInboundHandlerAdapter {
 	}
 
 	@Override
-	public void channelActive(ChannelHandlerContext ctx) throws Exception {
+	public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
 		logger.info("{} active", ctx.channel());
 		ctx.pipeline().addBefore("http11", "http1outbound", new Outbound());
-		ctx.fireChannelActive();
 	}
 
 	@Override
@@ -127,7 +128,7 @@ public final class Http11Handler extends ChannelInboundHandlerAdapter {
 		ctx.close();
 	}
 
-	public class Outbound extends ChannelOutboundHandlerAdapter implements Runnable {
+	private class Outbound extends ChannelOutboundHandlerAdapter implements Runnable {
 		private ChannelHandlerContext ctx;
 		private boolean closing = false;
 
@@ -139,19 +140,19 @@ public final class Http11Handler extends ChannelInboundHandlerAdapter {
 		@Override
 		public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
 			logger.debug("{} writ {}", ctx.channel(), msg);
+
+			ChannelFuture write = ctx.write(msg, promise);
 			if (msg instanceof LastHttpContent) {
 				if (closing)
-					ctx.close();
-				else if (keepAlive > 0)
+					write.addListener(ChannelFutureListener.CLOSE);
+				if (keepAlive > 0)
 					keepAliveTimeout = ctx.executor().schedule(this, keepAlive, TimeUnit.SECONDS);
 			}
-			ctx.write(msg, promise);
 		}
 
 		@Override
 		public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
 			logger.info("{} closing", ctx.channel());
-			closing = true;
 			if (f.isDone())
 				ctx.close(promise);
 			else

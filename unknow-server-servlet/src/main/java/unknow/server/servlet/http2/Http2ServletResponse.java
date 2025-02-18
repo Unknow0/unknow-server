@@ -6,21 +6,24 @@ import java.util.stream.Collectors;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.DefaultHttp2HeadersFrame;
+import io.netty.handler.codec.http2.Http2FrameStream;
 import io.netty.handler.codec.http2.Http2Headers;
 import unknow.server.servlet.impl.ServletContextImpl;
 import unknow.server.servlet.impl.ServletResponseImpl;
 
 public class Http2ServletResponse extends ServletResponseImpl {
 
+	private final Http2FrameStream stream;
 	private final Http2Headers headers;
 
-	private Http2ServletOutput rawOutput;
+	private final Http2ServletOutput rawOutput;
 
-	public Http2ServletResponse(ChannelHandlerContext out, ServletContextImpl ctx, Http2ServletRequest req) {
+	public Http2ServletResponse(ChannelHandlerContext out, ServletContextImpl ctx, Http2ServletRequest req, Http2FrameStream stream) {
 		super(out, ctx, req);
+		this.stream = stream;
 		headers = new DefaultHttp2Headers();
 		headers.status("200");
-		rawOutput = new Http2ServletOutput(out, this);
+		rawOutput = new Http2ServletOutput(out, this, stream);
 	}
 
 	@Override
@@ -30,7 +33,7 @@ public class Http2ServletResponse extends ServletResponseImpl {
 
 	@Override
 	protected void doCommit() throws InterruptedException {
-		out.write(new DefaultHttp2HeadersFrame(headers, rawOutput.isClosed() && rawOutput.remaingSize() == 0));
+		out.write(new DefaultHttp2HeadersFrame(headers, rawOutput.isClosed() && rawOutput.remaingSize() == 0).stream(stream));
 	}
 
 	@Override

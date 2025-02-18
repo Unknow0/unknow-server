@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -44,10 +45,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http2.Http2FrameCodecBuilder;
-import io.netty.handler.codec.http2.Http2MultiplexHandler;
-import io.netty.handler.codec.http2.Http2StreamChannel;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
@@ -174,7 +172,7 @@ public abstract class AbstractHttpServer {
 		try {
 			ServerBootstrap b = new ServerBootstrap();
 			b.option(ChannelOption.SO_BACKLOG, 1024);
-			b.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class).handler(new LoggingHandler(LogLevel.INFO))
+			b.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class)
 					.childHandler(new Initialize(pool, allChannels, ctx, ssl, keepAliveTime, addressHttp, addressHttps, addressShutdown, shutdownHandler));
 
 			if (addressHttp != null)
@@ -301,9 +299,10 @@ public abstract class AbstractHttpServer {
 				p.addLast(new HttpServerCodec()).addLast("http11", new Http11Handler(pool, servletContext, keepAlive));
 			else if (match(https, addr))
 				p.addLast(ssl.newHandler(ch.alloc()), new APNLHandler(pool, servletContext, keepAlive));
-			else if (match(shutdown, addr))
+			else if (match(shutdown, addr)) {
+				allChannels.remove(ch);
 				p.addLast(shutdownHandler);
-			else
+			} else
 				ch.close();
 
 		}
@@ -316,50 +315,28 @@ public abstract class AbstractHttpServer {
 	}
 
 	private static final class APNLHandler extends ApplicationProtocolNegotiationHandler {
+		private static final Http2Settings H2SETTINGS = new Http2Settings().initialWindowSize(Integer.MAX_VALUE);
+
 		private final ExecutorService pool;
 		private final ServletContextImpl servletContext;
 		private final int keepAlive;
-
-		private final Http2StreamInitializer http2Init;
 
 		public APNLHandler(ExecutorService pool, ServletContextImpl servletContext, int keepAlive) {
 			super(ApplicationProtocolNames.HTTP_1_1);
 			this.pool = pool;
 			this.servletContext = servletContext;
 			this.keepAlive = keepAlive;
-
-			this.http2Init = new Http2StreamInitializer(pool, servletContext);
 		}
 
 		@Override
 		protected void configurePipeline(ChannelHandlerContext ctx, String protocol) throws Exception {
 			if (ApplicationProtocolNames.HTTP_2.equals(protocol))
-				ctx.pipeline().addLast(Http2FrameCodecBuilder.forServer().build()).addLast(new Http2MultiplexHandler(http2Init));
+				ctx.pipeline().addLast(Http2FrameCodecBuilder.forServer().initialSettings(H2SETTINGS).build()).addLast("http2",
+						new Http2Handler(pool, servletContext, keepAlive));
 			else
 				ctx.pipeline().addLast(new HttpServerCodec()).addLast("http11", new Http11Handler(pool, servletContext, keepAlive));
-
+			ctx.fireChannelActive();
 		}
-	}
-
-	public static class Http2StreamInitializer extends ChannelInitializer<Http2StreamChannel> {
-		private final ExecutorService pool;
-		private final ServletContextImpl servletContext;
-
-		public Http2StreamInitializer(ExecutorService pool, ServletContextImpl servletContext) {
-			this.pool = pool;
-			this.servletContext = servletContext;
-		}
-
-		@Override
-		public boolean isSharable() {
-			return true;
-		}
-
-		@Override
-		protected void initChannel(Http2StreamChannel ch) throws Exception {
-			ch.pipeline().addLast(new Http2Handler(pool, servletContext));
-		}
-
 	}
 
 	public static final class ShutdownHandler extends SimpleChannelInboundHandler<ByteBuf> {
@@ -381,7 +358,9 @@ public abstract class AbstractHttpServer {
 			String receivedMessage = msg.toString(StandardCharsets.UTF_8).trim();
 			logger.info("{} {}", ctx.channel(), receivedMessage);
 			if ("shutdown".equals(receivedMessage))
-				allChannels.close().syncUninterruptibly();
+				allChannels.close().addListener(ChannelFutureListener.CLOSE);
+			else
+				ctx.close();
 		}
 	}
 

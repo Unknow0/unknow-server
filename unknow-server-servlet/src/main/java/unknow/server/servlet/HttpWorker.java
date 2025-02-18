@@ -14,9 +14,9 @@ import unknow.server.servlet.impl.ServletResponseImpl;
 public class HttpWorker implements Runnable {
 	private static final Logger logger = LoggerFactory.getLogger(HttpWorker.class);
 
-	private final ServletContextImpl ctx;
-	private final ServletRequestImpl req;
-	private final ServletResponseImpl res;
+	protected final ServletContextImpl ctx;
+	protected final ServletRequestImpl req;
+	protected final ServletResponseImpl res;
 
 	public HttpWorker(ServletContextImpl ctx, ServletRequestImpl req, ServletResponseImpl res) {
 		this.ctx = ctx;
