@@ -153,6 +153,7 @@ public final class Http11Handler extends ChannelInboundHandlerAdapter {
 		@Override
 		public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
 			logger.info("{} closing", ctx.channel());
+			keepAliveTimeout.cancel(true);
 			if (f.isDone())
 				ctx.close(promise);
 			else

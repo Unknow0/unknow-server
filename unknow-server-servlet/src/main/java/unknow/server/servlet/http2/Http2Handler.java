@@ -14,16 +14,16 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http2.DefaultHttp2DataFrame;
 import io.netty.handler.codec.http2.DefaultHttp2HeadersFrame;
 import io.netty.handler.codec.http2.DefaultHttp2ResetFrame;
 import io.netty.handler.codec.http2.Http2DataFrame;
-import io.netty.handler.codec.http2.Http2Frame;
 import io.netty.handler.codec.http2.Http2HeadersFrame;
 import io.netty.handler.codec.http2.Http2ResetFrame;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.collection.IntObjectHashMap;
 import unknow.server.servlet.HttpWorker;
 import unknow.server.servlet.impl.ServletContextImpl;
@@ -31,7 +31,7 @@ import unknow.server.servlet.impl.ServletInputStreamImpl;
 import unknow.server.servlet.impl.ServletRequestImpl;
 import unknow.server.servlet.impl.ServletResponseImpl;
 
-public final class Http2Handler extends SimpleChannelInboundHandler<Http2Frame> {
+public final class Http2Handler extends ChannelInboundHandlerAdapter {
 	private static final Logger logger = LoggerFactory.getLogger(Http2Handler.class);
 
 	private final ExecutorService pool;
@@ -67,7 +67,7 @@ public final class Http2Handler extends SimpleChannelInboundHandler<Http2Frame> 
 
 	@Override
 	public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-		logger.debug("{} evt {}", ctx.channel(), evt);
+		logger.info("{} evt {}", ctx.channel(), evt);
 //		if (evt instanceof Http2ResetFrame) {
 //			input = null;
 //			f.cancel(true);
@@ -75,35 +75,45 @@ public final class Http2Handler extends SimpleChannelInboundHandler<Http2Frame> 
 	}
 
 	@Override
-	protected void channelRead0(ChannelHandlerContext ctx, Http2Frame msg) {
-		Channel channel = ctx.channel();
-		logger.debug("{} msg {}", channel, msg);
-		keepAliveTimeout.cancel(true);
-
-		if (msg instanceof Http2HeadersFrame) {
-			InetSocketAddress remote = (InetSocketAddress) channel.remoteAddress();
-			InetSocketAddress local = (InetSocketAddress) channel.localAddress();
-
-			Http2HeadersFrame h = (Http2HeadersFrame) msg;
-			Http2ServletRequest req = new Http2ServletRequest(servletContext, h.headers(), remote, local);
-			Http2ServletResponse res = new Http2ServletResponse(ctx, servletContext, req, h.stream());
-
-			streams.put(h.stream().id(), new Http2Stream(servletContext, req, res));
-			if (h.isEndStream())
-				req.rawInput().close();
-		}
-		if (msg instanceof Http2DataFrame) {
-			Http2DataFrame d = (Http2DataFrame) msg;
-			Http2Stream http2Stream = streams.get(d.stream().id());
-			if (http2Stream != null) {
-				http2Stream.add(d.content());
-				if (d.isEndStream()) {
-					http2Stream.close();
-				}
+	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+		boolean release = true;
+		try {
+			if (msg instanceof Http2HeadersFrame)
+				handleHeader(ctx, (Http2HeadersFrame) msg);
+			else if (msg instanceof Http2DataFrame)
+				handleData((Http2DataFrame) msg);
+			else if (msg instanceof Http2ResetFrame)
+				streams.remove(((Http2ResetFrame) msg).stream().id()).cancel();
+			else {
+				release = false;
+				ctx.fireChannelRead(msg);
 			}
+		} finally {
+			if (release)
+				ReferenceCountUtil.release(msg);
 		}
-		if (msg instanceof Http2ResetFrame) {
-			streams.remove(((Http2ResetFrame) msg).stream().id()).cancel();
+	}
+
+	private void handleHeader(ChannelHandlerContext ctx, Http2HeadersFrame msg) {
+		Channel channel = ctx.channel();
+		InetSocketAddress remote = (InetSocketAddress) channel.remoteAddress();
+		InetSocketAddress local = (InetSocketAddress) channel.localAddress();
+
+		Http2ServletRequest req = new Http2ServletRequest(servletContext, msg.headers(), remote, local);
+		Http2ServletResponse res = new Http2ServletResponse(ctx, servletContext, req, msg.stream());
+
+		streams.put(msg.stream().id(), new Http2Stream(servletContext, req, res));
+		if (msg.isEndStream())
+			req.rawInput().close();
+	}
+
+	private void handleData(Http2DataFrame msg) {
+		Http2Stream http2Stream = streams.get(msg.stream().id());
+		if (http2Stream != null) {
+			http2Stream.add(msg.content());
+			if (msg.isEndStream()) {
+				http2Stream.close();
+			}
 		}
 	}
 
@@ -157,18 +167,22 @@ public final class Http2Handler extends SimpleChannelInboundHandler<Http2Frame> 
 					streams.remove(f.stream().id());
 			} else if (msg instanceof DefaultHttp2ResetFrame)
 				streams.remove(((Http2ResetFrame) msg).stream().id());
+
 			ChannelFuture write = ctx.write(msg, promise);
 			if (streams.isEmpty()) {
 				if (closing) {
 					write.addListener(ChannelFutureListener.CLOSE);
-				} else if (keepAlive > 0)
+				} else if (keepAlive > 0) {
+					keepAliveTimeout.cancel(true);
 					keepAliveTimeout = ctx.executor().schedule(this, keepAlive, TimeUnit.SECONDS);
+				}
 			}
 		}
 
 		@Override
 		public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
 			logger.info("{} closing", ctx.channel());
+			keepAliveTimeout.cancel(true);
 			if (streams.isEmpty())
 				ctx.close(promise);
 			else
