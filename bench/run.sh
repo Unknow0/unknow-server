@@ -5,6 +5,7 @@ unknow_start() {
 	pid=$!
 }
 unknow_stop() {
+	kill -3 $pid
 	echo 'shutdown' | nc 127.0.0.1 8009
 	sleep 10
 	kill -9 $pid 2>/dev/null
