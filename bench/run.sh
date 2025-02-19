@@ -39,7 +39,7 @@ cxf_start() {
 	time $CATALINA_HOME/bin/catalina.sh run > logs/tomcat.log 2>&1 || exit 1 &
 	pid=$!
 }
-alias cxf_stop=tomcat_stop
+cxf_stop() { tomcat_stop; }
 
 mkdir -p out
 trap '[[ "$pid" ]] && kill -9 $pid' EXIT
