@@ -20,7 +20,7 @@ curls() {
 	shift
 	for((i=0; i<$p; i++))
 	do
-		curl -s -o /dev/null --no-progress-meter -m .001 -w "$n %{response_code} %{time_total} %{time_starttransfer} %{errormsg}\n" "$@" | out $i &
+		curl -s -o /dev/null --no-progress-meter -m .01 -w "$n %{response_code} %{time_total} %{time_starttransfer} %{errormsg}\n" "$@" | out $i &
 	done
 	wait $(jobs -p)
 }
