@@ -21,6 +21,7 @@ import io.netty.handler.codec.http2.DefaultHttp2DataFrame;
 import io.netty.handler.codec.http2.DefaultHttp2HeadersFrame;
 import io.netty.handler.codec.http2.DefaultHttp2ResetFrame;
 import io.netty.handler.codec.http2.Http2DataFrame;
+import io.netty.handler.codec.http2.Http2Frame;
 import io.netty.handler.codec.http2.Http2HeadersFrame;
 import io.netty.handler.codec.http2.Http2ResetFrame;
 import io.netty.util.ReferenceCountUtil;
@@ -78,12 +79,17 @@ public final class Http2Handler extends ChannelInboundHandlerAdapter {
 	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 		boolean release = true;
 		try {
+			logger.info("{} msg {} {}", ctx.channel(), streams.size(), msg);
 			if (msg instanceof Http2HeadersFrame)
 				handleHeader(ctx, (Http2HeadersFrame) msg);
 			else if (msg instanceof Http2DataFrame)
 				handleData((Http2DataFrame) msg);
-			else if (msg instanceof Http2ResetFrame)
-				streams.remove(((Http2ResetFrame) msg).stream().id()).cancel();
+			else if (msg instanceof Http2ResetFrame) {
+				Http2Stream remove = streams.remove(((Http2ResetFrame) msg).stream().id());
+				if (remove != null)
+					remove.cancel();
+			} else if (msg instanceof Http2Frame)
+				; // ignore other http2 frame
 			else {
 				release = false;
 				ctx.fireChannelRead(msg);
