@@ -37,7 +37,7 @@ waitpid() {
 		while kill -0 $p > /dev/null
 		do
 	   		sleep 1
-			[[ $(--i) <= 0 ]] && return 1
+			[[ $((--i)) -lt 1 ]] && return 1
 		done
 	done
 }
