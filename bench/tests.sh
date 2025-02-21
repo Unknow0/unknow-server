@@ -3,7 +3,9 @@
 h=$1
 p=$2
 c=$3
-out=$4
+t=$4
+pid=$5
+out=$6
 
 out() {
 	if [[ -z $out ]]
@@ -20,9 +22,11 @@ curls() {
 	shift
 	for((i=0; i<$p; i++))
 	do
-		curl -s -o /dev/null --no-progress-meter -m .01 -w "$n %{response_code} %{time_total} %{time_starttransfer} %{errormsg}\n" "$@" | out $i &
+		curl -s -o /dev/null --no-progress-meter -w "$n %{response_code} %{time_total} %{time_starttransfer} %{errormsg}\n" "$@" | out $i &
 	done
-	wait $(jobs -p)
+	timeout $t wait $(jobs -p)
+	kill -3 $pid
+	kill $(jobs -p)
 }
 
 test() {
