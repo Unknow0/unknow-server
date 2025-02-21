@@ -26,7 +26,7 @@ curls() {
 	done
 	waitpid $t $(jobs -p)
 	kill -3 $pid
-	kill $(jobs -p)
+	kill $(jobs -p) > /dev/null
 }
 
 waitpid() {
