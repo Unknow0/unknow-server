@@ -358,7 +358,7 @@ public abstract class AbstractHttpServer {
 			String receivedMessage = msg.toString(StandardCharsets.UTF_8).trim();
 			logger.info("{} {}", ctx.channel(), receivedMessage);
 			if ("shutdown".equals(receivedMessage))
-				allChannels.close().addListener(ChannelFutureListener.CLOSE);
+				allChannels.close().addListener(c -> ctx.close());
 			else
 				ctx.close();
 		}

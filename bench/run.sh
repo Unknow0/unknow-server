@@ -55,7 +55,7 @@ bash bench/tests.sh 127.0.0.1 1  50000 30 $pid
 
 sleep 10
 echo -e "\nTesting.."
-bash bench/tests.sh 127.0.0.1 10 100000 80 $pid out/$1
+bash bench/tests.sh 127.0.0.1 10 100000 90 $pid out/$1
 
 ${1}_stop
 sleep 10

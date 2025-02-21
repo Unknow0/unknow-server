@@ -25,8 +25,8 @@ curls() {
 		curl -s -o /dev/null --no-progress-meter -w "$n %{response_code} %{time_total} %{time_starttransfer} %{errormsg}\n" "$@" | out $i &
 	done
 	waitpid $t $(jobs -p)
-	kill -3 $pid
-	kill $(jobs -p) > /dev/null
+	kill -3 $pid 2>/dev/null
+	kill $(jobs -p) 2> /dev/null
 }
 
 waitpid() {
@@ -34,7 +34,7 @@ waitpid() {
 	shift
 	for p in "$@"
 	do
-		while kill -0 $p > /dev/null
+		while kill -0 $p 2> /dev/null
 		do
 	   		sleep 1
 			[[ $((--i)) -lt 1 ]] && return 1
