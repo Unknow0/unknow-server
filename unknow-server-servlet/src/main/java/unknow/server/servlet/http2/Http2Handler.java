@@ -51,10 +51,13 @@ public final class Http2Handler extends ChannelInboundHandlerAdapter {
 		this.streams = new IntObjectHashMap<>();
 	}
 
+	public ChannelOutboundHandlerAdapter outbound() {
+		return new Outbound();
+	}
+
 	@Override
 	public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
 		logger.info("{} active", ctx.channel());
-		ctx.pipeline().addBefore("http2", "http2outbound", new Outbound());
 	}
 
 	@Override

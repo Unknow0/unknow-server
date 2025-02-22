@@ -49,10 +49,13 @@ public final class Http11Handler extends ChannelInboundHandlerAdapter {
 		this.keepAlive = keepAlive;
 	}
 
+	public ChannelOutboundHandlerAdapter outbound() {
+		return new Outbound();
+	}
+
 	@Override
 	public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
 		logger.info("{} active", ctx.channel());
-		ctx.pipeline().addBefore("http11", "http1outbound", new Outbound());
 	}
 
 	@Override

@@ -171,6 +171,7 @@ public abstract class AbstractHttpServer {
 		try {
 			ServerBootstrap b = new ServerBootstrap();
 			b.option(ChannelOption.SO_BACKLOG, 1024);
+			b.childOption(ChannelOption.TCP_NODELAY, true).childOption(ChannelOption.SO_KEEPALIVE, true);
 			b.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class)
 					.childHandler(new Initialize(pool, allChannels, ctx, ssl, keepAliveTime, addressHttp, addressHttps, addressShutdown, shutdownHandler));
 
@@ -329,11 +330,13 @@ public abstract class AbstractHttpServer {
 
 		@Override
 		protected void configurePipeline(ChannelHandlerContext ctx, String protocol) throws Exception {
-			if (ApplicationProtocolNames.HTTP_2.equals(protocol))
-				ctx.pipeline().addLast(Http2FrameCodecBuilder.forServer().initialSettings(H2SETTINGS).build()).addLast("http2",
-						new Http2Handler(pool, servletContext, keepAlive));
-			else
-				ctx.pipeline().addLast(new HttpServerCodec()).addLast("http11", new Http11Handler(pool, servletContext, keepAlive));
+			if (ApplicationProtocolNames.HTTP_2.equals(protocol)) {
+				Http2Handler http2Handler = new Http2Handler(pool, servletContext, keepAlive);
+				ctx.pipeline().addLast(Http2FrameCodecBuilder.forServer().initialSettings(H2SETTINGS).build(), http2Handler.outbound(), http2Handler);
+			} else {
+				Http11Handler http11Handler = new Http11Handler(pool, servletContext, keepAlive);
+				ctx.pipeline().addLast(new HttpServerCodec(), http11Handler.outbound(), http11Handler);
+			}
 			ctx.fireChannelActive();
 		}
 	}
