@@ -33,7 +33,11 @@ public class Http2ServletResponse extends ServletResponseImpl {
 
 	@Override
 	protected void doCommit() throws InterruptedException {
-		out.write(new DefaultHttp2HeadersFrame(headers, rawOutput.isClosed() && rawOutput.remaingSize() == 0).stream(stream));
+		DefaultHttp2HeadersFrame h = new DefaultHttp2HeadersFrame(headers, rawOutput.isClosed() && rawOutput.remaingSize() == 0).stream(stream);
+		if (h.isEndStream())
+			out.writeAndFlush(h);
+		else
+			out.write(h);
 	}
 
 	@Override

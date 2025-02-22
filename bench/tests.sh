@@ -22,8 +22,8 @@ curls() {
 	shift
 	for((i=0; i<$p; i++))
 	do
-		#curl -s -o /dev/null --no-progress-meter -w "$n %{response_code} %{time_total} %{time_starttransfer} %{errormsg}\n" "$@" | out $i &
-		curl -s -o /dev/null --no-progress-meter -w "$n %{response_code} %{time_total} %{time_appconnect} %{errormsg}\n" "$@" | out $i &
+		curl -s -o /dev/null --no-progress-meter -w "$n %{response_code} %{time_total} %{time_starttransfer} %{errormsg}\n" "$@" | out $i &
+		#curl -s -o /dev/null --no-progress-meter -w "$n %{response_code} %{time_total} %{time_appconnect} %{errormsg}\n" "$@" | out $i &
 	done
 	waitpid $t $(jobs -p)
 	kill -3 $pid 2>/dev/null
