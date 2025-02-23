@@ -2,6 +2,9 @@ package unknow.server.servlet.impl;
 
 import java.io.IOException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -13,6 +16,8 @@ import unknow.server.util.io.Buffers;
  * abstract implementation of ServlerOutputStream
  */
 public abstract class AbstractServletOutput<T extends ServletResponseImpl> extends ServletOutputStream {
+	private static final Logger logger = LoggerFactory.getLogger(AbstractServletOutput.class);
+
 	protected final ChannelHandlerContext out;
 	/** response that created this stream */
 	protected final T res;
@@ -139,6 +144,7 @@ public abstract class AbstractServletOutput<T extends ServletResponseImpl> exten
 	public final void close() throws IOException {
 		if (closed)
 			return;
+		logger.debug("{} closing {}", out.channel(), this);
 		closed = true;
 		flush();
 		afterClose();

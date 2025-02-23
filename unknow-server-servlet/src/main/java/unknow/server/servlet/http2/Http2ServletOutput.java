@@ -25,4 +25,9 @@ public class Http2ServletOutput extends AbstractServletOutput<Http2ServletRespon
 			out.write(h);
 		buffer.clear();
 	}
+
+	@Override
+	public String toString() {
+		return stream.toString();
+	}
 }
