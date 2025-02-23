@@ -39,19 +39,23 @@ public class ProcessResult {
 		Map<String, Result> stats = results.computeIfAbsent(n, k -> new HashMap<>());
 		try (CSVParser parser = CSVParser.parse(r, CSV)) {
 			for (CSVRecord l : parser) {
-				String name = l.get(0);
-				if ("duration".equals(name)) {
-					stats.computeIfAbsent(l.get(1), k -> new Result()).add(Double.parseDouble(l.get(2)), 0, -1, false);
-					continue;
+				try {
+					String name = l.get(0);
+					if ("duration".equals(name)) {
+						stats.computeIfAbsent(l.get(1), k -> new Result()).add(Double.parseDouble(l.get(2)), 0, -1, false);
+						continue;
+					}
+
+					tests.add(name);
+
+					boolean e = !("missing".equals(name) ? "404" : "200").equals(l.get(1));
+					double v = Double.parseDouble(l.get(2));
+					double c = Double.parseDouble(l.get(3));
+
+					stats.computeIfAbsent(name, k -> new Result()).add(0, v, c, e);
+				} catch (Exception e) {
+					throw new IOException("line " + l.getRecordNumber() + " " + e.getMessage());
 				}
-
-				tests.add(name);
-
-				boolean e = !("missing".equals(name) ? "404" : "200").equals(l.get(1));
-				double v = Double.parseDouble(l.get(2));
-				double c = Double.parseDouble(l.get(3));
-
-				stats.computeIfAbsent(name, k -> new Result()).add(0, v, c, e);
 			}
 		}
 	}
@@ -150,14 +154,15 @@ public class ProcessResult {
 		ProcessResult process = new ProcessResult(args);
 
 		for (String s : args) {
-			Path path = Paths.get("out", s);
+			Path path = Paths.get("C:\\Users\\Unknow\\Downloads\\results-unknow", s);
+//					"out", s);
 			if (Files.exists(path)) {
 				try (DirectoryStream<Path> out = Files.newDirectoryStream(path)) {
 					for (Path p : out) {
 						try (BufferedReader r = Files.newBufferedReader(p)) {
 							process.readCsv(r, s);
-						} catch (IOException e) {
-							System.err.println(e.getMessage());
+						} catch (Exception e) {
+							System.err.println(p + " " + e.getMessage());
 						}
 					}
 				}
