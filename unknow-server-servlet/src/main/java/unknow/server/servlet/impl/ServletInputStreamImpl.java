@@ -6,7 +6,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.PooledByteBufAllocator;
 import jakarta.servlet.ReadListener;
 import jakarta.servlet.ServletInputStream;
 
@@ -18,7 +18,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
 	private boolean closed;
 
 	public ServletInputStreamImpl() {
-		buffers = Unpooled.compositeBuffer();
+		buffers = PooledByteBufAllocator.DEFAULT.compositeBuffer();
 		lock = new ReentrantLock();
 		cond = lock.newCondition();
 	}

@@ -6,7 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.WriteListener;
@@ -37,7 +37,7 @@ public abstract class AbstractServletOutput<T extends ServletResponseImpl> exten
 		this.res = res;
 		if (res != null) {
 			bufferSize = res.getBufferSize();
-			this.buffer = Unpooled.buffer(bufferSize < 8192 ? 8192 : bufferSize);
+			this.buffer = PooledByteBufAllocator.DEFAULT.buffer(bufferSize < 8192 ? 8192 : bufferSize);
 		} else {
 			this.buffer = null;
 			this.bufferSize = 0;

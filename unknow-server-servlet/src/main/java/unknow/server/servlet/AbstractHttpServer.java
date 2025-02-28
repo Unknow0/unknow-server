@@ -15,7 +15,8 @@ import java.security.cert.CertificateException;
 import java.util.Arrays;
 import java.util.ServiceLoader;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.KeyManagerFactory;
@@ -113,7 +114,7 @@ public abstract class AbstractHttpServer {
 	protected abstract ArrayMap<String> mimeTypes();
 
 	protected ExecutorService pool() {
-		return Executors.newCachedThreadPool(new DefaultThreadFactory("request-executor", true));
+		return new ThreadPoolExecutor(20, Integer.MAX_VALUE, 60L, TimeUnit.SECONDS, new SynchronousQueue<Runnable>(), new DefaultThreadFactory("request-executor", true));
 	}
 
 	/**
