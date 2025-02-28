@@ -38,6 +38,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.group.ChannelGroup;
@@ -77,6 +78,18 @@ import unknow.server.util.data.ArrayMap;
  * @author unknow
  */
 public abstract class AbstractHttpServer {
+
+	private static final ChannelHandler prometheus;
+
+	static {
+		ChannelHandler h = null;
+		try {
+			Class<?> cl = Class.forName("unknow.server.servlet.PrometheusHandler");
+			h = (ChannelHandler) cl.getDeclaredField("HANDLER").get(null);
+		} catch (@SuppressWarnings("unused") Throwable e) { // ok
+		}
+		prometheus = h;
+	}
 
 	private static final Option help = Option.builder("h").longOpt("help").desc("show this help").build();
 	private static final Option shutdown = Option.builder().longOpt("shutdown").argName("port|addr:port").hasArg().type(Integer.class)
@@ -284,7 +297,10 @@ public abstract class AbstractHttpServer {
 		protected void initChannel(SocketChannel ch) {
 			allChannels.add(ch);
 			Http11Handler h = new Http11Handler(pool, servletContext, keepAlive);
-			ch.pipeline().addLast(new HttpServerCodec(), h.outbound(), h);
+			ChannelPipeline pipeline = ch.pipeline();
+			if (prometheus != null)
+				pipeline.addLast(prometheus);
+			pipeline.addLast(new HttpServerCodec(), h.outbound(), h);
 		}
 	}
 
@@ -306,7 +322,10 @@ public abstract class AbstractHttpServer {
 		@Override
 		protected void initChannel(SocketChannel ch) {
 			allChannels.add(ch);
-			ch.pipeline().addLast(ssl.newHandler(ch.alloc()), new APNLHandler(pool, servletContext, keepAlive));
+			ChannelPipeline pipeline = ch.pipeline();
+			if (prometheus != null)
+				pipeline.addLast(prometheus);
+			pipeline.addLast(ssl.newHandler(ch.alloc()), new APNLHandler(pool, servletContext, keepAlive));
 		}
 	}
 
@@ -353,12 +372,16 @@ public abstract class AbstractHttpServer {
 
 		@Override
 		protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) {
-			String receivedMessage = msg.toString(StandardCharsets.UTF_8).trim();
-			logger.info("{} {}", ctx.channel(), receivedMessage);
-			if ("shutdown".equals(receivedMessage))
-				allChannels.close().addListener(c -> ctx.close());
-			else
-				ctx.close();
+			try {
+				String receivedMessage = msg.toString(StandardCharsets.UTF_8).trim();
+				logger.info("{} {}", ctx.channel(), receivedMessage);
+				if ("shutdown".equals(receivedMessage))
+					allChannels.close().addListener(c -> ctx.close());
+				else
+					ctx.close();
+			} finally {
+				msg.release();
+			}
 		}
 	}
 
