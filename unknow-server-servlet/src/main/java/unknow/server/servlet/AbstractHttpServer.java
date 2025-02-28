@@ -3,6 +3,7 @@ package unknow.server.servlet;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -31,10 +32,11 @@ import org.slf4j.LoggerFactory;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.group.ChannelGroup;
@@ -166,21 +168,13 @@ public abstract class AbstractHttpServer {
 		EventLoopGroup workerGroup = new NioEventLoopGroup();
 		ChannelGroup allChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 
-		ShutdownHandler shutdownHandler = new ShutdownHandler(allChannels);
-
 		try {
-			ServerBootstrap b = new ServerBootstrap();
-			b.option(ChannelOption.SO_BACKLOG, 1024);
-			b.childOption(ChannelOption.TCP_NODELAY, true).childOption(ChannelOption.SO_KEEPALIVE, true);
-			b.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class)
-					.childHandler(new Initialize(pool, allChannels, ctx, ssl, keepAliveTime, addressHttp, addressHttps, addressShutdown, shutdownHandler));
-
 			if (addressHttp != null)
-				allChannels.add(b.bind(addressHttp).sync().channel());
+				allChannels.add(bind(bossGroup, workerGroup, addressHttp, new InitHttp(pool, allChannels, ctx, keepAliveTime)));
 			if (addressHttps != null)
-				allChannels.add(b.bind(addressHttps).sync().channel());
+				allChannels.add(bind(bossGroup, workerGroup, addressHttps, new InitHttps(pool, allChannels, ctx, ssl, keepAliveTime)));
 			if (addressShutdown != null)
-				allChannels.add(b.bind(addressShutdown).sync().channel());
+				allChannels.add(bind(bossGroup, workerGroup, addressShutdown, new ShutdownHandler(allChannels)));
 
 			allChannels.newCloseFuture().sync(); // wait only on server channel
 			allChannels.newCloseFuture().sync(); // wait on all other channel
@@ -189,6 +183,14 @@ public abstract class AbstractHttpServer {
 			workerGroup.shutdownGracefully(0, 30, TimeUnit.SECONDS).syncUninterruptibly();
 			ctx.events().fireContextDestroyed();
 		}
+	}
+
+	private static final Channel bind(EventLoopGroup bossGroup, EventLoopGroup workerGroup, SocketAddress addr, ChannelHandler handler) throws InterruptedException {
+		ServerBootstrap b = new ServerBootstrap();
+		b.option(ChannelOption.SO_BACKLOG, 1024);
+		b.childOption(ChannelOption.TCP_NODELAY, true).childOption(ChannelOption.SO_KEEPALIVE, true);
+		b.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class).childHandler(handler);
+		return b.bind(addr).sync().channel();
 	}
 
 	private static final CommandLine parseCli(String[] arg) {
@@ -264,53 +266,46 @@ public abstract class AbstractHttpServer {
 		}
 	}
 
-	private static final class Initialize extends ChannelInitializer<SocketChannel> {
+	private static final class InitHttp extends ChannelInitializer<SocketChannel> {
+		private final ExecutorService pool;
+		private final ChannelGroup allChannels;
+		private final ServletContextImpl servletContext;
+		private final int keepAlive;
+
+		public InitHttp(ExecutorService pool, ChannelGroup allChannels, ServletContextImpl servletContext, int keepAlive) {
+			this.pool = pool;
+			this.allChannels = allChannels;
+			this.servletContext = servletContext;
+			this.keepAlive = keepAlive;
+		}
+
+		@Override
+		protected void initChannel(SocketChannel ch) {
+			allChannels.add(ch);
+			Http11Handler h = new Http11Handler(pool, servletContext, keepAlive);
+			ch.pipeline().addLast(new HttpServerCodec(), h.outbound(), h);
+		}
+	}
+
+	private static final class InitHttps extends ChannelInitializer<SocketChannel> {
 		private final ExecutorService pool;
 		private final ChannelGroup allChannels;
 		private final ServletContextImpl servletContext;
 		private final SslContext ssl;
 		private final int keepAlive;
 
-		private final InetSocketAddress http;
-		private final InetSocketAddress https;
-		private final InetSocketAddress shutdown;
-		private final ShutdownHandler shutdownHandler;
-
-		public Initialize(ExecutorService pool, ChannelGroup allChannels, ServletContextImpl servletContext, SslContext ssl, int keepAlive, InetSocketAddress http,
-				InetSocketAddress https, InetSocketAddress shutdown, ShutdownHandler shutdownHandler) {
+		public InitHttps(ExecutorService pool, ChannelGroup allChannels, ServletContextImpl servletContext, SslContext ssl, int keepAlive) {
 			this.pool = pool;
 			this.allChannels = allChannels;
 			this.servletContext = servletContext;
 			this.ssl = ssl;
 			this.keepAlive = keepAlive;
-
-			this.http = http;
-			this.https = https;
-			this.shutdown = shutdown;
-			this.shutdownHandler = shutdownHandler;
 		}
 
 		@Override
 		protected void initChannel(SocketChannel ch) {
 			allChannels.add(ch);
-			ChannelPipeline p = ch.pipeline();
-			InetSocketAddress addr = ch.localAddress();
-			if (match(http, addr))
-				p.addLast(new HttpServerCodec()).addLast("http11", new Http11Handler(pool, servletContext, keepAlive));
-			else if (match(https, addr))
-				p.addLast(ssl.newHandler(ch.alloc()), new APNLHandler(pool, servletContext, keepAlive));
-			else if (match(shutdown, addr)) {
-				allChannels.remove(ch);
-				p.addLast(shutdownHandler);
-			} else
-				ch.close();
-
-		}
-
-		private static boolean match(InetSocketAddress a, InetSocketAddress b) {
-			if (a == null || a.getPort() != b.getPort())
-				return false;
-			return a.getAddress().isAnyLocalAddress() || a.getAddress().equals(b.getAddress());
+			ch.pipeline().addLast(ssl.newHandler(ch.alloc()), new APNLHandler(pool, servletContext, keepAlive));
 		}
 	}
 
