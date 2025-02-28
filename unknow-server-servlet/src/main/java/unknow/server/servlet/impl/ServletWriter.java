@@ -3,6 +3,7 @@ package unknow.server.servlet.impl;
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 public class ServletWriter extends Writer {
 	private final AbstractServletOutput<?> out;
@@ -14,18 +15,32 @@ public class ServletWriter extends Writer {
 	}
 
 	@Override
-	public void write(char[] cbuf, int off, int len) throws IOException {
-		out.buffer.writeCharSequence(new CharArray(cbuf, off, len), charset);
+	public void write(int c) throws IOException {
+		if (charset == StandardCharsets.UTF_8) {
+			if (c <= 0x7F) { // ASCII (1 byte)
+				out.write((byte) c);
+			} else if (c <= 0x7FF) { // 2-byte UTF-8
+				out.write((byte) (0xC0 | (c >> 6)));
+				out.write((byte) (0x80 | (c & 0x3F)));
+			} else { // 3-byte UTF-8 (valide pour BMP, UTF-16 basique)
+				out.write((byte) (0xE0 | (c >> 12)));
+				out.write((byte) (0x80 | ((c >> 6) & 0x3F)));
+				out.write((byte) (0x80 | (c & 0x3F)));
+			}
+		} else if (charset == StandardCharsets.US_ASCII)
+			out.write(c);
+		else
+			write(Character.toString(c));
 	}
 
 	@Override
-	public void write(String str) throws IOException {
-		out.buffer.writeCharSequence(str, charset);
+	public void write(char[] cbuf, int off, int len) throws IOException {
+		out.write(new String(cbuf, off, len).getBytes(charset));
 	}
 
 	@Override
 	public void write(String str, int off, int len) throws IOException {
-		out.buffer.writeCharSequence(str.substring(off, off + len), charset);
+		out.write(str.substring(off, off + len).getBytes(charset));
 	}
 
 	@Override
@@ -38,34 +53,4 @@ public class ServletWriter extends Writer {
 		out.close();
 	}
 
-	private static class CharArray implements CharSequence {
-		private final char[] cbuf;
-		private int off;
-		private int len;
-
-		public CharArray(char[] cbuf, int off, int len) {
-			this.cbuf = cbuf;
-			this.off = off;
-			this.len = len;
-		}
-
-		@Override
-		public int length() {
-			return len;
-		}
-
-		@Override
-		public char charAt(int index) {
-			return cbuf[off + index];
-		}
-
-		@Override
-		public CharSequence subSequence(int start, int end) {
-			if (start < 0 || end > len || end < start)
-				throw new IndexOutOfBoundsException();
-			if (start == 0 && end == len)
-				return this;
-			return new CharArray(cbuf, off + start, end - start);
-		}
-	}
 }
