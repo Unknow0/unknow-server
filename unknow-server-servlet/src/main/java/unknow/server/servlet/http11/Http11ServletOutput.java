@@ -17,13 +17,13 @@ public class Http11ServletOutput extends AbstractServletOutput<Http11ServletResp
 
 	@Override
 	protected void writebuffer() throws IOException {
-		out.write(new DefaultHttpContent(buffer.copy()));
-		buffer.clear();
+		ctx.write(new DefaultHttpContent(buffer));
+		buffer = ctx.alloc().buffer(getBufferSize() < 8192 ? 8192 : getBufferSize());
 	}
 
 	@Override
 	protected void afterClose() throws IOException {
-		ChannelFuture f = out.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+		ChannelFuture f = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 		if ("close".equals(res.getHeader("connection")))
 			f.addListener(ChannelFutureListener.CLOSE);
 		res.lock.unlockNext();

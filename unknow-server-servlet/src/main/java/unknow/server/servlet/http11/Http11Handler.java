@@ -16,9 +16,11 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.ReferenceCountUtil;
@@ -101,20 +103,20 @@ public final class Http11Handler extends ChannelInboundHandlerAdapter {
 		}
 
 		if (msg instanceof HttpRequest) {
-			if (msg.decoderResult().isFailure())
-				ctx.close();
-			else {
-				Channel channel = ctx.channel();
-				InetSocketAddress remote = (InetSocketAddress) channel.remoteAddress();
-				InetSocketAddress local = (InetSocketAddress) channel.localAddress();
+			HttpRequest r = (HttpRequest) msg;
+			if ("100-continue".equals(r.headers().get("expect")))
+				ctx.write(new DefaultHttpResponse(r.protocolVersion(), HttpResponseStatus.CONTINUE));
 
-				String scheme = ctx.pipeline().get(SslHandler.class) == null ? "http" : "https";
-				Http11ServletRequest req = new Http11ServletRequest(servletContext, scheme, (HttpRequest) msg, remote, local);
-				boolean connectionClose = keepAlive < 0 || "close".equals(req.getHeader("connection"));
-				res = new Http11ServletResponse(ctx, servletContext, req, lock, lock.nextId(), connectionClose);
-				input = req.rawInput();
-				f = pool.submit(new HttpWorker(servletContext, req, res));
-			}
+			Channel channel = ctx.channel();
+			InetSocketAddress remote = (InetSocketAddress) channel.remoteAddress();
+			InetSocketAddress local = (InetSocketAddress) channel.localAddress();
+
+			String scheme = ctx.pipeline().get(SslHandler.class) == null ? "http" : "https";
+			Http11ServletRequest req = new Http11ServletRequest(servletContext, scheme, r, remote, local);
+			boolean connectionClose = keepAlive < 0 || "close".equals(req.getHeader("connection"));
+			res = new Http11ServletResponse(ctx, servletContext, req, lock, lock.nextId(), connectionClose);
+			input = req.rawInput();
+			f = pool.submit(new HttpWorker(servletContext, req, res));
 		}
 
 		if (msg instanceof HttpContent)

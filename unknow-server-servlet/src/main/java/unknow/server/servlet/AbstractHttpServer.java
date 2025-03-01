@@ -49,7 +49,6 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http2.Http2FrameCodecBuilder;
 import io.netty.handler.codec.http2.Http2Settings;
-import io.netty.handler.flush.FlushConsolidationHandler;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
@@ -301,7 +300,7 @@ public abstract class AbstractHttpServer {
 			ChannelPipeline pipeline = ch.pipeline();
 			if (prometheus != null)
 				pipeline.addLast(prometheus);
-			pipeline.addLast(new FlushConsolidationHandler(), new HttpServerCodec(), h.outbound(), h);
+			pipeline.addLast(new HttpServerCodec(), h.outbound(), h);
 		}
 	}
 
@@ -326,7 +325,7 @@ public abstract class AbstractHttpServer {
 			ChannelPipeline pipeline = ch.pipeline();
 			if (prometheus != null)
 				pipeline.addLast(prometheus);
-			pipeline.addLast(new FlushConsolidationHandler(), ssl.newHandler(ch.alloc()), new APNLHandler(pool, servletContext, keepAlive));
+			pipeline.addLast(ssl.newHandler(ch.alloc()), new APNLHandler(pool, servletContext, keepAlive));
 		}
 	}
 

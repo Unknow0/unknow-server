@@ -6,7 +6,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.WriteListener;
@@ -18,12 +17,12 @@ import unknow.server.util.io.Buffers;
 public abstract class AbstractServletOutput<T extends ServletResponseImpl> extends ServletOutputStream {
 	private static final Logger logger = LoggerFactory.getLogger(AbstractServletOutput.class);
 
-	protected final ChannelHandlerContext out;
+	protected final ChannelHandlerContext ctx;
 	/** response that created this stream */
 	protected final T res;
 
 	/** the buffer */
-	protected final ByteBuf buffer;
+	protected ByteBuf buffer;
 	private int bufferSize;
 
 	private boolean closed;
@@ -32,12 +31,12 @@ public abstract class AbstractServletOutput<T extends ServletResponseImpl> exten
 	 * create a new AbstractServlet
 	 * @param res the response
 	 */
-	protected AbstractServletOutput(ChannelHandlerContext out, T res) {
-		this.out = out;
+	protected AbstractServletOutput(ChannelHandlerContext ctx, T res) {
+		this.ctx = ctx;
 		this.res = res;
 		if (res != null) {
 			bufferSize = res.getBufferSize();
-			this.buffer = PooledByteBufAllocator.DEFAULT.buffer(bufferSize < 8192 ? 8192 : bufferSize);
+			this.buffer = ctx.alloc().buffer(bufferSize < 8192 ? 8192 : bufferSize);
 		} else {
 			this.buffer = null;
 			this.bufferSize = 0;
@@ -145,7 +144,7 @@ public abstract class AbstractServletOutput<T extends ServletResponseImpl> exten
 	public final void close() throws IOException {
 		if (closed)
 			return;
-		logger.debug("{} closing {}", out.channel(), this);
+		logger.debug("{} closing {}", ctx.channel(), this);
 		closed = true;
 		flush();
 		afterClose();
