@@ -134,6 +134,7 @@ public abstract class AbstractServletOutput<T extends ServletResponseImpl> exten
 		try {
 			res.commit();
 		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
 			throw new IOException(e);
 		}
 //		logger.debug("{} flush {} {}", out.channel(), this, isClosed(), new Exception());

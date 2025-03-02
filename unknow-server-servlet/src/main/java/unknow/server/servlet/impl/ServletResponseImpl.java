@@ -193,6 +193,7 @@ public abstract class ServletResponseImpl implements HttpServletResponse {
 		try {
 			commit();
 		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
 			throw new IOException(e);
 		}
 		if (stream != null)
@@ -270,6 +271,7 @@ public abstract class ServletResponseImpl implements HttpServletResponse {
 		try {
 			commit();
 		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
 			throw new IOException(e);
 		}
 	}

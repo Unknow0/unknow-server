@@ -243,8 +243,6 @@
 					<artifactId>native-maven-plugin</artifactId>
 					<version>0.10.5</version>
 					<configuration>
-						<skipNativeBuild>true</skipNativeBuild>
-						<skipNativeTests>true</skipNativeTests>
 						<buildArgs>
 							<buildArg>--install-exit-handlers</buildArg>
 							<buildArg>--static</buildArg>

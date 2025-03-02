@@ -81,8 +81,9 @@ public class ServletInputStreamImpl extends ServletInputStream {
 		try {
 			while (!closed && !buffers.isReadable())
 				cond.await();
-			return !buffers.isReadable() ? -1 : buffers.readByte();
+			return !buffers.isReadable() ? -1 : buffers.readByte() & 0xFF;
 		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
 			throw new IOException(e);
 		} finally {
 			lock.unlock();
@@ -101,6 +102,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
 			buffers.readBytes(b, off, len);
 			return len;
 		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
 			throw new IOException(e);
 		} finally {
 			lock.unlock();
