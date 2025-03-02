@@ -16,7 +16,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
@@ -105,7 +105,7 @@ public final class Http11Handler extends ChannelInboundHandlerAdapter {
 		if (msg instanceof HttpRequest) {
 			HttpRequest r = (HttpRequest) msg;
 			if ("100-continue".equals(r.headers().get("expect")))
-				ctx.write(new DefaultHttpResponse(r.protocolVersion(), HttpResponseStatus.CONTINUE));
+				ctx.write(new DefaultFullHttpResponse(r.protocolVersion(), HttpResponseStatus.CONTINUE));
 
 			Channel channel = ctx.channel();
 			InetSocketAddress remote = (InetSocketAddress) channel.remoteAddress();
