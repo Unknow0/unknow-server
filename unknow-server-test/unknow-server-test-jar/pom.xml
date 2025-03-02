@@ -80,6 +80,7 @@
 							<goal>shade</goal>
 						</goals>
 						<configuration>
+							<shadedArtifactAttached>true</shadedArtifactAttached>
 							<finalName>server</finalName>
 							<filters>
 								<filter>
@@ -110,6 +111,26 @@
 									<mainClass>unknow.server.http.test.generated.Server</mainClass>
 								</transformer>
 							</transformers>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.graalvm.buildtools</groupId>
+				<artifactId>native-maven-plugin</artifactId>
+				<extensions>true</extensions>
+				<executions>
+					<execution>
+						<id>build-native</id>
+						<goals>
+							<goal>compile-no-fork</goal>
+						</goals>
+						<phase>package</phase>
+						<configuration>
+							<imageName>server</imageName>
+							<classpath>
+								<param>${project.build.directory}/server.jar</param>
+							</classpath>
 						</configuration>
 					</execution>
 				</executions>

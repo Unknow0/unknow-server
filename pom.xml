@@ -238,6 +238,23 @@
 						</execution>
 					</executions>
 				</plugin>
+				<plugin>
+					<groupId>org.graalvm.buildtools</groupId>
+					<artifactId>native-maven-plugin</artifactId>
+					<version>0.10.5</version>
+					<configuration>
+						<skipNativeBuild>true</skipNativeBuild>
+						<skipNativeTests>true</skipNativeTests>
+						<buildArgs>
+							<buildArg>--install-exit-handlers</buildArg>
+							<buildArg>--static</buildArg>
+							<buildArg>--no-fallback</buildArg>
+						</buildArgs>
+						<metadataRepository>
+							<enabled>true</enabled>
+						</metadataRepository>
+					</configuration>
+				</plugin>
 			</plugins>
 		</pluginManagement>
 		
