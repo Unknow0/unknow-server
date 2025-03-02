@@ -1,7 +1,6 @@
 package unknow.server.servlet.http2;
 
 import java.net.InetSocketAddress;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -18,9 +17,11 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.DefaultHttp2DataFrame;
+import io.netty.handler.codec.http2.DefaultHttp2GoAwayFrame;
 import io.netty.handler.codec.http2.DefaultHttp2HeadersFrame;
 import io.netty.handler.codec.http2.DefaultHttp2ResetFrame;
 import io.netty.handler.codec.http2.Http2DataFrame;
+import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Frame;
 import io.netty.handler.codec.http2.Http2HeadersFrame;
 import io.netty.handler.codec.http2.Http2ResetFrame;
@@ -41,7 +42,7 @@ public final class Http2Handler extends ChannelInboundHandlerAdapter {
 
 	private final IntObjectHashMap<Http2Stream> streams;
 
-	private Future<?> keepAliveTimeout = CompletableFuture.completedFuture(null);
+	private Future<?> keepAliveTimeout;
 
 	public Http2Handler(ExecutorService pool, ServletContextImpl servletContext, int keepAlive) {
 		this.pool = pool;
@@ -53,11 +54,6 @@ public final class Http2Handler extends ChannelInboundHandlerAdapter {
 
 	public ChannelOutboundHandlerAdapter outbound() {
 		return new Outbound();
-	}
-
-	@Override
-	public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-		logger.info("{} active", ctx.channel());
 	}
 
 	@Override
@@ -154,12 +150,15 @@ public final class Http2Handler extends ChannelInboundHandlerAdapter {
 	}
 
 	private class Outbound extends ChannelOutboundHandlerAdapter implements Runnable {
-		private ChannelHandlerContext ctx;
 		private boolean closing = false;
+		private ChannelHandlerContext ctx;
 
 		@Override
 		public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+			logger.info("{} active", ctx.channel());
 			this.ctx = ctx;
+			keepAliveTimeout = ctx.executor()
+					.schedule(() -> ctx.writeAndFlush(new DefaultHttp2GoAwayFrame(Http2Error.SETTINGS_TIMEOUT)).addListener(ChannelFutureListener.CLOSE), 2, TimeUnit.SECONDS);
 		}
 
 		@Override

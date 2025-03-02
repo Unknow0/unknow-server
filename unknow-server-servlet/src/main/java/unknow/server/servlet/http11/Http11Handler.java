@@ -21,6 +21,7 @@ import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.ReferenceCountUtil;
@@ -41,7 +42,7 @@ public final class Http11Handler extends ChannelInboundHandlerAdapter {
 	private Http11ServletResponse res;
 	private ServletInputStreamImpl input;
 	private Future<?> f = CompletableFuture.completedFuture(null);
-	private Future<?> keepAliveTimeout = CompletableFuture.completedFuture(null);
+	private Future<?> keepAliveTimeout;
 
 	public Http11Handler(ExecutorService pool, ServletContextImpl servletContext, int keepAlive) {
 		this.pool = pool;
@@ -53,11 +54,6 @@ public final class Http11Handler extends ChannelInboundHandlerAdapter {
 
 	public ChannelOutboundHandlerAdapter outbound() {
 		return new Outbound();
-	}
-
-	@Override
-	public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-		logger.info("{} active", ctx.channel());
 	}
 
 	@Override
@@ -134,12 +130,17 @@ public final class Http11Handler extends ChannelInboundHandlerAdapter {
 	}
 
 	private class Outbound extends ChannelOutboundHandlerAdapter implements Runnable {
-		private ChannelHandlerContext ctx;
 		private boolean closing = false;
+
+		private ChannelHandlerContext ctx;
 
 		@Override
 		public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+			logger.info("{} active", ctx.channel());
 			this.ctx = ctx;
+			keepAliveTimeout = ctx.executor().schedule(
+					() -> ctx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_0, HttpResponseStatus.REQUEST_TIMEOUT)).addListener(ChannelFutureListener.CLOSE), 2,
+					TimeUnit.SECONDS);
 		}
 
 		@Override
