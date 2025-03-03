@@ -171,10 +171,14 @@ public abstract class AbstractHttpServer {
 		if (addressHttp == null && addressHttps == null)
 			addressHttp = new InetSocketAddress(8080);
 
-		String vhostName = cli.getOptionValue(vhost, addressHttp != null ? addressHttp.getHostString() : addressHttps != null ? addressHttps.getHostName() : "");
+		String vhostName = "127.0.0.1";
+		if (addressHttp != null)
+			vhostName = addressHttp.getHostString();
+		else if (addressHttps != null)
+			vhostName = addressHttps.getHostString();
+		vhostName = cli.getOptionValue(vhost, vhostName);
 
 		ExecutorService pool = pool();
-		SslContext ssl = sslContext(cli.getOptionValue(keystore), cli.getOptionValue(keypass));
 
 		ServletContextImpl ctx = initializeContext(vhostName);
 
@@ -185,8 +189,10 @@ public abstract class AbstractHttpServer {
 		try {
 			if (addressHttp != null)
 				allChannels.add(bind(bossGroup, workerGroup, addressHttp, new InitHttp(pool, allChannels, ctx, keepAliveTime)));
-			if (addressHttps != null)
+			if (addressHttps != null) {
+				SslContext ssl = sslContext(cli.getOptionValue(keystore), cli.getOptionValue(keypass));
 				allChannels.add(bind(bossGroup, workerGroup, addressHttps, new InitHttps(pool, allChannels, ctx, ssl, keepAliveTime)));
+			}
 			if (addressShutdown != null)
 				allChannels.add(bind(bossGroup, workerGroup, addressShutdown, new ShutdownHandler(allChannels)));
 

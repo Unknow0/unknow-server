@@ -68,10 +68,6 @@ public final class Http2Handler extends ChannelInboundHandlerAdapter {
 	@Override
 	public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
 		logger.info("{} evt {}", ctx.channel(), evt);
-//		if (evt instanceof Http2ResetFrame) {
-//			input = null;
-//			f.cancel(true);
-//		}
 	}
 
 	@Override
@@ -87,9 +83,7 @@ public final class Http2Handler extends ChannelInboundHandlerAdapter {
 				Http2Stream remove = streams.remove(((Http2ResetFrame) msg).stream().id());
 				if (remove != null)
 					remove.cancel();
-			} else if (msg instanceof Http2Frame)
-				; // ignore other http2 frame
-			else {
+			} else if (!(msg instanceof Http2Frame)) {
 				release = false;
 				ctx.fireChannelRead(msg);
 			}

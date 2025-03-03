@@ -28,8 +28,8 @@ import jakarta.servlet.http.HttpServletResponse;
 public abstract class ServletResponseImpl implements HttpServletResponse {
 	private static final DateTimeFormatter RFC1123 = DateTimeFormatter.RFC_1123_DATE_TIME.withZone(ZoneOffset.UTC);
 
-	protected final ChannelHandlerContext out;
-	private final ServletContextImpl ctx;
+	protected final ChannelHandlerContext ctx;
+	private final ServletContextImpl servletCtx;
 	private final HttpServletRequest req;
 
 	private final Collection<Cookie> cookies;
@@ -45,17 +45,19 @@ public abstract class ServletResponseImpl implements HttpServletResponse {
 	/**
 	 * create new ServletResponseImpl
 	 * 
-	 * @param ctx the servlet context
+	 * @param ctx netty context
+	 * @param servletCtx the servlet context
+	 * @param req  the request
 	 */
-	public ServletResponseImpl(ChannelHandlerContext out, ServletContextImpl ctx, HttpServletRequest req) {
-		this.out = out;
+	protected ServletResponseImpl(ChannelHandlerContext ctx, ServletContextImpl servletCtx, HttpServletRequest req) {
 		this.ctx = ctx;
+		this.servletCtx = servletCtx;
 		this.req = req;
 
 		this.cookies = new ArrayList<>();
 	}
 
-	protected abstract AbstractServletOutput<?> rawOutput();
+	protected abstract <T extends ServletResponseImpl> AbstractServletOutput<T> rawOutput();
 
 	protected abstract void doCommit() throws IOException, InterruptedException;
 
@@ -79,7 +81,7 @@ public abstract class ServletResponseImpl implements HttpServletResponse {
 		if (stream != null)
 			stream.close();
 		commit();
-		out.flush();
+		ctx.flush();
 	}
 
 	public void checkCommited() {
@@ -89,14 +91,14 @@ public abstract class ServletResponseImpl implements HttpServletResponse {
 
 	public void sendError(int sc, Throwable t, String msg) throws IOException {
 		reset(false);
-		FilterChain f = ctx.servlets().getError(sc, t);
+		FilterChain f = servletCtx.servlets().getError(sc, t);
 		if (f != null) {
 			try {
 				ServletRequestError r = new ServletRequestError(req, sc, t);
 				f.doFilter(r, this);
 				return;
 			} catch (ServletException e) {
-				ctx.log("Failed to send error", e);
+				servletCtx.log("Failed to send error", e);
 			}
 		}
 		setStatus(sc);
@@ -119,7 +121,7 @@ public abstract class ServletResponseImpl implements HttpServletResponse {
 
 	@Override
 	public String getCharacterEncoding() {
-		return charset == null ? ctx.getResponseCharacterEncoding() : charset.name();
+		return charset == null ? servletCtx.getResponseCharacterEncoding() : charset.name();
 	}
 
 	@Override
@@ -130,10 +132,13 @@ public abstract class ServletResponseImpl implements HttpServletResponse {
 	@Override
 	public void setContentType(String type) {
 		setHeader("content-type", type);
-//		int i = type.indexOf("charset="); TODO get charset
-//		if (i < 0)
-//			return;
-//		int l = type.indexOf(';', i);
+		int i = type.indexOf(";charset=");
+		if (i < 0)
+			return;
+		int l = type.indexOf(';', i);
+		if (l < 0)
+			l = type.length();
+		charset = Charset.forName(type.substring(i + 9, l));
 	}
 
 	@Override
@@ -162,7 +167,7 @@ public abstract class ServletResponseImpl implements HttpServletResponse {
 		if (stream != null)
 			throw new IllegalStateException("output already got created with getWriter()");
 		stream = rawOutput();
-		return writer = new PrintWriter(new ServletWriter(stream, charset == null ? Charset.forName(ctx.getResponseCharacterEncoding()) : charset));
+		return writer = new PrintWriter(new ServletWriter(stream, charset == null ? Charset.forName(servletCtx.getResponseCharacterEncoding()) : charset));
 	}
 
 	@Override
@@ -220,7 +225,7 @@ public abstract class ServletResponseImpl implements HttpServletResponse {
 	@Override
 	public void setLocale(Locale loc) {
 		if (charset == null)
-			setCharacterEncoding(ctx.getEncoding(loc));
+			setCharacterEncoding(servletCtx.getEncoding(loc));
 		setHeader("Content-Language", loc.toLanguageTag());
 	}
 
@@ -266,7 +271,7 @@ public abstract class ServletResponseImpl implements HttpServletResponse {
 		commited = true;
 		setStatus(302);
 		setContentLength(0);
-		out.close();
+		ctx.close();
 		setHeader("location", location);
 		try {
 			commit();
@@ -275,24 +280,6 @@ public abstract class ServletResponseImpl implements HttpServletResponse {
 			throw new IOException(e);
 		}
 	}
-
-	@Override
-	public abstract String getHeader(String name);
-
-	@Override
-	public abstract Collection<String> getHeaders(String name);
-
-	@Override
-	public abstract Collection<String> getHeaderNames();
-
-	@Override
-	public abstract boolean containsHeader(String name);
-
-	@Override
-	public abstract void setHeader(String name, String value);
-
-	@Override
-	public abstract void addHeader(String name, String value);
 
 	@Override
 	public void setDateHeader(String name, long date) {
@@ -313,10 +300,4 @@ public abstract class ServletResponseImpl implements HttpServletResponse {
 	public void addIntHeader(String name, int value) {
 		addHeader(name, Integer.toString(value));
 	}
-
-	@Override
-	public abstract void setStatus(int sc);
-
-	@Override
-	public abstract int getStatus();
 }

@@ -88,7 +88,7 @@ public abstract class ServletRequestImpl implements HttpServletRequest {
 	 * @param remote the report address
 	 * @param local the local address
 	 */
-	public ServletRequestImpl(ServletContextImpl ctx, String scheme, String method, String uri, String protocol, InetSocketAddress remote, InetSocketAddress local) {
+	protected ServletRequestImpl(ServletContextImpl ctx, String scheme, String method, String uri, String protocol, InetSocketAddress remote, InetSocketAddress local) {
 		this.ctx = ctx;
 		this.scheme = scheme;
 		this.method = method;
@@ -145,21 +145,6 @@ public abstract class ServletRequestImpl implements HttpServletRequest {
 	public ServletInputStreamImpl rawInput() {
 		return rawInput;
 	}
-
-	@Override
-	public abstract String getHeader(String name);
-
-	@Override
-	public abstract Enumeration<String> getHeaders(String name);
-
-	@Override
-	public abstract Enumeration<String> getHeaderNames();
-
-	@Override
-	public abstract long getDateHeader(String name);
-
-	@Override
-	public abstract int getIntHeader(String name);
 
 	@Override
 	public Object getAttribute(String name) {
@@ -239,9 +224,6 @@ public abstract class ServletRequestImpl implements HttpServletRequest {
 		long l = getContentLengthLong();
 		return l > Integer.MAX_VALUE ? -1 : (int) l;
 	}
-
-	@Override
-	public abstract long getContentLengthLong();
 
 	@Override
 	public ServletInputStream getInputStream() throws IOException {
@@ -463,7 +445,7 @@ public abstract class ServletRequestImpl implements HttpServletRequest {
 //			return sessionFromCookie;
 //		if (sessionFromUrl != null)
 //			return sessionFromUrl;
-//		co.ctx().getEffectiveSessionTrackingModes(); // TODO manage other session traking mode
+//		ctx.getEffectiveSessionTrackingModes(); // TODO manage other session traking mode
 //		SessionCookieConfig cookieCfg = co.ctx().getSessionCookieConfig();
 //		if (cookieCfg != null) {
 //			String name = cookieCfg.getName();

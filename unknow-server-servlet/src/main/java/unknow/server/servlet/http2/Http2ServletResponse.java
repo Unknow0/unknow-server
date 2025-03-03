@@ -26,6 +26,7 @@ public class Http2ServletResponse extends ServletResponseImpl {
 		rawOutput = new Http2ServletOutput(out, this, stream);
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	protected Http2ServletOutput rawOutput() {
 		return rawOutput;
@@ -35,9 +36,9 @@ public class Http2ServletResponse extends ServletResponseImpl {
 	protected void doCommit() throws InterruptedException {
 		DefaultHttp2HeadersFrame h = new DefaultHttp2HeadersFrame(headers, rawOutput.isClosed() && rawOutput.remaingSize() == 0).stream(stream);
 		if (h.isEndStream())
-			out.writeAndFlush(h);
+			ctx.writeAndFlush(h);
 		else
-			out.write(h);
+			ctx.write(h);
 	}
 
 	@Override

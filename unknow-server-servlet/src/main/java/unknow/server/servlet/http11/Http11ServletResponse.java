@@ -33,6 +33,7 @@ public class Http11ServletResponse extends ServletResponseImpl {
 		connectionClose = true;
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	protected Http11ServletOutput rawOutput() {
 		return rawOutput;
@@ -49,7 +50,7 @@ public class Http11ServletResponse extends ServletResponseImpl {
 			else
 				res.headers().set("transfer-encoding", "chunked");
 		}
-		out.write(res);
+		ctx.write(res);
 	}
 
 	@Override
