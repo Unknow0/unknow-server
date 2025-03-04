@@ -46,7 +46,7 @@
 		<jmh.version>1.37</jmh.version>
 		<protostuff.version>1.8.0</protostuff.version>
 		<protobuf.version>4.28.2</protobuf.version>
-		<netty.version>4.1.115.Final</netty.version>
+		<netty.version>4.1.119.Final</netty.version>
 	</properties>
 
 
@@ -243,10 +243,10 @@
 					<artifactId>native-maven-plugin</artifactId>
 					<version>0.10.5</version>
 					<configuration>
+						<fallback>false</fallback>
 						<buildArgs>
 							<buildArg>--install-exit-handlers</buildArg>
 							<buildArg>--static</buildArg>
-							<buildArg>--no-fallback</buildArg>
 						</buildArgs>
 						<metadataRepository>
 							<enabled>true</enabled>

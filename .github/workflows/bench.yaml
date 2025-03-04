@@ -17,6 +17,9 @@ jobs:
 
     - name: build
       run: mvn -B package -Pnative-image
+    - name: build native image 
+      run: native-image --install-exit-handlers --static --no-fallback -jar unknow-server-test/unknow-server-test-jar/target/server.jar server-native
+
 
 
     - uses: actions/upload-artifact@v4
