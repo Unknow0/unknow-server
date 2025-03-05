@@ -46,6 +46,7 @@
 		<jmh.version>1.37</jmh.version>
 		<protostuff.version>1.8.0</protostuff.version>
 		<protobuf.version>4.28.2</protobuf.version>
+		<netty.version>4.1.119.Final</netty.version>
 	</properties>
 
 
@@ -237,6 +238,21 @@
 						</execution>
 					</executions>
 				</plugin>
+				<plugin>
+					<groupId>org.graalvm.buildtools</groupId>
+					<artifactId>native-maven-plugin</artifactId>
+					<version>0.10.5</version>
+					<configuration>
+						<fallback>false</fallback>
+						<buildArgs>
+							<buildArg>--install-exit-handlers</buildArg>
+							<buildArg>--static</buildArg>
+						</buildArgs>
+						<metadataRepository>
+							<enabled>true</enabled>
+						</metadataRepository>
+					</configuration>
+				</plugin>
 			</plugins>
 		</pluginManagement>
 		
@@ -380,7 +396,13 @@
 				<version>${protobuf.version}</version>
 			</dependency>
 
-
+			<dependency>
+				<groupId>io.netty</groupId>
+				<artifactId>netty-bom</artifactId>
+				<version>${netty.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
 			<dependency>
 				<groupId>com.fasterxml.jackson</groupId>
 				<artifactId>jackson-bom</artifactId>

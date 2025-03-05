@@ -2,32 +2,32 @@ package unknow.server.servlet.http2;
 
 import java.io.IOException;
 
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http2.DefaultHttp2DataFrame;
+import io.netty.handler.codec.http2.Http2FrameStream;
 import unknow.server.servlet.impl.AbstractServletOutput;
-import unknow.server.servlet.impl.ServletResponseImpl;
 
-public class Http2ServletOutput extends AbstractServletOutput {
-	private final Http2Processor p;
-	private final int id;
+public class Http2ServletOutput extends AbstractServletOutput<Http2ServletResponse> {
 
-	public Http2ServletOutput(ServletResponseImpl res, Http2Processor p, int id) {
-		super(res);
-		this.p = p;
-		this.id = id;
-	}
+	private final Http2FrameStream stream;
 
-	public boolean isDone() {
-		return isClosed() && buffer.isEmpty();
+	protected Http2ServletOutput(ChannelHandlerContext out, Http2ServletResponse res, Http2FrameStream stream) {
+		super(out, res);
+		this.stream = stream;
 	}
 
 	@Override
-	public void flush() throws IOException {
-		res.commit();
-		try {
-			p.sendData(id, buffer, isClosed());
-		} catch (InterruptedException e) {
-			Thread.currentThread().interrupt();
-			throw new IOException(e);
-		}
+	protected void writebuffer() throws IOException {
+		DefaultHttp2DataFrame h = new DefaultHttp2DataFrame(buffer, isClosed()).stream(stream);
+		if (h.isEndStream())
+			ctx.writeAndFlush(h);
+		else
+			ctx.write(h);
+		buffer = ctx.alloc().buffer(getBufferSize() < 8192 ? 8192 : getBufferSize());
 	}
 
+	@Override
+	public String toString() {
+		return stream.toString();
+	}
 }

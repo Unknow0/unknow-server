@@ -36,6 +36,24 @@
 			<artifactId>unknow-server-nio</artifactId>
 			<version>${project.version}</version>
 		</dependency>
+		
+		<dependency>
+			<groupId>io.netty</groupId>
+			<artifactId>netty-transport</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.netty</groupId>
+			<artifactId>netty-codec-http</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.netty</groupId>
+			<artifactId>netty-codec-http2</artifactId>
+		</dependency>
+		<dependency>
+		    <groupId>io.prometheus</groupId>
+		    <artifactId>simpleclient</artifactId>
+		    <optional>true</optional>
+		</dependency>
 
 		<dependency>
 			<groupId>jakarta.servlet</groupId>

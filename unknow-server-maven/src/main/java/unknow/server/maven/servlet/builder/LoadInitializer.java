@@ -24,6 +24,7 @@ import jakarta.servlet.ServletContainerInitializer;
 import jakarta.servlet.ServletException;
 import unknow.server.maven.Utils;
 import unknow.server.maven.servlet.Builder;
+import unknow.server.servlet.impl.ServletContextImpl;
 
 /**
  * @author unknow
@@ -48,7 +49,7 @@ public class LoadInitializer extends Builder {
 			logger.warn("Failed to process ServletContainerInitializer", ex);
 		}
 		BlockStmt b = ctx.self().addMethod("loadInitializer", Keyword.PROTECTED, Keyword.FINAL).addThrownException(ctx.type().getClass(ServletException.class))
-				.addMarkerAnnotation(Override.class).createBody();
+				.addMarkerAnnotation(Override.class).addParameter(ctx.type().getClass(ServletContextImpl.class), "ctx").createBody();
 		for (String s : clazz)
 			b.addStatement(new MethodCallExpr(new ObjectCreationExpr(null, ctx.type().getClass(s), Utils.list()), "onStartup",
 					Utils.list(new NullLiteralExpr(), new NameExpr("ctx"))));
