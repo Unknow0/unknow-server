@@ -21,7 +21,7 @@ import org.apache.commons.math3.distribution.TDistribution;
 
 public class ProcessResult {
 	private static final CSVFormat JTL = CSVFormat.newFormat(',').builder().setHeader().setSkipHeaderRecord(true).setQuote('"').build();
-	private static final CSVFormat CSV = CSVFormat.newFormat(' ');
+	private static final CSVFormat CSV = CSVFormat.newFormat(' ').builder().setIgnoreSurroundingSpaces(true).build();
 	private static final CSVFormat H2 = CSVFormat.newFormat('\t');
 
 	private static final double MILLI = 1000.;
@@ -45,13 +45,12 @@ public class ProcessResult {
 						stats.computeIfAbsent(l.get(1), k -> new Result()).add(Double.parseDouble(l.get(2)), 0, -1, false);
 						continue;
 					}
+					tests.add(name);
 
-					if (l.size() != 4) {
+					if (l.size() < 4) {
 						stats.computeIfAbsent(name, k -> new Result()).addErr();
 						continue;
 					}
-
-					tests.add(name);
 
 					boolean e = !("missing".equals(name) ? "404" : "200").equals(l.get(1));
 					double v = Double.parseDouble(l.get(2));
@@ -159,7 +158,7 @@ public class ProcessResult {
 		ProcessResult process = new ProcessResult(args);
 
 		for (String s : args) {
-			Path path = Paths.get("out", s);
+			Path path = Paths.get("C:\\Users\\la0ch\\Downloads\\results-native\\", s);
 			if (Files.exists(path)) {
 				try (DirectoryStream<Path> out = Files.newDirectoryStream(path)) {
 					for (Path p : out) {
