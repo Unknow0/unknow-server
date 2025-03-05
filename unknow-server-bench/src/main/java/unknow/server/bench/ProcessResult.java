@@ -46,6 +46,11 @@ public class ProcessResult {
 						continue;
 					}
 
+					if (l.size() != 4) {
+						stats.computeIfAbsent(name, k -> new Result()).addErr();
+						continue;
+					}
+
 					tests.add(name);
 
 					boolean e = !("missing".equals(name) ? "404" : "200").equals(l.get(1));
@@ -194,6 +199,10 @@ public class ProcessResult {
 		public Result() {
 			this.time = new Stat();
 			this.latency = new Stat();
+		}
+
+		public void addErr() {
+			err++;
 		}
 
 		public void add(double t, double v, double c, boolean e) {
