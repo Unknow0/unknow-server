@@ -45,12 +45,12 @@ public class ProcessResult {
 						stats.computeIfAbsent(l.get(1), k -> new Result()).add(Double.parseDouble(l.get(2)), 0, -1, false);
 						continue;
 					}
-					tests.add(name);
 
 					if (l.size() < 4) {
 						stats.computeIfAbsent(name, k -> new Result()).addErr();
 						continue;
 					}
+					tests.add(name);
 
 					boolean e = !("missing".equals(name) ? "404" : "200").equals(l.get(1));
 					double v = Double.parseDouble(l.get(2));
@@ -158,7 +158,7 @@ public class ProcessResult {
 		ProcessResult process = new ProcessResult(args);
 
 		for (String s : args) {
-			Path path = Paths.get("C:\\Users\\la0ch\\Downloads\\results-native\\", s);
+			Path path = Paths.get("out", s);
 			if (Files.exists(path)) {
 				try (DirectoryStream<Path> out = Files.newDirectoryStream(path)) {
 					for (Path p : out) {
