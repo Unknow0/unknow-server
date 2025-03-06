@@ -41,6 +41,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -208,7 +209,8 @@ public abstract class AbstractHttpServer {
 	private static final Channel bind(EventLoopGroup bossGroup, EventLoopGroup workerGroup, SocketAddress addr, ChannelHandler handler) throws InterruptedException {
 		ServerBootstrap b = new ServerBootstrap();
 		b.option(ChannelOption.SO_BACKLOG, 1024);
-		b.childOption(ChannelOption.TCP_NODELAY, true).childOption(ChannelOption.SO_KEEPALIVE, true);
+		b.childOption(ChannelOption.TCP_NODELAY, true).childOption(ChannelOption.SO_KEEPALIVE, true).childOption(ChannelOption.SO_RCVBUF, 33000)
+				.childOption(ChannelOption.SO_SNDBUF, 33000).childOption(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(32 * 1024, 1024 * 1024));
 		b.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class).childHandler(handler);
 		return b.bind(addr).sync().channel();
 	}
