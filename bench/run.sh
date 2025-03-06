@@ -11,17 +11,25 @@ unknow_stop() {
 	kill -9 $pid 2>/dev/null
 	pid=
 }
-native_start() {
-	chmod a+x server-native
-	./server-native --shutdown :8009 --http-addr :8080 --https-addr :8443 --keystore store.jks --keypass 123456 > logs/native.log 2>&1 &
+
+_native_start() {
+	chmod a+x $1
+	./$1 --shutdown :8009 --http-addr :8080 --https-addr :8443 --keystore store.jks --keypass 123456 > logs/native.log 2>&1 &
 	pid=$!
 }
+
+native_start() { _native_start server-native; }
+
 native_stop() {
 	echo 'shutdown' | nc 127.0.0.1 8009
 	sleep 10
 	kill -9 $pid 2>/dev/null
 	pid=
 }
+
+native-pgo_start() { _native_start server-native-pgo; }
+native-pgo_stop() { native_stop; }
+
 tomcat_start() {
 	cp unknow-server-test/unknow-server-test-tomcat/target/*.war $CATALINA_HOME/webapps/ROOT.war || exit 1
 	$CATALINA_HOME/bin/catalina.sh run > logs/tomcat.log 2>&1 || exit 1 &
