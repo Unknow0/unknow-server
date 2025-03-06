@@ -21,7 +21,7 @@ jobs:
       run: native-image --install-exit-handlers --static --no-fallback -jar unknow-server-test/unknow-server-test-jar/target/server.jar server-native
     - name: build pgo 
       run: |
-        native-image --pgo-intrumented -jar unknow-server-test/unknow-server-test-jar/target/server.jar server-native-intrumented
+        native-image --pgo-instrument  -jar unknow-server-test/unknow-server-test-jar/target/server.jar server-native-intrumented
         ./server-native-intrumented --shutdown :8009 --http-addr :8080 --https-addr :8443 --keystore store.jks --keypass 123456 > dev/null 2>&1 &
         pid=$?
         bash bench/tests.sh 127.0.0.1 1  50000 30 $pid
