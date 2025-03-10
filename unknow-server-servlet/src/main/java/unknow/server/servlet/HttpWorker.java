@@ -39,7 +39,6 @@ public class HttpWorker implements Runnable {
 				if (!res.isCommitted())
 					res.sendError(500, e, null);
 			}
-			ctx.events().fireRequestDestroyed(req);
 		} catch (Throwable e) {
 			logger.error("processor error", e);
 			try {
@@ -57,6 +56,7 @@ public class HttpWorker implements Runnable {
 				Thread.currentThread().interrupt();
 			} catch (@SuppressWarnings("unused") IOException e) { // OK
 			}
+			ctx.events().fireRequestDestroyed(req);
 		}
 	}
 }
