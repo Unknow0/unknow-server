@@ -47,7 +47,7 @@ public abstract class ServletResponseImpl implements HttpServletResponse {
 	 * 
 	 * @param ctx netty context
 	 * @param servletCtx the servlet context
-	 * @param req  the request
+	 * @param req the request
 	 */
 	protected ServletResponseImpl(ChannelHandlerContext ctx, ServletContextImpl servletCtx, HttpServletRequest req) {
 		this.ctx = ctx;
@@ -80,6 +80,7 @@ public abstract class ServletResponseImpl implements HttpServletResponse {
 			writer.close();
 		if (stream != null)
 			stream.close();
+		rawOutput().close();
 		commit();
 		ctx.flush();
 	}

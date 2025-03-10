@@ -378,16 +378,12 @@ public abstract class AbstractHttpServer {
 
 		@Override
 		protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) {
-			try {
-				String receivedMessage = msg.toString(StandardCharsets.UTF_8).trim();
-				logger.info("{} {}", ctx.channel(), receivedMessage);
-				if ("shutdown".equals(receivedMessage))
-					allChannels.close().addListener(c -> ctx.close());
-				else
-					ctx.close();
-			} finally {
-				msg.release();
-			}
+			String receivedMessage = msg.toString(StandardCharsets.UTF_8).trim();
+			logger.info("{} {}", ctx.channel(), receivedMessage);
+			if ("shutdown".equals(receivedMessage))
+				allChannels.close().addListener(c -> ctx.close());
+			else
+				ctx.close();
 		}
 	}
 
