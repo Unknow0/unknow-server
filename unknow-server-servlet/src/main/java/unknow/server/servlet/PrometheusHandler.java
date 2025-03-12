@@ -20,7 +20,7 @@ import io.prometheus.client.GaugeMetricFamily;
 import io.prometheus.client.Histogram;
 
 public class PrometheusHandler extends ChannelDuplexHandler {
-	private static final Gauge activeConnections = Gauge.build().name("netty_connections_total").help("Current number of active connections").labelNames("addr").register();
+	private static final Gauge activeConnections = Gauge.build().name("netty_connections_active").help("Current number of active connections").labelNames("addr").register();
 	private static final Counter totalConnections = Counter.build().name("netty_connections_total").help("Total number of opened connections").labelNames("addr").register();
 	private static final Counter errors = Counter.build().name("netty_errors_total").help("Total number of errors").labelNames("addr", "exception").register();
 
@@ -28,7 +28,7 @@ public class PrometheusHandler extends ChannelDuplexHandler {
 
 	public static final PrometheusHandler HANDLER = new PrometheusHandler();
 
-	private final PooledByteBufCollector collector = new PooledByteBufCollector().register();
+	private static final PooledByteBufCollector collector = new PooledByteBufCollector().register();
 
 	private PrometheusHandler() {
 		collector.track(PooledByteBufAllocator.DEFAULT);
@@ -74,7 +74,7 @@ public class PrometheusHandler extends ChannelDuplexHandler {
 	}
 
 	private static final class PooledByteBufCollector extends Collector {
-		private static final List<String> LABEL = Arrays.asList("name");
+		private static final List<String> LABEL = Arrays.asList("name", "area");
 
 		private final Map<ByteBufAllocatorMetricProvider, Object> map = new ConcurrentHashMap<>();
 
@@ -94,14 +94,13 @@ public class PrometheusHandler extends ChannelDuplexHandler {
 		public List<MetricFamilySamples> collect() {
 			List<MetricFamilySamples> metrics = new ArrayList<>();
 
-			GaugeMetricFamily direct = new GaugeMetricFamily("netty_pooled_bytebuf_arena_chunk", "ByteBuf allocator chunksize", LABEL);
-			GaugeMetricFamily heap = new GaugeMetricFamily("netty_pooled_bytebuf_arena_chunk", "ByteBuf allocator chunksize", LABEL);
+			GaugeMetricFamily usedMem = new GaugeMetricFamily("netty_pooled_bytebuf_used_memory", "ByteBuf allocator chunksize", LABEL);
 			for (ByteBufAllocatorMetricProvider alloc : map.keySet()) {
-				List<String> label = Arrays.asList(name(alloc));
+				String name = name(alloc);
 
 				ByteBufAllocatorMetric m = alloc.metric();
-				heap.addMetric(label, m.usedHeapMemory());
-				direct.addMetric(label, m.usedHeapMemory());
+				usedMem.addMetric(Arrays.asList(name, "heap"), m.usedHeapMemory());
+				usedMem.addMetric(Arrays.asList(name, "direct"), m.usedDirectMemory());
 			}
 
 			return metrics;

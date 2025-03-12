@@ -22,9 +22,11 @@ jobs:
     - name: build pgo 
       run: |
         native-image --pgo-instrument --no-fallback -jar unknow-server-test/unknow-server-test-jar/target/server.jar server-native-intrumented
+		
+		keytool -genkey -alias server -keyalg RSA -validity 365 -keystore store.jks -storepass 123456 -storetype JKS -keypass 123456 -dname "C=FR"
         ./server-native-intrumented --shutdown :8009 --http-addr :8080 --https-addr :8443 --keystore store.jks --keypass 123456 &
         pid=$!
-        bash bench/tests.sh 127.0.0.1 1  50000 30 $pid  || true
+        bash bench/tests.sh 127.0.0.1 10  50000 30 $pid  || true
         echo 'shutdown' | nc 127.0.0.1 8009  || true
         sleep 10  || true
         kill -9 $pid 2>/dev/null || true
