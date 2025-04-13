@@ -21,7 +21,7 @@ import org.apache.commons.math3.distribution.TDistribution;
 
 public class ProcessResult {
 	private static final CSVFormat JTL = CSVFormat.newFormat(',').builder().setHeader().setSkipHeaderRecord(true).setQuote('"').build();
-	private static final CSVFormat CSV = CSVFormat.newFormat(' ');
+	private static final CSVFormat CSV = CSVFormat.newFormat(' ').builder().setIgnoreSurroundingSpaces(true).build();
 	private static final CSVFormat H2 = CSVFormat.newFormat('\t');
 
 	private static final double MILLI = 1000.;
@@ -39,19 +39,27 @@ public class ProcessResult {
 		Map<String, Result> stats = results.computeIfAbsent(n, k -> new HashMap<>());
 		try (CSVParser parser = CSVParser.parse(r, CSV)) {
 			for (CSVRecord l : parser) {
-				String name = l.get(0);
-				if ("duration".equals(name)) {
-					stats.computeIfAbsent(l.get(1), k -> new Result()).add(Double.parseDouble(l.get(2)), 0, -1, false);
-					continue;
+				try {
+					String name = l.get(0);
+					if ("duration".equals(name)) {
+						stats.computeIfAbsent(l.get(1), k -> new Result()).add(Double.parseDouble(l.get(2)), 0, -1, false);
+						continue;
+					}
+
+					if (l.size() < 4) {
+						stats.computeIfAbsent(name, k -> new Result()).addErr();
+						continue;
+					}
+					tests.add(name);
+
+					boolean e = !("missing".equals(name) ? "404" : "200").equals(l.get(1));
+					double v = Double.parseDouble(l.get(2));
+					double c = Double.parseDouble(l.get(3));
+
+					stats.computeIfAbsent(name, k -> new Result()).add(0, v, c, e);
+				} catch (Exception e) {
+					throw new IOException("line " + l.getRecordNumber() + " " + e.getMessage());
 				}
-
-				tests.add(name);
-
-				boolean e = !("missing".equals(name) ? "404" : "200").equals(l.get(1));
-				double v = Double.parseDouble(l.get(2));
-				double c = Double.parseDouble(l.get(3));
-
-				stats.computeIfAbsent(name, k -> new Result()).add(0, v, c, e);
 			}
 		}
 	}
@@ -156,8 +164,8 @@ public class ProcessResult {
 					for (Path p : out) {
 						try (BufferedReader r = Files.newBufferedReader(p)) {
 							process.readCsv(r, s);
-						} catch (IOException e) {
-							System.err.println(e.getMessage());
+						} catch (Exception e) {
+							System.err.println(p + " " + e.getMessage());
 						}
 					}
 				}
@@ -190,6 +198,10 @@ public class ProcessResult {
 		public Result() {
 			this.time = new Stat();
 			this.latency = new Stat();
+		}
+
+		public void addErr() {
+			err++;
 		}
 
 		public void add(double t, double v, double c, boolean e) {
