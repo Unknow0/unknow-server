@@ -13,9 +13,8 @@ public interface NIOConnectionHandler {
 	 * 
 	 * @param co the connection
 	 * @param sslEngine the sslEngine for ssl connection null for other
-	 * @throws InterruptedException on interrupt
 	 */
-	void onInit(NIOConnectionAbstract co, SSLEngine sslEngine) throws InterruptedException;
+	void onInit(NIOConnectionAbstract co, SSLEngine sslEngine);
 
 	/**
 	 * called when the handshake process finish

@@ -45,6 +45,10 @@ public abstract class NIOConnectionAbstract {
 	protected long lastRead;
 	protected long lastWrite;
 
+	long lastCheck;
+	NIOConnectionAbstract next;
+	NIOConnectionAbstract prev;
+
 	/**
 	 * create new connection
 	 * 
@@ -94,16 +98,19 @@ public abstract class NIOConnectionAbstract {
 	 */
 	protected abstract void writeInto(ByteBuffer buf) throws InterruptedException, IOException;
 
-	public void toggleKeyOps() {
-		key.interestOps(pendingWrite.isEmpty() ? SelectionKey.OP_READ : SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+	@SuppressWarnings("resource")
+	public final void toggleKeyOps() {
+		int desired = pendingWrite.isEmpty() ? SelectionKey.OP_READ : SelectionKey.OP_READ | SelectionKey.OP_WRITE;
+		if (desired != key.interestOps()) {
+			key.interestOps(desired);
+			key.selector().wakeup();
+		}
 	}
 
-	@SuppressWarnings("resource")
-	public void flush() {
+	public final void flush() {
 		if (pendingWrite.isEmpty())
 			return;
 		toggleKeyOps();
-		key.selector().wakeup();
 	}
 
 	/**
@@ -190,6 +197,11 @@ public abstract class NIOConnectionAbstract {
 	 * @throws IOException on io error
 	 */
 	public final void free() throws IOException {
+		key.cancel();
+		try {
+			key.channel().close();
+		} catch (@SuppressWarnings("unused") IOException e) { // ignore
+		}
 		out.close();
 		pendingWrite.clear();
 		pendingRead.clear();

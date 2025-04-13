@@ -30,11 +30,9 @@ public class NIOConnectionPlain extends NIOConnectionAbstract {
 
 	/**
 	 * called after the connection is initialized
-	 * 
-	 * @throws InterruptedException on interrupt
 	 */
 	@Override
-	protected final void onInit() throws InterruptedException { // for override
+	protected final void onInit() { // for override
 		handler.onInit(this, null);
 	}
 

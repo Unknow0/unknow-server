@@ -99,7 +99,7 @@ public final class HttpConnection implements NIOConnectionHandler {
 			return false;
 
 		if (p == null && co.lastRead() < now - 1000) {
-			logger.warn("request timeout {}", this);
+			logger.warn("request timeout {}", co);
 			return true;
 		}
 
@@ -109,7 +109,7 @@ public final class HttpConnection implements NIOConnectionHandler {
 			if (keepAliveMs > 0) {
 				long e = now - keepAliveMs - 500;
 				if (co.lastRead() <= e && co.lastWrite() <= e) {
-					logger.info("keep alive idle reached {}", this);
+					logger.info("keep alive idle reached {}", co);
 					return true;
 				}
 			}

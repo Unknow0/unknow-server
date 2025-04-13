@@ -10,8 +10,6 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayDeque;
 import java.util.Queue;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 
 import org.slf4j.Logger;
@@ -30,14 +28,13 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	/** the listener */
 	private final NIOServerListener listener;
 
-	/** used for all synchronization */
-	private final Lock mutex;
 	/** buffer to read/write */
 	private final ByteBuffer buf;
 
-	private final Queue<SelectionKey> init;
+	private final Queue<Runnable> tasks;
 
-	private long lastCheck;
+	private NIOConnectionAbstract head;
+	private NIOConnectionAbstract tail;
 
 	/**
 	 * create new IOWorker
@@ -52,9 +49,9 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		this.id = id;
 		this.listener = listener;
 
-		this.mutex = new ReentrantLock();
 		this.buf = ByteBuffer.allocateDirect(25000);
-		this.init = new ArrayDeque<>();
+		this.tasks = new ArrayDeque<>();
+
 	}
 
 	/**
@@ -65,35 +62,28 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	 * @throws IOException on ioexception
 	 * @throws InterruptedException on interrupt
 	 */
-	@SuppressWarnings("resource")
 	@Override
 	public final void register(SocketChannel socket, Function<SelectionKey, NIOConnectionAbstract> pool) throws IOException, InterruptedException {
-		socket.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.TRUE).configureBlocking(false);
-		mutex.lockInterruptibly();
-		try {
-			selector.wakeup();
-			SelectionKey key = socket.register(selector, 0);
-			init.add(key);
-			key.attach(pool.apply(key));
-		} finally {
-			mutex.unlock();
-		}
+		tasks.add(new RegisterTask(socket, pool));
+		selector.wakeup();
 	}
 
 	@Override
 	@SuppressWarnings("resource")
 	protected final void selected(SelectionKey key) throws IOException, InterruptedException {
-		NIOConnectionAbstract h = (NIOConnectionAbstract) key.attachment();
+		NIOConnectionAbstract co = (NIOConnectionAbstract) key.attachment();
 		SocketChannel channel = (SocketChannel) key.channel();
 
 		if (key.isValid() && key.isWritable()) {
 			try {
-				h.writeInto(buf);
+				co.lastWrite = System.currentTimeMillis();
+				toTail(co);
+				co.writeInto(buf);
 			} catch (InterruptedException e) {
-				logger.error("failed to write {}", h, e);
+				logger.error("failed to write {}", co, e);
 				Thread.currentThread().interrupt();
 			} catch (Exception e) {
-				logger.error("failed to write {}", h, e);
+				logger.error("failed to write {}", co, e);
 				channel.close();
 			} finally {
 				buf.clear();
@@ -103,12 +93,13 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		// Tests whether this key's channel is ready to accept a new socket connection
 		if (key.isValid() && key.isReadable()) {
 			try {
-				h.readFrom(buf);
+				toTail(co);
+				co.readFrom(buf);
 			} catch (InterruptedException e) {
-				logger.error("failed to read {}", h, e);
+				logger.error("failed to read {}", co, e);
 				Thread.currentThread().interrupt();
 			} catch (Exception e) {
-				logger.error("failed to read {}", h, e);
+				logger.error("failed to read {}", co, e);
 				channel.close();
 			} finally {
 				buf.clear();
@@ -118,38 +109,88 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 
 	@Override
 	protected void onSelect(boolean close) throws InterruptedException {
-		mutex.lock();
-		try {
-			SelectionKey k;
-			while ((k = init.poll()) != null) {
-				k.interestOps(SelectionKey.OP_READ);
-				NIOConnectionAbstract co = (NIOConnectionAbstract) k.attachment();
-				listener.accepted(id, co);
-				co.onInit();
-			}
+		Runnable r;
+		while ((r = tasks.poll()) != null)
+			r.run();
 
-			long now = System.currentTimeMillis();
-			if (now - lastCheck < timeout)
-				return;
-			lastCheck = now;
-			for (SelectionKey key : selector.keys()) {
-				NIOConnectionAbstract co = (NIOConnectionAbstract) key.attachment();
-				if (!key.isValid() || co.closed(now, close)) {
-					listener.closed(id, co);
-					key.cancel();
-					try {
-						key.channel().close();
-					} catch (@SuppressWarnings("unused") IOException e) { // ignore
-					}
-					try {
-						co.free();
-					} catch (Exception e) {
-						logger.warn("Failed to free connection {}", co, e);
-					}
+		long now = System.currentTimeMillis();
+		long end = now - 1000;
+		NIOConnectionAbstract co = head;
+		while (co != null && co.lastCheck < end) {
+			if (!co.key.isValid() || co.closed(now, close)) {
+				listener.closed(id, co);
+				try {
+					co.free();
+				} catch (Exception e) {
+					logger.warn("Failed to free connection {}", co, e);
 				}
+				remove(co);
 			}
-		} finally {
-			mutex.unlock();
+			co = co.next;
 		}
+	}
+
+	private final class RegisterTask implements Runnable {
+		private final SocketChannel socket;
+		private final Function<SelectionKey, NIOConnectionAbstract> pool;
+
+		public RegisterTask(SocketChannel socket, Function<SelectionKey, NIOConnectionAbstract> pool) {
+			this.socket = socket;
+			this.pool = pool;
+		}
+
+		@SuppressWarnings("resource")
+		@Override
+		public void run() {
+			SelectionKey key = null;
+			try {
+				socket.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.TRUE).setOption(StandardSocketOptions.TCP_NODELAY, Boolean.TRUE).configureBlocking(false);
+				key = socket.register(selector, SelectionKey.OP_READ);
+			} catch (IOException e) {
+				try {
+					socket.close();
+				} catch (IOException ex) {
+					e.addSuppressed(ex);
+				}
+				logger.warn("Failed to register socket", e);
+				return;
+			}
+			NIOConnectionAbstract co = pool.apply(key);
+			listener.accepted(id, co);
+			key.attach(co);
+			toTail(co);
+			try {
+				co.onInit();
+			} catch (@SuppressWarnings("unused") InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
+		}
+	}
+
+	private final void remove(NIOConnectionAbstract co) {
+		if (co.prev != null)
+			co.prev.next = co.next;
+		if (co.next != null)
+			co.next.prev = co.prev;
+
+		if (head == co)
+			head = co.next;
+		if (tail == co)
+			tail = co.prev;
+	}
+
+	private final void toTail(NIOConnectionAbstract co) {
+		co.lastCheck = System.currentTimeMillis();
+		if (co.prev != null)
+			co.prev.next = co.next;
+		if (co.next != null)
+			co.next.prev = co.prev;
+		co.next = null;
+		co.prev = tail;
+		if (tail != null)
+			tail.next = co;
+		tail = co;
+		if (head == null)
+			head = co;
 	}
 }
