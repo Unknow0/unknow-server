@@ -7,23 +7,18 @@ t=$4
 pid=$5
 out=$6
 
-out() {
-	if [[ -z $out ]]
-	then
-		cat - > /dev/null
-	else
-		mkdir -p $out
-		cat - >> $out/$1.csv
-	fi
-}
+
+[[ -n $out ]] && mkdir -p $out
 
 curls() {
 	local n=$1
 	shift
 	for((i=0; i<$p; i++))
 	do
-		curl -s -o /dev/null --no-progress-meter -w "$n %{response_code} %{time_total} %{time_starttransfer} %{errormsg}\n" "$@" | out $i &
+		log=[[ -z "$out" ]] && "/dev/null" || "$out/$i.csv"
+		curl -s -o /dev/null --no-progress-meter -w "$n %{response_code} %{time_total} %{time_starttransfer} %{errormsg}\n" "$@" >> $log
 	done
+	
 	waitpid $t $(jobs -p) || kill -3 $pid 2>/dev/null
 	kill $(jobs -p) 2> /dev/null
 }

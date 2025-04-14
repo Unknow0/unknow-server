@@ -76,7 +76,6 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 
 		if (key.isValid() && key.isWritable()) {
 			try {
-				co.lastWrite = System.currentTimeMillis();
 				toTail(co);
 				co.writeInto(buf);
 			} catch (InterruptedException e) {
