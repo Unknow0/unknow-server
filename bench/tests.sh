@@ -13,11 +13,18 @@ out=$6
 curls() {
 	local n=$1
 	shift
-	for((i=0; i<$p; i++))
-	do
-		log=[[ -z "$out" ]] && "/dev/null" || "$out/$i.csv"
-		curl -s -o /dev/null --no-progress-meter -w "$n %{response_code} %{time_total} %{time_starttransfer} %{errormsg}\n" "$@" >> $log
-	done
+	if [[ -z "$out" ]]
+	then
+		for((i=0; i<$p; i++))
+		do
+			curl -s -o /dev/null --no-progress-meter "$@"
+		done
+	else
+		for((i=0; i<$p; i++))
+		do
+			curl -s -o /dev/null --no-progress-meter -w "$n %{response_code} %{time_total} %{time_starttransfer} %{errormsg}\n" "$@" | tee "$out/$1.csv" > /dev/null
+		done
+	fi
 	
 	waitpid $t $(jobs -p) || kill -3 $pid 2>/dev/null
 	kill $(jobs -p) 2> /dev/null
