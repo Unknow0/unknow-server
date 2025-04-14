@@ -13,14 +13,11 @@ out=$6
 curls() {
 	local n=$1
 	shift
-	if 
-	then
-		for((i=0; i<$p; i++))
-		do
-			[[ -z "$out" ]] && f="/dev/null" || f="$out/$1.csv"
-			curl -s -o /dev/null --no-progress-meter -w "%output{$f} $n %{response_code} %{time_total} %{time_starttransfer} %{errormsg}\n" "$@" | tee "$out/$1.csv" > /dev/null
-		done
-	fi
+	for((i=0; i<$p; i++))
+	do
+		[[ -z "$out" ]] && f="/dev/null" || f="$out/$1.csv"
+		curl -s -o /dev/null --no-progress-meter -w "%output{$f} $n %{response_code} %{time_total} %{time_starttransfer} %{errormsg}\n" "$@" | tee "$out/$1.csv" > /dev/null
+	done
 	
 	waitpid $t $(jobs -p) || kill -3 $pid 2>/dev/null
 	kill $(jobs -p) 2> /dev/null
@@ -42,7 +39,8 @@ waitpid() {
 test() {
 	TIMEFORMAT="duration $1 %R"
 	echo "run $1"
-	{ time curls "$@"; } |& tee "$out/times.csv"
+	[[ -z "$out" ]] && f="/dev/null" || f="$out/$1.csv"
+	{ time curls "$@"; } |& tee "$f"
 }
 
 test missing -XGET http://$h:8080/missing?[1-$c]
