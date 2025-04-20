@@ -16,7 +16,7 @@ curls() {
 	for((i=0; i<$p; i++))
 	do
 		[[ -z "$out" ]] && f="/dev/null" || f="$out/$i.csv"
-		curl -s -o /dev/null --no-progress-meter -w "%output{$f} $n %{response_code} %{time_total} %{time_starttransfer} %{errormsg}\n" "$@"
+		curl -s -o /dev/null --no-progress-meter -w "%output{$f} $n %{response_code} %{time_total} %{time_starttransfer} %{errormsg}\n" "$@" &
 	done
 	
 	waitpid $t $(jobs -p) || kill -3 $pid 2>/dev/null
