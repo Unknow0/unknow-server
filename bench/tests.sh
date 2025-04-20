@@ -3,9 +3,7 @@
 h=$1
 p=$2
 c=$3
-t=$4
-pid=$5
-out=$6
+out=$4
 
 
 [[ -n $out ]] && mkdir -p $out

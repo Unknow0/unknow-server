@@ -69,21 +69,19 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	}
 
 	@Override
-	@SuppressWarnings("resource")
 	protected final void selected(SelectionKey key) throws IOException, InterruptedException {
 		NIOConnectionAbstract co = (NIOConnectionAbstract) key.attachment();
-		SocketChannel channel = (SocketChannel) key.channel();
 
 		if (key.isValid() && key.isWritable()) {
 			try {
-				toTail(co);
 				co.writeInto(buf);
+				toTail(co);
 			} catch (InterruptedException e) {
 				logger.error("failed to write {}", co, e);
 				Thread.currentThread().interrupt();
 			} catch (Exception e) {
 				logger.error("failed to write {}", co, e);
-				channel.close();
+				close(co);
 			} finally {
 				buf.clear();
 			}
@@ -99,7 +97,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 				Thread.currentThread().interrupt();
 			} catch (Exception e) {
 				logger.error("failed to read {}", co, e);
-				channel.close();
+				close(co);
 			} finally {
 				buf.clear();
 			}
@@ -119,15 +117,9 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		long end = now - 1000;
 		NIOConnectionAbstract co = head;
 		while (co != null && co.lastCheck < end) {
-			if (!co.key.isValid() || co.closed(now, close)) {
-				listener.closed(id, co);
-				try {
-					co.free();
-				} catch (Exception e) {
-					logger.warn("Failed to free connection {}", co, e);
-				}
-				remove(co);
-			} else
+			if (!co.key.isValid() || co.closed(now, close))
+				close(co);
+			else
 				co.lastCheck = now;
 			co = co.next;
 		}
@@ -136,8 +128,23 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		if (co != null && co.prev != null) {
 			tail.next = head;
 			head.prev = tail;
+
 			tail = co.prev;
+			tail.next = null;
+
+			co.prev = null;
+			head = co;
 		}
+	}
+
+	private void close(NIOConnectionAbstract co) {
+		listener.closed(id, co);
+		try {
+			co.free();
+		} catch (Exception e) {
+			logger.warn("Failed to free connection {}", co, e);
+		}
+		remove(co);
 	}
 
 	private final class RegisterTask implements Runnable {
