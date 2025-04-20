@@ -16,24 +16,10 @@ curls() {
 	for((i=0; i<$p; i++))
 	do
 		[[ -z "$out" ]] && f="/dev/null" || f="$out/$i.csv"
-		curl -s -o /dev/null --no-progress-meter -w "%output{$f} $n %{response_code} %{time_total} %{time_starttransfer} %{errormsg}\n" "$@" &
+		curl -s -o /dev/null --no-progress-meter -w "%output{$f}$n %{response_code} %{time_total} %{time_starttransfer} %{errormsg}\n" "$@" &
 	done
-	
-	waitpid $t $(jobs -p) || kill -3 $pid 2>/dev/null
-	kill $(jobs -p) 2> /dev/null
-}
 
-waitpid() {
-	i=$1
-	shift
-	for p in "$@"
-	do
-		while kill -0 $p 2> /dev/null
-		do
-	   		sleep 1
-			((--i < 1)) && return 1
-		done
-	done
+	wait
 }
 
 test() {
@@ -43,9 +29,9 @@ test() {
 	{ time curls "$@"; } |& tee "$f"
 }
 
-test missing -XGET http://$h:8080/missing?[1-$c]
-test simple -XGET  http://$h:8080/test?[1-$c]
-test ssl -k --http1.1 -XGET https://$h:8443/test?[1-$c]
-test ws -XPOST -d@bench/req/ws.xml  http://$h:8080/ws?[1-$c]
-test rest -XPOST -H 'Accept: application/json' -H 'Content-type: application/json' -d'{"v":"toto"}' http://$h:8080/rest/[1-$c]
-test http2 -k --http2 --parallel-immediate --parallel-max 10 -XGET https://$h:8443/test?[1-$c]
+test missing -m .005 -XGET http://$h:8080/missing?[1-$c]
+test simple  -m .005 -XGET http://$h:8080/test?[1-$c]
+test ssl     -m .005 -k --http1.1 -XGET https://$h:8443/test?[1-$c]
+test ws      -m .005 -XPOST -d@bench/req/ws.xml  http://$h:8080/ws?[1-$c]
+test rest    -m .005 -XPOST -H 'Accept: application/json' -H 'Content-type: application/json' -d'{"v":"toto"}' http://$h:8080/rest/[1-$c]
+test http2   -m .005 -k --http2 --parallel-immediate --parallel-max 10 -XGET https://$h:8443/test?[1-$c]
