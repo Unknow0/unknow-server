@@ -82,11 +82,12 @@ public abstract class NIOConnectionAbstract {
 	 * read data from the channel and try to handles it
 	 * 
 	 * @param buf output buffer
+	 * @return  true if something is read
 	 * 
 	 * @throws InterruptedException on interrupt
 	 * @throws IOException on io exception
 	 */
-	protected abstract void readFrom(ByteBuffer buf) throws InterruptedException, IOException;
+	protected abstract boolean readFrom(ByteBuffer buf) throws InterruptedException, IOException;
 
 	/**
 	 * write pending data to the channel

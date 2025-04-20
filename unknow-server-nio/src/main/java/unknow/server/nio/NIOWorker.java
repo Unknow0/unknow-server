@@ -92,8 +92,8 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		// Tests whether this key's channel is ready to accept a new socket connection
 		if (key.isValid() && key.isReadable()) {
 			try {
-				toTail(co);
-				co.readFrom(buf);
+				if (co.readFrom(buf))
+					toTail(co);
 			} catch (InterruptedException e) {
 				logger.error("failed to read {}", co, e);
 				Thread.currentThread().interrupt();
@@ -112,6 +112,9 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		while ((r = tasks.poll()) != null)
 			r.run();
 
+		if (head == null)
+			return;
+
 		long now = System.currentTimeMillis();
 		long end = now - 1000;
 		NIOConnectionAbstract co = head;
@@ -124,8 +127,16 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 					logger.warn("Failed to free connection {}", co, e);
 				}
 				remove(co);
-			}
+			} else
+				co.lastCheck = now;
 			co = co.next;
+		}
+
+		// move all to tail
+		if (co != null && co.prev != null) {
+			tail.next = head;
+			head.prev = tail;
+			tail = co.prev;
 		}
 	}
 
@@ -180,6 +191,8 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 
 	private final void toTail(NIOConnectionAbstract co) {
 		co.lastCheck = System.currentTimeMillis();
+		if (tail == co)
+			return;
 		if (co.prev != null)
 			co.prev.next = co.next;
 		if (co.next != null)

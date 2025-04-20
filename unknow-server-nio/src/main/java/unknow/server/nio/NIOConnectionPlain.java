@@ -36,26 +36,18 @@ public class NIOConnectionPlain extends NIOConnectionAbstract {
 		handler.onInit(this, null);
 	}
 
-	/**
-	 * read data from the channel and try to handles it
-	 * 
-	 * @param buf output buffer
-	 * 
-	 * @throws InterruptedException on interrupt
-	 * @throws IOException on io exception
-	 */
 	@Override
-	protected final void readFrom(ByteBuffer buf) throws InterruptedException, IOException {
+	protected final boolean readFrom(ByteBuffer buf) throws InterruptedException, IOException {
 		int l;
 		lastRead = System.currentTimeMillis();
 		while (true) {
 			l = channel.read(buf);
 			if (l == -1) {
 				in.close();
-				return;
+				return false;
 			}
 			if (l == 0)
-				return;
+				return true;
 			buf.flip();
 
 			if (logger.isTraceEnabled()) {

@@ -56,19 +56,19 @@ public class NIOConnectionSSL extends NIOConnectionAbstract {
 	}
 
 	@Override
-	protected final void readFrom(ByteBuffer buf) throws InterruptedException, IOException {
+	protected final boolean readFrom(ByteBuffer buf) throws InterruptedException, IOException {
 		lastRead = System.currentTimeMillis();
 		if (processHandshake())
-			return;
+			return true;
 		int l;
 		while (true) {
 			l = channel.read(rawIn);
 			if (l == -1) {
 				in.close();
-				return;
+				return false;
 			}
 			if (l == 0 && rawIn.position() == 0)
-				return;
+				return true;
 			rawIn.flip();
 			SSLEngineResult r = sslEngine.unwrap(rawIn, app);
 			logger.debug("unwrap {}", r.getStatus());

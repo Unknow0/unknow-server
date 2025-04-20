@@ -16,7 +16,7 @@ curls() {
 	for((i=0; i<$p; i++))
 	do
 		[[ -z "$out" ]] && f="/dev/null" || f="$out/$i.csv"
-		curl -s -o /dev/null --no-progress-meter -w "%output{$f} $n %{response_code} %{time_total} %{time_starttransfer} %{errormsg}\n" "$@" | tee "$out/$1.csv" > /dev/null
+		curl -s -o /dev/null --no-progress-meter -w "%output{$f} $n %{response_code} %{time_total} %{time_starttransfer} %{errormsg}\n" "$@"
 	done
 	
 	waitpid $t $(jobs -p) || kill -3 $pid 2>/dev/null
@@ -39,7 +39,7 @@ waitpid() {
 test() {
 	TIMEFORMAT="duration $1 %R"
 	echo "run $1"
-	[[ -z "$out" ]] && f="/dev/null" || f="$out/$times.csv"
+	[[ -z "$out" ]] && f="/dev/null" || f="$out/times.csv"
 	{ time curls "$@"; } |& tee "$f"
 }
 
