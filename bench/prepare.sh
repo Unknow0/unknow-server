@@ -10,6 +10,3 @@ mkdir -p tomcat
 wget -O - https://dlcdn.apache.org/tomcat/tomcat-$TOMCAT/v$VER/bin/apache-tomcat-$VER.tar.gz | tar xzf - --strip-components=1 -C tomcat
 rm -r tomcat/webapps/*
 cp bench/server.xml tomcat/conf/
-
-ulimit -a
-sudo ulimit -n unlimited
