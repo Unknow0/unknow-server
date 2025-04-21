@@ -99,21 +99,22 @@ public class NIOLoop implements Runnable {
 	}
 
 	private final void select(long timeout, boolean close) throws IOException, InterruptedException {
-		onSelect(close);
-		if (selector.select(timeout) == 0)
-			return;
-		Iterator<SelectionKey> it = selector.selectedKeys().iterator();
-
-		while (it.hasNext()) {
-			SelectionKey next = it.next();
-			it.remove();
-			try {
-				selected(next);
-			} catch (IOException e) {
-				logger.warn("{}", next, e);
-				next.cancel();
+		long now = System.currentTimeMillis();
+		onSelect(now, close);
+		if (selector.select(timeout) > 0) {
+			Iterator<SelectionKey> it = selector.selectedKeys().iterator();
+			while (it.hasNext()) {
+				SelectionKey next = it.next();
+				it.remove();
+				try {
+					selected(now, next);
+				} catch (IOException e) {
+					logger.warn("{}", next, e);
+					next.cancel();
+				}
 			}
 		}
+
 	}
 
 	/**
@@ -124,23 +125,25 @@ public class NIOLoop implements Runnable {
 
 	/**
 	 * call for each selected key
-	 * 
+	 * @param now currentTimeMillis
 	 * @param key the selected key
+	 * 
 	 * @throws IOException on ioexception
 	 * @throws InterruptedException on interrupt
 	 */
 	@SuppressWarnings("unused")
-	protected void selected(SelectionKey key) throws IOException, InterruptedException { // for override
+	protected void selected(long now, SelectionKey key) throws IOException, InterruptedException { // for override
 	}
 
 	/**
 	 * process after each selection loop
-	 * 
+	 * @param now currentTimeMillis
 	 * @param close true if we are closing
+	 * 
 	 * @throws InterruptedException on interrupt
 	 */
 	@SuppressWarnings("unused")
-	protected void onSelect(boolean close) throws InterruptedException { // for override
+	protected void onSelect(long now, boolean close) throws InterruptedException { // for override
 	}
 
 	/**

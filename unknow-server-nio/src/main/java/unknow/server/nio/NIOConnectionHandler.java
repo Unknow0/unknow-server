@@ -44,7 +44,7 @@ public interface NIOConnectionHandler {
 	/**
 	 * check if the connection is closed and should be stoped
 	 * 
-	 * @param now System.currentMillis()
+	 * @param now currentTimeMillis
 	 * @param stop if true the server is in stop phase
 	 * @return true is the collection is closed
 	 */

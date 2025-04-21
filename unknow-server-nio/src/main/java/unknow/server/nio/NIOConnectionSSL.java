@@ -22,8 +22,8 @@ public class NIOConnectionSSL extends NIOConnectionAbstract {
 	private final ByteBuffer rawOut;
 	private final ByteBuffer app;
 
-	public NIOConnectionSSL(SelectionKey key, NIOConnectionHandler handler, SSLContext sslContext) {
-		super(key, handler);
+	public NIOConnectionSSL(SelectionKey key, long now, NIOConnectionHandler handler, SSLContext sslContext) {
+		super(key, now, handler);
 		this.sslEngine = sslContext.createSSLEngine(getRemote().getHostString(), getRemote().getPort());
 		this.rawIn = ByteBuffer.allocate(sslEngine.getSession().getPacketBufferSize());
 		this.rawOut = ByteBuffer.allocate(sslEngine.getSession().getPacketBufferSize());
@@ -56,8 +56,8 @@ public class NIOConnectionSSL extends NIOConnectionAbstract {
 	}
 
 	@Override
-	protected final boolean readFrom(ByteBuffer buf) throws InterruptedException, IOException {
-		lastRead = System.currentTimeMillis();
+	protected final boolean readFrom(ByteBuffer buf, long now) throws InterruptedException, IOException {
+		lastRead = now;
 		if (processHandshake())
 			return true;
 		int l;
@@ -82,8 +82,8 @@ public class NIOConnectionSSL extends NIOConnectionAbstract {
 	}
 
 	@Override
-	protected final void writeInto(ByteBuffer buf) throws InterruptedException, IOException {
-		lastWrite = System.currentTimeMillis();
+	protected final void writeInto(ByteBuffer buf, long now) throws InterruptedException, IOException {
+		lastWrite = now;
 		if (rawOut.remaining() > 0) {
 			channel.write(rawOut);
 			return;

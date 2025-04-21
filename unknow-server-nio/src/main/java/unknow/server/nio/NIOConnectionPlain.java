@@ -22,10 +22,11 @@ public class NIOConnectionPlain extends NIOConnectionAbstract {
 	 * create new connection
 	 * 
 	 * @param key the selectionKey
+	 * @param now currentTimeMillis
 	 * @param handler the connection handler
 	 */
-	public NIOConnectionPlain(SelectionKey key, NIOConnectionHandler handler) {
-		super(key, handler);
+	public NIOConnectionPlain(SelectionKey key, long now, NIOConnectionHandler handler) {
+		super(key, now, handler);
 	}
 
 	/**
@@ -37,9 +38,9 @@ public class NIOConnectionPlain extends NIOConnectionAbstract {
 	}
 
 	@Override
-	protected final boolean readFrom(ByteBuffer buf) throws InterruptedException, IOException {
+	protected final boolean readFrom(ByteBuffer buf, long now) throws InterruptedException, IOException {
 		int l;
-		lastRead = System.currentTimeMillis();
+		lastRead = now;
 		while (true) {
 			l = channel.read(buf);
 			if (l == -1) {
@@ -62,17 +63,10 @@ public class NIOConnectionPlain extends NIOConnectionAbstract {
 		}
 	}
 
-	/**
-	 * write pending data to the channel
-	 * 
-	 * @param buf local cache
-	 * 
-	 * @throws InterruptedException on interrupt
-	 * @throws IOException on io exception
-	 */
+
 	@Override
-	protected final void writeInto(ByteBuffer buf) throws InterruptedException, IOException {
-		lastWrite = System.currentTimeMillis();
+	protected final void writeInto(ByteBuffer buf, long now) throws InterruptedException, IOException {
+		lastWrite = now;
 		while (pendingWrite.read(buf, false)) {
 			buf.flip();
 

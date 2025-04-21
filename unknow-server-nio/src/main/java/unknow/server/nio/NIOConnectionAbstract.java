@@ -55,12 +55,12 @@ public abstract class NIOConnectionAbstract {
 	 * @param key the selectionKey
 	 * @param handler the handler
 	 */
-	protected NIOConnectionAbstract(SelectionKey key, NIOConnectionHandler handler) {
+	protected NIOConnectionAbstract(SelectionKey key, long now, NIOConnectionHandler handler) {
 		this.key = key;
 		this.channel = (SocketChannel) key.channel();
 		this.handler = handler;
 		this.out = new Out(this);
-		lastRead = lastWrite = System.currentTimeMillis();
+		lastRead = lastWrite = now;
 		InetSocketAddress a;
 		try {
 			a = (InetSocketAddress) channel.getLocalAddress();
@@ -82,22 +82,23 @@ public abstract class NIOConnectionAbstract {
 	 * read data from the channel and try to handles it
 	 * 
 	 * @param buf output buffer
+	 * @param now currentTimeMillis
 	 * @return  true if something is read
 	 * 
 	 * @throws InterruptedException on interrupt
 	 * @throws IOException on io exception
 	 */
-	protected abstract boolean readFrom(ByteBuffer buf) throws InterruptedException, IOException;
+	protected abstract boolean readFrom(ByteBuffer buf, long now) throws InterruptedException, IOException;
 
 	/**
 	 * write pending data to the channel
 	 * 
 	 * @param buf local cache
-	 * 
+	 * @param now currentTimeMillis
 	 * @throws InterruptedException on interrupt
 	 * @throws IOException on io exception
 	 */
-	protected abstract void writeInto(ByteBuffer buf) throws InterruptedException, IOException;
+	protected abstract void writeInto(ByteBuffer buf, long now) throws InterruptedException, IOException;
 
 	@SuppressWarnings("resource")
 	public final void toggleKeyOps() {
@@ -184,7 +185,7 @@ public abstract class NIOConnectionAbstract {
 	/**
 	 * check if the connection is closed and should be stoped
 	 * 
-	 * @param now System.currentMillis()
+	 * @param now currentTimeMillis
 	 * @param stop if true the server is in stop phase
 	 * @return true is the collection is closed
 	 */

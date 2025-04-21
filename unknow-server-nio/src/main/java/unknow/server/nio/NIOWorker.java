@@ -10,10 +10,11 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayDeque;
 import java.util.Queue;
-import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import unknow.server.nio.NIOServer.ConnectionFactory;
 
 /**
  * Thread responsible of all io
@@ -31,7 +32,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	/** buffer to read/write */
 	private final ByteBuffer buf;
 
-	private final Queue<Runnable> tasks;
+	private final Queue<WorkerTask> tasks;
 
 	private NIOConnectionAbstract head;
 	private NIOConnectionAbstract tail;
@@ -58,24 +59,24 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	 * register a new socket to this thread
 	 * 
 	 * @param socket the socket to register
-	 * @param pool the connection factory
+	 * @param factory the connection factory
 	 * @throws IOException on ioexception
 	 * @throws InterruptedException on interrupt
 	 */
 	@Override
-	public final void register(SocketChannel socket, Function<SelectionKey, NIOConnectionAbstract> pool) throws IOException, InterruptedException {
-		tasks.add(new RegisterTask(socket, pool));
+	public final void register(SocketChannel socket, ConnectionFactory factory) throws IOException, InterruptedException {
+		tasks.add(new RegisterTask(socket, factory));
 		selector.wakeup();
 	}
 
 	@Override
-	protected final void selected(SelectionKey key) throws IOException, InterruptedException {
+	protected final void selected(long now, SelectionKey key) throws IOException, InterruptedException {
 		NIOConnectionAbstract co = (NIOConnectionAbstract) key.attachment();
 
 		if (key.isValid() && key.isWritable()) {
 			try {
-				co.writeInto(buf);
-				toTail(co);
+				co.writeInto(buf, now);
+				toTail(co, now);
 			} catch (InterruptedException e) {
 				logger.error("failed to write {}", co, e);
 				Thread.currentThread().interrupt();
@@ -90,8 +91,10 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		// Tests whether this key's channel is ready to accept a new socket connection
 		if (key.isValid() && key.isReadable()) {
 			try {
-				if (co.readFrom(buf))
-					toTail(co);
+				if (co.readFrom(buf, now))
+					toTail(co, now);
+				else if (!co.key.isValid() || co.closed(now, false))
+					close(co);
 			} catch (InterruptedException e) {
 				logger.error("failed to read {}", co, e);
 				Thread.currentThread().interrupt();
@@ -105,15 +108,14 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	}
 
 	@Override
-	protected void onSelect(boolean close) throws InterruptedException {
-		Runnable r;
+	protected void onSelect(long now, boolean close) throws InterruptedException {
+		WorkerTask r;
 		while ((r = tasks.poll()) != null)
-			r.run();
+			r.run(now);
 
 		if (head == null)
 			return;
 
-		long now = System.currentTimeMillis();
 		long end = now - 1000;
 		NIOConnectionAbstract co = head;
 		while (co != null && co.lastCheck < end) {
@@ -148,18 +150,22 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		remove(co);
 	}
 
-	private final class RegisterTask implements Runnable {
-		private final SocketChannel socket;
-		private final Function<SelectionKey, NIOConnectionAbstract> pool;
+	public static interface WorkerTask {
+		void run(long now);
+	}
 
-		public RegisterTask(SocketChannel socket, Function<SelectionKey, NIOConnectionAbstract> pool) {
+	private final class RegisterTask implements WorkerTask {
+		private final SocketChannel socket;
+		private final ConnectionFactory pool;
+
+		public RegisterTask(SocketChannel socket, ConnectionFactory pool) {
 			this.socket = socket;
 			this.pool = pool;
 		}
 
 		@SuppressWarnings("resource")
 		@Override
-		public void run() {
+		public void run(long now) {
 			SelectionKey key = null;
 			try {
 				socket.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.TRUE).setOption(StandardSocketOptions.TCP_NODELAY, Boolean.TRUE).configureBlocking(false);
@@ -173,10 +179,10 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 				logger.warn("Failed to register socket", e);
 				return;
 			}
-			NIOConnectionAbstract co = pool.apply(key);
+			NIOConnectionAbstract co = pool.build(key, now);
 			listener.accepted(id, co);
 			key.attach(co);
-			toTail(co);
+			toTail(co, now);
 			try {
 				co.onInit();
 			} catch (@SuppressWarnings("unused") InterruptedException e) {
@@ -202,8 +208,8 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		co.next = co.prev = null;
 	}
 
-	private final void toTail(NIOConnectionAbstract co) {
-		co.lastCheck = System.currentTimeMillis();
+	private final void toTail(NIOConnectionAbstract co, long now) {
+		co.lastCheck = now;
 
 		if (tail == co)
 			return;

@@ -6,9 +6,6 @@ unknow_start() {
 }
 unknow_stop() {
 	echo 'shutdown' | nc 127.0.0.1 8009
-	sleep 10
-	kill -9 $pid 2>/dev/null
-	pid=
 }
 native_start() {
 	chmod a+x server-native
@@ -17,9 +14,6 @@ native_start() {
 }
 native_stop() {
 	echo 'shutdown' | nc 127.0.0.1 8009
-	sleep 10
-	kill -9 $pid 2>/dev/null
-	pid=
 }
 tomcat_start() {
 	cp unknow-server-test/unknow-server-test-tomcat/target/*.war $CATALINA_HOME/webapps/ROOT.war || exit 1
@@ -28,9 +22,6 @@ tomcat_start() {
 }
 tomcat_stop() {
 	$CATALINA_HOME/bin/shutdown.sh
-	sleep 2
-	kill -9 $pid
-	pid=
 }
 
 cxf_start() {
@@ -38,7 +29,9 @@ cxf_start() {
 	$CATALINA_HOME/bin/catalina.sh run > logs/tomcat.log 2>&1 || exit 1 &
 	pid=$!
 }
-cxf_stop() { tomcat_stop; }
+cxf_stop() { 
+	$CATALINA_HOME/bin/shutdown.sh
+ }
 
 mkdir -p out logs
 trap '[[ "$pid" ]] && kill -9 $pid' EXIT
@@ -52,7 +45,8 @@ bash bench/tests.sh 127.0.0.1  1  50000
 
 sleep 10
 echo -e "\nTesting.."
-bash bench/tests.sh 127.0.0.1 10 100000 out/$1
+bash bench/tests.sh 127.0.0.1 10 500000 out/$1
 
-${1}_stop
+${1}_stop &
 sleep 10
+kill -9 $(jobs -p)
