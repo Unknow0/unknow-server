@@ -154,43 +154,6 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		void run(long now);
 	}
 
-	private final class RegisterTask implements WorkerTask {
-		private final SocketChannel socket;
-		private final ConnectionFactory pool;
-
-		public RegisterTask(SocketChannel socket, ConnectionFactory pool) {
-			this.socket = socket;
-			this.pool = pool;
-		}
-
-		@SuppressWarnings("resource")
-		@Override
-		public void run(long now) {
-			SelectionKey key = null;
-			try {
-				socket.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.TRUE).setOption(StandardSocketOptions.TCP_NODELAY, Boolean.TRUE).configureBlocking(false);
-				key = socket.register(selector, SelectionKey.OP_READ);
-			} catch (IOException e) {
-				try {
-					socket.close();
-				} catch (IOException ex) {
-					e.addSuppressed(ex);
-				}
-				logger.warn("Failed to register socket", e);
-				return;
-			}
-			NIOConnectionAbstract co = pool.build(key, now);
-			listener.accepted(id, co);
-			key.attach(co);
-			toTail(co, now);
-			try {
-				co.onInit();
-			} catch (@SuppressWarnings("unused") InterruptedException e) {
-				Thread.currentThread().interrupt();
-			}
-		}
-	}
-
 	private final void unlink(NIOConnectionAbstract co) {
 		if (co.prev != null)
 			co.prev.next = co.next;
@@ -223,5 +186,43 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		tail = co;
 		if (head == null)
 			head = co;
+	}
+
+	private final class RegisterTask implements WorkerTask {
+		private final SocketChannel socket;
+		private final ConnectionFactory pool;
+
+		public RegisterTask(SocketChannel socket, ConnectionFactory pool) {
+			this.socket = socket;
+			this.pool = pool;
+		}
+
+		@SuppressWarnings("resource")
+		@Override
+		public void run(long now) {
+			SelectionKey key = null;
+			try {
+				socket.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.TRUE).setOption(StandardSocketOptions.TCP_NODELAY, Boolean.TRUE).configureBlocking(false);
+				key = socket.register(selector, SelectionKey.OP_READ);
+			} catch (IOException e) {
+				try {
+					socket.close();
+				} catch (IOException ex) {
+					e.addSuppressed(ex);
+				}
+				logger.warn("Failed to register socket", e);
+				return;
+			}
+			NIOConnectionAbstract co = pool.build(key, now);
+			listener.accepted(id, co);
+			key.attach(co);
+			toTail(co, now);
+			try {
+				co.onInit();
+			} catch (Exception e) {
+				logger.warn("Failed to start connection", e);
+				close(co);
+			}
+		}
 	}
 }

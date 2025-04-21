@@ -76,7 +76,7 @@ public abstract class NIOConnectionAbstract {
 		remote = a;
 	}
 
-	protected abstract void onInit() throws InterruptedException;
+	protected abstract void onInit() throws InterruptedException, IOException;
 
 	/**
 	 * read data from the channel and try to handles it

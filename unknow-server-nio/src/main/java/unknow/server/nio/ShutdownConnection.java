@@ -37,7 +37,8 @@ public class ShutdownConnection implements NIOConnectionHandler {
 	}
 
 	@Override
-	public void onRead(Buffers b) throws InterruptedException, IOException { // ok
+	public void onRead(Buffers b) throws InterruptedException, IOException {
+		b.clear();
 	}
 
 	@Override

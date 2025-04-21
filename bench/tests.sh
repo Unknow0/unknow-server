@@ -23,9 +23,9 @@ test() {
 	} |& tee -a "$tout"
 }
 
-test missing -m 0.005 --resolve "*:8080:$h" -XGET http://$h:8080/missing?[1-$c]
-test simple  -m 0.005 --resolve "*:8080:$h" -XGET http://$h:8080/test?[1-$c]
-test ssl     -m 0.005 --resolve "*:8443:$h" -XGET -k --http1.1 https://$h:8443/test?[1-$c]
-test ws      -m 0.005 --resolve "*:8080:$h" -XPOST -d@bench/req/ws.xml  http://$h:8080/ws?[1-$c]
-test rest    -m 0.005 --resolve "*:8080:$h" -XPOST -H 'Accept: application/json' -H 'Content-type: application/json' -d'{"v":"toto"}' http://$h:8080/rest/[1-$c]
-test http2   -m 0.005 --resolve "*:8443:$h" -XGET -k --http2 https://host[1-5]:8443/test?[1-$c]
+test missing -m 0.01 -XGET http://$h:8080/missing?[1-$c]
+test simple  -m 0.01 -XGET http://$h:8080/test?[1-$c]
+test ssl     -m 0.01 -XGET -k --http1.1 https://$h:8443/test?[1-$c]
+test ws      -m 0.01 -XPOST -d@bench/req/ws.xml  http://$h:8080/ws?[1-$c]
+test rest    -m 0.01 -XPOST -H 'Accept: application/json' -H 'Content-type: application/json' -d'{"v":"toto"}' http://$h:8080/rest/[1-$c]
+test http2   -m 0.01 -XGET -k --http2 https://$h:8443/test?[1-$c]

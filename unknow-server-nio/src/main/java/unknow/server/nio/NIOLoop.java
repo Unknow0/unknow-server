@@ -24,6 +24,8 @@ public class NIOLoop implements Runnable {
 	/** the selector */
 	protected final Selector selector;
 
+	private volatile boolean closing;
+
 	/**
 	 * create new loop
 	 * @param name the thread name
@@ -47,7 +49,8 @@ public class NIOLoop implements Runnable {
 	 * stop the loop
 	 */
 	public final void stop() {
-		t.interrupt();
+		closing = true;
+		selector.wakeup();
 	}
 
 	/**
@@ -64,7 +67,7 @@ public class NIOLoop implements Runnable {
 	@Override
 	public final void run() {
 		onStartup();
-		while (!Thread.interrupted()) {
+		while (!closing) {
 			try {
 				select(timeout, false);
 			} catch (IOException e) {
