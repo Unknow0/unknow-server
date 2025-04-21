@@ -6,7 +6,6 @@ package unknow.server.servlet;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
 import javax.net.ssl.SSLEngine;
@@ -31,7 +30,6 @@ public final class HttpConnection implements NIOConnectionHandler {
 
 	private static final HttpProcessorFactory[] VERSIONS = new HttpProcessorFactory[] { Http2Processor.Factory, Http11Processor.Factory };
 
-	private final ExecutorService executor;
 	private final ServletContextImpl ctx;
 	private final ServletManager manager;
 	private final EventManager events;
@@ -43,13 +41,11 @@ public final class HttpConnection implements NIOConnectionHandler {
 	/**
 	 * create new RequestBuilder
 	 * 
-	 * @param executor the executor
 	 * @param ctx the servlet context
 	 * @param events
 	 * @param manager
 	 */
-	protected HttpConnection(ExecutorService executor, ServletContextImpl ctx, ServletManager manager, EventManager events, int keepAliveIdle) {
-		this.executor = executor;
+	protected HttpConnection(ServletContextImpl ctx, ServletManager manager, EventManager events, int keepAliveIdle) {
 		this.ctx = ctx;
 		this.manager = manager;
 		this.events = events;
@@ -130,9 +126,8 @@ public final class HttpConnection implements NIOConnectionHandler {
 		}
 	}
 
-	@SuppressWarnings("unchecked")
-	public <T> Future<T> submit(Runnable r) {
-		return (Future<T>) executor.submit(r);
+	public final <T> Future<T> submit(Runnable r) {
+		return co.submit(r);
 	}
 
 	public ServletContextImpl getCtx() {

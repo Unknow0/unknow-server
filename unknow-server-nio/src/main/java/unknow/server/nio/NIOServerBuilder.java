@@ -10,6 +10,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.DefaultParser;
@@ -165,17 +169,31 @@ public class NIOServerBuilder {
 		process(server, cli);
 		InetSocketAddress addr = parseAddr(cli, shutdown, "127.0.0.1");
 		if (addr != null)
-			server.bind(addr, (key, now) -> new NIOConnectionPlain(key, now, new ShutdownConnection(server)));
+			server.bind(addr, (exec, key, now) -> new NIOConnectionPlain(exec, key, now, new ShutdownConnection(server)));
 		return server;
 	}
 
 	private NIOWorkers createWorkers(int i, int selectTime, NIOServerListener l) throws IOException {
+		ExecutorService executor = getExecutor();
 		if (i == 1)
-			return new NIOWorker(0, l, selectTime);
+			return new NIOWorker(0, executor, l, selectTime);
 		NIOWorker[] w = new NIOWorker[i];
 		while (i > 0)
-			w[--i] = new NIOWorker(i, l, selectTime);
+			w[--i] = new NIOWorker(i, executor, l, selectTime);
 		return new RoundRobin(w);
+	}
+
+	protected ExecutorService getExecutor() {
+		return Executors.newCachedThreadPool(new ThreadFactory() {
+			private final AtomicInteger i = new AtomicInteger();
+
+			@Override
+			public Thread newThread(Runnable r) {
+				Thread t = new Thread(r, "exec-" + i.getAndIncrement());
+				t.setDaemon(true);
+				return t;
+			}
+		});
 	}
 
 	private NIOServerListener getListener(String l) {

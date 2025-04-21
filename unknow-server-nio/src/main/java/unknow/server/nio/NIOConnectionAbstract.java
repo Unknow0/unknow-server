@@ -9,6 +9,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
+import java.util.concurrent.Future;
 
 import unknow.server.util.io.Buffers;
 import unknow.server.util.io.BuffersInputStream;
@@ -33,6 +34,8 @@ public abstract class NIOConnectionAbstract {
 	/** Output stream */
 	protected final Out out;
 
+	protected final NIOWorker worker;
+
 	/** selection key */
 	protected final SelectionKey key;
 	protected final SocketChannel channel;
@@ -52,10 +55,13 @@ public abstract class NIOConnectionAbstract {
 	/**
 	 * create new connection
 	 * 
+	 * @param worker the worker
 	 * @param key the selectionKey
+	 * @param now currentTimeMillis
 	 * @param handler the handler
 	 */
-	protected NIOConnectionAbstract(SelectionKey key, long now, NIOConnectionHandler handler) {
+	protected NIOConnectionAbstract(NIOWorker worker, SelectionKey key, long now, NIOConnectionHandler handler) {
+		this.worker = worker;
 		this.key = key;
 		this.channel = (SocketChannel) key.channel();
 		this.handler = handler;
@@ -74,6 +80,10 @@ public abstract class NIOConnectionAbstract {
 			a = DISCONECTED;
 		}
 		remote = a;
+	}
+
+	public final <T> Future<T> submit(Runnable r) {
+		return worker.submit(r);
 	}
 
 	protected abstract void onInit() throws InterruptedException, IOException;

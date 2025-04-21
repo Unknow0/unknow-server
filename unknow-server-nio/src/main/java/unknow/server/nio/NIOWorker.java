@@ -8,8 +8,10 @@ import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
-import java.util.ArrayDeque;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +28,8 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 
 	/** this worker id */
 	private final int id;
+	/** executor for delegating task */
+	private final ExecutorService executor;
 	/** the listener */
 	private final NIOServerListener listener;
 
@@ -41,18 +45,24 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	 * create new IOWorker
 	 * 
 	 * @param id the worker id
+	 * @param executor executor for delegated task
 	 * @param listener listener to use
 	 * @param timeout the timeout on select
 	 * @throws IOException on ioexception
 	 */
-	public NIOWorker(int id, NIOServerListener listener, long timeout) throws IOException {
+	public NIOWorker(int id, ExecutorService executor, NIOServerListener listener, long timeout) throws IOException {
 		super("NIOWorker-" + id, timeout);
 		this.id = id;
+		this.executor = executor;
 		this.listener = listener;
 
 		this.buf = ByteBuffer.allocateDirect(25000);
-		this.tasks = new ArrayDeque<>();
+		this.tasks = new ConcurrentLinkedQueue<>();
+	}
 
+	protected final void execute(WorkerTask task) {
+		tasks.add(task);
+		selector.wakeup();
 	}
 
 	/**
@@ -60,13 +70,10 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	 * 
 	 * @param socket the socket to register
 	 * @param factory the connection factory
-	 * @throws IOException on ioexception
-	 * @throws InterruptedException on interrupt
 	 */
 	@Override
-	public final void register(SocketChannel socket, ConnectionFactory factory) throws IOException, InterruptedException {
-		tasks.add(new RegisterTask(socket, factory));
-		selector.wakeup();
+	public final void register(SocketChannel socket, ConnectionFactory factory) {
+		execute(new RegisterTask(socket, factory));
 	}
 
 	@Override
@@ -138,6 +145,11 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			co.prev = null;
 			head = co;
 		}
+	}
+
+	@SuppressWarnings("unchecked")
+	public final <T> Future<T> submit(Runnable r) {
+		return (Future<T>) executor.submit(r);
 	}
 
 	private void close(NIOConnectionAbstract co) {
@@ -213,7 +225,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 				logger.warn("Failed to register socket", e);
 				return;
 			}
-			NIOConnectionAbstract co = pool.build(key, now);
+			NIOConnectionAbstract co = pool.build(NIOWorker.this, key, now);
 			listener.accepted(id, co);
 			key.attach(co);
 			toTail(co, now);

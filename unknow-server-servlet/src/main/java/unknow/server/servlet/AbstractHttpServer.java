@@ -12,11 +12,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.util.ServiceLoader;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -48,9 +43,6 @@ public abstract class AbstractHttpServer extends NIOServerBuilder {
 	private Opt keystore;
 	private Opt keystorePass;
 	private Opt vhost;
-	private Opt execMin;
-	private Opt execMax;
-	private Opt execIdle;
 	private Opt keepAlive;
 
 	/** the servlet context */
@@ -87,10 +79,6 @@ public abstract class AbstractHttpServer extends NIOServerBuilder {
 		keystorePass = withOpt("keypass").withCli(Option.builder().longOpt("keypass").hasArg().desc("passphrase for the keystore").build());
 
 		vhost = withOpt("vhost").withCli(Option.builder().longOpt("vhost").hasArg().desc("public vhost seen by the servlet, default to the binded address").build());
-		execMin = withOpt("exec-min").withCli(Option.builder().longOpt("exec-min").hasArg().desc("min number of exec thread to use").build()).withValue("0");
-		execMax = withOpt("exec-max").withCli(Option.builder().longOpt("exec-max").hasArg().desc("max number of exec thread to use").build())
-				.withValue(Integer.toString(Integer.MAX_VALUE));
-		execIdle = withOpt("exec-idle").withCli(Option.builder().longOpt("exec-idle").hasArg().desc("max idle time for exec thread in seconds").build()).withValue("60");
 		keepAlive = withOpt("keepalive")
 				.withCli(Option.builder().longOpt("keepalive").hasArg().desc("max time to keep idle keepalive connection in seconds, -1: no keep alive, 0: infinite").build())
 				.withValue("2");
@@ -121,18 +109,11 @@ public abstract class AbstractHttpServer extends NIOServerBuilder {
 
 		SSLContext sslContext = addressHttps == null ? null : sslContext(ks, keystorePass.value(cli));
 
-		AtomicInteger i = new AtomicInteger();
-		ExecutorService executor = new ThreadPoolExecutor(parseInt(cli, execMin, 0), parseInt(cli, execMax, 0), parseInt(cli, execIdle, 0), TimeUnit.SECONDS,
-				new SynchronousQueue<>(), r -> {
-					Thread t = new Thread(r, "exec-" + i.getAndIncrement());
-					t.setDaemon(true);
-					return t;
-				});
 		int keepAliveIdle = parseInt(cli, keepAlive, -1) * 1000;
 		if (addressHttps != null)
-			server.bind(addressHttps, (key, now) -> new NIOConnectionSSL(key, now, new HttpConnection(executor, ctx, manager, events, keepAliveIdle), sslContext));
+			server.bind(addressHttps, (exec, key, now) -> new NIOConnectionSSL(exec, key, now, new HttpConnection(ctx, manager, events, keepAliveIdle), sslContext));
 		if (addressHttp != null)
-			server.bind(addressHttp, (key, now) -> new NIOConnectionPlain(key, now, new HttpConnection(executor, ctx, manager, events, keepAliveIdle)));
+			server.bind(addressHttp, (exec, key, now) -> new NIOConnectionPlain(exec, key, now, new HttpConnection(ctx, manager, events, keepAliveIdle)));
 	}
 
 	private final SSLContext sslContext(String keystore, String password)

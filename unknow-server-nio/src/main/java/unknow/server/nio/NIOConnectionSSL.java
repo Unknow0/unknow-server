@@ -13,6 +13,8 @@ import javax.net.ssl.SSLEngineResult.Status;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import unknow.server.nio.NIOWorker.WorkerTask;
+
 public class NIOConnectionSSL extends NIOConnectionAbstract {
 	private static final Logger logger = LoggerFactory.getLogger(NIOConnectionSSL.class);
 
@@ -22,8 +24,8 @@ public class NIOConnectionSSL extends NIOConnectionAbstract {
 	private final ByteBuffer rawOut;
 	private final ByteBuffer app;
 
-	public NIOConnectionSSL(SelectionKey key, long now, NIOConnectionHandler handler, SSLContext sslContext) {
-		super(key, now, handler);
+	public NIOConnectionSSL(NIOWorker worker, SelectionKey key, long now, NIOConnectionHandler handler, SSLContext sslContext) {
+		super(worker, key, now, handler);
 		this.sslEngine = sslContext.createSSLEngine(getRemote().getHostString(), getRemote().getPort());
 		this.rawIn = ByteBuffer.allocate(sslEngine.getSession().getPacketBufferSize());
 		this.rawOut = ByteBuffer.allocate(sslEngine.getSession().getPacketBufferSize());
@@ -35,7 +37,7 @@ public class NIOConnectionSSL extends NIOConnectionAbstract {
 	@Override
 	public boolean closed(long now, boolean stop) {
 		if (sslEngine.getHandshakeStatus() != HandshakeStatus.NOT_HANDSHAKING)
-			return false;
+			return lastRead + 1000 < now;
 		return handler.closed(now, stop);
 	}
 
@@ -116,11 +118,8 @@ public class NIOConnectionSSL extends NIOConnectionAbstract {
 			switch (hs) {
 				case NEED_TASK:
 					logger.debug("running tasks");
-					Runnable task;
-					while ((task = sslEngine.getDelegatedTask()) != null)
-						task.run();
-					hs = sslEngine.getHandshakeStatus();
-					break;
+					submit(new RunTask());
+					return true;
 				case NEED_UNWRAP:
 				case NEED_UNWRAP_AGAIN:
 					if (channel.read(rawIn) < 0)
@@ -153,6 +152,25 @@ public class NIOConnectionSSL extends NIOConnectionAbstract {
 					handler.onHandshakeDone(sslEngine); // fallthrough
 				default:
 					return false;
+			}
+		}
+	}
+
+	private final class RunTask implements Runnable, WorkerTask {
+		@Override
+		public void run() {
+			Runnable task;
+			while ((task = sslEngine.getDelegatedTask()) != null)
+				task.run();
+			worker.execute(this);
+		}
+
+		@Override
+		public void run(long now) {
+			try {
+				processHandshake();
+			} catch (Exception e) {
+				logger.warn("Failed to handshake", e);
 			}
 		}
 	}

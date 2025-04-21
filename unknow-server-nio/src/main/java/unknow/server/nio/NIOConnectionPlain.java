@@ -21,12 +21,13 @@ public class NIOConnectionPlain extends NIOConnectionAbstract {
 	/**
 	 * create new connection
 	 * 
+	 * @param worker worker owning the connection
 	 * @param key the selectionKey
 	 * @param now currentTimeMillis
 	 * @param handler the connection handler
 	 */
-	public NIOConnectionPlain(SelectionKey key, long now, NIOConnectionHandler handler) {
-		super(key, now, handler);
+	public NIOConnectionPlain(NIOWorker worker, SelectionKey key, long now, NIOConnectionHandler handler) {
+		super(worker, key, now, handler);
 	}
 
 	/**
@@ -62,7 +63,6 @@ public class NIOConnectionPlain extends NIOConnectionAbstract {
 			handler.onRead(pendingRead);
 		}
 	}
-
 
 	@Override
 	protected final void writeInto(ByteBuffer buf, long now) throws InterruptedException, IOException {
