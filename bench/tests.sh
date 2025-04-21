@@ -23,13 +23,21 @@ curls() {
 test() {
 	TIMEFORMAT="duration $1 %R"
 	echo "run $1"
-	[[ -z "$out" ]] && f="/dev/null" || f="$out/times.csv"
-	{ time curls "$@"; } |& tee "$f"
+	tout=/dev/null
+	cout=/dev/null
+	if [[ -z "$out" ]]
+	then
+		tout="$out/times.csv"
+		cout="$out/$1.csv"
+	fi
+	{
+		time curl -Z --parallel-immediate --parallel-max $p -s -o /dev/null --no-progress-meter -w "%output{>>$cout}$n %{response_code} %{time_total} %{time_starttransfer} %{errormsg}\n" "$@"
+	} |& tee -a "$tout"
 }
 
-test missing -m .005 -XGET http://$h:8080/missing?[1-$c]
-test simple  -m .005 -XGET http://$h:8080/test?[1-$c]
-test ssl     -m .005 -k --http1.1 -XGET https://$h:8443/test?[1-$c]
-test ws      -m .005 -XPOST -d@bench/req/ws.xml  http://$h:8080/ws?[1-$c]
-test rest    -m .005 -XPOST -H 'Accept: application/json' -H 'Content-type: application/json' -d'{"v":"toto"}' http://$h:8080/rest/[1-$c]
-test http2   -m .005 -k --http2 --parallel-immediate --parallel-max 10 -XGET https://$h:8443/test?[1-$c]
+test missing -m .001 -XGET http://$h:8080/missing?[1-$c]
+test simple  -m .001 -XGET http://$h:8080/test?[1-$c]
+test ssl     -m .001 -XGET -k --http1.1 https://$h:8443/test?[1-$c]
+test ws      -m .001 -XPOST -d@bench/req/ws.xml  http://$h:8080/ws?[1-$c]
+test rest    -m .001 -XPOST -H 'Accept: application/json' -H 'Content-type: application/json' -d'{"v":"toto"}' http://$h:8080/rest/[1-$c]
+test http2   -m .001 -XGET -k --http2 --resolve "*:$h" https://host[1-5]:8443/test?[1-$c]
