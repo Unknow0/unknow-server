@@ -117,11 +117,12 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		long end = now - 1000;
 		NIOConnectionAbstract co = head;
 		while (co != null && co.lastCheck < end) {
+			NIOConnectionAbstract next = co.next;
 			if (!co.key.isValid() || co.closed(now, close))
 				close(co);
 			else
 				co.lastCheck = now;
-			co = co.next;
+			co = next;
 		}
 
 		// move all to tail
@@ -184,7 +185,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		}
 	}
 
-	private final void remove(NIOConnectionAbstract co) {
+	private final void unlink(NIOConnectionAbstract co) {
 		if (co.prev != null)
 			co.prev.next = co.next;
 		if (co.next != null)
@@ -196,16 +197,21 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			tail = co.prev;
 	}
 
+	private final void remove(NIOConnectionAbstract co) {
+		unlink(co);
+		co.next = co.prev = null;
+	}
+
 	private final void toTail(NIOConnectionAbstract co) {
 		co.lastCheck = System.currentTimeMillis();
+
 		if (tail == co)
 			return;
-		if (co.prev != null)
-			co.prev.next = co.next;
-		if (co.next != null)
-			co.next.prev = co.prev;
+		unlink(co);
+
 		co.next = null;
 		co.prev = tail;
+
 		if (tail != null)
 			tail.next = co;
 		tail = co;
