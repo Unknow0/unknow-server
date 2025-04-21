@@ -11,5 +11,5 @@ wget -O - https://dlcdn.apache.org/tomcat/tomcat-$TOMCAT/v$VER/bin/apache-tomcat
 rm -r tomcat/webapps/*
 cp bench/server.xml tomcat/conf/
 
-# avoid going out of ephemeral port
-sudo sysctl net.ipv4.tcp_tw_reuse=1
+ulimit -a
+sudo ulimit -n unlimited
