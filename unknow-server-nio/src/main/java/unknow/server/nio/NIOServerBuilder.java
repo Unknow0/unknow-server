@@ -11,8 +11,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.cli.CommandLine;
@@ -184,16 +186,17 @@ public class NIOServerBuilder {
 	}
 
 	protected ExecutorService getExecutor() {
-		return Executors.newCachedThreadPool(new ThreadFactory() {
-			private final AtomicInteger i = new AtomicInteger();
+		return new ThreadPoolExecutor(Runtime.getRuntime().availableProcessors() * 4, Integer.MAX_VALUE, 60L, TimeUnit.SECONDS, new SynchronousQueue<Runnable>(),
+				new ThreadFactory() {
+					private final AtomicInteger i = new AtomicInteger();
 
-			@Override
-			public Thread newThread(Runnable r) {
-				Thread t = new Thread(r, "exec-" + i.getAndIncrement());
-				t.setDaemon(true);
-				return t;
-			}
-		});
+					@Override
+					public Thread newThread(Runnable r) {
+						Thread t = new Thread(r, "exec-" + i.getAndIncrement());
+						t.setDaemon(true);
+						return t;
+					}
+				});
 	}
 
 	private NIOServerListener getListener(String l) {

@@ -215,6 +215,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			SelectionKey key = null;
 			try {
 				socket.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.TRUE).setOption(StandardSocketOptions.TCP_NODELAY, Boolean.TRUE).configureBlocking(false);
+				socket.setOption(StandardSocketOptions.SO_RCVBUF, 64 * 1024).setOption(StandardSocketOptions.SO_SNDBUF, 64 * 1024);
 				key = socket.register(selector, SelectionKey.OP_READ);
 			} catch (IOException e) {
 				try {

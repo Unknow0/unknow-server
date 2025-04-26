@@ -13,7 +13,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * @author unknow
  */
 public class Buffers {
-	public static final int BUF_LEN = 4096;
+	public static final int BUF_LEN = 8192;
 	private final ReentrantLock lock = new ReentrantLock();
 	private final Condition cond = lock.newCondition();
 
