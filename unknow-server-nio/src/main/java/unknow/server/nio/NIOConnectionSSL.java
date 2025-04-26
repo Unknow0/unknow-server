@@ -119,10 +119,12 @@ public class NIOConnectionSSL extends NIOConnectionAbstract {
 				case NEED_TASK:
 					logger.debug("running tasks");
 //					submit(new RunTask());
+//					return true;
 					Runnable task;
 					while ((task = sslEngine.getDelegatedTask()) != null)
 						task.run();
-					return true;
+					hs = sslEngine.getHandshakeStatus();
+					break;
 				case NEED_UNWRAP:
 				case NEED_UNWRAP_AGAIN:
 					if (channel.read(rawIn) < 0)
