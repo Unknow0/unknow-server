@@ -96,7 +96,7 @@ public class ProcessResult {
 
 	private void printResult(Formatter out) {
 		Function<Result, String> thrpt = r -> Integer.toString((int) r.thrpt());
-		Function<Result, String> time = r -> r.time.cnt() == 0 ? "" : String.format("%.2f ± %.2f (%.2f)", r.time.avg(MILLI), r.time.err(MILLI, .999), r.time.max);
+		Function<Result, String> time = r -> r.time.cnt() == 0 ? "" : String.format("%.2f ± %.2f (%.2f)", r.time.avg(MILLI), r.time.err(MILLI, .999), r.time.max * MILLI);
 		Function<Result, String> lattency = r -> r.latency.cnt() == 0 ? "" : String.format("%.2f ± %.2f", r.latency.avg(ΜICRO), r.latency.err(ΜICRO, .999));
 		Function<Result, String> error = r -> Long.toString(r.err());
 
