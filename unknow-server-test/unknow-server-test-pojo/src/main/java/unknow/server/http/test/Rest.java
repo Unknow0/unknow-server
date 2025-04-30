@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import jakarta.ws.rs.BeanParam;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.CookieParam;
+import jakarta.ws.rs.FormParam;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.MatrixParam;
@@ -84,7 +85,7 @@ public class Rest {
 		@QueryParam("p")
 		public String[] p;
 
-		@QueryParam("d")
+		@FormParam("d")
 		public List<? super E> d;
 
 		public Truc truc;
@@ -104,6 +105,14 @@ public class Rest {
 
 		public void setSid(String sid) {
 			this.sid = sid;
+		}
+
+		public Truc getTruc() {
+			return truc;
+		}
+
+		public void setTruc(Truc truc) {
+			this.truc = truc;
 		}
 
 		@Override

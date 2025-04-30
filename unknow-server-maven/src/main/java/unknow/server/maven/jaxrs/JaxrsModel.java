@@ -114,7 +114,7 @@ public class JaxrsModel {
 	private final TypeModel bodyWriter;
 	private final TypeModel string;
 
-	public final List<String> converter = new ArrayList<>();
+	public final List<ClassModel> converter = new ArrayList<>();
 	public final Map<ClassModel, List<String>> readers = new HashMap<>();
 	public final Map<ClassModel, List<String>> writers = new HashMap<>();
 	public final Map<TypeModel, ClassModel> exceptions = new HashMap<>();
@@ -291,7 +291,7 @@ public class JaxrsModel {
 
 	private void processProvider(ClassModel clazz) {
 		if (paramProvider.isAssignableFrom(clazz))
-			converter.add(clazz.name());
+			converter.add(clazz);
 		ClassModel e = clazz.ancestor(exceptionMapper);
 		if (e != null) {
 			if (exceptions.containsKey(e))
@@ -401,15 +401,14 @@ public class JaxrsModel {
 			Set<MethodModel> setters = new HashSet<>();
 			for (FieldModel f : cl.fields()) {
 				List<AnnotationModel> l = f.annotations().stream().filter(v -> JARXS_PARAM.contains(v.name())).collect(Collectors.toList());
-				if (l.isEmpty())
-					continue;
 				if (l.size() > 1)
 					throw new RuntimeException("Duplicate parameter annotation on " + f.parent() + "." + f.name());
 
 				Optional<MethodModel> s = getSetter(cl, f.name(), f.type());
 				if (!f.isPublic() && s.isEmpty())
 					throw new RuntimeException("Can't find setter for " + f + " in " + cl);
-				params.add(new JaxrsBeanFieldParam(buildParam(f, l.get(0)), f, s.orElse(null)));
+				JaxrsParam<?> param = l.isEmpty() ? new JaxrsBodyParam<>(f) : buildParam(f, l.get(0));
+				params.add(new JaxrsBeanFieldParam(param, f, s.orElse(null)));
 				s.ifPresent(setters::add);
 			}
 			for (MethodModel m : cl.methods()) {
@@ -460,7 +459,7 @@ public class JaxrsModel {
 			return;
 
 		ClassModel cl = type.asClass();
-		if (cl.isBoxedPrimitive() || converter.contains(cl.name()))
+		if (cl.isBoxedPrimitive() || converter.contains(cl))
 			return;
 
 		if (cl.constructors(string).filter(c -> c.isPublic()).isPresent())
