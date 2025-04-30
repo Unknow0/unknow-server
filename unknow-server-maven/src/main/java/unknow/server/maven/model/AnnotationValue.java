@@ -40,8 +40,8 @@ public interface AnnotationValue {
 
 	/**
 	 * @param <T> array component
-	 * @param t   empty array for type
-	 * @param f   conversion function
+	 * @param t empty array for type
+	 * @param f conversion function
 	 * @return value as an array
 	 */
 	default <T> T[] asArray(T[] t, Function<AnnotationValue, T> f) {
@@ -140,7 +140,7 @@ public interface AnnotationValue {
 		/**
 		 * create new AnnotationValueArray
 		 * 
-		 * @param a
+		 * @param a the array value
 		 */
 		public AnnotationValueArray(AnnotationValue[] a) {
 			this.a = a;
@@ -175,7 +175,7 @@ public interface AnnotationValue {
 		/**
 		 * create new AnnotationValueClass
 		 * 
-		 * @param c
+		 * @param c the type value
 		 */
 		public AnnotationValueClass(TypeModel c) {
 			this.c = c;
@@ -208,7 +208,7 @@ public interface AnnotationValue {
 		/**
 		 * create new AnnotationValueLiteral
 		 * 
-		 * @param s
+		 * @param s the string value
 		 */
 		public AnnotationValueLiteral(String s) {
 			this.s = s;
@@ -236,7 +236,7 @@ public interface AnnotationValue {
 		/**
 		 * create new AnnotationValueAnnotation
 		 * 
-		 * @param a
+		 * @param a the annotation value
 		 */
 		public AnnotationValueAnnotation(AnnotationModel a) {
 			this.a = a;

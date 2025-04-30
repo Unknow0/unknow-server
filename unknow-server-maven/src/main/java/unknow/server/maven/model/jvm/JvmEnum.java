@@ -22,9 +22,9 @@ public class JvmEnum extends JvmClass implements EnumModel {
 	/**
 	 * create new AstEnum
 	 * 
-	 * @param cl
-	 * @param loader
-	 * @param params
+	 * @param loader the loader
+	 * @param cl the enum class
+	 * @param params the generic params
 	 */
 	public JvmEnum(JvmModelLoader loader, Class<?> cl, TypeModel[] params) {
 		super(loader, cl, params);
@@ -55,8 +55,8 @@ public class JvmEnum extends JvmClass implements EnumModel {
 		/**
 		 * create new AstEnumConstant
 		 * 
-		 * @param loader
-		 * @param e
+		 * @param loader the loader
+		 * @param e the enum entry
 		 */
 		public JvmEnumConstant(JvmModelLoader loader, Enum<?> e) {
 			this.loader = loader;

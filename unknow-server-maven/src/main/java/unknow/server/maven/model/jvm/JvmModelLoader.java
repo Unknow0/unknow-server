@@ -18,7 +18,7 @@ public class JvmModelLoader extends ModelLoader {
 	/**
 	 * create new JvmModelLoader
 	 * 
-	 * @param cl
+	 * @param cl class loader
 	 */
 	public JvmModelLoader(ClassLoader cl) {
 		this.cl = cl;

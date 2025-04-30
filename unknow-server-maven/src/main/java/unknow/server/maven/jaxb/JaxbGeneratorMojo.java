@@ -197,7 +197,8 @@ public class JaxbGeneratorMojo extends AbstractGeneratorMojo {
 	}
 
 	/**
-	 * @param t
+	 * @param t the type
+	 * @return the root elem qname (or null)
 	 */
 	public static QName getRootQN(TypeModel t) {
 		AnnotationModel r = t.annotation(XmlRootElement.class).orElse(null);
