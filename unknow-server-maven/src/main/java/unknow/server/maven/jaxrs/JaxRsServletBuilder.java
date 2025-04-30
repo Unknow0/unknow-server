@@ -118,7 +118,7 @@ public class JaxRsServletBuilder {
 
 	private final Map<JaxrsMapping, NameExpr> pathParams = new HashMap<>();
 
-	private final ServiceBuilder b;
+	private final ServiceBuilder builder;
 
 	public JaxRsServletBuilder(CompilationUnit cu, Map<String, String> existingClass, String path, List<JaxrsMapping> mappings, BeanParamBuilder beans, MediaTypesBuilder mt) {
 		this.cu = cu;
@@ -131,7 +131,7 @@ public class JaxRsServletBuilder {
 				.addExtendedType(HttpServlet.class);
 		cl.addFieldWithInitializer(long.class, "serialVersionUID", new LongLiteralExpr("1L"), Utils.PSF);
 
-		b = path.endsWith("*") ? new PatternService(path.length() - 1) : new SimpleService();
+		builder = path.endsWith("*") ? new PatternService(path.length() - 1) : new SimpleService();
 
 		for (JaxrsMapping m : mappings) {
 			ClassModel c = m.clazz;
@@ -145,7 +145,7 @@ public class JaxRsServletBuilder {
 
 	public CompilationUnit build() {
 		buildInializer();
-		b.build();
+		builder.build();
 
 		for (JaxrsMapping mapping : mappings)
 			buildCall(mapping, services);
