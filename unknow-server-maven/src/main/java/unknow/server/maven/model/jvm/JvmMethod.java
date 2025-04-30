@@ -32,9 +32,9 @@ public class JvmMethod implements MethodModel, JvmMod {
 	/**
 	 * create new JvmField
 	 * 
-	 * @param parent
+	 * @param parent the class owning the method
 	 * @param loader the loader
-	 * @param m      the method
+	 * @param m the method
 	 */
 	public JvmMethod(ClassModel parent, JvmModelLoader loader, Method m) {
 		this.parent = parent;

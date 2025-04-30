@@ -39,9 +39,9 @@ public class JvmClass implements ClassModel, JvmMod {
 	/**
 	 * create new JvmClass
 	 * 
-	 * @param loader
-	 * @param cl
-	 * @param paramsClass
+	 * @param loader the loader
+	 * @param cl the class
+	 * @param paramsClass the parameter
 	 */
 	public JvmClass(JvmModelLoader loader, Class<?> cl, TypeModel[] paramsClass) {
 		this.loader = loader;

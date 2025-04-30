@@ -33,10 +33,9 @@ public class AstMethod implements MethodModel, AstMod<MethodDeclaration> {
 	/**
 	 * create new AstMethod
 	 * 
-	 * @param parent
-	 * 
-	 * @param loader
-	 * @param m
+	 * @param parent the class owning the method
+	 * @param loader the loader
+	 * @param m the method
 	 */
 	public AstMethod(ClassModel parent, ModelLoader loader, MethodDeclaration m) {
 		this.parent = parent;

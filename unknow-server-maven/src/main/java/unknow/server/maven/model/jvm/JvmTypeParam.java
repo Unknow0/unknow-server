@@ -28,10 +28,10 @@ public class JvmTypeParam implements TypeParamModel {
 	/**
 	 * create new JvmTypeParam
 	 * 
-	 * @param loader
-	 * @param c
-	 * @param t
-	 * @param type
+	 * @param loader the loader
+	 * @param c the class owning this param
+	 * @param t the param variable
+	 * @param type the concrete type
 	 */
 	public JvmTypeParam(JvmModelLoader loader, ClassModel c, TypeVariable<?> t, TypeModel type) {
 		this.loader = loader;

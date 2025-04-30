@@ -30,9 +30,9 @@ public class AstConstructor implements ConstructorModel, AstMod<ConstructorDecla
 	/**
 	 * create new AstMethod
 	 * 
-	 * @param parent
-	 * @param loader
-	 * @param c
+	 * @param parent the class owning the constructor
+	 * @param loader the loader
+	 * @param c the constructor
 	 */
 	public AstConstructor(ClassModel parent, ModelLoader loader, ConstructorDeclaration c) {
 		this.parent = parent;

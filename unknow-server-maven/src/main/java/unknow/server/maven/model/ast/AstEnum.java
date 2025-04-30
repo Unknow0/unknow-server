@@ -28,9 +28,9 @@ public class AstEnum extends AstBaseClass<EnumDeclaration> implements EnumModel 
 	/**
 	 * create new AstEnum
 	 * 
-	 * @param loader
-	 * @param p
-	 * @param e
+	 * @param loader the loader
+	 * @param p the package
+	 * @param e the enum
 	 */
 	public AstEnum(ModelLoader loader, PackageDeclaration p, EnumDeclaration e) {
 		super(loader, p, e);

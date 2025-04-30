@@ -19,7 +19,7 @@ public interface TypeModel extends WithAnnotation, WithName, WithParent<PackageM
 	@Override
 	String name();
 
-	/** @return return type fully qualified name without parameter (java.util.List&lt;java.lang.String>) */
+	/** @return return type fully qualified name without parameter (java.util.List&lt;java.lang.String&gt;) */
 	default String genericName() {
 		return name();
 	}
@@ -188,7 +188,7 @@ public interface TypeModel extends WithAnnotation, WithName, WithParent<PackageM
 	}
 
 	/**
-	 * @param t
+	 * @param t the type
 	 * @return true if type are equals
 	 */
 	default boolean equals(TypeModel t) {

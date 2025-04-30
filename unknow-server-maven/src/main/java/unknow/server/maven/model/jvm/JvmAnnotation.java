@@ -27,8 +27,8 @@ public class JvmAnnotation implements AnnotationModel {
 	/**
 	 * create new JvmAnnotation
 	 * 
-	 * @param loader
-	 * @param a
+	 * @param loader the loader
+	 * @param a the annotation
 	 */
 	public JvmAnnotation(ModelLoader loader, Annotation a) {
 		this.a = a;
@@ -64,8 +64,10 @@ public class JvmAnnotation implements AnnotationModel {
 	}
 
 	/**
-	 * @param loader
-	 * @param o
+	 * convert annotation value
+	 * 
+	 * @param loader the loader
+	 * @param o value to convert
 	 * @return object as annotation value
 	 */
 	public static AnnotationValue getValue(ModelLoader loader, Object o) {

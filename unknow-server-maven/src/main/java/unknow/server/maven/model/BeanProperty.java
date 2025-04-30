@@ -60,8 +60,9 @@ public class BeanProperty {
 
 	/**
 	 * get annotation on field, getter and setter
-	 * @param name
-	 * @return
+	 * 
+	 * @param name field name
+	 * @return the annotations
 	 */
 	public List<AnnotationModel> annotations(String name) {
 		List<AnnotationModel> list = new ArrayList<>(3);

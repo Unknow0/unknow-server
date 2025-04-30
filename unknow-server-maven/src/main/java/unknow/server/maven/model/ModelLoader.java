@@ -35,7 +35,7 @@ public abstract class ModelLoader {
 	}
 
 	/**
-	 * @param loaders
+	 * @param loaders the loaders
 	 * @return a model loader
 	 */
 	public static ModelLoader from(ModelLoader... loaders) {
@@ -45,7 +45,7 @@ public abstract class ModelLoader {
 	}
 
 	/**
-	 * @param cl
+	 * @param cl the class to load
 	 * @return the loaded type
 	 */
 	public TypeModel get(String cl) {
@@ -53,7 +53,7 @@ public abstract class ModelLoader {
 	}
 
 	/**
-	 * @param cl         class
+	 * @param cl class
 	 * @param parameters actual type params
 	 * @return the loaded type
 	 */
@@ -105,8 +105,9 @@ public abstract class ModelLoader {
 	}
 
 	/**
-	 * @param params
-	 * @param cl
+	 * @param loader the loader
+	 * @param cl the fqn class to load
+	 * @param params the concrete generic param
 	 */
 	protected abstract TypeModel load(ModelLoader loader, String cl, TypeModel[] params);
 

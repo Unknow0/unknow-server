@@ -30,10 +30,10 @@ public class AstField implements FieldModel, AstMod<FieldDeclaration> {
 	/**
 	 * create new AstField
 	 * 
-	 * @param loader
-	 * @param cl
-	 * @param f
-	 * @param v
+	 * @param loader the loader
+	 * @param cl the class owning the field
+	 * @param f the field declaration (can contains multiple variable)
+	 * @param v the variable
 	 */
 	public AstField(ModelLoader loader, ClassModel cl, FieldDeclaration f, VariableDeclarator v) {
 		this.loader = loader;

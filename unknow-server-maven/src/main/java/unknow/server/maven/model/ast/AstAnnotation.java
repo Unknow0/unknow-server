@@ -41,8 +41,8 @@ public class AstAnnotation implements AnnotationModel {
 	/**
 	 * create new AstAnnotation
 	 * 
-	 * @param loader
-	 * @param a
+	 * @param loader the loader
+	 * @param a the annotation
 	 */
 	public AstAnnotation(ModelLoader loader, AnnotationExpr a) {
 		this.name = a.resolve().getQualifiedName();
@@ -87,8 +87,10 @@ public class AstAnnotation implements AnnotationModel {
 	}
 
 	/**
-	 * @param loader
-	 * @param v
+	 * get annotation value
+	 * 
+	 * @param loader the loader
+	 * @param v the value
 	 * @return expression as AnnotationValue
 	 */
 	public static AnnotationValue value(ModelLoader loader, Expression v) {

@@ -26,7 +26,7 @@ public interface AnnotationModel extends WithName {
 	}
 
 	/**
-	 * @param name
+	 * @param name the name to find
 	 * @return the member with name
 	 */
 	default Optional<AnnotationMemberModel> member(String name) {

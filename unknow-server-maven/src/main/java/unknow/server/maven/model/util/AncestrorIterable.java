@@ -16,7 +16,7 @@ public class AncestrorIterable implements Iterable<ClassModel> {
 	/**
 	 * create new AncestrorIterable
 	 * 
-	 * @param clazz
+	 * @param clazz the root class
 	 */
 	public AncestrorIterable(ClassModel clazz) {
 		this.clazz = clazz;

@@ -26,8 +26,12 @@ public class XmlTypeComplex implements XmlType {
 	/**
 	 * create new XmlTypeComplex
 	 * 
-	 * @param qname
-	 * @param type
+	 * @param qname the name
+	 * @param type the java type
+	 * @param factory the type factory
+	 * @param attrs the attributes
+	 * @param elements the childs
+	 * @param value the content
 	 */
 	public XmlTypeComplex(QName qname, ClassModel type, Factory factory, List<XmlElement> attrs, XmlElements elements, XmlElement value) {
 		this.qname = qname;
