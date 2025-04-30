@@ -23,8 +23,8 @@ public class AstPackage implements PackageModel {
 	/**
 	 * create new AstPackage
 	 * 
-	 * @param loader
-	 * @param p
+	 * @param loader the loader
+	 * @param p the package
 	 */
 	public AstPackage(ModelLoader loader, PackageDeclaration p) {
 		this.loader = loader;

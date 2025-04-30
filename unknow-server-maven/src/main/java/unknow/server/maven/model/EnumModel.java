@@ -24,7 +24,7 @@ public interface EnumModel extends ClassModel {
 	List<EnumConstant> entries();
 
 	/**
-	 * @param name
+	 * @param name name to find
 	 * @return enum constant with name
 	 */
 	default Optional<EnumConstant> entry(String name) {

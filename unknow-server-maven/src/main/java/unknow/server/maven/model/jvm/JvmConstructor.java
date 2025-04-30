@@ -31,7 +31,7 @@ public class JvmConstructor implements ConstructorModel, JvmMod {
 	 * 
 	 * @param parent the owner
 	 * @param loader the loader
-	 * @param c      the constructor
+	 * @param c the constructor
 	 */
 	public JvmConstructor(ClassModel parent, JvmModelLoader loader, Constructor<?> c) {
 		this.parent = parent;

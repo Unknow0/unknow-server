@@ -19,8 +19,8 @@ public class XmlTypeSimple implements XmlType {
 	/**
 	 * create new XmlTypeSimple
 	 * 
-	 * @param qname
-	 * @param type
+	 * @param qname the qname
+	 * @param type the java type
 	 */
 	public XmlTypeSimple(QName qname, TypeModel type) {
 		this.qname = qname;

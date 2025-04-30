@@ -18,8 +18,8 @@ public class XmlElements implements Iterable<XmlElement> {
 	/**
 	 * create new XmlElements
 	 * 
-	 * @param group
-	 * @param elements
+	 * @param group the group type
+	 * @param elements the childs
 	 */
 	public XmlElements(XmlGroup group, List<XmlElement> elements) {
 		this.group = group;

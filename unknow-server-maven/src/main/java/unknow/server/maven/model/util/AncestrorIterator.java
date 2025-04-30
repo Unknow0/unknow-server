@@ -14,9 +14,15 @@ import unknow.server.maven.model.ClassModel;
 
 /**
  * iterate over the ancestror of a class. <br>
- * (iterate over interface first, then super class) <pre><code>
+ * (iterate over interface first, then super class)
+ * 
+ * <pre>
+ * <code>
  * class A extends B implements I1, I2
- * interface I1 extends I3</code></pre> iteration over A will give : <code>[A, I1, I3, I2, B]</code>
+ * interface I1 extends I3</code>
+ * </pre>
+ * 
+ * iteration over A will give : <code>[A, I1, I3, I2, B]</code>
  * 
  * @author unknow
  */
@@ -27,7 +33,7 @@ public class AncestrorIterator implements Iterator<ClassModel> {
 	/**
 	 * create new AncestrorIterator
 	 * 
-	 * @param clazz
+	 * @param clazz the root class
 	 */
 	public AncestrorIterator(ClassModel clazz) {
 		this.queue = new LinkedBlockingQueue<>();

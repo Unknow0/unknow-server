@@ -8,6 +8,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -49,6 +50,7 @@ import com.github.javaparser.ast.stmt.Statement;
 import com.github.javaparser.ast.stmt.ThrowStmt;
 import com.github.javaparser.ast.stmt.TryStmt;
 import com.github.javaparser.ast.type.ArrayType;
+import com.github.javaparser.ast.type.ClassOrInterfaceType;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -116,7 +118,7 @@ public class JaxRsServletBuilder {
 
 	private final Map<JaxrsMapping, NameExpr> pathParams = new HashMap<>();
 
-	private final ServiceBuilder b;
+	private final ServiceBuilder builder;
 
 	public JaxRsServletBuilder(CompilationUnit cu, Map<String, String> existingClass, String path, List<JaxrsMapping> mappings, BeanParamBuilder beans, MediaTypesBuilder mt) {
 		this.cu = cu;
@@ -129,7 +131,7 @@ public class JaxRsServletBuilder {
 				.addExtendedType(HttpServlet.class);
 		cl.addFieldWithInitializer(long.class, "serialVersionUID", new LongLiteralExpr("1L"), Utils.PSF);
 
-		b = path.endsWith("*") ? new PatternService(path.length() - 1) : new SimpleService();
+		builder = path.endsWith("*") ? new PatternService(path.length() - 1) : new SimpleService();
 
 		for (JaxrsMapping m : mappings) {
 			ClassModel c = m.clazz;
@@ -143,7 +145,7 @@ public class JaxRsServletBuilder {
 
 	public CompilationUnit build() {
 		buildInializer();
-		b.build();
+		builder.build();
 
 		for (JaxrsMapping mapping : mappings)
 			buildCall(mapping, services);
@@ -155,9 +157,12 @@ public class JaxRsServletBuilder {
 	 * @param mappings
 	 */
 	private void buildInializer() {
-		BlockStmt b = cl.addStaticInitializer().addStatement(new VariableDeclarationExpr(types.array(Type.class), "t"))
-				.addStatement(new VariableDeclarationExpr(new ArrayType(types.array(Annotation.class)), "a"))
-				.addStatement(new VariableDeclarationExpr(types.getClass(Type.class), "r")).addStatement(new VariableDeclarationExpr(types.array(Annotation.class), "ra"));
+		BlockStmt b = cl.addStaticInitializer();
+		if (hasParamConverter(mappings))
+			b.addStatement(new VariableDeclarationExpr(types.array(Type.class), "t"))
+					.addStatement(new VariableDeclarationExpr(new ArrayType(types.array(Annotation.class)), "a"));
+		if (hasReturn(mappings))
+			b.addStatement(new VariableDeclarationExpr(types.getClass(Type.class), "r")).addStatement(new VariableDeclarationExpr(types.array(Annotation.class), "ra"));
 
 		for (JaxrsMapping m : mappings) {
 			List<ParamModel<MethodModel>> parameters = m.m.parameters();
@@ -169,13 +174,17 @@ public class JaxRsServletBuilder {
 			getMethod.addAll(classes);
 
 			BlockStmt t = new BlockStmt()
-					.addStatement(Utils.assign(types.getClass(Method.class), "m", new MethodCallExpr(new ClassExpr(types.get(m.m.parent().name())), "getMethod", getMethod)))
-					.addStatement(new AssignExpr(new NameExpr("t"), new MethodCallExpr(new NameExpr("m"), "getGenericParameterTypes"), AssignExpr.Operator.ASSIGN))
-					.addStatement(new AssignExpr(new NameExpr("a"), new MethodCallExpr(new NameExpr("m"), "getParameterAnnotations"), AssignExpr.Operator.ASSIGN));
-			BlockStmt ca = new BlockStmt().addStatement(new AssignExpr(new NameExpr("t"), Utils.array(types.getClass(Type.class), classes), AssignExpr.Operator.ASSIGN))
-					.addStatement(new AssignExpr(new NameExpr("a"), Utils.array(types.getClass(Annotation.class), parameters.size(), 0), AssignExpr.Operator.ASSIGN));
+					.addStatement(Utils.assign(types.getClass(Method.class), "m", new MethodCallExpr(new ClassExpr(types.get(m.m.parent().name())), "getMethod", getMethod)));
+			BlockStmt ca = new BlockStmt();
 
-			if (!m.m.type().isVoid()) {
+			if (hasParamConverter(m)) {
+				t.addStatement(new AssignExpr(new NameExpr("t"), new MethodCallExpr(new NameExpr("m"), "getGenericParameterTypes"), AssignExpr.Operator.ASSIGN))
+						.addStatement(new AssignExpr(new NameExpr("a"), new MethodCallExpr(new NameExpr("m"), "getParameterAnnotations"), AssignExpr.Operator.ASSIGN));
+				ca.addStatement(new AssignExpr(new NameExpr("t"), Utils.array(types.getClass(Type.class), classes), AssignExpr.Operator.ASSIGN))
+						.addStatement(new AssignExpr(new NameExpr("a"), Utils.array(types.getClass(Annotation.class), parameters.size(), 0), AssignExpr.Operator.ASSIGN));
+			}
+
+			if (hasReturn(m)) {
 				t.addStatement(new AssignExpr(new NameExpr("r"), new MethodCallExpr(new NameExpr("m"), "getGenericReturnType"), AssignExpr.Operator.ASSIGN))
 						.addStatement(new AssignExpr(new NameExpr("ra"), new MethodCallExpr(new NameExpr("m"), "getAnnotations"), AssignExpr.Operator.ASSIGN));
 				ca.addStatement(new AssignExpr(new NameExpr("r"), new ClassExpr(types.get(m.m.type().name())), AssignExpr.Operator.ASSIGN))
@@ -194,16 +203,44 @@ public class JaxRsServletBuilder {
 			if (!type.isVoid()) {
 				if (type.isPrimitive())
 					type = type.asPrimitive().boxed();
-
-				cl.addField(types.getClass(JaxrsEntityWriter.class, types.getClass(type)), m.v + "$r", Utils.PSF);
+				ClassOrInterfaceType c = types.getClass(type.genericName());
+				cl.addField(types.getClass(JaxrsEntityWriter.class, c), m.v + "$r", Utils.PSF);
 				b.addStatement(new AssignExpr(new NameExpr(m.v + "$r"), new MethodCallExpr(new TypeExpr(types.getClass(JaxrsEntityWriter.class)), "create",
-						Utils.list(new ClassExpr(types.get(m.m.type().name())), new NameExpr("r"), new NameExpr("ra"))), AssignExpr.Operator.ASSIGN));
+						Utils.list(new ClassExpr(types.get(type.name())), new NameExpr("r"), new NameExpr("ra"))), AssignExpr.Operator.ASSIGN));
 			}
 			for (JaxrsParam<?> p : m.params) {
 				if (p instanceof JaxrsBeanParam)
 					beans.add((JaxrsBeanParam<?>) p);
 			}
 		}
+	}
+
+	private static boolean hasParamConverter(Collection<JaxrsMapping> mappings) {
+		for (JaxrsMapping m : mappings) {
+			if (hasParamConverter(m))
+				return true;
+		}
+		return false;
+	}
+
+	private static boolean hasParamConverter(JaxrsMapping m) {
+		for (JaxrsParam<?> p : m.params) {
+			if (!(p instanceof JaxrsBeanParam))
+				return true;
+		}
+		return false;
+	}
+
+	private static boolean hasReturn(Collection<JaxrsMapping> mappings) {
+		for (JaxrsMapping m : mappings) {
+			if (hasReturn(m))
+				return true;
+		}
+		return false;
+	}
+
+	private static boolean hasReturn(JaxrsMapping m) {
+		return !m.m.type().isVoid();
 	}
 
 	private void buildOptions(String name, Set<String> methods) {
@@ -238,7 +275,8 @@ public class JaxRsServletBuilder {
 		}
 
 		if (p instanceof JaxrsBodyParam) {
-			cl.addField(types.getClass(JaxrsEntityReader.class, types.getClass(p.type)), n, Utils.PSF);
+			ClassOrInterfaceType type = types.getClass(p.type.genericName());
+			cl.addField(types.getClass(JaxrsEntityReader.class, type), n, Utils.PSF);
 			b.addStatement(new AssignExpr(new NameExpr(n),
 					new ObjectCreationExpr(null, types.getClass(JaxrsEntityReader.class, TypeCache.EMPTY), Utils.list(new ClassExpr(types.get(p.type.name())),
 							new ArrayAccessExpr(new NameExpr("t"), new IntegerLiteralExpr("" + i)), new ArrayAccessExpr(new NameExpr("a"), new IntegerLiteralExpr("" + i)))),
@@ -345,9 +383,14 @@ public class JaxRsServletBuilder {
 		MethodCallExpr call = new MethodCallExpr(services.get(mapping.clazz.name()), m.name(), arg);
 		if (m.type().isVoid()) {
 			b.addStatement(call).addStatement(new MethodCallExpr(new NameExpr("res"), "sendError", Utils.list(new IntegerLiteralExpr("204"))));
-		} else
-			b.addStatement(Utils.assign(types.get(m.type()), "result", call))
-					.addStatement(new MethodCallExpr(new NameExpr(mapping.v + "$r"), "write", Utils.list(new NameExpr("r"), new NameExpr("result"), new NameExpr("res"))));
+		} else {
+			Expression result = Utils.assign(types.get(m.type()), "result", call);
+			Expression write = new MethodCallExpr(new NameExpr(mapping.v + "$r"), "write", Utils.list(new NameExpr("r"), new NameExpr("result"), new NameExpr("res")));
+			if (m.type().isAssignableTo(AutoCloseable.class))
+				b.addStatement(new TryStmt().setResources(Utils.list(result)).setTryBlock(new BlockStmt().addStatement(write)));
+			else
+				b.addStatement(result).addStatement(write);
+		}
 	}
 
 	/**

@@ -28,7 +28,7 @@ import unknow.server.maven.model.TypeParamModel;
 
 /**
  * @author unknow
- * @param <T>
+ * @param <T> class / enum
  */
 public abstract class AstBaseClass<T extends TypeDeclaration<?>> implements ClassModel, AstMod<T> {
 	protected final ModelLoader loader;

@@ -24,8 +24,8 @@ public class AstModelLoader extends ModelLoader {
 	/**
 	 * create new AstModelLoader
 	 * 
-	 * @param classes
-	 * @param packages
+	 * @param classes the existing class
+	 * @param packages the existing packages
 	 */
 	public AstModelLoader(Map<String, TypeDeclaration<?>> classes, Map<String, PackageDeclaration> packages) {
 		this.classes = classes;

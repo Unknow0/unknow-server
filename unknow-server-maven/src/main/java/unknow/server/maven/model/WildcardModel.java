@@ -19,8 +19,8 @@ public class WildcardModel implements TypeModel {
 	/**
 	 * create new WildcardModel
 	 * 
-	 * @param bound
-	 * @param upper
+	 * @param bound the bound type
+	 * @param upper if extends or super
 	 */
 	public WildcardModel(TypeModel bound, boolean upper) {
 		this.bound = bound;
@@ -38,7 +38,7 @@ public class WildcardModel implements TypeModel {
 	}
 
 	/**
-	 * @return the wound type (after ?)
+	 * @return the bound type (after ?)
 	 */
 	public TypeModel bound() {
 		return bound;

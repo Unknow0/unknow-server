@@ -78,7 +78,7 @@ public interface ClassModel extends TypeModel, WithMod {
 	Collection<MethodModel> methods();
 
 	/**
-	 * @param name   the method name
+	 * @param name the method name
 	 * @param params the method params
 	 * @return the declared method
 	 */
@@ -98,7 +98,7 @@ public interface ClassModel extends TypeModel, WithMod {
 	}
 
 	/**
-	 * @param name   the method name
+	 * @param name the method name
 	 * @param params the method params
 	 * @return the method
 	 */
@@ -236,6 +236,7 @@ public interface ClassModel extends TypeModel, WithMod {
 
 	/**
 	 * get a BeanProperty on this class
+	 * 
 	 * @param name property name
 	 * @return the BeanProperty or null if not found
 	 */

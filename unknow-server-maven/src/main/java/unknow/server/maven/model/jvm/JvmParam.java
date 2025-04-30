@@ -16,7 +16,7 @@ import unknow.server.maven.model.util.WithParent;
 
 /**
  * @author unknow
- * @param <T>
+ * @param <T> owner of the param
  */
 public class JvmParam<T extends WithParent<ClassModel>> implements ParamModel<T> {
 	private final JvmModelLoader loader;
@@ -29,9 +29,10 @@ public class JvmParam<T extends WithParent<ClassModel>> implements ParamModel<T>
 	/**
 	 * create new JvmParam
 	 * 
-	 * @param loader
-	 * @param m
-	 * @param p
+	 * @param loader the loader
+	 * @param m the owner of the param
+	 * @param p the param
+	 * @param index the parameter index
 	 */
 	public JvmParam(JvmModelLoader loader, T m, Parameter p, int index) {
 		this.loader = loader;

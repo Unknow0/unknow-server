@@ -31,8 +31,9 @@ public class AstParam<T extends WithParent<ClassModel>> implements ParamModel<T>
 	 * create new AstParam
 	 * 
 	 * @param loader the loader
-	 * @param m      the owner
-	 * @param p      the parameter
+	 * @param m the owner
+	 * @param p the parameter
+	 * @param index the param index
 	 */
 	public AstParam(ModelLoader loader, T m, Parameter p, int index) {
 		this.loader = loader;

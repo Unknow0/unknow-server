@@ -21,8 +21,8 @@ public class JvmPackage implements PackageModel {
 	/**
 	 * create new JvmPackage
 	 * 
-	 * @param loader
-	 * @param p
+	 * @param loader the loader
+	 * @param p the package
 	 */
 	public JvmPackage(JvmModelLoader loader, Package p) {
 		this.loader = loader;

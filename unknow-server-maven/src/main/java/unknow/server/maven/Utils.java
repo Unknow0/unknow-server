@@ -51,7 +51,7 @@ public class Utils {
 	 * create a node list
 	 * 
 	 * @param <T> type of element
-	 * @param t   the values
+	 * @param t the values
 	 * @return the node list
 	 */
 	@SafeVarargs
@@ -74,7 +74,7 @@ public class Utils {
 	}
 
 	/**
-	 * @param values
+	 * @param values the values
 	 * @return new string[] {values}
 	 */
 	public static ArrayCreationExpr stringArray(String[] values) {
@@ -106,8 +106,8 @@ public class Utils {
 	/**
 	 * T n = value
 	 * 
-	 * @param t     the variable type
-	 * @param n     the variable name
+	 * @param t the variable type
+	 * @param n the variable name
 	 * @param value the value
 	 * @return the assignement
 	 */
@@ -122,7 +122,7 @@ public class Utils {
 	/**
 	 * create a new ArrayMap
 	 * 
-	 * @param map   the map content
+	 * @param map the map content
 	 * @param types the typeCahe
 	 * @return the array map creation
 	 */
@@ -142,7 +142,7 @@ public class Utils {
 	/**
 	 * create a new ArrayMap
 	 * 
-	 * @param map   the map content
+	 * @param map the map content
 	 * @param types the typeCahe
 	 * @return the array map creation
 	 */

@@ -3,23 +3,26 @@
  */
 package unknow.server.maven.jaxrs;
 
+import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.maven.plugin.MojoExecutionException;
 
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
+import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.AssignExpr;
 import com.github.javaparser.ast.expr.ClassExpr;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.FieldAccessExpr;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.NameExpr;
-import com.github.javaparser.ast.expr.NullLiteralExpr;
+import com.github.javaparser.ast.expr.ObjectCreationExpr;
 import com.github.javaparser.ast.expr.TypeExpr;
 import com.github.javaparser.ast.expr.VariableDeclarationExpr;
 import com.github.javaparser.ast.stmt.BlockStmt;
@@ -27,6 +30,7 @@ import com.github.javaparser.ast.stmt.CatchClause;
 import com.github.javaparser.ast.stmt.ReturnStmt;
 import com.github.javaparser.ast.stmt.TryStmt;
 
+import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.ext.ParamConverter;
 import unknow.server.http.jaxrs.JaxrsContext;
 import unknow.server.http.jaxrs.JaxrsEntityReader;
@@ -37,6 +41,7 @@ import unknow.server.maven.Utils;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam.JaxrsBeanFieldParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBodyParam;
+import unknow.server.maven.jaxrs.JaxrsParam.JaxrsFormParam;
 import unknow.server.maven.model.TypeModel;
 import unknow.server.maven.model.jvm.JvmModelLoader;
 
@@ -81,8 +86,11 @@ public class BeanParamBuilder {
 		for (JaxrsBeanFieldParam p : param.params)
 			processBeanConverter(p.param, n + "$" + i++, init);
 
-		BlockStmt b = cl.addMethod(beansVar.get(clazz), Utils.PUBLIC_STATIC).addParameter(types.getClass(JaxrsReq.class), "r").setType(types.get(clazz)).createBody()
-				.addStatement(Utils.create(types.getClass(clazz), "b", Utils.list()));
+		MethodDeclaration m = cl.addMethod(beansVar.get(clazz), Utils.PUBLIC_STATIC).addParameter(types.getClass(JaxrsReq.class), "r").setType(types.get(clazz))
+				.addThrownException(types.getClass(WebApplicationException.class));
+		if (throwsIoException(param.params))
+			m.addThrownException(types.getClass(IOException.class));
+		BlockStmt b = m.createBody().addStatement(Utils.create(types.getClass(clazz), "b", Utils.list()));
 		for (JaxrsBeanFieldParam e : param.params) {
 			if (e.setter != null)
 				b.addStatement(new MethodCallExpr(new NameExpr("b"), e.setter.name(), Utils.list(getParam(e.param))));
@@ -91,6 +99,17 @@ public class BeanParamBuilder {
 
 		}
 		b.addStatement(new ReturnStmt(new NameExpr("b")));
+	}
+
+	private boolean throwsIoException(List<JaxrsBeanFieldParam> params) {
+		for (JaxrsBeanFieldParam p : params) {
+			if (p.param instanceof JaxrsBeanParam) {
+				if (throwsIoException(((JaxrsBeanParam<?>) p.param).params))
+					return true;
+			} else if (p.param instanceof JaxrsFormParam || p.param instanceof JaxrsBodyParam)
+				return true;
+		}
+		return false;
 	}
 
 	public void save(Output out) throws MojoExecutionException {
@@ -131,11 +150,8 @@ public class BeanParamBuilder {
 
 		if (p instanceof JaxrsBodyParam) {
 			cl.addField(types.getClass(JaxrsEntityReader.class, types.getClass(p.type)), n, Utils.PSF);
-			b.addStatement(
-					new AssignExpr(new NameExpr(n),
-							new MethodCallExpr(new TypeExpr(types.getClass(JaxrsContext.class)), "reader",
-									Utils.list(new ClassExpr(types.get(p.type.name())), new NameExpr("t"), new NameExpr("a"), new NullLiteralExpr())),
-							AssignExpr.Operator.ASSIGN));
+			b.addStatement(new AssignExpr(new NameExpr(n), new ObjectCreationExpr(null, types.getClass(JaxrsEntityReader.class, TypeCache.EMPTY),
+					Utils.list(new ClassExpr(types.get(p.type.name())), new NameExpr("t"), new NameExpr("a"))), AssignExpr.Operator.ASSIGN));
 		} else {
 			cl.addField(types.getClass(ParamConverter.class, types.get(t)), n, Utils.PSF);
 			b.addStatement(new AssignExpr(new NameExpr(n), new MethodCallExpr(new TypeExpr(types.getClass(JaxrsContext.class)), "converter",
