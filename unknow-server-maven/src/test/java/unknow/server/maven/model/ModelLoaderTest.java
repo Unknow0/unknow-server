@@ -87,6 +87,8 @@ public class ModelLoaderTest {
 	void testClassName(ClassModel list) {
 
 		assertEquals(this.getClass().getName() + "$StringList", list.name());
+		assertEquals(this.getClass().getName() + "$StringList", list.genericName());
+
 		assertEquals(this.getClass().getName() + "$G", list.superType().name());
 		assertEquals(this.getClass().getName() + "$G<java.lang.String>", list.superType().genericName());
 

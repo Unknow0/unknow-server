@@ -154,8 +154,14 @@ public class JaxrsMojo extends AbstractGeneratorMojo {
 				.addParameter(types.getClass(Set.class, types.getClass(Class.class, TypeCache.ANY)), "c").addParameter(types.getClass(ServletContext.class), "ctx")
 				.createBody().addStatement(new MethodCallExpr(new TypeExpr(types.getClass(RuntimeDelegate.class)), "setInstance",
 						Utils.list(new ObjectCreationExpr(null, types.getClass(JaxrsRuntime.class), Utils.list()))));
-		for (String s : model.converter)
-			b.addStatement(new MethodCallExpr(ctx, "registerConverter", Utils.list(new ObjectCreationExpr(null, types.getClass(s), Utils.list()))));
+		for (ClassModel s : model.converter) {
+			ClassOrInterfaceType t = types.getClass(s);
+			if (!s.parameters().isEmpty()) {
+				t = t.clone();
+				t.setTypeArguments(Utils.list(TypeCache.EMPTY));
+			}
+			b.addStatement(new MethodCallExpr(ctx, "registerConverter", Utils.list(new ObjectCreationExpr(null, t, Utils.list()))));
+		}
 		if (!model.implicitConstructor.isEmpty() || !model.implicitFromString.isEmpty() || !model.implicitValueOf.isEmpty())
 			b.addStatement(new MethodCallExpr(ctx, "registerConverter", Utils.list(new ObjectCreationExpr(null, new ClassOrInterfaceType(null, "P"), Utils.list()))));
 
@@ -170,8 +176,12 @@ public class JaxrsMojo extends AbstractGeneratorMojo {
 			NodeList<Expression> list = Utils.list();
 			if (m != null && e.getKey().constructors(loader.get(ObjectMapper.class.getName())).isPresent())
 				list.add(m);
-
-			NodeList<Expression> l = new NodeList<>(new ObjectCreationExpr(null, types.getClass(e.getKey()), list));
+			ClassOrInterfaceType t = types.getClass(e.getKey());
+			if (!e.getKey().parameters().isEmpty()) {
+				t = t.clone();
+				t.setTypeArguments(Utils.list(TypeCache.EMPTY));
+			}
+			NodeList<Expression> l = new NodeList<>(new ObjectCreationExpr(null, t, list));
 			l.add(e.getKey().annotation(Priority.class).flatMap(a -> a.value()).filter(v -> v.isSet()).map(a -> (Expression) new IntegerLiteralExpr(a.asLiteral()))
 					.orElseGet(() -> new FieldAccessExpr(new TypeExpr(types.get(Priorities.class)), "USER")));
 			for (String s : e.getValue())
@@ -182,8 +192,12 @@ public class JaxrsMojo extends AbstractGeneratorMojo {
 			NodeList<Expression> list = Utils.list();
 			if (m != null && e.getKey().constructors(loader.get(ObjectMapper.class.getName())).isPresent())
 				list.add(m);
-
-			NodeList<Expression> l = new NodeList<>(new ObjectCreationExpr(null, types.getClass(e.getKey()), list));
+			ClassOrInterfaceType t = types.getClass(e.getKey());
+			if (!e.getKey().parameters().isEmpty()) {
+				t = t.clone();
+				t.setTypeArguments(Utils.list(TypeCache.EMPTY));
+			}
+			NodeList<Expression> l = new NodeList<>(new ObjectCreationExpr(null, t, list));
 			l.add(e.getKey().annotation(Priority.class).flatMap(a -> a.value()).filter(v -> v.isSet()).map(a -> (Expression) new IntegerLiteralExpr(a.asLiteral()))
 					.orElseGet(() -> new FieldAccessExpr(new TypeExpr(types.get(Priorities.class)), "USER")));
 			for (String s : e.getValue())

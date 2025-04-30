@@ -36,7 +36,8 @@ public class JaxrsEntityReader<T> {
 	 * @param genericType the class as a generix
 	 * @param annotations the annotation on the param
 	 */
-	public JaxrsEntityReader(Class<T> clazz, Type genericType, Annotation[] annotations) {
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public JaxrsEntityReader(Class clazz, Type genericType, Annotation[] annotations) {
 		this.clazz = clazz;
 		this.genericType = genericType;
 		this.annotations = annotations;

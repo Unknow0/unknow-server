@@ -14,12 +14,12 @@ import unknow.server.maven.model.util.WithParent;
  */
 public interface TypeModel extends WithAnnotation, WithName, WithParent<PackageModel> {
 	/**
-	 * @return type fully qualified name with actual parameter
+	 * @return type fully qualified name (java.util.List)
 	 */
 	@Override
 	String name();
 
-	/** @return generic name */
+	/** @return return type fully qualified name without parameter (java.util.List&lt;java.lang.String>) */
 	default String genericName() {
 		return name();
 	}
@@ -85,7 +85,8 @@ public interface TypeModel extends WithAnnotation, WithName, WithParent<PackageM
 	}
 
 	/**
-	 * Determines if the type represented by this {@code TypeModel} object is either the same as, or is a superclass or superinterface of, the type represented by the specified {@code TypeModel} parameter
+	 * Determines if the type represented by this {@code TypeModel} object is either the same as, or is a superclass or superinterface of, the type represented by the
+	 * specified {@code TypeModel} parameter
 	 * 
 	 * @param t the clazz
 	 * @return true if clazz this = t works
@@ -95,7 +96,8 @@ public interface TypeModel extends WithAnnotation, WithName, WithParent<PackageM
 	}
 
 	/**
-	 * Determines if the type represented by the specified parameter is either the same as, or is a superclass or superinterface of, the type represented by this {@code TypeModel} object
+	 * Determines if the type represented by the specified parameter is either the same as, or is a superclass or superinterface of, the type represented by this
+	 * {@code TypeModel} object
 	 * 
 	 * @param cl the clazz
 	 * @return true if cl = this works
@@ -105,7 +107,8 @@ public interface TypeModel extends WithAnnotation, WithName, WithParent<PackageM
 	}
 
 	/**
-	 * Determines if the type represented by the specified parameter is either the same as, or is a superclass or superinterface of, the type represented by this {@code TypeModel} object
+	 * Determines if the type represented by the specified parameter is either the same as, or is a superclass or superinterface of, the type represented by this
+	 * {@code TypeModel} object
 	 * 
 	 * @param cl the clazz
 	 * @return true if cl = this works
