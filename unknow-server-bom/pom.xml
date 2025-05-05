@@ -35,12 +35,17 @@
 		<dependencies>
 			<dependency>
 				<groupId>${project.groupId}</groupId>
-				<artifactId>unknow-server</artifactId>
+				<artifactId>unknow-server-util</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>${project.groupId}</groupId>
-				<artifactId>unknow-server-bench</artifactId>
+				<artifactId>unknow-server-jaxrs</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>${project.groupId}</groupId>
+				<artifactId>unknow-server-nio</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
@@ -55,7 +60,7 @@
 			</dependency>
 			<dependency>
 				<groupId>${project.groupId}</groupId>
-				<artifactId>unknow-server-jaxrs</artifactId>
+				<artifactId>unknow-server-protostuff</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
@@ -66,46 +71,6 @@
 			<dependency>
 				<groupId>${project.groupId}</groupId>
 				<artifactId>unknow-server-maven</artifactId>
-				<version>${project.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>${project.groupId}</groupId>
-				<artifactId>unknow-server-nio</artifactId>
-				<version>${project.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>${project.groupId}</groupId>
-				<artifactId>unknow-server-protostuff</artifactId>
-				<version>${project.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>${project.groupId}</groupId>
-				<artifactId>unknow-server-test</artifactId>
-				<version>${project.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>${project.groupId}</groupId>
-				<artifactId>unknow-server-test-cxf</artifactId>
-				<version>${project.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>${project.groupId}</groupId>
-				<artifactId>unknow-server-test-jar</artifactId>
-				<version>${project.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>${project.groupId}</groupId>
-				<artifactId>unknow-server-test-pojo</artifactId>
-				<version>${project.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>${project.groupId}</groupId>
-				<artifactId>unknow-server-test-tomcat</artifactId>
-				<version>${project.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>${project.groupId}</groupId>
-				<artifactId>unknow-server-util</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 		</dependencies>

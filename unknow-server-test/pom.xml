@@ -11,7 +11,11 @@
 	<name>${project.groupId}:${project.artifactId}</name>
 	<description>Test projects</description>
 	<url>https://github.com/Unknow0/unknow-server</url>
-	
+
+	<properties>
+		<maven.deploy.skip>true</maven.deploy.skip>
+	</properties>
+
 	<licenses>
 		<license>
 			<name>The Apache License, Version 2.0</name>
@@ -30,7 +34,7 @@
 		<developerConnection>scm:git:ssh://github.com:Unknow0/unknow-server.git</developerConnection>
 		<url>https://github.com/Unknow0/unknow-server</url>
 	</scm>
-	
+
 	<modules>
 		<module>unknow-server-test-pojo</module>
 		<module>unknow-server-test-jar</module>
