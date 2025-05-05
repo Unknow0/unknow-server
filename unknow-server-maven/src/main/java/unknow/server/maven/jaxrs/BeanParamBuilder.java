@@ -19,7 +19,6 @@ import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.AssignExpr;
 import com.github.javaparser.ast.expr.ClassExpr;
 import com.github.javaparser.ast.expr.Expression;
-import com.github.javaparser.ast.expr.FieldAccessExpr;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
@@ -91,13 +90,8 @@ public class BeanParamBuilder {
 		if (throwsIoException(param.params))
 			m.addThrownException(types.getClass(IOException.class));
 		BlockStmt b = m.createBody().addStatement(Utils.create(types.getClass(clazz), "b", Utils.list()));
-		for (JaxrsBeanFieldParam e : param.params) {
-			if (e.setter != null)
-				b.addStatement(new MethodCallExpr(new NameExpr("b"), e.setter.name(), Utils.list(getParam(e.param))));
-			else
-				b.addStatement(new AssignExpr(new FieldAccessExpr(new NameExpr("b"), e.field.name()), getParam(e.param), AssignExpr.Operator.ASSIGN));
-
-		}
+		for (JaxrsBeanFieldParam e : param.params)
+			b.addStatement(new MethodCallExpr(new NameExpr("b"), e.prop.setter().name(), Utils.list(getParam(e.param))));
 		b.addStatement(new ReturnStmt(new NameExpr("b")));
 	}
 
