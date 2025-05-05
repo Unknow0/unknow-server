@@ -8,8 +8,8 @@ import java.util.function.Consumer;
 
 import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.Encoded;
+import unknow.server.maven.model.BeanProperty;
 import unknow.server.maven.model.ClassModel;
-import unknow.server.maven.model.FieldModel;
 import unknow.server.maven.model.MethodModel;
 import unknow.server.maven.model.ParamModel;
 import unknow.server.maven.model.PrimitiveModel;
@@ -35,10 +35,8 @@ public abstract class JaxrsParam<T extends WithName & WithAnnotation & WithType>
 		this.p = p;
 		if (p instanceof ParamModel)
 			this.parent = ((ParamModel<?>) p).parent().parent();
-		else if (p instanceof FieldModel)
-			this.parent = ((FieldModel) p).parent();
-		else if (p instanceof MethodModel)
-			this.parent = ((MethodModel) p).parent();
+		else if (p instanceof BeanProperty)
+			this.parent = ((BeanProperty) p).getter().parent();
 		else
 			throw new IllegalArgumentException("unsupported param type " + p);
 
@@ -80,13 +78,11 @@ public abstract class JaxrsParam<T extends WithName & WithAnnotation & WithType>
 
 		public static class JaxrsBeanFieldParam {
 			public final JaxrsParam<?> param;
-			public final FieldModel field;
-			public final MethodModel setter;
+			public final BeanProperty prop;
 
-			public JaxrsBeanFieldParam(JaxrsParam<?> param, FieldModel field, MethodModel setter) {
+			public JaxrsBeanFieldParam(JaxrsParam<?> param, BeanProperty prop) {
 				this.param = param;
-				this.field = field;
-				this.setter = setter;
+				this.prop = prop;
 			}
 		}
 	}
