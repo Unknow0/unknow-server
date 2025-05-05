@@ -2,6 +2,7 @@ package unknow.server.maven.model;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -10,7 +11,11 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class BeanProperty {
+import unknow.server.maven.model.util.WithAnnotation;
+import unknow.server.maven.model.util.WithName;
+import unknow.server.maven.model.util.WithType;
+
+public class BeanProperty implements WithName, WithAnnotation, WithType {
 	private static final Logger logger = LoggerFactory.getLogger(BeanProperty.class);
 
 	private final String name;
@@ -25,6 +30,7 @@ public class BeanProperty {
 		this.setter = setter;
 	}
 
+	@Override
 	public String name() {
 		return name;
 	}
@@ -41,14 +47,17 @@ public class BeanProperty {
 		return setter;
 	}
 
+	@Override
 	public TypeModel type() {
 		return getter.type();
 	}
 
+	@Override
 	public Optional<AnnotationModel> annotation(Class<?> clazz) {
 		return annotation(clazz.getName());
 	}
 
+	@Override
 	public Optional<AnnotationModel> annotation(String name) {
 		List<AnnotationModel> list = annotations(name);
 		if (list.isEmpty())
@@ -56,6 +65,23 @@ public class BeanProperty {
 		if (list.size() > 1)
 			throw new IllegalArgumentException("Duplicate annotation " + name + " for property " + this);
 		return Optional.of(list.get(0));
+	}
+
+	/**
+	 * get all annotation on the field or the getter or the setter (the first one that as annotation)
+	 * 
+	 * @return annotations of the property
+	 */
+	@Override
+	public Collection<AnnotationModel> annotations() {
+		Collection<AnnotationModel> annotations = Collections.emptyList();
+		if (field != null)
+			annotations = field.annotations();
+		if (annotations.isEmpty())
+			annotations = getter.annotations();
+		if (annotations.isEmpty())
+			annotations = setter.annotations();
+		return annotations;
 	}
 
 	/**
