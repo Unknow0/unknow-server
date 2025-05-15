@@ -15,7 +15,7 @@ import org.mockito.Mockito;
 
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.FilterChain;
-import unknow.server.servlet.HttpAdapter;
+import unknow.server.servlet.HttpConnection;
 import unknow.server.servlet.impl.ServletContextImpl;
 import unknow.server.servlet.impl.ServletRequestImpl;
 import unknow.server.servlet.utils.PathTree.Node;
@@ -30,8 +30,8 @@ public class PathTreeTest {
 	@BeforeEach
 	public void init() {
 		ServletContextImpl ctx = new ServletContextImpl("", "", null, null, null, null, null);
-		HttpAdapter p = mock(HttpAdapter.class);
-		when(p.ctx()).thenReturn(ctx);
+		HttpConnection p = mock(HttpConnection.class);
+		when(p.getCtx()).thenReturn(ctx);
 
 		mock = mock(ServletRequestImpl.class, Mockito.withSettings().useConstructor(p, DispatcherType.REQUEST));
 	}

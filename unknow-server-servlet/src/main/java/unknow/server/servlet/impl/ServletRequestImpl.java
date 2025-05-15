@@ -6,6 +6,8 @@ package unknow.server.servlet.impl;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.Reader;
+import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -42,7 +44,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.HttpUpgradeHandler;
 import jakarta.servlet.http.Part;
-import unknow.server.servlet.HttpAdapter;
+import unknow.server.servlet.HttpConnection;
 import unknow.server.servlet.impl.session.SessionFactory;
 import unknow.server.servlet.utils.PathUtils;
 import unknow.server.util.data.ArrayMap;
@@ -50,14 +52,14 @@ import unknow.server.util.data.ArrayMap;
 /**
  * @author unknow
  */
-public final class ServletRequestImpl implements HttpServletRequest {
+public abstract class ServletRequestImpl implements HttpServletRequest {
 	private static final Logger logger = LoggerFactory.getLogger(ServletRequestImpl.class);
 
 	private static final Cookie[] EMPTY = new Cookie[0];
 
 	private final ArrayMap<Object> attributes = new ArrayMap<>();
 
-	protected final HttpAdapter co;
+	protected final HttpConnection co;
 	private final DispatcherType type;
 
 	private String requestUri;
@@ -67,8 +69,7 @@ public final class ServletRequestImpl implements HttpServletRequest {
 	private String method = null;
 	private String servletPath = null;
 	private String pathInfo = null;
-	private String query = "";
-	private Map<String, List<String>> queryParam = new HashMap<>();
+	private String query;
 
 	private String encoding = null;
 	private long contentLength = -2;
@@ -97,12 +98,14 @@ public final class ServletRequestImpl implements HttpServletRequest {
 	 * @param co the connection adapter
 	 * @param type dispatcher type of this request
 	 */
-	public ServletRequestImpl(HttpAdapter co, DispatcherType type) {
+	public ServletRequestImpl(HttpConnection co, DispatcherType type) {
 		this.co = co;
 		this.type = type;
 
 		this.headers = new HashMap<>();
 	}
+
+	protected abstract ServletInputStream createInput();
 
 	public void setMethod(String method) {
 		this.method = method;
@@ -110,10 +113,6 @@ public final class ServletRequestImpl implements HttpServletRequest {
 
 	public void setQuery(String query) {
 		this.query = query;
-	}
-
-	public Map<String, List<String>> getQueryParam() {
-		return queryParam;
 	}
 
 	public void setProtocol(String protocol) {
@@ -140,7 +139,14 @@ public final class ServletRequestImpl implements HttpServletRequest {
 		if (parameter != null)
 			return;
 		parameter = new HashMap<>();
-		Map<String, List<String>> map = new HashMap<>(queryParam);
+		Map<String, List<String>> map = new HashMap<>();
+		if (query != null) {
+			try (Reader r = new StringReader(query)) {
+				PathUtils.pathQuery(r, map);
+			} catch (IOException e) {
+				logger.error("Failed to parse query param", e);
+			}
+		}
 
 		try {
 			if ("POST".equals(getMethod()) && "application/x-www-form-urlencoded".equalsIgnoreCase(getContentType()))
@@ -159,7 +165,7 @@ public final class ServletRequestImpl implements HttpServletRequest {
 	 * @throws IOException
 	 */
 	private void parseContentParam(Map<String, List<String>> p) throws IOException {
-		try (BufferedReader r = new BufferedReader(new InputStreamReader(co.createInput(), getCharacterEncoding()))) {
+		try (BufferedReader r = new BufferedReader(new InputStreamReader(createInput(), getCharacterEncoding()))) {
 			PathUtils.pathQuery(r, p);
 		}
 		contentLength = 0;
@@ -171,12 +177,12 @@ public final class ServletRequestImpl implements HttpServletRequest {
 	public void setServletPath(String servletPath) {
 		this.servletPath = servletPath;
 		this.pathInfo = "";
-		this.query = "";
+		this.query = null;
 	}
 
 	public void clearInput() throws IOException {
 		if (input == null)
-			input = co.createInput();
+			input = createInput();
 		while (!input.isFinished())
 			input.skip(Long.MAX_VALUE);
 	}
@@ -199,7 +205,7 @@ public final class ServletRequestImpl implements HttpServletRequest {
 	@Override
 	public void setAttribute(String name, Object o) {
 		Object old = attributes.put(name, o);
-		co.events().fireRequestAttribute(this, name, o, old);
+		co.getEvents().fireRequestAttribute(this, name, o, old);
 	}
 
 	@Override
@@ -216,7 +222,7 @@ public final class ServletRequestImpl implements HttpServletRequest {
 				}
 			}
 			if (encoding == null)
-				encoding = co.ctx().getRequestCharacterEncoding();
+				encoding = co.getCtx().getRequestCharacterEncoding();
 		}
 		return encoding;
 	}
@@ -312,7 +318,7 @@ public final class ServletRequestImpl implements HttpServletRequest {
 		if (reader != null)
 			throw new IllegalStateException("getReader() called");
 		if (input == null)
-			input = co.createInput();
+			input = createInput();
 		return input;
 	}
 
@@ -321,7 +327,7 @@ public final class ServletRequestImpl implements HttpServletRequest {
 		if (input != null)
 			throw new IllegalStateException("getInputStream() called");
 		if (reader == null)
-			reader = new BufferedReader(new InputStreamReader(co.createInput(), getCharacterEncoding()));
+			reader = new BufferedReader(new InputStreamReader(createInput(), getCharacterEncoding()));
 		return reader;
 	}
 
@@ -366,7 +372,7 @@ public final class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public String getQueryString() {
-		return query.isEmpty() ? null : query;
+		return query;
 	}
 
 	@Override
@@ -376,7 +382,7 @@ public final class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public String getServerName() {
-		return co.ctx().getVirtualServerName();
+		return co.getCtx().getVirtualServerName();
 	}
 
 	@Override
@@ -533,8 +539,8 @@ public final class ServletRequestImpl implements HttpServletRequest {
 			return sessionFromCookie;
 		if (sessionFromUrl != null)
 			return sessionFromUrl;
-		co.ctx().getEffectiveSessionTrackingModes(); // TODO manage other session traking mode
-		SessionCookieConfig cookieCfg = co.ctx().getSessionCookieConfig();
+		co.getCtx().getEffectiveSessionTrackingModes(); // TODO manage other session traking mode
+		SessionCookieConfig cookieCfg = co.getCtx().getSessionCookieConfig();
 		if (cookieCfg != null) {
 			String name = cookieCfg.getName();
 			Cookie[] c = getCookies();
@@ -552,7 +558,7 @@ public final class ServletRequestImpl implements HttpServletRequest {
 		if (session != null)
 			return session;
 		String sessionId = getRequestedSessionId();
-		SessionFactory sessionFactory = co.ctx().getSessionFactory();
+		SessionFactory sessionFactory = co.getCtx().getSessionFactory();
 //		ctx.getSessionCookieConfig().
 		if (sessionId == null && create) {
 			sessionId = sessionFactory.generateId();
@@ -570,7 +576,7 @@ public final class ServletRequestImpl implements HttpServletRequest {
 	public String changeSessionId() {
 		if (session == null)
 			throw new IllegalStateException("no session");
-		SessionFactory sessionFactory = co.ctx().getSessionFactory();
+		SessionFactory sessionFactory = co.getCtx().getSessionFactory();
 		String newId = sessionFactory.generateId();
 		sessionFactory.changeId(session, newId);
 		return newId;
@@ -633,7 +639,7 @@ public final class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public ServletContext getServletContext() {
-		return co.ctx();
+		return co.getCtx();
 	}
 
 	@Override
@@ -659,5 +665,14 @@ public final class ServletRequestImpl implements HttpServletRequest {
 		if (address == null)
 			return "127.0.0.1";
 		return address.getHostAddress();
+	}
+
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		sb.append(method).append(' ').append(requestUri).append(' ').append(protocol);
+		for (Entry<String, List<String>> e : headers.entrySet())
+			sb.append('\n').append(e.getKey()).append(": ").append(e.getValue());
+		return sb.toString();
 	}
 }

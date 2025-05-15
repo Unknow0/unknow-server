@@ -38,8 +38,8 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 
 	private final Queue<WorkerTask> tasks;
 
-	private NIOConnectionAbstract head;
-	private NIOConnectionAbstract tail;
+	private NIOConnection head;
+	private NIOConnection tail;
 
 	/**
 	 * create new IOWorker
@@ -56,7 +56,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		this.executor = executor;
 		this.listener = listener;
 
-		this.buf = ByteBuffer.allocateDirect(25000);
+		this.buf = ByteBuffer.allocateDirect(16000);
 		this.tasks = new ConcurrentLinkedQueue<>();
 	}
 
@@ -77,45 +77,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	}
 
 	@Override
-	protected final void selected(long now, SelectionKey key) throws IOException, InterruptedException {
-		NIOConnectionAbstract co = (NIOConnectionAbstract) key.attachment();
-
-		if (key.isValid() && key.isWritable()) {
-			try {
-				co.writeInto(buf, now);
-				toTail(co, now);
-			} catch (InterruptedException e) {
-				logger.error("failed to write {}", co, e);
-				Thread.currentThread().interrupt();
-			} catch (Exception e) {
-				logger.error("failed to write {}", co, e);
-				close(co);
-			} finally {
-				buf.clear();
-			}
-		}
-
-		// Tests whether this key's channel is ready to accept a new socket connection
-		if (key.isValid() && key.isReadable()) {
-			try {
-				if (co.readFrom(buf, now))
-					toTail(co, now);
-				else if (!co.key.isValid() || co.closed(now, false))
-					close(co);
-			} catch (InterruptedException e) {
-				logger.error("failed to read {}", co, e);
-				Thread.currentThread().interrupt();
-			} catch (Exception e) {
-				logger.error("failed to read {}", co, e);
-				close(co);
-			} finally {
-				buf.clear();
-			}
-		}
-	}
-
-	@Override
-	protected void onSelect(long now, boolean close) throws InterruptedException {
+	protected void onSelect(long now, boolean close) {
 		WorkerTask r;
 		while ((r = tasks.poll()) != null)
 			r.run(now);
@@ -124,9 +86,9 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			return;
 
 		long end = now - 1000;
-		NIOConnectionAbstract co = head;
+		NIOConnection co = head;
 		while (co != null && co.lastCheck < end) {
-			NIOConnectionAbstract next = co.next;
+			NIOConnection next = co.next;
 			if (!co.key.isValid() || co.closed(now, close))
 				close(co);
 			else
@@ -147,15 +109,72 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		}
 	}
 
+	@Override
+	protected final void selected(long now, SelectionKey key) throws IOException {
+		NIOConnection co = (NIOConnection) key.attachment();
+
+		if (key.isValid() && key.isWritable()) {
+			try {
+				doWrite(co, now);
+			} catch (Exception e) {
+				logger.error("failed to write {}", co, e);
+				close(co);
+			} finally {
+				buf.clear();
+			}
+		}
+
+		// Tests whether this key's channel is ready to accept a new socket connection
+		if (key.isValid() && key.isReadable()) {
+			try {
+				doRead(co, now);
+			} catch (Exception e) {
+				logger.error("failed to read {}", co, e);
+				close(co);
+			} finally {
+				buf.clear();
+			}
+		}
+	}
+
+	private void doRead(NIOConnection co, long now) throws IOException {
+		int l;
+		l = co.channel.read(buf);
+		if (l == -1) {
+			// TODO mark as closing
+			co.onRead(null, now);
+			if (co.closed(now, false))
+				close(co);
+			return;
+		}
+		if (l == 0) {
+			toTail(co, now);
+			return;
+		}
+		buf.flip();
+		ByteBuffer data = ByteBuffer.allocate(buf.remaining());
+		data.put(buf);
+		data.flip();
+		co.onRead(data, now);
+	}
+
+	private void doWrite(NIOConnection co, long now) throws IOException {
+		co.beforeWrite();
+		if (co.channel.write(co.writes, 0, co.writesLength) > 0) {
+			co.onWrite(now);
+			toTail(co, now);
+		}
+	}
+
 	@SuppressWarnings("unchecked")
 	public final <T> Future<T> submit(Runnable r) {
 		return (Future<T>) executor.submit(r);
 	}
 
-	private void close(NIOConnectionAbstract co) {
+	private void close(NIOConnection co) {
 		listener.closed(id, co);
 		try {
-			co.free();
+			co.onFree();
 		} catch (Exception e) {
 			logger.warn("Failed to free connection {}", co, e);
 		}
@@ -166,7 +185,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		void run(long now);
 	}
 
-	private final void unlink(NIOConnectionAbstract co) {
+	private final void unlink(NIOConnection co) {
 		if (co.prev != null)
 			co.prev.next = co.next;
 		if (co.next != null)
@@ -178,12 +197,12 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			tail = co.prev;
 	}
 
-	private final void remove(NIOConnectionAbstract co) {
+	private final void remove(NIOConnection co) {
 		unlink(co);
 		co.next = co.prev = null;
 	}
 
-	private final void toTail(NIOConnectionAbstract co, long now) {
+	private final void toTail(NIOConnection co, long now) {
 		co.lastCheck = now;
 
 		if (tail == co)
@@ -202,11 +221,11 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 
 	private final class RegisterTask implements WorkerTask {
 		private final SocketChannel socket;
-		private final ConnectionFactory pool;
+		private final ConnectionFactory factory;
 
-		public RegisterTask(SocketChannel socket, ConnectionFactory pool) {
+		public RegisterTask(SocketChannel socket, ConnectionFactory factory) {
 			this.socket = socket;
-			this.pool = pool;
+			this.factory = factory;
 		}
 
 		@SuppressWarnings("resource")
@@ -226,16 +245,17 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 				logger.warn("Failed to register socket", e);
 				return;
 			}
-			NIOConnectionAbstract co = pool.build(NIOWorker.this, key, now);
+			NIOConnection co = new NIOConnection(NIOWorker.this, key, factory.build());
 			listener.accepted(id, co);
-			key.attach(co);
-			toTail(co, now);
 			try {
-				co.onInit();
+				co.onInit(co, now, null);
 			} catch (Exception e) {
 				logger.warn("Failed to start connection", e);
 				close(co);
+				return;
 			}
+			key.attach(co);
+			toTail(co, now);
 		}
 	}
 }

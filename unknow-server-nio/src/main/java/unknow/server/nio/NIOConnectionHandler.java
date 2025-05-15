@@ -1,45 +1,61 @@
 package unknow.server.nio;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import javax.net.ssl.SSLEngine;
 
-import unknow.server.util.io.Buffers;
-
+@SuppressWarnings("unused")
 public interface NIOConnectionHandler {
 
 	/**
 	 * called after the connection is initialized
 	 * 
 	 * @param co the connection
+	 * @param now currentTimeMillis
 	 * @param sslEngine the sslEngine for ssl connection null for other
+	 * @throws IOException on io exception
 	 */
-	void onInit(NIOConnectionAbstract co, SSLEngine sslEngine);
+	default void onInit(NIOConnection co, long now, SSLEngine sslEngine) throws IOException { // ok
+	}
 
 	/**
 	 * called when the handshake process finish
 	 * 
 	 * @param sslEngine the sslEngine
-	 * @throws InterruptedException on interrupt
+	 * @throws IOException on io exception
 	 */
-	void onHandshakeDone(SSLEngine sslEngine) throws InterruptedException;
+	default void onHandshakeDone(SSLEngine sslEngine) throws IOException { // ok
+	}
 
 	/**
 	 * called after some data has been read
 	 * 
 	 * @param b the read buffers
-	 * @throws InterruptedException on interrupt
+	 * @param now currentTimeMillis
 	 * @throws IOException on io exception
 	 */
-	void onRead(Buffers b) throws InterruptedException, IOException;
+	default void onRead(ByteBuffer b, long now) throws IOException { // ok
+	}
+
+	/**
+	 * called before a buffer is written
+	 * @param b buffer to be written
+	 * @return new buffer to write
+	 * @throws IOException on io exception
+	 */
+	default ByteBuffer beforeWrite(ByteBuffer b) throws IOException {
+		return b;
+	}
 
 	/**
 	 * called after data has been written
 	 * 
-	 * @throws InterruptedException on interrupt
+	 * @param now currentTimeMillis
 	 * @throws IOException on io exception
 	 */
-	void onWrite() throws InterruptedException, IOException;
+	default void onWrite(long now) throws IOException { // ok
+	}
 
 	/**
 	 * check if the connection is closed and should be stoped
@@ -48,12 +64,15 @@ public interface NIOConnectionHandler {
 	 * @param stop if true the server is in stop phase
 	 * @return true is the collection is closed
 	 */
-	boolean closed(long now, boolean stop);
+	default boolean closed(long now, boolean stop) {
+		return false;
+	}
 
 	/**
 	 * called when the connection is free
 	 * 
 	 * @throws IOException on io exception
 	 */
-	void onFree() throws IOException;
+	default void onFree() throws IOException { // ok
+	}
 }

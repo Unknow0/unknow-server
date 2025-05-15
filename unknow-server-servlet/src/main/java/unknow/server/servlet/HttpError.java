@@ -102,8 +102,9 @@ public final class HttpError {
 	}
 
 	/**
-	 * @param status
-	 * @return
+	 * get the error from a status
+	 * @param status http status
+	 * @return the error
 	 */
 	public static HttpError fromStatus(int status) {
 		switch (status) {

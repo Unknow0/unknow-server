@@ -5,7 +5,6 @@ package unknow.server.servlet.utils;
 
 import jakarta.servlet.FilterChain;
 import unknow.server.servlet.impl.ServletRequestImpl;
-import unknow.server.util.io.Buffers;
 
 /**
  * the calculated path tree to FilterChains
@@ -138,27 +137,6 @@ public class PathTree {
 	 * 
 	 * @param a one
 	 * @param b two
-	 * @param o start of the part in the buffer
-	 * @param e end of the part
-	 * @return -1,1 or 0
-	 * @throws InterruptedException
-	 */
-	public static int compare(byte[] a, Buffers b, int o, int e) throws InterruptedException {
-		int i = a.length;
-		int bl = e - o;
-		while (o < e && i >= 0) {
-			int c = a[--i] - b.get(--e);
-			if (c != 0)
-				return c;
-		}
-		return a.length - bl;
-	}
-
-	/**
-	 * compare two part
-	 * 
-	 * @param a one
-	 * @param b two
 	 * @return -1,1 or 0
 	 */
 	public static int compare(String a, String b) {
@@ -200,8 +178,8 @@ public class PathTree {
 		/**
 		 * create new EndNode
 		 * 
-		 * @param part
-		 * @param chain
+		 * @param part path part
+		 * @param chain filter chain
 		 */
 		public Node(String part, FilterChain chain) {
 			this.part = part;

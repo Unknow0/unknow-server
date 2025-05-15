@@ -42,7 +42,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 	private final List<Cookie> cookies;
 
 	private long contentLength = -1;
-	private int bufferSize = -1;
+	private int bufferSize = 4096;
 
 	// Content-Language
 	private Locale locale = null;
@@ -63,7 +63,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 	/**
 	 * commit the response
 	 * 
-	 * @throws IOException
+	 * @throws IOException in case of iosxception
 	 */
 	public final void commit() throws IOException {
 		if (commited)

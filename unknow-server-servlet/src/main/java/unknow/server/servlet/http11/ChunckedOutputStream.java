@@ -4,8 +4,9 @@
 package unknow.server.servlet.http11;
 
 import java.io.IOException;
-import java.io.OutputStream;
+import java.nio.ByteBuffer;
 
+import unknow.server.nio.NIOConnection.Out;
 import unknow.server.servlet.impl.AbstractServletOutput;
 import unknow.server.servlet.impl.ServletResponseImpl;
 
@@ -17,7 +18,7 @@ import unknow.server.servlet.impl.ServletResponseImpl;
 public class ChunckedOutputStream extends AbstractServletOutput {
 	private static final byte[] CRLF = new byte[] { '\r', '\n' };
 	private static final byte[] END = new byte[] { '0', '\r', '\n', '\r', '\n' };
-	private final OutputStream out;
+	private final Out out;
 
 	/**
 	 * create new ChunckedOutputStream
@@ -25,7 +26,7 @@ public class ChunckedOutputStream extends AbstractServletOutput {
 	 * @param out        the real output
 	 * @param res        the servlet response (to commit)
 	 */
-	public ChunckedOutputStream(OutputStream out, ServletResponseImpl res) {
+	public ChunckedOutputStream(Out out, ServletResponseImpl res) {
 		super(res);
 		this.out = out;
 	}
@@ -36,21 +37,10 @@ public class ChunckedOutputStream extends AbstractServletOutput {
 	}
 
 	@Override
-	public void flush() throws IOException {
-		if (buffer.isEmpty())
-			return;
-		res.commit();
-		writeBlock();
-	}
-
-	private void writeBlock() throws IOException {
-		out.write(Integer.toString(buffer.length(), 16).getBytes());
+	protected void writeBuffer(ByteBuffer b) throws IOException {
+		out.write(Integer.toString(b.remaining(), 16).getBytes());
 		out.write(CRLF);
-		try {
-			buffer.read(out, -1, false);
-		} catch (@SuppressWarnings("unused") InterruptedException e) {
-			Thread.currentThread().interrupt();
-		}
+		out.write(b);
 		out.write(CRLF);
 	}
 }

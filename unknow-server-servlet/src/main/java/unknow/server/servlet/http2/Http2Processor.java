@@ -1,6 +1,9 @@
 package unknow.server.servlet.http2;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -8,27 +11,27 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import unknow.server.nio.NIOConnectionHandler;
 import unknow.server.servlet.HttpConnection;
-import unknow.server.servlet.HttpProcessor;
 import unknow.server.servlet.http2.frame.FrameData;
 import unknow.server.servlet.http2.frame.FrameGoAway;
 import unknow.server.servlet.http2.frame.FrameHeader;
-import unknow.server.servlet.http2.frame.FramePRI;
 import unknow.server.servlet.http2.frame.FramePing;
 import unknow.server.servlet.http2.frame.FrameReader;
 import unknow.server.servlet.http2.frame.FrameReader.FrameBuilder;
 import unknow.server.servlet.http2.frame.FrameRstStream;
 import unknow.server.servlet.http2.frame.FrameSettings;
 import unknow.server.servlet.http2.frame.FrameWindowUpdate;
+import unknow.server.servlet.http2.header.Http2HeadersDecoder;
+import unknow.server.servlet.http2.header.Http2HeadersEncoder;
+import unknow.server.servlet.http2.header.Http2HeadersEncoder.ByteBufferConsumer;
 import unknow.server.servlet.impl.ServletResponseImpl;
 import unknow.server.util.data.IntArrayMap;
-import unknow.server.util.io.Buffers;
-import unknow.server.util.io.BuffersUtils;
 
-public class Http2Processor implements HttpProcessor, Http2FlowControl {
+public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 	static final Logger logger = LoggerFactory.getLogger(Http2Processor.class);
 
-	private static final byte[] PRI = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes(StandardCharsets.US_ASCII);
+	public static final byte[] PRI = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes(StandardCharsets.US_ASCII);
 
 	public static final int NO_ERROR = 0;
 	public static final int PROTOCOL_ERROR = 1;
@@ -62,10 +65,12 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 	public final HttpConnection co;
 	public final IntArrayMap<Http2Stream> streams;
 	public final List<Http2Stream> pending;
-	public final Http2Headers headers;
+	public final Http2HeadersEncoder headersEncoder;
+	public final Http2HeadersDecoder headersDecoder;
 	private final byte[] b;
+	private int l;
 	private int window;
-	public boolean closing;
+	private int closingId;
 
 //	private boolean allowPush;
 //	private int concurrent;
@@ -78,13 +83,14 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 
 	public boolean wantContinuation;
 
-	public Http2Processor(HttpConnection co) throws InterruptedException {
+	public Http2Processor(HttpConnection co) throws IOException {
 		this.co = co;
 		this.streams = new IntArrayMap<>();
 		this.pending = new LinkedList<>();
-		this.headers = new Http2Headers(4096);
+		this.headersEncoder = new Http2HeadersEncoder(4096);
+		this.headersDecoder = new Http2HeadersDecoder(4096);
 		this.b = new byte[9];
-		this.closing = false;
+		this.closingId = -1;
 
 		this.window = 65535;
 
@@ -94,23 +100,24 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 		this.frame = 16384;
 //		this.headerList = Integer.MAX_VALUE;
 
-		this.r = FramePRI.INSTRANCE;
+		this.r = new FrameReader(this, 24, 0, 0);
 
-		formatFrame(b, 0, 4, 0, 0);
-		co.pendingWrite().write(b, 0, 9);
-		co.flush();
+		sendFrame(4, 0, 0, null);
 	}
 
 	@Override
-	public final void process() throws InterruptedException {
-		if (r != null) {
-			r = r.process(co.pendingRead());
-			if (r != null)
-				return;
+	public void onRead(ByteBuffer b, long now) throws IOException {
+		if (b == null) {
+			closingId = lastId;
+			return;
 		}
 
-		while (co.pendingRead().length() > 9 && r == null)
-			readFrame(co.pendingRead());
+		while (b.hasRemaining()) {
+			if (r != null)
+				r = r.process(b);
+			else
+				readFrame(b);
+		}
 	}
 
 	@Override
@@ -121,13 +128,12 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 	}
 
 	@Override
-	public boolean isClosable(boolean stop) {
-		if (stop && !closing) {
+	public boolean closed(long now, boolean stop) {
+		if (stop && closingId < 0) {
 			try {
 				goaway(NO_ERROR);
-				closing = true;
-			} catch (@SuppressWarnings("unused") InterruptedException e) {
-				Thread.currentThread().interrupt();
+				closingId = lastId;
+			} catch (@SuppressWarnings("unused") IOException e) { // ok
 			}
 		}
 		Iterator<Http2Stream> it = pending.iterator();
@@ -139,10 +145,19 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 	}
 
 	@Override
-	public void close() {
+	public void onFree() {
 		for (Http2Stream s : streams.values())
 			s.close(true);
 		streams.clear();
+	}
+
+	public void close(int lastClienId) {
+		closingId = lastClienId;
+	}
+
+	public void addStream(Http2Stream s) {
+		streams.set(s.id(), s);
+		lastId = Math.max(s.id(), lastId);
 	}
 
 	/**
@@ -150,10 +165,17 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 	 * 
 	 * @param buf
 	 * @return
-	 * @throws InterruptedException
+	 * @
+	 * @throws IOException 
+	 * @throws InterruptedException 
 	 */
-	private void readFrame(Buffers buf) throws InterruptedException {
-		buf.read(b, 0, 9, false);
+	private void readFrame(ByteBuffer buf) throws IOException {
+		int m = Math.min(9 - l, buf.remaining());
+		buf.get(b, l, m);
+		l += m;
+		if (l < 9)
+			return;
+		l = 0;
 		int size = (b[0] & 0xff) << 16 | (b[1] & 0xff) << 8 | (b[2] & 0xff);
 		int type = b[3];
 		int flags = b[4];
@@ -166,16 +188,22 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 		wantContinuation = false;
 
 		if (logger.isDebugEnabled())
-			logger.debug(String.format("%s frame: %02x, size: %s, flags: %02x, id: %s", co, type, size, flags, id));
-		FrameBuilder builder = BUILDERS.get(type);
-		if (builder == null) {
-			goaway(PROTOCOL_ERROR);
-			return;
-		}
+			logger.debug(String.format("%s read frame: %02x, size: %s, flags: %02x, id: %s", co, type, size, flags, id));
+
+		FrameBuilder builder;
+		if (closingId < 0 || id < closingId) {
+			builder = BUILDERS.get(type);
+			if (builder == null) {
+				goaway(PROTOCOL_ERROR);
+				return;
+			}
+		} else
+			builder = FrameReader.BUILDER;
+
 		r = builder.build(this, size, flags, id, buf);
 	}
 
-	public void goaway(int err) throws InterruptedException {
+	public void goaway(int err) throws IOException {
 		byte[] f = new byte[17];
 		formatFrame(f, 8, 7, 0, 0);
 		f[9] = (byte) ((lastId >> 24) & 0x7f);
@@ -186,82 +214,64 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 		f[14] = (byte) ((err >> 16) & 0xff);
 		f[15] = (byte) ((err >> 8) & 0xff);
 		f[16] = (byte) (err & 0xff);
-		Buffers buf = co.pendingWrite();
-		buf.lock();
-		try {
-			buf.write(f);
-		} finally {
-			buf.unlock();
-		}
-		co.flush();
-		logger.debug("{}: send GOAWAY {}", this, error(err));
+		co.write(ByteBuffer.wrap(f));
+		logger.debug("{}: send GOAWAY {}", co, error(err));
 	}
 
-	public void sendFrame(byte[] b, int size, int type, int flags, int id, Buffers data) throws InterruptedException {
-		size = Math.min(size, data.length());
+	public void sendFrame(int type, int flags, int id, ByteBuffer data) throws IOException {
+		int size = Math.min(frame, data == null ? 0 : data.remaining());
+		byte[] b = new byte[9];
 		formatFrame(b, size, type, flags, id);
-		Buffers write = co.pendingWrite();
-		write.lock();
-		try {
-			write.write(b);
-			data.read(write, size, false);
-		} finally {
-			write.unlock();
-		}
-		if (logger.isDebugEnabled())
-			logger.debug(String.format("%s: send %02x %02x", this, type, flags));
-		co.flush();
-	}
-
-	public void rawWrite(byte[] b) throws InterruptedException {
-		Buffers write = co.pendingWrite();
-		write.lock();
-		try {
-			write.write(b);
-		} finally {
-			write.unlock();
-		}
-		co.flush();
-	}
-
-	public void sendHeaders(int id, ServletResponseImpl res) throws InterruptedException {
-		byte[] f = new byte[9];
-		Buffers out = new Buffers();
-		int type = 1;
-		Buffers write = co.pendingWrite();
-		write.lock();
-		try {  // all headers frame should be together
-			synchronized (headers) {
-				headers.writeHeader(out, ":status", Integer.toString(res.getStatus()));
-				for (String n : res.getHeaderNames()) {
-					for (String v : res.getHeaders(n)) {
-						headers.writeHeader(out, n, v);
-
-						while (out.length() >= frame) {
-							sendFrame(f, frame, type, 0, id, out);
-							type = 9;
-						}
-					}
-				}
+		synchronized (co) {
+			co.write(ByteBuffer.wrap(b));
+			if (size > 0 && data != null) {
+				if (size < data.remaining()) {
+					co.write(data.slice().limit(size));
+					data.position(data.position() + size);
+				} else
+					co.write(data);
 			}
-			int flag = 0x4;
-			@SuppressWarnings("resource")
-			Http2ServletOutput sout = (Http2ServletOutput) res.getRawStream();
-			if (sout == null || sout.isDone())
-				flag |= 0x1;
-
-			sendFrame(f, out.length(), type, flag, id, out);
-		} finally {
-			write.unlock();
 		}
+
+		if (logger.isDebugEnabled())
+			logger.debug(String.format("%s send frame: %02x, size: %s, flags: %02x, id: %s", co, type, size, flags, id));
+		co.flush();
 	}
 
-	public void sendData(int id, Buffers data, boolean done) throws InterruptedException {
-		byte[] f = new byte[9];
-		int l = data.length();
-		while (l > frame)
-			sendFrame(f, frame, 0, 0, id, data);
-		sendFrame(f, data.length(), 0, done ? 0x1 : 0, id, data);
+	@SuppressWarnings("resource")
+	public void sendHeaders(int id, ServletResponseImpl res) throws IOException {
+		List<ByteBuffer> list = new ArrayList<>();
+		ByteBufferConsumer c = list::add;
+
+		synchronized (headersEncoder) {
+			headersEncoder.encode(":status", Integer.toString(res.getStatus()), c);
+			for (String n : res.getHeaderNames()) {
+				for (String v : res.getHeaders(n))
+					headersEncoder.encode(n, v, c);
+			}
+
+			headersEncoder.flush(c);
+		}
+
+		int flags = 0x0;
+		Http2ServletOutput sout = (Http2ServletOutput) res.getRawStream();
+		if (sout == null || sout.isDone())
+			flags |= 0x1;
+		int size = list.size();
+		if (size == 1) {
+			sendFrame(1, flags | 0x4, id, list.get(0));
+			return;
+		}
+		sendFrame(1, flags, id, list.get(0));
+		for (int i = 1; i < size - 1; i++)
+			sendFrame(9, flags, id, list.get(i));
+		sendFrame(9, flags | 0x4, id, list.get(-1));
+	}
+
+	public void sendData(int id, ByteBuffer data, boolean done) throws IOException {
+		while (data.remaining() > frame)
+			sendFrame(0, 0, id, data);
+		sendFrame(0, done ? 0x1 : 0, id, data);
 		co.flush();
 	}
 
@@ -312,10 +322,4 @@ public class Http2Processor implements HttpProcessor, Http2FlowControl {
 		}
 	}
 
-	public static final HttpProcessorFactory Factory = co -> {
-		if (BuffersUtils.startsWith(co.pendingRead(), PRI, 0, PRI.length)) {
-			return new Http2Processor(co);
-		}
-		return null;
-	};
 }

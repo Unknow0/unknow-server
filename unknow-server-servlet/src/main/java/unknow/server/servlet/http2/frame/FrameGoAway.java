@@ -1,10 +1,12 @@
 package unknow.server.servlet.http2.frame;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import unknow.server.servlet.http2.Http2Processor;
-import unknow.server.util.io.Buffers;
 
 public class FrameGoAway extends FrameReader {
 	private static final Logger logger = LoggerFactory.getLogger(FrameGoAway.class);
@@ -18,6 +20,7 @@ public class FrameGoAway extends FrameReader {
 	};
 
 	private final byte[] b;
+	private int l;
 
 	private int lastId = -1;
 
@@ -27,19 +30,21 @@ public class FrameGoAway extends FrameReader {
 	}
 
 	@Override
-	public FrameReader process(Buffers buf) throws InterruptedException {
+	public FrameReader process(ByteBuffer buf) throws IOException {
 		if (lastId >= 0)
 			return super.process(buf);
-		if (buf.length() < 8)
+
+		int i = Math.min(buf.remaining(), 8 - l);
+		buf.get(b, l, i);
+		if ((l += i) < 8)
 			return this;
 
-		buf.read(b, 0, 8, false);
 		lastId = (b[0] & 0x7f) << 24 | (b[1] & 0xff) << 16 | (b[2] & 0xff) << 8 | (b[3] & 0xff);
 
 		int err = (b[4] & 0xff) << 24 | (b[5] & 0xff) << 16 | (b[6] & 0xff) << 8 | (b[7] & 0xff);
 		logger.info("goaway last: {} err: {}", lastId, Http2Processor.error(err));
 		size -= 8;
-		p.closing = true;
+		p.close(lastId);
 		return super.process(buf);
 	}
 }

@@ -1,20 +1,19 @@
-package unknow.server.servlet.http2;
+package unknow.server.servlet.http2.header;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import unknow.server.util.io.Buffers;
-import unknow.server.util.io.BuffersUtils;
+import unknow.server.servlet.http2.header.Http2Huffman.S;
 
 public class Http2HuffmanTest {
 	public static Stream<Arguments> input() {
@@ -31,19 +30,18 @@ public class Http2HuffmanTest {
 	@MethodSource("input")
 	public void decode(String decoded, byte[] encoded) throws IOException {
 		StringBuilder sb = new StringBuilder();
-		try (InputStream b = new ByteArrayInputStream(encoded)) {
-			Http2Huffman.decode(b, encoded.length, sb);
-		}
+		ByteBuffer b = ByteBuffer.wrap(encoded);
+		Http2Huffman.decode(b, new S(encoded.length), sb);
 		assertEquals(decoded, sb.toString());
 	}
 
 	@ParameterizedTest
 	@MethodSource("input")
-	public void encode(String decoded, byte[] encoded) throws InterruptedException {
+	public void encode(String decoded, byte[] encoded) {
 		byte[] bytes = decoded.getBytes(StandardCharsets.US_ASCII);
-		Buffers b = new Buffers();
+		ByteBuffer b = ByteBuffer.allocate(bytes.length);
 		Http2Huffman.encode(b, bytes);
-		byte[] array = BuffersUtils.toArray(b, 0, -1);
+		byte[] array = Arrays.copyOf(b.array(), b.position());
 		assertArrayEquals(encoded, array);
 	}
 

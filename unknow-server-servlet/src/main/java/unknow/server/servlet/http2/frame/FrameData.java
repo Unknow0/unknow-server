@@ -1,8 +1,10 @@
 package unknow.server.servlet.http2.frame;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+
 import unknow.server.servlet.http2.Http2Processor;
 import unknow.server.servlet.http2.Http2Stream;
-import unknow.server.util.io.Buffers;
 
 public class FrameData extends FrameReader {
 	public static final FrameBuilder BUILDER = (p, size, flags, id, buf) -> {
@@ -25,7 +27,7 @@ public class FrameData extends FrameReader {
 	}
 
 	@Override
-	public FrameReader process(Buffers buf) throws InterruptedException {
+	public FrameReader process(ByteBuffer buf) throws IOException {
 		if (pad < 0) {
 			pad = readPad(buf);
 			if (pad < 0)
@@ -33,14 +35,17 @@ public class FrameData extends FrameReader {
 			size -= pad;
 		}
 
-		int l = Math.min(buf.length(), size);
-		s.in.read(buf, l);
+		int l = Math.min(buf.remaining(), size);
+		s.append(buf.slice().limit(l));
+		buf.position(buf.position() + l);
 		size -= l;
 		if (size > 0)
 			return this;
 
 		if (pad > 0) {
-			pad -= buf.skip(pad);
+			l = Math.min(buf.remaining(), pad);
+			buf.position(buf.position() + l);
+			pad -= l;
 			if (pad > 0)
 				return this;
 		}

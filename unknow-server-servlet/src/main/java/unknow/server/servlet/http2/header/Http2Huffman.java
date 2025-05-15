@@ -1,10 +1,8 @@
-package unknow.server.servlet.http2;
+package unknow.server.servlet.http2.header;
 
 import java.io.EOFException;
 import java.io.IOException;
-import java.io.InputStream;
-
-import unknow.server.util.io.Buffers;
+import java.nio.ByteBuffer;
 
 /**
  * HPACK static huffman table
@@ -65,7 +63,7 @@ public class Http2Huffman {
 	private Http2Huffman() {
 	}
 
-	private static int bits(S s, int need) throws IOException {
+	private static int bits(S s, ByteBuffer b, int need) throws IOException {
 		int val = s.bit;
 		while (s.cnt < need) {
 			if (--s.max < 0) {
@@ -73,9 +71,11 @@ public class Http2Huffman {
 					throw new EOFException();
 				return -1;
 			}
+			if (!b.hasRemaining())
+				return -1;
 
 			val <<= 8;
-			val |= s.b.read(); /* load eight bits */
+			val |= b.get() & 0xFF; /* load eight bits */
 			s.cnt += 8;
 		}
 
@@ -88,23 +88,30 @@ public class Http2Huffman {
 		return (val & m) >> s.cnt;
 	}
 
-	public static String decode(InputStream b, int max, StringBuilder sb) throws IOException {
-		S s = new S(b, max);
+	public static void decode(ByteBuffer b, S s, StringBuilder sb) throws IOException {
 		char c;
-		while ((s.max > 0 || s.cnt > 0) && (c = read(s)) != 256)
+		while ((s.max > 0 || s.cnt > 0) && (c = read(s, b)) != 256)
 			sb.append(c);
-		return sb.toString();
 	}
 
-	public static void encode(Buffers b, byte[] data) throws InterruptedException {
-		C c = new C();
-		for (int i = 0; i < data.length; i++)
-			encode(c, b, data[i]);
+	/**
+	 * encode data into buf
+	 * @param buf output buffer
+	 * @param data data to encode
+	 * @return true false if buf if full or data is smaller
+	 */
+	public static boolean encode(ByteBuffer buf, byte[] data) {
+		S c = new S();
+		for (int i = 0; i < data.length; i++) {
+			if (encode(c, buf, data[i]))
+				return false;
+		}
 		if (c.cnt != 0)
-			b.write(c.bit | (0xff >> c.cnt));
+			buf.put((byte) (c.bit | (0xff >> c.cnt)));
+		return buf.position() < data.length;
 	}
 
-	private static void encode(C c, Buffers buf, byte b) throws InterruptedException {
+	private static boolean encode(S c, ByteBuffer buf, byte b) {
 		int code = codes[b];
 		int size = sizes[b];
 
@@ -113,22 +120,25 @@ public class Http2Huffman {
 			if (size <= r) {
 				c.cnt += size;
 				c.bit |= (code << (r - size)) & 0xFF;
-				return;
+				return false;
 			}
 
 			size -= r;
-			buf.write(c.bit | (code >> size) & 0xFF);
+			buf.put((byte) (c.bit | (code >> size) & 0xFF));
 			c.bit = 0;
 			c.cnt = 0;
+			if (!buf.hasRemaining())
+				return true;
 		}
+		return false;
 	}
 
-	private static final char read(S s) throws IOException {
+	private static final char read(S s, ByteBuffer b) throws IOException {
 		int first = 0; /* first code of length len */
 		int index = 0; /* index of first code of length len in symbol table */
 
 		int len = MINBITS;
-		int code = bits(s, 5);
+		int code = bits(s, b, 5);
 		if (code == -1)
 			return 256;
 		while (true) {
@@ -143,23 +153,21 @@ public class Http2Huffman {
 
 			if (++len > MAXBITS)
 				throw new IOException("Broken code");
-			code |= bits(s, 1); /* get next bit */
+			code |= bits(s, b, 1); /* get next bit */
 			if (code == -1)
 				return 256;
 		}
 	}
 
-	static class C {
+	public static class S {
 		int bit;
 		int cnt;
-	}
-
-	static class S extends C {
-		final InputStream b;
 		int max;
 
-		public S(InputStream b, int max) {
-			this.b = b;
+		public S() {
+		}
+
+		public S(int max) {
 			this.max = max;
 		}
 	}

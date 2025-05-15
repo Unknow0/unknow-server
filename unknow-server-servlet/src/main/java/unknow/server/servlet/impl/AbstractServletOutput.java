@@ -1,19 +1,19 @@
 package unknow.server.servlet.impl;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.WriteListener;
-import unknow.server.util.io.Buffers;
 
 /**
  * abstract implementation of ServlerOutputStream
  */
 public abstract class AbstractServletOutput extends ServletOutputStream {
-	/** the buffer */
-	protected final Buffers buffer;
 	/** response that created this stream */
 	protected final ServletResponseImpl res;
+	/** the buffer */
+	protected ByteBuffer buffer;
 	private int bufferSize;
 
 	private boolean closed;
@@ -25,8 +25,7 @@ public abstract class AbstractServletOutput extends ServletOutputStream {
 	protected AbstractServletOutput(ServletResponseImpl res) {
 		this.res = res;
 		if (res != null) {
-			this.buffer = new Buffers();
-			setBufferSize(res.getBufferSize());
+			this.buffer = ByteBuffer.allocate(res.getBufferSize());
 		} else {
 			this.buffer = null;
 			this.bufferSize = 0;
@@ -53,11 +52,10 @@ public abstract class AbstractServletOutput extends ServletOutputStream {
 	 * @param bufferSize the size
 	 */
 	public final void setBufferSize(int bufferSize) {
-		if (!buffer.isEmpty())
-			throw new IllegalStateException("data already written");
-
-		int r = bufferSize % Buffers.BUF_LEN; // make size a multiple of chunk size
-		this.bufferSize = r == 0 ? bufferSize : bufferSize + Buffers.BUF_LEN - r;
+		if (buffer.capacity() > bufferSize || buffer.position() > 0)
+			return;
+		this.bufferSize = bufferSize;
+		this.buffer = ByteBuffer.allocate(bufferSize);
 	}
 
 	public boolean isClosed() {
@@ -91,12 +89,8 @@ public abstract class AbstractServletOutput extends ServletOutputStream {
 	@Override
 	public void write(int b) throws IOException {
 		ensureOpen();
-		try {
-			buffer.write(b);
-		} catch (@SuppressWarnings("unused") InterruptedException e) {
-			Thread.currentThread().interrupt();
-		}
-		if (buffer.length() >= bufferSize)
+		buffer.put((byte) b);
+		if (!buffer.hasRemaining())
 			flush();
 	}
 
@@ -110,21 +104,36 @@ public abstract class AbstractServletOutput extends ServletOutputStream {
 		if (len == 0)
 			return;
 		ensureOpen();
-		try {
-			buffer.write(b, off, len);
-		} catch (@SuppressWarnings("unused") InterruptedException e) {
-			Thread.currentThread().interrupt();
-		}
-		if (buffer.length() >= bufferSize)
-			flush();
+		int l = Math.min(len, buffer.remaining());
+		buffer.put(b, off, l);
+		if (buffer.hasRemaining())
+			return;
+		flush();
+		len -= l;
+		if (len >= bufferSize)
+			writeBuffer(ByteBuffer.wrap(b, off + l, len));
+		else
+			buffer.put(b, off + l, len);
 	}
 
 	@Override
 	public final void close() throws IOException {
 		if (closed)
 			return;
+		res.commit();
 		closed = true;
 		flush();
 		afterClose();
 	}
+
+	@Override
+	public final void flush() throws IOException {
+		if (buffer.position() == 0)
+			return;
+		res.commit();
+		writeBuffer(buffer.flip());
+		buffer = ByteBuffer.allocate(bufferSize);
+	}
+
+	protected abstract void writeBuffer(ByteBuffer b) throws IOException;
 }

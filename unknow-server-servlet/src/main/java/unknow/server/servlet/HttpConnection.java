@@ -4,8 +4,9 @@
 package unknow.server.servlet;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.concurrent.Future;
 
 import javax.net.ssl.SSLEngine;
@@ -14,36 +15,36 @@ import javax.net.ssl.SSLParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import unknow.server.nio.NIOConnectionAbstract;
-import unknow.server.nio.NIOConnectionAbstract.Out;
+import unknow.server.nio.NIOConnection;
+import unknow.server.nio.NIOConnection.Out;
 import unknow.server.nio.NIOConnectionHandler;
-import unknow.server.servlet.HttpProcessor.HttpProcessorFactory;
 import unknow.server.servlet.http11.Http11Processor;
 import unknow.server.servlet.http2.Http2Processor;
 import unknow.server.servlet.impl.ServletContextImpl;
 import unknow.server.servlet.utils.EventManager;
 import unknow.server.servlet.utils.ServletManager;
-import unknow.server.util.io.Buffers;
 
 public final class HttpConnection implements NIOConnectionHandler {
 	private static final Logger logger = LoggerFactory.getLogger(HttpConnection.class);
-
-	private static final HttpProcessorFactory[] VERSIONS = new HttpProcessorFactory[] { Http2Processor.Factory, Http11Processor.Factory };
 
 	private final ServletContextImpl ctx;
 	private final ServletManager manager;
 	private final EventManager events;
 	private final int keepAliveMs;
 
-	private NIOConnectionAbstract co;
-	private HttpProcessor p;
+	private NIOConnection co;
+	private NIOConnectionHandler p;
+
+	private long lastRead;
+	private long lastWrite;
 
 	/**
 	 * create new RequestBuilder
 	 * 
 	 * @param ctx the servlet context
-	 * @param events
-	 * @param manager
+	 * @param manager servet manager
+	 * @param events event manager
+	 * @param keepAliveIdle max idle time in ms
 	 */
 	protected HttpConnection(ServletContextImpl ctx, ServletManager manager, EventManager events, int keepAliveIdle) {
 		this.ctx = ctx;
@@ -53,8 +54,9 @@ public final class HttpConnection implements NIOConnectionHandler {
 	}
 
 	@Override
-	public void onInit(NIOConnectionAbstract co, SSLEngine sslEngine) {
+	public void onInit(NIOConnection co, long now, SSLEngine sslEngine) {
 		this.co = co;
+		this.lastRead = this.lastWrite = now;
 		if (sslEngine != null) {
 			sslEngine.setUseClientMode(false);
 
@@ -65,69 +67,81 @@ public final class HttpConnection implements NIOConnectionHandler {
 	}
 
 	@Override
-	public void onHandshakeDone(SSLEngine sslEngine) throws InterruptedException {
+	public void onHandshakeDone(SSLEngine sslEngine) throws IOException {
 		if ("h2".equals(sslEngine.getApplicationProtocol()))
 			p = new Http2Processor(this);
 		else
-			p = new Http11Processor(this, false);
-		p.process();
+			p = new Http11Processor(this);
 	}
 
 	@Override
-	public final void onRead(Buffers b) throws InterruptedException {
-		for (int i = 0; p == null && i < VERSIONS.length; i++)
-			p = VERSIONS[i].create(this);
-
-		if (p != null)
-			p.process();
-	}
-
-	@SuppressWarnings("resource")
-	@Override
-	public boolean closed(long now, boolean stop) {
-		if (stop)
-			return p == null || p.isClosable(stop);
-
-		if (co.isClosed())
-			return true;
-
-		if (p != null && !p.isClosable(stop))
-			return false;
-
-		if (p == null && co.lastRead() < now - 1000) {
-			logger.warn("request timeout {}", co);
-			return true;
+	public final void onRead(ByteBuffer b, long now) throws IOException {
+		if (p == null) {
+			if (Arrays.equals(b.array(), b.position(), b.limit(), Http2Processor.PRI, 0, Http2Processor.PRI.length))
+				p = new Http2Processor(this);
+			else
+				p = new Http11Processor(this);
 		}
+		p.onRead(b, now);
+	}
 
-		if (co.pendingWrite().isEmpty()) {
-			if (co.getIn().isClosed())
+	public boolean keepAliveReached(long now) {
+		if (keepAliveMs > 0) {
+			long e = now - keepAliveMs - 500;
+			if (lastRead <= e && lastWrite <= e) {
+				logger.info("keep alive idle reached {}", co);
 				return true;
-			if (keepAliveMs > 0) {
-				long e = now - keepAliveMs - 500;
-				if (co.lastRead() <= e && co.lastWrite() <= e) {
-					logger.info("keep alive idle reached {}", co);
-					return true;
-				}
 			}
 		}
-
 		return false;
 	}
 
 	@Override
-	public void onWrite() throws InterruptedException, IOException { // ok
+	public boolean closed(long now, boolean stop) {
+		if (stop)
+			return p == null || p.closed(now, stop);
+
+		if (p == null) {
+			if (lastRead < now - 1000) {
+				logger.warn("request timeout {}", co);
+				return true;
+			}
+			return false;
+		}
+
+		if (co.hasPendingWrites())
+			return false;
+
+		return p.closed(now, stop);
 	}
 
 	@Override
-	public final void onFree() {
+	public void onWrite(long now) { // ok
+	}
+
+	@Override
+	public final void onFree() throws IOException {
 		if (p != null) {
-			p.close();
+			p.onFree();
 			p = null;
 		}
 	}
 
 	public final <T> Future<T> submit(Runnable r) {
 		return co.submit(r);
+	}
+
+	public void write(ByteBuffer buf) throws IOException {
+		try {
+			co.write(buf);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			throw new IOException("Failed to write", e);
+		}
+	}
+
+	public boolean hasPendingWrites() {
+		return co.hasPendingWrites();
 	}
 
 	public ServletContextImpl getCtx() {
@@ -154,23 +168,17 @@ public final class HttpConnection implements NIOConnectionHandler {
 		return co.getLocal();
 	}
 
+	@SuppressWarnings("resource")
+	public void flush() throws IOException {
+		co.getOut().flush();
+	}
+
 	public Out getOut() {
 		return co.getOut();
 	}
 
-	public InputStream getIn() {
-		return co.getIn();
-	}
-
-	public void flush() {
-		co.flush();
-	}
-
-	public Buffers pendingWrite() {
-		return co.pendingWrite();
-	}
-
-	public Buffers pendingRead() {
-		return co.pendingRead();
+	@Override
+	public String toString() {
+		return co.toString();
 	}
 }

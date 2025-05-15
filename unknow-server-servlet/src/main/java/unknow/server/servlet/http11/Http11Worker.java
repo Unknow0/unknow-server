@@ -2,33 +2,20 @@ package unknow.server.servlet.http11;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
-import java.util.Map;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.http.Cookie;
-import unknow.server.nio.NIOConnectionAbstract.Out;
-import unknow.server.servlet.Decode;
+import unknow.server.nio.NIOConnection.Out;
 import unknow.server.servlet.HttpConnection;
 import unknow.server.servlet.HttpError;
 import unknow.server.servlet.HttpWorker;
 import unknow.server.servlet.impl.AbstractServletOutput;
 import unknow.server.servlet.impl.ServletRequestImpl;
-import unknow.server.util.io.Buffers;
-import unknow.server.util.io.BuffersUtils;
 
 /** http/1.1 worker */
 public final class Http11Worker extends HttpWorker {
-	private static final Logger logger = LoggerFactory.getLogger(Http11Worker.class);
 
 	private static final byte[] CRLF = { '\r', '\n' };
-	private static final byte[] PARAM_SEP = { '&', '=' };
-	private static final byte[] SPACE_SLASH = { ' ', '/' };
 	private static final byte[] QUOTE = new byte[] { '\\', '"' };
 	private static final byte[] CHUNKED = new byte[] { 't', 'r', 'a', 'n', 's', 'f', 'e', 'r', '-', 'e', 'n', 'c', 'o', 'd', 'i', 'n', 'g', ':', ' ', 'c', 'h', 'u', 'n', 'k',
 			'e', 'd', '\r', '\n' };
@@ -42,46 +29,20 @@ public final class Http11Worker extends HttpWorker {
 	private static final byte[] SECURE = new byte[] { ';', 's', 'e', 'c', 'u', 'r', 'e' };
 	private static final byte[] HTTP_ONLY = new byte[] { ';', 'h', 't', 't', 'p', 'o', 'n', 'l', 'y' };
 
-	private static final byte SPACE = ' ';
-	private static final byte QUESTION = '?';
-	private static final byte COLON = ':';
-	private static final byte AMPERSAMP = '&';
-	private static final byte EQUAL = '=';
-
 	private static final String UNKNOWN = "Unknown";
 
-	private static final int MAX_METHOD_SIZE = 10; // max size for method
-	private static final int MAX_PATH_SIZE = 2000;
-	private static final int MAX_VERSION_SIZE = 12;
-	private static final int MAX_HEADER_SIZE = 512;
-
 	private final int keepAliveIdle;
-	private final StringBuilder sb;
-	private final Decode decode;
 
 	/**
 	 * new worker
 	 * 
 	 * @param co the connection
+	 * @param req the request
 	 */
-	public Http11Worker(HttpConnection co) {
-		super(co);
+	public Http11Worker(HttpConnection co, ServletRequestImpl req) {
+		super(co, req);
 		this.keepAliveIdle = co.getkeepAlive() / 1000;
 
-		sb = new StringBuilder();
-		decode = new Decode(sb);
-	}
-
-	@SuppressWarnings("resource")
-	@Override
-	public ServletInputStream createInput() {
-		String tr = req.getHeader("transfer-encoding");
-		if ("chunked".equalsIgnoreCase(tr))
-			return new ChunckedInputStream(co.getIn());
-		long l = req.getContentLengthLong();
-		if (l > 0)
-			return new LengthInputStream(co.getIn(), l);
-		return EmptyInputStream.INSTANCE;
 	}
 
 	@SuppressWarnings("resource")
@@ -130,11 +91,6 @@ public final class Http11Worker extends HttpWorker {
 	@SuppressWarnings("resource")
 	@Override
 	public final boolean doStart() throws IOException, InterruptedException {
-		if (!fillRequest(req)) {
-			logger.warn("Failed to process request");
-			return false;
-		}
-
 		if ("100-continue".equals(req.getHeader("expect"))) {
 			Out out = co.getOut();
 			out.write(HttpError.CONTINUE.encoded);
@@ -154,105 +110,9 @@ public final class Http11Worker extends HttpWorker {
 	}
 
 	@Override
-	protected void doDone() {
+	protected void doDone() throws IOException {
 		if (!"keep-alive".equalsIgnoreCase(res.getHeader("connection")))
 			co.getOut().close();
-	}
-
-	private boolean fillRequest(ServletRequestImpl req) throws InterruptedException, IOException {
-		Buffers b = co.pendingRead();
-		int i = BuffersUtils.indexOf(b, SPACE_SLASH, 0, MAX_METHOD_SIZE);
-		if (i < 0) {
-			sendError(HttpError.BAD_REQUEST.code, null, null);
-			return false;
-		}
-		BuffersUtils.toString(sb, b, 0, i);
-		req.setMethod(sb.toString());
-		sb.setLength(0);
-		int last = i + 1;
-
-		i = BuffersUtils.indexOf(b, SPACE, last, MAX_PATH_SIZE);
-		if (i < 0) {
-			sendError(HttpError.URI_TOO_LONG.code, null, null);
-			return false;
-		}
-		int q = BuffersUtils.indexOf(b, QUESTION, last, i - last);
-		if (q < 0)
-			q = i;
-
-		b.walk(decode, last, q - last);
-		if (!decode.done())
-			return false;
-		req.setRequestUri(sb.toString());
-		sb.setLength(0);
-
-		if (q < i) {
-			BuffersUtils.toString(sb, b, q + 1, i - q - 1);
-			req.setQuery(sb.toString());
-			sb.setLength(0);
-		} else
-			req.setQuery("");
-
-		parseParam(req.getQueryParam(), b, q + 1, i);
-		last = i + 1;
-
-		i = BuffersUtils.indexOf(b, CRLF, last, MAX_VERSION_SIZE);
-		if (i < 0) {
-			sendError(HttpError.BAD_REQUEST.code, null, null);
-			return false;
-		}
-		BuffersUtils.toString(sb, b, last, i - last);
-		req.setProtocol(sb.toString());
-		sb.setLength(0);
-		last = i + 2;
-
-		while ((i = BuffersUtils.indexOf(b, CRLF, last, MAX_HEADER_SIZE)) > last) {
-			int c = BuffersUtils.indexOf(b, COLON, last, i - last);
-			if (c < 0) {
-				sendError(HttpError.BAD_REQUEST.code, null, null);
-				return false;
-			}
-
-			BuffersUtils.toString(sb, b, last, c - last);
-			String k = sb.toString().trim().toLowerCase();
-			sb.setLength(0);
-
-			BuffersUtils.toString(sb, b, c + 1, i - c - 1);
-			String v = sb.toString().trim();
-			sb.setLength(0);
-
-			req.addHeader(k, v);
-			last = i + 2;
-		}
-		b.skip(last + 2L);
-		return true;
-	}
-
-	private boolean parseParam(Map<String, List<String>> map, Buffers data, int o, int e) throws InterruptedException {
-		while (o < e) {
-			int i = BuffersUtils.indexOfOne(data, PARAM_SEP, o, e - o);
-			if (i < 0)
-				i = e;
-			data.walk(decode, o, i - o);
-			if (!decode.done())
-				return false;
-			String key = sb.toString();
-			sb.setLength(0);
-
-			o = i + 1;
-			if (i < e && data.get(i) == EQUAL) {
-				i = BuffersUtils.indexOf(data, AMPERSAMP, o, e - o);
-				if (i < 0)
-					i = e;
-				data.walk(decode, o, i - o);
-				if (!decode.done())
-					return false;
-				o = i + 1;
-			}
-			map.computeIfAbsent(key, k -> new ArrayList<>(1)).add(sb.toString());
-			sb.setLength(0);
-		}
-		return true;
 	}
 
 	/**

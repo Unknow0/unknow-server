@@ -4,8 +4,9 @@
 package unknow.server.servlet.http11;
 
 import java.io.IOException;
-import java.io.OutputStream;
+import java.nio.ByteBuffer;
 
+import unknow.server.nio.NIOConnection.Out;
 import unknow.server.servlet.impl.AbstractServletOutput;
 import unknow.server.servlet.impl.ServletResponseImpl;
 
@@ -15,7 +16,7 @@ import unknow.server.servlet.impl.ServletResponseImpl;
  * @author unknow
  */
 public class LengthOutputStream extends AbstractServletOutput {
-	private final OutputStream out;
+	private final Out out;
 	private long length;
 
 	/**
@@ -25,7 +26,7 @@ public class LengthOutputStream extends AbstractServletOutput {
 	 * @param res    the servlet response
 	 * @param length the length
 	 */
-	public LengthOutputStream(OutputStream out, ServletResponseImpl res, long length) {
+	public LengthOutputStream(Out out, ServletResponseImpl res, long length) {
 		super(res);
 		this.out = out;
 		this.length = length;
@@ -33,14 +34,8 @@ public class LengthOutputStream extends AbstractServletOutput {
 
 	@Override
 	public void afterClose() throws IOException {
-		if (length > 0) {
-			byte[] b = new byte[4096];
-			while (length > 0) {
-				int l = (int) Math.min(length, 4096);
-				out.write(b, 0, l);
-				length -= l;
-			}
-		}
+		if (length > 0)
+			throw new IOException("Closing before end");
 	}
 
 	@Override
@@ -64,12 +59,7 @@ public class LengthOutputStream extends AbstractServletOutput {
 	}
 
 	@Override
-	public void flush() throws IOException {
-		res.commit();
-		try {
-			buffer.read(out, -1, false);
-		} catch (@SuppressWarnings("unused") InterruptedException e) {
-			Thread.currentThread().interrupt();
-		}
+	protected void writeBuffer(ByteBuffer b) throws IOException {
+		out.write(b);
 	}
 }

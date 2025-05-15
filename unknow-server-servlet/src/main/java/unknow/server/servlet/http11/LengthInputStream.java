@@ -18,6 +18,8 @@ public class LengthInputStream extends ServletInputStream {
 
 	/**
 	 * create new ServletInputLength
+	 * @param in the raw input
+	 * @param length the length
 	 */
 	public LengthInputStream(InputStream in, long length) {
 		this.in = in;

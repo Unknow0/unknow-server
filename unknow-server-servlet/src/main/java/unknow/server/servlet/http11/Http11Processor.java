@@ -1,65 +1,75 @@
 package unknow.server.servlet.http11;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
+import unknow.server.nio.NIOConnectionHandler;
 import unknow.server.servlet.HttpConnection;
-import unknow.server.servlet.HttpProcessor;
-import unknow.server.util.io.Buffers;
-import unknow.server.util.io.BuffersUtils;
+import unknow.server.servlet.impl.ServletRequestImpl;
+import unknow.server.util.io.ByteBufferInputStream;
 
 /**
  * http/1.1 implementation
  */
-public class Http11Processor implements HttpProcessor {
-	private static final byte[] END = new byte[] { '\r', '\n', '\r', '\n' };
-
-	private static final int MAX_START_SIZE = 8192;
+public final class Http11Processor implements NIOConnectionHandler {
 
 	private final HttpConnection co;
 
-	private volatile Future<?> exec;
+	private volatile Future<?> exec = CompletableFuture.completedFuture(null);
+
+	private final ByteBufferInputStream content;
+	private final RequestDecoder dec;
 
 	/**
 	 * new http11 processor
 	 * 
 	 * @param co the connection
 	 */
-	public Http11Processor(HttpConnection co, boolean start) {
+	public Http11Processor(HttpConnection co) {
 		this.co = co;
-		this.exec = start ? co.submit(new Http11Worker(co)) : CompletableFuture.completedFuture(null);
+		this.content = new ByteBufferInputStream();
+		this.dec = new RequestDecoder(this);
+	}
+
+	HttpConnection co() {
+		return co;
+	}
+
+	InputStream content() {
+		return content;
 	}
 
 	@Override
-	public final void process() {
-		if (exec.isDone() && isStart(co.pendingRead()))
-			exec = co.submit(new Http11Worker(co));
+	public void onRead(ByteBuffer b, long now) throws IOException {
+		if (b == null) {
+			content.close();
+			return;
+		}
+		if (exec.isDone()) {
+			ServletRequestImpl req = dec.append(b);
+			if (req != null) {
+				content.addBuffer(b);
+				exec = co.submit(new Http11Worker(co, req));
+				dec.reset();
+			}
+		} else
+			content.addBuffer(b);
 	}
 
 	@Override
-	public final boolean isClosable(boolean stop) {
-		process();
-		return exec.isDone();
+	public boolean closed(long now, boolean stop) {
+		if (!exec.isDone())
+			return false;
+		if (content.isClosed())
+			return true;
+		return co.keepAliveReached(now);
 	}
 
 	@Override
-	public final void close() {
+	public final void onFree() {
 		exec.cancel(true);
 	}
-
-	public static final boolean isStart(Buffers b) {
-		try {
-			return BuffersUtils.indexOf(b, END, 0, MAX_START_SIZE) > 0;
-		} catch (@SuppressWarnings("unused") InterruptedException e) {
-			Thread.currentThread().interrupt();
-			return false;
-		}
-	}
-
-	/** the processor factory */
-	public static final HttpProcessorFactory Factory = co -> {
-		if (isStart(co.pendingRead()))
-			return new Http11Processor(co, true);
-		return null;
-	};
 }

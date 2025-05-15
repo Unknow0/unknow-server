@@ -1,6 +1,7 @@
 package unknow.server.servlet.http2;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import unknow.server.servlet.impl.AbstractServletOutput;
 import unknow.server.servlet.impl.ServletResponseImpl;
@@ -16,18 +17,11 @@ public class Http2ServletOutput extends AbstractServletOutput {
 	}
 
 	public boolean isDone() {
-		return isClosed() && buffer.isEmpty();
+		return isClosed() && buffer.position() == 0;
 	}
 
 	@Override
-	public void flush() throws IOException {
-		res.commit();
-		try {
-			p.sendData(id, buffer, isClosed());
-		} catch (InterruptedException e) {
-			Thread.currentThread().interrupt();
-			throw new IOException(e);
-		}
+	protected void writeBuffer(ByteBuffer b) throws IOException {
+		p.sendData(id, b, isClosed());
 	}
-
 }

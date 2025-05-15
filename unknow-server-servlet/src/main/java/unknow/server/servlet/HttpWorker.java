@@ -7,10 +7,11 @@ import java.net.InetSocketAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import jakarta.servlet.DispatcherType;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.UnavailableException;
+import unknow.server.servlet.impl.AbstractServletOutput;
 import unknow.server.servlet.impl.ServletContextImpl;
 import unknow.server.servlet.impl.ServletRequestImpl;
 import unknow.server.servlet.impl.ServletResponseImpl;
@@ -25,10 +26,10 @@ public abstract class HttpWorker implements Runnable, HttpAdapter {
 	protected ServletRequestImpl req;
 	protected ServletResponseImpl res;
 
-	protected HttpWorker(HttpConnection co) {
+	protected HttpWorker(HttpConnection co, ServletRequestImpl req) {
 		this.co = co;
 		this.manager = co.getServlet();
-		this.req = new ServletRequestImpl(this, DispatcherType.REQUEST);
+		this.req = req;
 		this.res = new ServletResponseImpl(this);
 	}
 
@@ -54,25 +55,23 @@ public abstract class HttpWorker implements Runnable, HttpAdapter {
 
 	protected abstract boolean doStart() throws IOException, InterruptedException;
 
-	protected abstract void doDone();
+	protected abstract void doDone() throws IOException;
 
 	@Override
 	public void sendError(int sc, Throwable t, String msg) throws IOException {
 		res.reset(false);
 		FilterChain f = manager.getError(sc, t);
 		if (f != null) {
-			ServletRequestImpl r = new ServletRequestImpl(this, DispatcherType.ERROR);
-			r.setMethod("GET");
-			r.setAttribute("javax.servlet.error.status_code", sc);
+			req.setAttribute("javax.servlet.error.status_code", sc);
 			if (t != null) {
-				r.setAttribute("javax.servlet.error.exception_type", t.getClass());
-				r.setAttribute("javax.servlet.error.message", t.getMessage());
-				r.setAttribute("javax.servlet.error.exception", t);
+				req.setAttribute("javax.servlet.error.exception_type", t.getClass());
+				req.setAttribute("javax.servlet.error.message", t.getMessage());
+				req.setAttribute("javax.servlet.error.exception", t);
 			}
-			r.setAttribute("javax.servlet.error.request_uri", r.getRequestURI());
-			r.setAttribute("javax.servlet.error.servlet_name", "");
+			req.setAttribute("javax.servlet.error.request_uri", req.getRequestURI());
+			req.setAttribute("javax.servlet.error.servlet_name", "");
 			try {
-				f.doFilter(r, res);
+				f.doFilter(req, res);
 				return;
 			} catch (ServletException e) {
 				logger.error("failed to send error", e);
@@ -107,8 +106,12 @@ public abstract class HttpWorker implements Runnable, HttpAdapter {
 			if (e instanceof InterruptedException)
 				Thread.currentThread().interrupt();
 		} finally {
-			doDone();
-			co.flush();
+			try {
+				doDone();
+				co.flush();
+			} catch (IOException e) {
+				logger.warn("Failed to finish connection", e);
+			}
 		}
 	}
 
@@ -128,5 +131,23 @@ public abstract class HttpWorker implements Runnable, HttpAdapter {
 		co.getEvents().fireRequestDestroyed(req);
 		req.clearInput();
 		res.close();
+	}
+
+	@Override
+	public ServletInputStream createInput() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public AbstractServletOutput createOutput() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void commit() throws IOException {
+		// TODO Auto-generated method stub
+
 	}
 }

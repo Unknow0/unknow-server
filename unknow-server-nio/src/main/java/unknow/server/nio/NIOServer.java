@@ -97,6 +97,9 @@ public class NIOServer extends NIOLoop {
 	}
 
 	public static interface ConnectionFactory {
-		NIOConnectionAbstract build(NIOWorker worker, SelectionKey t, long now);
+//		NIOConnection build(NIOWorker worker, SelectionKey t);
+
+		NIOConnectionHandler build();
+
 	}
 }

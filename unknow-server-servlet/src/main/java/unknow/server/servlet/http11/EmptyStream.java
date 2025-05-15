@@ -4,6 +4,7 @@
 package unknow.server.servlet.http11;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import unknow.server.servlet.impl.AbstractServletOutput;
 
@@ -25,5 +26,9 @@ public class EmptyStream extends AbstractServletOutput {
 	@Override
 	public void write(byte[] b, int off, int len) throws IOException {
 		throw new IOException("content lenth = 0");
+	}
+
+	@Override
+	protected void writeBuffer(ByteBuffer b) throws IOException { // ok
 	}
 }
