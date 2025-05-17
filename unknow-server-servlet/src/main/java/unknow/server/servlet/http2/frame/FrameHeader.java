@@ -58,6 +58,7 @@ public class FrameHeader extends FrameReader {
 			skip -= i;
 			if (skip > 0)
 				return this;
+			flags ^= 0x20;
 		}
 
 		try {
@@ -68,7 +69,7 @@ public class FrameHeader extends FrameReader {
 				p.headersDecoder.decode(buf, s::addHeader);
 			size -= buf.position() - i;
 			buf.limit(l);
-			if (size > pad || !buf.hasRemaining())
+			if (size > pad)
 				return this;
 
 			if (pad > 0) {
