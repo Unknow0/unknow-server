@@ -102,10 +102,12 @@ public final class NIOConnection extends NIOHandlerDelegate {
 
 	@SuppressWarnings("resource")
 	public final void flush() {
+		System.out.println(">> flush");
 		if (!hasPendingWrites())
 			return;
 		toggleKeyOps();
 		key.selector().wakeup();
+		System.out.println(">> flush");
 	}
 
 	/**
@@ -205,7 +207,7 @@ public final class NIOConnection extends NIOHandlerDelegate {
 				throw new IOException("already closed");
 			buf.put((byte) b);
 			if (!buf.hasRemaining())
-				flush();
+				writeBuffer();
 		}
 
 		@Override
@@ -225,12 +227,12 @@ public final class NIOConnection extends NIOHandlerDelegate {
 			int r = buf.remaining();
 			if (len <= r) {
 				buf.put(b, off, len);
-				flush();
+				writeBuffer();
 			} else {
 				buf.put(b, off, r);
 				len -= r;
 				off += r;
-				flush();
+				writeBuffer();
 				if (len < 4096)
 					buf.put(b, off, len);
 				else
@@ -251,9 +253,10 @@ public final class NIOConnection extends NIOHandlerDelegate {
 		public synchronized void write(ByteBuffer b) throws IOException {
 			if (h == null)
 				throw new IOException("already closed");
-			flush();
+			writeBuffer();
 			try {
 				h.write(b);
+				h.flush();
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
 				throw new IOException(e);
@@ -262,6 +265,7 @@ public final class NIOConnection extends NIOHandlerDelegate {
 
 		@Override
 		public synchronized void close() throws IOException {
+			System.out.println("close");
 			flush();
 			h = null;
 		}
@@ -276,16 +280,24 @@ public final class NIOConnection extends NIOHandlerDelegate {
 		}
 
 		@Override
-		public void flush() throws IOException {
+		public synchronized void flush() throws IOException {
 			if (h == null || buf.position() == 0)
 				return;
+			if (writeBuffer())
+				h.flush();
+		}
+
+		private boolean writeBuffer() throws IOException {
+			if (h == null || buf.position() == 0)
+				return false;
 			try {
 				h.write(buf.flip());
+				buf = ByteBuffer.allocate(4096);
+				return true;
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
 				throw new IOException(e);
 			}
-			buf = ByteBuffer.allocate(4096);
 		}
 	}
 }
