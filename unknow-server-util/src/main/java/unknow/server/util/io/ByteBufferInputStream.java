@@ -23,6 +23,10 @@ public class ByteBufferInputStream extends InputStream {
 	}
 
 	public void drain(Collection<ByteBuffer> list) {
+		if (current != null && current.hasRemaining() || current == EOF) {
+			list.add(current);
+			current = null;
+		}
 		buffers.drainTo(list);
 	}
 
@@ -46,7 +50,10 @@ public class ByteBufferInputStream extends InputStream {
 
 	@Override
 	public int available() {
-		return buffers.peek().remaining();
+		int l = current == null ? 0 : current.remaining();
+		for (ByteBuffer b : buffers)
+			l += b.remaining();
+		return l;
 	}
 
 	@Override
@@ -91,5 +98,12 @@ public class ByteBufferInputStream extends InputStream {
 
 	public boolean isClosed() {
 		return buffers.peek() == EOF;
+	}
+
+	public boolean hasRemaining() {
+		if (current != null && current.hasRemaining())
+			return true;
+		ByteBuffer peek = buffers.peek();
+		return peek != null && peek != EOF;
 	}
 }

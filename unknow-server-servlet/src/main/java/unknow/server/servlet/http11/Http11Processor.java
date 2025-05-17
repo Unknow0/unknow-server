@@ -3,10 +3,16 @@ package unknow.server.servlet.http11;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import unknow.server.nio.NIOConnectionHandler;
+import unknow.server.nio.NIOWorker.WorkerTask;
 import unknow.server.servlet.HttpConnection;
 import unknow.server.servlet.impl.ServletRequestImpl;
 import unknow.server.util.io.ByteBufferInputStream;
@@ -15,6 +21,7 @@ import unknow.server.util.io.ByteBufferInputStream;
  * http/1.1 implementation
  */
 public final class Http11Processor implements NIOConnectionHandler {
+	private static final Logger logger = LoggerFactory.getLogger(Http11Processor.class);
 
 	private final HttpConnection co;
 
@@ -43,19 +50,14 @@ public final class Http11Processor implements NIOConnectionHandler {
 	}
 
 	@Override
-	public void onRead(ByteBuffer b, long now) throws IOException {
+	public void onRead(ByteBuffer b, long now) {
 		if (b == null) {
 			content.close();
 			return;
 		}
-		if (exec.isDone()) {
-			ServletRequestImpl req = dec.append(b);
-			if (req != null) {
-				content.addBuffer(b);
-				exec = co.submit(new Http11Worker(co, req));
-				dec.reset();
-			}
-		} else
+		if (exec.isDone())
+			decode(b);
+		else
 			content.addBuffer(b);
 	}
 
@@ -72,4 +74,38 @@ public final class Http11Processor implements NIOConnectionHandler {
 	public final void onFree() {
 		exec.cancel(true);
 	}
+
+	private boolean decode(ByteBuffer b) {
+		ServletRequestImpl req = dec.append(b);
+		if (req == null)
+			return false;
+		content.addBuffer(b);
+		exec = co.submit(new Http11Worker(this, req));
+		dec.reset();
+		return true;
+	}
+
+	protected void requestDone() {
+		if (content.hasRemaining())
+			co.execute(new NextRequest());
+	}
+
+	private final class NextRequest implements WorkerTask {
+
+		@Override
+		public void run(long now) {
+			if (!exec.isDone())
+				return;
+
+			List<ByteBuffer> list = new ArrayList<>();
+			content.drain(list);
+			try {
+				for (ByteBuffer b : list)
+					co.onRead(b, now);
+			} catch (IOException e) {
+				logger.error("Failed to reuse content", e);
+			}
+		}
+	}
+
 }

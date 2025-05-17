@@ -4,13 +4,9 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.function.BiConsumer;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import unknow.server.servlet.http2.header.Http2Huffman.S;
 
 public class Http2HeadersDecoder extends Http2Headers {
-	private static final Logger logger = LoggerFactory.getLogger(Http2HeadersDecoder.class);
 
 	private enum State {
 		READ_HEADER_FIRST, READ_INT_CONT, READ_NAME_LEN, READ_STRLEN, READ_NAME, READ_VALUE_LEN, READ_VALUE
@@ -111,7 +107,6 @@ public class Http2HeadersDecoder extends Http2Headers {
 				case READ_VALUE:
 					if (decodeString(chunk)) {
 						String s = sb.toString();
-						logger.debug("\t{}: {}", name, s);
 						h.accept(name, s);
 						sb.setLength(0);
 						state = State.READ_HEADER_FIRST;
@@ -144,7 +139,6 @@ public class Http2HeadersDecoder extends Http2Headers {
 				if (value == 0)
 					throw new IOException("invalid index");
 				Entry e = get(value);
-				logger.debug("\t{}: {}", e.name(), e.value());
 				handler.accept(e.name(), e.value());
 				state = State.READ_HEADER_FIRST;
 				break;

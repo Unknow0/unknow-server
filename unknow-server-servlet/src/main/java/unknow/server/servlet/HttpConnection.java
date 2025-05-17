@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import unknow.server.nio.NIOConnection;
 import unknow.server.nio.NIOConnection.Out;
 import unknow.server.nio.NIOConnectionHandler;
+import unknow.server.nio.NIOWorker.WorkerTask;
 import unknow.server.servlet.http11.Http11Processor;
 import unknow.server.servlet.http2.Http2Processor;
 import unknow.server.servlet.impl.ServletContextImpl;
@@ -76,6 +77,7 @@ public final class HttpConnection implements NIOConnectionHandler {
 
 	@Override
 	public final void onRead(ByteBuffer b, long now) throws IOException {
+		lastRead = now;
 		if (p == null) {
 			if (Arrays.equals(b.array(), b.position(), b.limit(), Http2Processor.PRI, 0, Http2Processor.PRI.length))
 				p = new Http2Processor(this);
@@ -116,7 +118,9 @@ public final class HttpConnection implements NIOConnectionHandler {
 	}
 
 	@Override
-	public void onWrite(long now) { // ok
+	public void onWrite(long now) throws IOException {
+		lastWrite = now;
+		p.onWrite(now);
 	}
 
 	@Override
@@ -129,6 +133,10 @@ public final class HttpConnection implements NIOConnectionHandler {
 
 	public final <T> Future<T> submit(Runnable r) {
 		return co.submit(r);
+	}
+
+	public final void execute(WorkerTask task) {
+		co.execute(task);
 	}
 
 	public void write(ByteBuffer buf) throws IOException {

@@ -200,7 +200,7 @@ public final class NIOConnection extends NIOHandlerDelegate {
 		}
 
 		@Override
-		public final void write(int b) throws IOException {
+		public synchronized void write(int b) throws IOException {
 			if (h == null)
 				throw new IOException("already closed");
 			buf.put((byte) b);
@@ -214,7 +214,7 @@ public final class NIOConnection extends NIOHandlerDelegate {
 		}
 
 		@Override
-		public final void write(byte[] b, int off, int len) throws IOException {
+		public synchronized void write(byte[] b, int off, int len) throws IOException {
 			if (len == 0)
 				return;
 			if ((off | len | (off + len) | (b.length - (off + len))) < 0)
@@ -248,7 +248,9 @@ public final class NIOConnection extends NIOHandlerDelegate {
 		 * @param b
 		 * @throws IOException
 		 */
-		public void write(ByteBuffer b) throws IOException {
+		public synchronized void write(ByteBuffer b) throws IOException {
+			if (h == null)
+				throw new IOException("already closed");
 			flush();
 			try {
 				h.write(b);
@@ -259,7 +261,7 @@ public final class NIOConnection extends NIOHandlerDelegate {
 		}
 
 		@Override
-		public void close() throws IOException {
+		public synchronized void close() throws IOException {
 			flush();
 			h = null;
 		}
@@ -269,7 +271,7 @@ public final class NIOConnection extends NIOHandlerDelegate {
 		 * 
 		 * @return true if the co is closed
 		 */
-		public boolean isClosed() {
+		public synchronized boolean isClosed() {
 			return h == null;
 		}
 

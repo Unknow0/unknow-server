@@ -324,11 +324,11 @@ public abstract class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public BufferedReader getReader() throws IOException {
+		if (reader != null)
+			return reader;
 		if (input != null)
 			throw new IllegalStateException("getInputStream() called");
-		if (reader == null)
-			reader = new BufferedReader(new InputStreamReader(createInput(), getCharacterEncoding()));
-		return reader;
+		return reader = new BufferedReader(new InputStreamReader(input = createInput(), getCharacterEncoding()));
 	}
 
 	@Override

@@ -2,20 +2,16 @@ package unknow.server.servlet;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.net.InetSocketAddress;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.UnavailableException;
-import unknow.server.servlet.impl.AbstractServletOutput;
 import unknow.server.servlet.impl.ServletContextImpl;
 import unknow.server.servlet.impl.ServletRequestImpl;
 import unknow.server.servlet.impl.ServletResponseImpl;
-import unknow.server.servlet.utils.EventManager;
 import unknow.server.servlet.utils.ServletManager;
 
 public abstract class HttpWorker implements Runnable, HttpAdapter {
@@ -36,21 +32,6 @@ public abstract class HttpWorker implements Runnable, HttpAdapter {
 	@Override
 	public final ServletContextImpl ctx() {
 		return co.getCtx();
-	}
-
-	@Override
-	public final EventManager events() {
-		return co.getEvents();
-	}
-
-	@Override
-	public InetSocketAddress getRemote() {
-		return co.getRemote();
-	}
-
-	@Override
-	public InetSocketAddress getLocal() {
-		return co.getLocal();
 	}
 
 	protected abstract boolean doStart() throws IOException, InterruptedException;
@@ -131,23 +112,5 @@ public abstract class HttpWorker implements Runnable, HttpAdapter {
 		co.getEvents().fireRequestDestroyed(req);
 		req.clearInput();
 		res.close();
-	}
-
-	@Override
-	public ServletInputStream createInput() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public AbstractServletOutput createOutput() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public void commit() throws IOException {
-		// TODO Auto-generated method stub
-
 	}
 }

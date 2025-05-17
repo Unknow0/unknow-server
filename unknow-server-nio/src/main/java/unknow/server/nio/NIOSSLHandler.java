@@ -35,7 +35,7 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 
 	@Override
 	public boolean closed(long now, boolean stop) {
-		return handler.closed(now, stop);
+		return sslEngine.isInboundDone() && handler.closed(now, stop);
 	}
 
 	@Override
@@ -60,13 +60,13 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 		if (b.remaining() > rawIn.remaining()) {
 			ByteBuffer n = ByteBuffer.allocate(rawIn.capacity() + b.remaining());
 			n.put(rawIn.flip());
-			rawIn = b;
+			rawIn = n;
 		}
 		rawIn.put(b);
 
 		rawIn.flip();
 		SSLEngineResult r = sslEngine.unwrap(rawIn, app);
-		logger.debug("unwrap {}", r);
+		logger.debug("unwrap {} {}", r.getStatus(), r.getHandshakeStatus());
 		rawIn.compact();
 
 		if (checkHandshake(r.getHandshakeStatus()))
@@ -119,7 +119,7 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 	public ByteBuffer beforeWrite(ByteBuffer b) throws IOException {
 		ByteBuffer out = ByteBuffer.allocate(sslEngine.getSession().getPacketBufferSize());
 		SSLEngineResult r = sslEngine.wrap(b, out);
-		logger.debug("wrap {}", r);
+		logger.debug("wrap {} {}", r.getStatus(), r.getHandshakeStatus());
 		checkHandshake(r.getHandshakeStatus());
 		return out.flip();
 	}

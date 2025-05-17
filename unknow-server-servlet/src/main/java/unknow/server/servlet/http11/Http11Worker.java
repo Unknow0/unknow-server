@@ -6,7 +6,6 @@ import java.util.Collection;
 
 import jakarta.servlet.http.Cookie;
 import unknow.server.nio.NIOConnection.Out;
-import unknow.server.servlet.HttpConnection;
 import unknow.server.servlet.HttpError;
 import unknow.server.servlet.HttpWorker;
 import unknow.server.servlet.impl.AbstractServletOutput;
@@ -31,16 +30,18 @@ public final class Http11Worker extends HttpWorker {
 
 	private static final String UNKNOWN = "Unknown";
 
+	private final Http11Processor p;
 	private final int keepAliveIdle;
 
 	/**
 	 * new worker
 	 * 
-	 * @param co the connection
+	 * @param p the connection
 	 * @param req the request
 	 */
-	public Http11Worker(HttpConnection co, ServletRequestImpl req) {
-		super(co, req);
+	public Http11Worker(Http11Processor p, ServletRequestImpl req) {
+		super(p.co(), req);
+		this.p = p;
 		this.keepAliveIdle = co.getkeepAlive() / 1000;
 
 	}
@@ -113,6 +114,8 @@ public final class Http11Worker extends HttpWorker {
 	protected void doDone() throws IOException {
 		if (!"keep-alive".equalsIgnoreCase(res.getHeader("connection")))
 			co.getOut().close();
+		else
+			p.requestDone();
 	}
 
 	/**
