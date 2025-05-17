@@ -89,7 +89,7 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	/**
 	 * add a buffers to the writing queue
 	 * @param buf buffer to be written
-	 * @throws InterruptedException 
+	 * @throws InterruptedException  in case of interruption
 	 */
 	public final void write(ByteBuffer buf) throws InterruptedException {
 		if (pending.size() == 16)
@@ -182,8 +182,6 @@ public final class NIOConnection extends NIOHandlerDelegate {
 
 	/**
 	 * free the handler
-	 * 
-	 * @throws IOException on io error
 	 */
 	@Override
 	public final void doneClosing() {
@@ -262,8 +260,8 @@ public final class NIOConnection extends NIOHandlerDelegate {
 
 		/**
 		 * write a raw buffer
-		 * @param b
-		 * @throws IOException
+		 * @param b buffer to write
+		 * @throws IOException in case of ioexception
 		 */
 		public synchronized void write(ByteBuffer b) throws IOException {
 			if (h == null)
