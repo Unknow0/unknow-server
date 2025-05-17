@@ -92,8 +92,11 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	 * @throws InterruptedException 
 	 */
 	public final void write(ByteBuffer buf) throws InterruptedException {
+		if (pending.size() == 16)
+			flush();
 		pending.put(buf);
 		toggleKeyOps();
+
 	}
 
 	public final void toggleKeyOps() {
@@ -102,12 +105,10 @@ public final class NIOConnection extends NIOHandlerDelegate {
 
 	@SuppressWarnings("resource")
 	public final void flush() {
-		System.out.println(">> flush");
 		if (!hasPendingWrites())
 			return;
 		toggleKeyOps();
 		key.selector().wakeup();
-		System.out.println(">> flush");
 	}
 
 	/**
@@ -144,7 +145,7 @@ public final class NIOConnection extends NIOHandlerDelegate {
 		return out.isClosed() && writesLength == 0;
 	}
 
-	protected void beforeWrite() throws IOException {
+	protected final void beforeWrite() throws IOException {
 		while (writesLength < writes.length && !pending.isEmpty()) {
 			ByteBuffer b = handler.beforeWrite(pending.poll());
 			if (b != null && b.hasRemaining())
@@ -225,10 +226,7 @@ public final class NIOConnection extends NIOHandlerDelegate {
 				throw new IOException("already closed");
 
 			int r = buf.remaining();
-			if (len <= r) {
-				buf.put(b, off, len);
-				writeBuffer();
-			} else {
+			if (len > r) {
 				buf.put(b, off, r);
 				len -= r;
 				off += r;
@@ -242,7 +240,11 @@ public final class NIOConnection extends NIOHandlerDelegate {
 						Thread.currentThread().interrupt();
 						throw new IOException(e);
 					}
-			}
+			} else if (len == r) {
+				buf.put(b, off, len);
+				writeBuffer();
+			} else
+				buf.put(b, off, len);
 		}
 
 		/**
@@ -256,7 +258,6 @@ public final class NIOConnection extends NIOHandlerDelegate {
 			writeBuffer();
 			try {
 				h.write(b);
-				h.flush();
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
 				throw new IOException(e);
@@ -265,7 +266,6 @@ public final class NIOConnection extends NIOHandlerDelegate {
 
 		@Override
 		public synchronized void close() throws IOException {
-			System.out.println("close");
 			flush();
 			h = null;
 		}
@@ -281,19 +281,18 @@ public final class NIOConnection extends NIOHandlerDelegate {
 
 		@Override
 		public synchronized void flush() throws IOException {
-			if (h == null || buf.position() == 0)
-				return;
-			if (writeBuffer())
+			writeBuffer();
+			if (h != null)
 				h.flush();
 		}
 
-		private boolean writeBuffer() throws IOException {
+		private void writeBuffer() throws IOException {
 			if (h == null || buf.position() == 0)
-				return false;
+				return;
 			try {
 				h.write(buf.flip());
 				buf = ByteBuffer.allocate(4096);
-				return true;
+				return;
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
 				throw new IOException(e);

@@ -41,6 +41,7 @@ public abstract class HttpWorker implements Runnable, HttpAdapter {
 	@Override
 	public void sendError(int sc, Throwable t, String msg) throws IOException {
 		res.reset(false);
+		res.setStatus(sc);
 		FilterChain f = manager.getError(sc, t);
 		if (f != null) {
 			req.setAttribute("javax.servlet.error.status_code", sc);
@@ -58,7 +59,6 @@ public abstract class HttpWorker implements Runnable, HttpAdapter {
 				logger.error("failed to send error", e);
 			}
 		}
-		res.setStatus(sc);
 		if (msg == null) {
 			HttpError e = HttpError.fromStatus(sc);
 			msg = e == null ? "" : e.message;
@@ -89,7 +89,6 @@ public abstract class HttpWorker implements Runnable, HttpAdapter {
 		} finally {
 			try {
 				doDone();
-				co.flush();
 			} catch (IOException e) {
 				logger.warn("Failed to finish connection", e);
 			}
@@ -112,5 +111,6 @@ public abstract class HttpWorker implements Runnable, HttpAdapter {
 		co.getEvents().fireRequestDestroyed(req);
 		req.clearInput();
 		res.close();
+		co.flush();
 	}
 }
