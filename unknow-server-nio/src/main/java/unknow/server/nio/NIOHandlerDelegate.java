@@ -28,18 +28,38 @@ public class NIOHandlerDelegate implements NIOConnectionHandler {
 	}
 
 	@Override
+	public ByteBuffer beforeWrite(ByteBuffer b) throws IOException {
+		return handler.beforeWrite(b);
+	}
+
+	@Override
 	public void onWrite(long now) throws IOException {
 		handler.onWrite(now);
 	}
 
 	@Override
-	public boolean closed(long now, boolean stop) {
-		return handler.closed(now, stop);
+	public void onOutputClosed() {
+		handler.onOutputClosed();
 	}
 
 	@Override
-	public void onFree() throws IOException {
-		handler.onFree();
+	public boolean canClose(long now, boolean stop) {
+		return handler.canClose(now, stop);
+	}
+
+	@Override
+	public void startClose() {
+		handler.startClose();
+	}
+
+	@Override
+	public boolean finishClosing(long now) {
+		return handler.finishClosing(now);
+	}
+
+	@Override
+	public void doneClosing() {
+		handler.doneClosing();
 	}
 
 }

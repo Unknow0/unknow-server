@@ -51,10 +51,6 @@ public final class Http11Processor implements NIOConnectionHandler {
 
 	@Override
 	public void onRead(ByteBuffer b, long now) {
-		if (b == null) {
-			content.close();
-			return;
-		}
 		if (exec.isDone())
 			decode(b);
 		else
@@ -62,17 +58,18 @@ public final class Http11Processor implements NIOConnectionHandler {
 	}
 
 	@Override
-	public boolean closed(long now, boolean stop) {
-		if (!exec.isDone())
-			return false;
-		if (content.isClosed())
-			return true;
-		return co.keepAliveReached(now);
+	public boolean canClose(long now, boolean stop) {
+		return exec.isDone() && co.keepAliveReached(now);
 	}
 
 	@Override
-	public final void onFree() {
-		exec.cancel(true);
+	public void startClose() {
+		content.close();
+	}
+
+	@Override
+	public boolean finishClosing(long now) {
+		return exec.isDone();
 	}
 
 	private boolean decode(ByteBuffer b) {

@@ -27,15 +27,11 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 	private SSLEngine sslEngine;
 	private ByteBuffer rawIn;
 	private ByteBuffer app;
+	private boolean handshake;
 
 	public NIOSSLHandler(SSLContext sslContext, NIOConnectionHandler handler) {
 		super(handler);
 		this.sslContext = sslContext;
-	}
-
-	@Override
-	public boolean closed(long now, boolean stop) {
-		return sslEngine.isInboundDone() && handler.closed(now, stop);
 	}
 
 	@Override
@@ -45,6 +41,7 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 		this.sslEngine = sslContext.createSSLEngine(remote.getHostString(), remote.getPort());
 		this.rawIn = ByteBuffer.allocate(sslEngine.getSession().getPacketBufferSize());
 		this.app = ByteBuffer.allocate(sslEngine.getSession().getApplicationBufferSize());
+		this.handshake = true;
 
 		handler.onInit(co, now, sslEngine);
 		sslEngine.beginHandshake();
@@ -52,11 +49,13 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 	}
 
 	@Override
+	public void onHandshakeDone(SSLEngine sslEngine) throws IOException {
+		handshake = false;
+		handler.onHandshakeDone(sslEngine);
+	}
+
+	@Override
 	public void onRead(ByteBuffer b, long now) throws IOException {
-		if (b == null) {
-			handler.onRead(null, now);
-			return;
-		}
 		if (b.remaining() > rawIn.remaining()) {
 			ByteBuffer n = ByteBuffer.allocate(rawIn.capacity() + b.remaining());
 			n.put(rawIn.flip());
@@ -64,13 +63,27 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 		}
 		rawIn.put(b);
 
-		rawIn.flip();
-		SSLEngineResult r = sslEngine.unwrap(rawIn, app);
-		logger.debug("unwrap {} {}", r.getStatus(), r.getHandshakeStatus());
-		rawIn.compact();
+		if (handshake) {
+			rawIn.flip();
+			SSLEngineResult r = sslEngine.unwrap(rawIn, app);
+			rawIn.compact();
+			if (checkHandshake(r.getHandshakeStatus())) {
+				return;
+			}
+		}
 
-		if (checkHandshake(r.getHandshakeStatus()))
-			return;
+		rawIn.flip();
+		do {
+			SSLEngineResult r = sslEngine.unwrap(rawIn, app);
+			logger.trace("unwrap {}", r);
+			if (r.getStatus() == SSLEngineResult.Status.BUFFER_OVERFLOW) {
+				app.flip();
+				handler.onRead(app, now);
+				app = ByteBuffer.allocate(sslEngine.getSession().getApplicationBufferSize());
+			} else if (r.getStatus() == Status.BUFFER_OVERFLOW || r.getStatus() == Status.CLOSED)
+				break;
+		} while (rawIn.hasRemaining());
+		rawIn.compact();
 
 		if (app.position() > 0) {
 			app.flip();
@@ -79,72 +92,39 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 		}
 	}
 
-	private boolean checkHandshake(HandshakeStatus hs) throws IOException {
-		while (true) {
-			SSLEngineResult r;
-			switch (hs) {
-				case NEED_TASK:
-					logger.debug("running tasks");
-					co.submit(new RunTask());
-					return true;
-				case NEED_UNWRAP:
-				case NEED_UNWRAP_AGAIN:
-					rawIn.flip();
-					r = sslEngine.unwrap(rawIn, app);
-					logger.debug("unwrap {}", r);
-					rawIn.compact();
-					if (r.getStatus() == Status.BUFFER_UNDERFLOW) {
-						co.toggleKeyOps();
-						return true;
-					}
-					hs = r.getHandshakeStatus();
-					break;
-				case NEED_WRAP:
-					try {
-						co.write(EMPTY);
-						return true;
-					} catch (InterruptedException e) {
-						Thread.currentThread().interrupt();
-						throw new SSLException("Handshake interrupted", e);
-					}
-				case FINISHED:
-					handler.onHandshakeDone(sslEngine); // fallthrough
-				default:
-					return false;
-			}
-		}
-	}
-
 	@Override
 	public ByteBuffer beforeWrite(ByteBuffer b) throws IOException {
 		ByteBuffer out = ByteBuffer.allocate(sslEngine.getSession().getPacketBufferSize());
 		SSLEngineResult r = sslEngine.wrap(b, out);
-		logger.debug("wrap {} {}", r.getStatus(), r.getHandshakeStatus());
+		logger.trace("wrap {}", r);
 		checkHandshake(r.getHandshakeStatus());
 		return out.flip();
 	}
 
 	@Override
-	public void onWrite(long now) throws IOException {
-		if (processHandshake())
-			return;
-		handler.onWrite(now);
+	public void onOutputClosed() {
+		sslEngine.closeOutbound();
+		try {
+			co.write(EMPTY);
+		} catch (@SuppressWarnings("unused") InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
+		handler.onOutputClosed();
 	}
 
-	private boolean processHandshake() throws IOException {
-		HandshakeStatus hs = sslEngine.getHandshakeStatus();
+	private boolean checkHandshake(HandshakeStatus hs) throws IOException {
 		while (true) {
 			SSLEngineResult r;
 			switch (hs) {
 				case NEED_TASK:
-					logger.debug("running tasks");
+					logger.trace("running tasks");
 					co.submit(new RunTask());
 					return true;
 				case NEED_UNWRAP:
 				case NEED_UNWRAP_AGAIN:
 					rawIn.flip();
 					r = sslEngine.unwrap(rawIn, app);
-					logger.debug("unwrap {}", r);
+					logger.trace("unwrap {}", r);
 					rawIn.compact();
 					if (r.getStatus() == Status.BUFFER_UNDERFLOW) {
 						co.toggleKeyOps();
@@ -161,7 +141,7 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 						throw new SSLException("Handshake interrupted", e);
 					}
 				case FINISHED:
-					handler.onHandshakeDone(sslEngine); // fallthrough
+					onHandshakeDone(sslEngine);
 				default:
 					return false;
 			}
@@ -171,7 +151,7 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 	private final class RunTask implements Runnable, WorkerTask {
 		@Override
 		public void run() {
-			logger.debug("start task");
+			logger.trace("start task");
 			Runnable task;
 			while ((task = sslEngine.getDelegatedTask()) != null)
 				task.run();
@@ -180,9 +160,9 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 
 		@Override
 		public void run(long now) {
-			logger.debug("resume handshake");
+			logger.trace("resume handshake");
 			try {
-				processHandshake();
+				checkHandshake(sslEngine.getHandshakeStatus());
 			} catch (Exception e) {
 				logger.warn("Failed to handshake", e);
 			}

@@ -8,6 +8,9 @@ import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
@@ -38,6 +41,8 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 
 	private final Queue<WorkerTask> tasks;
 
+	private final List<NIOConnection> closing;
+
 	private NIOConnection head;
 	private NIOConnection tail;
 
@@ -58,6 +63,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 
 		this.buf = ByteBuffer.allocateDirect(16000);
 		this.tasks = new ConcurrentLinkedQueue<>();
+		this.closing = new LinkedList<>();
 	}
 
 	protected final void execute(WorkerTask task) {
@@ -82,15 +88,19 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		while ((r = tasks.poll()) != null)
 			r.run(now);
 
+		checkPending(now, close);
+		finishClosing(now);
+	}
+
+	private void checkPending(long now, boolean close) {
 		if (head == null)
 			return;
-
 		long end = now - 1000;
 		NIOConnection co = head;
 		while (co != null && co.lastCheck < end) {
 			NIOConnection next = co.next;
-			if (!co.key.isValid() || co.closed(now, close))
-				close(co);
+			if (!co.key.isValid() || co.canClose(now, close))
+				startClose(co);
 			else
 				co.lastCheck = now;
 			co = next;
@@ -109,6 +119,20 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		}
 	}
 
+	private void finishClosing(long now) {
+		if (closing.isEmpty())
+			return;
+
+		Iterator<NIOConnection> it = closing.iterator();
+		while (it.hasNext()) {
+			NIOConnection co = it.next();
+			if (!co.hasPendingWrites() && co.finishClosing(now)) {
+				it.remove();
+				doneClose(co);
+			}
+		}
+	}
+
 	@Override
 	protected final void selected(long now, SelectionKey key) throws IOException {
 		NIOConnection co = (NIOConnection) key.attachment();
@@ -118,7 +142,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 				doWrite(co, now);
 			} catch (Exception e) {
 				logger.error("failed to write {}", co, e);
-				close(co);
+				startClose(co);
 			} finally {
 				buf.clear();
 			}
@@ -130,7 +154,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 				doRead(co, now);
 			} catch (Exception e) {
 				logger.error("failed to read {}", co, e);
-				close(co);
+				startClose(co);
 			} finally {
 				buf.clear();
 			}
@@ -141,10 +165,8 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		int l;
 		l = co.channel.read(buf);
 		if (l == -1) {
-			// TODO mark as closing
-			co.onRead(null, now);
-			if (co.closed(now, false))
-				close(co);
+			co.key.interestOpsAnd(~SelectionKey.OP_READ);
+			startClose(co);
 			return;
 		}
 		if (l == 0) {
@@ -171,14 +193,19 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		return (Future<T>) executor.submit(r);
 	}
 
-	private void close(NIOConnection co) {
+	private void startClose(NIOConnection co) {
+		closing.add(co);
+		remove(co);
+		co.startClose();
+	}
+
+	private void doneClose(NIOConnection co) {
 		listener.closed(id, co);
 		try {
-			co.onFree();
+			co.doneClosing();
 		} catch (Exception e) {
 			logger.warn("Failed to free connection {}", co, e);
 		}
-		remove(co);
 	}
 
 	public static interface WorkerTask {
@@ -199,13 +226,13 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 
 	private final void remove(NIOConnection co) {
 		unlink(co);
-		co.next = co.prev = null;
+		co.next = co.prev = co;
 	}
 
 	private final void toTail(NIOConnection co, long now) {
 		co.lastCheck = now;
 
-		if (tail == co)
+		if (tail == co || co.next == co)
 			return;
 		unlink(co);
 
@@ -251,7 +278,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 				co.onInit(co, now, null);
 			} catch (Exception e) {
 				logger.warn("Failed to start connection", e);
-				close(co);
+				startClose(co);
 				return;
 			}
 			key.attach(co);

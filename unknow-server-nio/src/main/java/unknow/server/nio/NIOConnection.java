@@ -100,7 +100,12 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	}
 
 	public final void toggleKeyOps() {
-		key.interestOps(hasPendingWrites() ? SelectionKey.OP_READ | SelectionKey.OP_WRITE : SelectionKey.OP_READ);
+		if (!key.isValid())
+			return;
+		if (hasPendingWrites())
+			key.interestOpsOr(SelectionKey.OP_WRITE);
+		else
+			key.interestOpsAnd(~SelectionKey.OP_WRITE);
 	}
 
 	@SuppressWarnings("resource")
@@ -170,20 +175,28 @@ public final class NIOConnection extends NIOHandlerDelegate {
 		handler.onWrite(now);
 	}
 
+	@Override
+	public void startClose() {
+		handler.startClose();
+	}
+
 	/**
 	 * free the handler
 	 * 
 	 * @throws IOException on io error
 	 */
 	@Override
-	public final void onFree() throws IOException {
+	public final void doneClosing() {
 		key.cancel();
 		try {
 			key.channel().close();
 		} catch (@SuppressWarnings("unused") IOException e) { // ignore
 		}
-		out.close();
-		handler.onFree();
+		try {
+			out.close();
+		} catch (@SuppressWarnings("unused") IOException e) { // ignore
+		}
+		handler.doneClosing();
 	}
 
 	@Override
@@ -266,7 +279,10 @@ public final class NIOConnection extends NIOHandlerDelegate {
 
 		@Override
 		public synchronized void close() throws IOException {
+			if (h == null)
+				return;
 			flush();
+			h.onOutputClosed();
 			h = null;
 		}
 

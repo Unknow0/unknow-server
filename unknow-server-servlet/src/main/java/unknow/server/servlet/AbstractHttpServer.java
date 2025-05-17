@@ -80,7 +80,7 @@ public abstract class AbstractHttpServer extends NIOServerBuilder {
 		vhost = withOpt("vhost").withCli(Option.builder().longOpt("vhost").hasArg().desc("public vhost seen by the servlet, default to the binded address").build());
 		keepAlive = withOpt("keepalive")
 				.withCli(Option.builder().longOpt("keepalive").hasArg().desc("max time to keep idle keepalive connection in seconds, -1: no keep alive, 0: infinite").build())
-				.withValue("2");
+				.withValue("30");
 	}
 
 	@Override

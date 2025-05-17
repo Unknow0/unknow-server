@@ -128,14 +128,28 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 	}
 
 	@Override
-	public boolean closed(long now, boolean stop) {
-		if (stop && closingId < 0) {
-			try {
-				goaway(NO_ERROR);
-				closingId = lastId;
-			} catch (@SuppressWarnings("unused") IOException e) { // ok
-			}
+	public boolean canClose(long now, boolean stop) {
+		if (stop)
+			return true;
+		Iterator<Http2Stream> it = pending.iterator();
+		while (it.hasNext()) {
+			if (it.next().isClosed())
+				it.remove();
 		}
+		if (!pending.isEmpty() || !streams.isEmpty())
+			return false;
+		return co.keepAliveReached(now);
+	}
+
+	@Override
+	public void startClose() {
+		goaway(NO_ERROR);
+		for (Http2Stream s : streams.values())
+			s.close(false);
+	}
+
+	@Override
+	public boolean finishClosing(long now) {
 		Iterator<Http2Stream> it = pending.iterator();
 		while (it.hasNext()) {
 			if (it.next().isClosed())
@@ -145,10 +159,7 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 	}
 
 	@Override
-	public void onFree() {
-		for (Http2Stream s : streams.values())
-			s.close(true);
-		streams.clear();
+	public void doneClosing() { // ok
 	}
 
 	public void close(int lastClienId) {
@@ -166,8 +177,6 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 	 * @param buf
 	 * @return
 	 * @
-	 * @throws IOException 
-	 * @throws InterruptedException 
 	 */
 	private void readFrame(ByteBuffer buf) throws IOException {
 		int m = Math.min(9 - l, buf.remaining());
@@ -203,7 +212,8 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 		r = builder.build(this, size, flags, id, buf);
 	}
 
-	public void goaway(int err) throws IOException {
+	public void goaway(int err) {
+		closingId = lastId;
 		byte[] f = new byte[17];
 		formatFrame(f, 8, 7, 0, 0);
 		f[9] = (byte) ((lastId >> 24) & 0x7f);
@@ -214,8 +224,12 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 		f[14] = (byte) ((err >> 16) & 0xff);
 		f[15] = (byte) ((err >> 8) & 0xff);
 		f[16] = (byte) (err & 0xff);
-		co.write(ByteBuffer.wrap(f));
-		logger.debug("{}: send GOAWAY {}", co, error(err));
+		try {
+			co.write(ByteBuffer.wrap(f));
+			logger.debug("{}: send GOAWAY {}", co, error(err));
+		} catch (IOException e) {
+			logger.error("Failed to send", e);
+		}
 	}
 
 	public void sendFrame(int type, int flags, int id, ByteBuffer data) throws IOException {

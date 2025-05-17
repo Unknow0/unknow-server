@@ -87,21 +87,17 @@ public final class HttpConnection implements NIOConnectionHandler {
 		p.onRead(b, now);
 	}
 
-	public boolean keepAliveReached(long now) {
-		if (keepAliveMs > 0) {
-			long e = now - keepAliveMs - 500;
-			if (lastRead <= e && lastWrite <= e) {
-				logger.info("keep alive idle reached {}", co);
-				return true;
-			}
-		}
-		return false;
+	@Override
+	public void onWrite(long now) throws IOException {
+		lastWrite = now;
+		if (p != null)
+			p.onWrite(now);
 	}
 
 	@Override
-	public boolean closed(long now, boolean stop) {
+	public boolean canClose(long now, boolean stop) {
 		if (stop)
-			return p == null || p.closed(now, stop);
+			return p == null || p.canClose(now, stop);
 
 		if (p == null) {
 			if (lastRead < now - 1000) {
@@ -111,24 +107,37 @@ public final class HttpConnection implements NIOConnectionHandler {
 			return false;
 		}
 
-		if (co.hasPendingWrites())
-			return false;
-
-		return p.closed(now, stop);
+		return p.canClose(now, stop);
 	}
 
 	@Override
-	public void onWrite(long now) throws IOException {
-		lastWrite = now;
-		p.onWrite(now);
+	public void startClose() {
+		if (p != null)
+			p.startClose();
 	}
 
 	@Override
-	public final void onFree() throws IOException {
+	public boolean finishClosing(long now) {
+		return p == null || p.finishClosing(now);
+	}
+
+	@Override
+	public final void doneClosing() {
 		if (p != null) {
-			p.onFree();
+			p.doneClosing();
 			p = null;
 		}
+	}
+
+	public boolean keepAliveReached(long now) {
+		if (keepAliveMs > 0) {
+			long e = now - keepAliveMs - 500;
+			if (lastRead <= e && lastWrite <= e) {
+				logger.info("keep alive idle reached {}", co);
+				return true;
+			}
+		}
+		return false;
 	}
 
 	public final <T> Future<T> submit(Runnable r) {

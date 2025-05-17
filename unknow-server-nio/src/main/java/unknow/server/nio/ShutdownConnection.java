@@ -24,7 +24,12 @@ public class ShutdownConnection implements NIOConnectionHandler {
 	}
 
 	@Override
-	public boolean closed(long now, boolean close) {
+	public boolean canClose(long now, boolean close) {
+		return true;
+	}
+
+	@Override
+	public boolean finishClosing(long now) {
 		return true;
 	}
 }

@@ -58,22 +58,41 @@ public interface NIOConnectionHandler {
 	}
 
 	/**
-	 * check if the connection is closed and should be stoped
+	 * called when the output is closed
+	 */
+	default void onOutputClosed() { // ok
+	}
+
+	/**
+	 * check if the connection can be closed
 	 * 
 	 * @param now currentTimeMillis
 	 * @param stop if true the server is in stop phase
-	 * @return true is the collection is closed
+	 * @return true is the collection can be closed
 	 */
-	default boolean closed(long now, boolean stop) {
+	default boolean canClose(long now, boolean stop) {
 		return false;
 	}
 
 	/**
-	 * called when the connection is free
-	 * 
-	 * @throws IOException on io exception
+	 * start the closing of the connection
 	 */
-	default void onFree() throws IOException { // ok
+	default void startClose() { // ok
+	}
+
+	/**
+	 * try to finish the closing
+	 * @param now currentTimeMillis
+	 * @return true if the connection is closed
+	 */
+	default boolean finishClosing(long now) {
+		return true;
+	}
+
+	/**
+	 * called when the connection is closed
+	 */
+	default void doneClosing() { // ok
 	}
 
 }
