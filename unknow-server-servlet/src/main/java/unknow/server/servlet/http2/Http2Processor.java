@@ -174,13 +174,14 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 		lastId = Math.max(s.id(), lastId);
 	}
 
-	public Http2Stream getStream(int id) {
+	public void closeStream(int id) {
 		if (id > lastId)
-			return null;
-		Http2Stream s = streams.get(id);
+			return;
+		Http2Stream s = streams.remove(id);
+		if (s == null)
+			s = pending.remove(id);
 		if (s != null)
-			return s;
-		return pending.get(id);
+			s.close(true);
 	}
 
 	/**

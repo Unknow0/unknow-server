@@ -6,7 +6,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import unknow.server.servlet.http2.Http2Processor;
-import unknow.server.servlet.http2.Http2Stream;
 
 public class FrameRstStream extends FrameReader {
 	private static final Logger logger = LoggerFactory.getLogger(FrameRstStream.class);
@@ -42,9 +41,7 @@ public class FrameRstStream extends FrameReader {
 
 		int err = (b[0] & 0xff) << 24 | (b[1] & 0xff) << 16 | (b[2] & 0xff) << 8 | (b[3] & 0xff);
 		logger.info("closing stream {} err: {}", id, Http2Processor.error(err));
-		Http2Stream s = p.getStream(id);
-		if (s != null)
-			s.close(true);
+		p.closeStream(id);
 		return null;
 	}
 }

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 unknow_start() {
-	java -jar unknow-server-test/unknow-server-test-jar/target/server.jar --shutdown :8009 --http-addr :8080 --https-addr :8443 --keystore store.jks --keypass 123456 > logs/unknow.log 2>&1 &
+	java -Dorg.slf4j.simpleLogger.showDateTime=true -jar unknow-server-test/unknow-server-test-jar/target/server.jar --shutdown :8009 --http-addr :8080 --https-addr :8443 --keystore store.jks --keypass 123456 --listener LOG > logs/unknow.log 2>&1 &
 	pid=$!
 }
 unknow_stop() {
