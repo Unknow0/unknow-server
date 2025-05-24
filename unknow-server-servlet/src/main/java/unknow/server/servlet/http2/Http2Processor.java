@@ -5,7 +5,6 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -64,7 +63,7 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 
 	public final HttpConnection co;
 	public final IntArrayMap<Http2Stream> streams;
-	public final List<Http2Stream> pending;
+	public final IntArrayMap<Http2Stream> pending;
 	public final Http2HeadersEncoder headersEncoder;
 	public final Http2HeadersDecoder headersDecoder;
 	private final byte[] b;
@@ -86,7 +85,7 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 	public Http2Processor(HttpConnection co) throws IOException {
 		this.co = co;
 		this.streams = new IntArrayMap<>();
-		this.pending = new LinkedList<>();
+		this.pending = new IntArrayMap<>();
 		this.headersEncoder = new Http2HeadersEncoder(4096);
 		this.headersDecoder = new Http2HeadersDecoder(4096);
 		this.b = new byte[9];
@@ -131,7 +130,7 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 	public boolean canClose(long now, boolean stop) {
 		if (stop)
 			return true;
-		Iterator<Http2Stream> it = pending.iterator();
+		Iterator<Http2Stream> it = pending.values().iterator();
 		while (it.hasNext()) {
 			if (it.next().isClosed())
 				it.remove();
@@ -150,7 +149,7 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 
 	@Override
 	public boolean finishClosing(long now) {
-		Iterator<Http2Stream> it = pending.iterator();
+		Iterator<Http2Stream> it = pending.values().iterator();
 		while (it.hasNext()) {
 			if (it.next().isClosed())
 				it.remove();
@@ -159,7 +158,11 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 	}
 
 	@Override
-	public void doneClosing() { // ok
+	public void doneClosing() {
+		for (Http2Stream s : streams.values())
+			s.close(true);
+		for (Http2Stream s : pending.values())
+			s.close(true);
 	}
 
 	public void close(int lastClienId) {
@@ -169,6 +172,15 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 	public void addStream(Http2Stream s) {
 		streams.set(s.id(), s);
 		lastId = Math.max(s.id(), lastId);
+	}
+
+	public Http2Stream getStream(int id) {
+		if (id > lastId)
+			return null;
+		Http2Stream s = streams.get(id);
+		if (s != null)
+			return s;
+		return pending.get(id);
 	}
 
 	/**
@@ -335,5 +347,4 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 				return "unknown " + err;
 		}
 	}
-
 }

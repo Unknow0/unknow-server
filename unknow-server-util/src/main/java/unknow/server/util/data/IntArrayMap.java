@@ -18,6 +18,9 @@ public class IntArrayMap<T> {
 	private T[] values;
 	private int len;
 
+	private final Keys kSet;
+	private final Values vSet;
+
 	/**
 	 * create an empty array map
 	 */
@@ -26,6 +29,9 @@ public class IntArrayMap<T> {
 		keys = new int[10];
 		values = (T[]) new Object[10];
 		len = 0;
+
+		kSet = new Keys();
+		vSet = new Values();
 	}
 
 	/**
@@ -40,6 +46,9 @@ public class IntArrayMap<T> {
 		this.keys = key;
 		this.values = value;
 		this.len = key.length;
+
+		kSet = new Keys();
+		vSet = new Values();
 	}
 
 	/**
@@ -161,23 +170,23 @@ public class IntArrayMap<T> {
 	 * @return set of all the keys
 	 */
 	public Set<Integer> keySet() {
-		return new KeySet();
+		return kSet;
 	}
 
 	public Collection<T> values() {
-		return new Values();
+		return vSet;
 	}
 
-	private class KeySet implements Set<Integer> {
+	private class Keys implements Set<Integer> {
 
 		@Override
 		public int size() {
-			return len;
+			return IntArrayMap.this.size();
 		}
 
 		@Override
 		public boolean isEmpty() {
-			return len == 0;
+			return IntArrayMap.this.isEmpty();
 		}
 
 		@Override
@@ -236,33 +245,16 @@ public class IntArrayMap<T> {
 		}
 	}
 
-	private class KeyIt implements Iterator<Integer> {
-		private int i = 0;
-
-		@Override
-		public boolean hasNext() {
-			return i < len;
-		}
-
-		@Override
-		public Integer next() {
-			if (i == len)
-				throw new NoSuchElementException();
-			return keys[i++];
-		}
-
-	}
-
 	private class Values implements Collection<T> {
 
 		@Override
 		public int size() {
-			return len;
+			return IntArrayMap.this.size();
 		}
 
 		@Override
 		public boolean isEmpty() {
-			return len == 0;
+			return IntArrayMap.this.isEmpty();
 		}
 
 		@Override
@@ -278,12 +270,13 @@ public class IntArrayMap<T> {
 
 		@Override
 		public Object[] toArray() {
-			throw new UnsupportedOperationException();
+			return Arrays.copyOfRange(values, 0, len);
 		}
 
 		@Override
+		@SuppressWarnings("unchecked")
 		public <E> E[] toArray(E[] a) {
-			throw new UnsupportedOperationException();
+			return Arrays.copyOf(values, len, (Class<E[]>) a.getClass());
 		}
 
 		@Override
@@ -318,32 +311,49 @@ public class IntArrayMap<T> {
 
 		@Override
 		public void clear() {
-			throw new UnsupportedOperationException();
+			IntArrayMap.this.clear();
 		}
 	}
 
-	private class ValuesIt implements Iterator<T> {
-		private int i = 0;
+	private abstract class It<E> implements Iterator<E> {
+		private int i = -1;
+		private boolean remove;
 
 		@Override
 		public boolean hasNext() {
-			return i < len;
+			return i + 1 < len;
 		}
 
 		@Override
-		public T next() {
-			if (i == len)
+		public E next() {
+			if (i + 1 == len)
 				throw new NoSuchElementException();
-			return values[i++];
+			remove = true;
+			return v(++i);
 		}
 
 		@Override
 		public void remove() {
-			len--;
-			i--;
-			System.arraycopy(keys, i + 1, keys, i, len - i);
-			System.arraycopy(values, i + 1, values, i, len - i);
-			values[len] = null;
+			if (!remove)
+				return;
+			IntArrayMap.this.remove(keys[i]);
+			remove = true;
+		}
+
+		protected abstract E v(int i);
+	}
+
+	private class KeyIt extends It<Integer> {
+		@Override
+		public Integer v(int i) {
+			return keys[i];
+		}
+	}
+
+	private class ValuesIt extends It<T> {
+		@Override
+		protected T v(int i) {
+			return values[i];
 		}
 	}
 }
