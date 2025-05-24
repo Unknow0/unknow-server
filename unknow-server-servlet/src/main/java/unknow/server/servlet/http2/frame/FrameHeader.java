@@ -85,7 +85,7 @@ public class FrameHeader extends FrameReader {
 
 			if ((flags & 0x1) == 1) {
 				p.streams.remove(id);
-				p.pending.add(s);
+				p.pending.set(id, s);
 				s.close(false);
 			}
 

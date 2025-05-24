@@ -337,5 +337,13 @@ public class IntArrayMap<T> {
 			return values[i++];
 		}
 
+		@Override
+		public void remove() {
+			len--;
+			i--;
+			System.arraycopy(keys, i + 1, keys, i, len - i);
+			System.arraycopy(values, i + 1, values, i, len - i);
+			values[len] = null;
+		}
 	}
 }

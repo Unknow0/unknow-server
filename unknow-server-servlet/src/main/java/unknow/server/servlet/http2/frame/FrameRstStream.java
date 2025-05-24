@@ -12,8 +12,7 @@ public class FrameRstStream extends FrameReader {
 	private static final Logger logger = LoggerFactory.getLogger(FrameRstStream.class);
 
 	public static final FrameBuilder BUILDER = (p, size, flags, id, buf) -> {
-		Http2Stream s = p.streams.remove(id);
-		if (s == null) {
+		if (id == 0) {
 			p.goaway(Http2Processor.PROTOCOL_ERROR);
 			return null;
 		}
@@ -22,16 +21,14 @@ public class FrameRstStream extends FrameReader {
 			return null;
 		}
 
-		return new FrameRstStream(p, size, flags, id, s).process(buf);
+		return new FrameRstStream(p, size, flags, id).process(buf);
 	};
 
-	private final Http2Stream s;
 	private final byte[] b;
 	private int l;
 
-	protected FrameRstStream(Http2Processor p, int size, int flags, int id, Http2Stream s) {
+	protected FrameRstStream(Http2Processor p, int size, int flags, int id) {
 		super(p, size, flags, id);
-		this.s = s;
 		this.b = new byte[4];
 		this.l = 0;
 	}
@@ -45,7 +42,9 @@ public class FrameRstStream extends FrameReader {
 
 		int err = (b[0] & 0xff) << 24 | (b[1] & 0xff) << 16 | (b[2] & 0xff) << 8 | (b[3] & 0xff);
 		logger.info("closing stream {} err: {}", id, Http2Processor.error(err));
-		s.close(true);
+		Http2Stream s = p.getStream(id);
+		if (s != null)
+			s.close(true);
 		return null;
 	}
 }
