@@ -21,7 +21,7 @@ test() {
 		cout="$out/$n.csv"
 	fi
 	{
-		time curl -Z --parallel-immediate --parallel-max $p -s -o /dev/null --no-progress-meter -w "%output{>>$cout}$n %{response_code} %{time_total} %{time_starttransfer} %{errormsg}\n" "$@" > /dev/null
+		time curl -Z --parallel-immediate --parallel-max $p -s -o /dev/null --no-progress-meter -w "$n %{response_code} %{time_total} %{time_starttransfer} %{errormsg}\n" "$@" > $cout
 	} |& tee -a "$tout"
 }
 
