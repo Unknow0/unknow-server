@@ -8,6 +8,7 @@ import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -142,7 +143,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 				doWrite(co, now);
 			} catch (Exception e) {
 				logger.error("failed to write {}", co, e);
-				startClose(co);
+				drainAndClose(co);
 			} finally {
 				buf.clear();
 			}
@@ -154,11 +155,22 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 				doRead(co, now);
 			} catch (Exception e) {
 				logger.error("failed to read {}", co, e);
-				startClose(co);
+				drainAndClose(co);
 			} finally {
 				buf.clear();
 			}
 		}
+	}
+
+	private void drainAndClose(NIOConnection co) {
+		startClose(co);
+		try {
+			co.getOut().close();
+		} catch (@SuppressWarnings("unused") IOException e) { // ignore
+		}
+		co.pending.clear();
+		co.writesLength = 0;
+		Arrays.fill(co.writes, null);
 	}
 
 	private void doRead(NIOConnection co, long now) throws IOException {

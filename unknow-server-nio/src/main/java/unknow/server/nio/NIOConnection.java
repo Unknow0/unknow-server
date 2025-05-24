@@ -36,9 +36,9 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	protected final InetSocketAddress local;
 	protected final InetSocketAddress remote;
 
-	private final BlockingQueue<ByteBuffer> pending;
-	protected ByteBuffer[] writes = new ByteBuffer[10];
-	protected int writesLength = 0;
+	final BlockingQueue<ByteBuffer> pending;
+	final ByteBuffer[] writes;
+	int writesLength = 0;
 
 	long lastCheck;
 	NIOConnection next;
@@ -72,6 +72,7 @@ public final class NIOConnection extends NIOHandlerDelegate {
 		remote = a;
 
 		this.pending = new ArrayBlockingQueue<>(16);
+		this.writes = new ByteBuffer[16];
 	}
 
 	public final <T> Future<T> submit(Runnable r) {
@@ -92,7 +93,7 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	 * @throws InterruptedException  in case of interruption
 	 */
 	public final void write(ByteBuffer buf) throws InterruptedException {
-		if (pending.size() == 16)
+		if (pending.size() > 10)
 			flush();
 		pending.put(buf);
 		toggleKeyOps();
