@@ -38,7 +38,7 @@ public class FrameRstStream extends FrameReader {
 		frame.size = 0;
 
 		int err = (b[0] & 0xff) << 24 | (b[1] & 0xff) << 16 | (b[2] & 0xff) << 8 | (b[3] & 0xff);
-		logger.info("closing stream {} err: {}", frame.id, Http2Processor.error(err));
+		logger.debug("closing stream {} err: {}", frame.id, Http2Processor.error(err));
 		p.closeStream(frame.id);
 	}
 }

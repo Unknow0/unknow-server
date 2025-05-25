@@ -4,6 +4,8 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import unknow.server.servlet.utils.Utf8Encoder;
+
 /**
  * HPACK static huffman table
  * https://httpwg.org/specs/rfc7541.html#huffman.code
@@ -63,6 +65,23 @@ public class Http2Huffman {
 	private Http2Huffman() {
 	}
 
+	/**
+	 * estimate if we should try to encode
+	 * @param data data to encode
+	 * @return true if we could gain
+	 */
+	public static boolean shouldEncode(byte[] data) {
+		int l = data.length;
+		if (l < 4)
+			return false;
+		if (l > 15)
+			return true;
+		int c = 0;
+		for (int i = 0; i < l; i++)
+			c += sizes[data[i]];
+		return c / 8 < data.length;
+	}
+
 	private static int bits(S s, ByteBuffer b, int need) throws IOException {
 		int val = s.bit;
 		while (s.cnt < need) {
@@ -107,15 +126,18 @@ public class Http2Huffman {
 	 * @param data data to encode
 	 * @return true false if buf if full or data is smaller
 	 */
-	public static boolean encode(ByteBuffer buf, byte[] data) {
-		S c = new S();
-		for (int i = 0; i < data.length; i++) {
-			if (encode(c, buf, data[i]))
+	public static boolean encode(ByteBuffer buf, CharSequence data) {
+		S s = new S();
+
+		Utf8Encoder e = new Utf8Encoder(data);
+
+		while (e.hasNext()) {
+			if (encode(s, buf, e.next()))
 				return false;
 		}
-		if (c.cnt != 0)
-			buf.put((byte) (c.bit | (0xff >> c.cnt)));
-		return buf.position() < data.length;
+		if (s.cnt != 0)
+			buf.put((byte) (s.bit | (0xff >> s.cnt)));
+		return buf.position() < e.count();
 	}
 
 	private static boolean encode(S c, ByteBuffer buf, byte b) {

@@ -2,8 +2,8 @@ package unknow.server.servlet.http2.header;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 
+import unknow.server.servlet.utils.Utf8Encoder;
 import unknow.server.util.ConsumerWithException;
 
 public class Http2HeadersEncoder extends Http2Headers {
@@ -107,28 +107,23 @@ public class Http2HeadersEncoder extends Http2Headers {
 	}
 
 	private <E extends Throwable> void writeData(String value, ConsumerWithException<ByteBuffer, E> c) throws E {
-		byte[] bytes = value.getBytes(StandardCharsets.US_ASCII);
-		if (buf.remaining() < bytes.length)
-			flush(c);
-
-		ByteBuffer b = ByteBuffer.allocate(bytes.length);
-		if (Http2Huffman.encode(b, bytes)) {
+		ByteBuffer b = ByteBuffer.allocate(value.length() < 128 ? value.length() * 4 : Utf8Encoder.length(value));
+		if (value.length() > 4 && Http2Huffman.encode(b, value))
 			encodeInt(0x80, 7, b.position(), c);
-			int l = b.flip().limit();
-			while (b.hasRemaining()) {
-				buf.put(b.limit(Math.min(l, buf.remaining())));
-				if (!buf.hasRemaining())
-					doFlush(c);
-			}
-		} else {
-			encodeInt(0, 7, bytes.length, c);
-			int o = 0;
-			while (o < bytes.length) {
-				int l = Math.min(buf.remaining(), bytes.length);
-				buf.put(bytes, o, l);
-				if (!buf.hasRemaining())
-					doFlush(c);
-			}
+		else {
+			b.clear();
+			Utf8Encoder.encode(value, b);
+			encodeInt(0, 7, b.position(), c);
+		}
+
+		byte[] bytes = b.array();
+		int len = b.position();
+		int o = 0;
+		while (o < bytes.length) {
+			int l = Math.min(buf.remaining(), len);
+			buf.put(bytes, o, l);
+			if (!buf.hasRemaining())
+				doFlush(c);
 		}
 	}
 }

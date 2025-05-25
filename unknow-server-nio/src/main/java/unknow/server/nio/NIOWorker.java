@@ -196,7 +196,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	}
 
 	private void startClose(NIOConnection co) {
-		logger.info("{} start closing", co);
+		logger.debug("{} start closing", co);
 		closing.add(co);
 		remove(co);
 		co.startClose();

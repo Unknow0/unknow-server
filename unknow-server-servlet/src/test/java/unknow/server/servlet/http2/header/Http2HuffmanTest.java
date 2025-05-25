@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.stream.Stream;
 
@@ -38,9 +37,8 @@ public class Http2HuffmanTest {
 	@ParameterizedTest
 	@MethodSource("input")
 	public void encode(String decoded, byte[] encoded) {
-		byte[] bytes = decoded.getBytes(StandardCharsets.US_ASCII);
-		ByteBuffer b = ByteBuffer.allocate(bytes.length);
-		Http2Huffman.encode(b, bytes);
+		ByteBuffer b = ByteBuffer.allocate(decoded.length());
+		Http2Huffman.encode(b, decoded);
 		byte[] array = Arrays.copyOf(b.array(), b.position());
 		assertArrayEquals(encoded, array);
 	}
