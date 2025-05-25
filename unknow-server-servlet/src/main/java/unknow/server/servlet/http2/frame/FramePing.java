@@ -2,6 +2,7 @@ package unknow.server.servlet.http2.frame;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 import unknow.server.servlet.http2.Http2Processor;
 
@@ -35,6 +36,6 @@ public class FramePing extends FrameReader {
 		frame.size = 0;
 
 		if ((frame.flags & 0x1) == 0)
-			p.sendFrame(8, 1, 0, ByteBuffer.wrap(frame.b));
+			p.sendFrame(8, 1, 0, ByteBuffer.wrap(Arrays.copyOf(frame.b, 8)));
 	}
 }

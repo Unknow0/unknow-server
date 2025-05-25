@@ -2,6 +2,7 @@ package unknow.server.servlet.impl;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.WriteListener;
@@ -106,14 +107,15 @@ public abstract class AbstractServletOutput extends ServletOutputStream {
 		ensureOpen();
 		int l = Math.min(len, buffer.remaining());
 		buffer.put(b, off, l);
-		if (buffer.hasRemaining())
+		len -= l;
+		if (len == 0)
 			return;
 		flush();
-		len -= l;
+		off += l;
 		if (len >= bufferSize)
-			writeBuffer(ByteBuffer.wrap(b, off + l, len));
+			writeBuffer(ByteBuffer.wrap(Arrays.copyOfRange(b, off, off + len)));
 		else
-			buffer.put(b, off + l, len);
+			buffer.put(b, off, len);
 	}
 
 	@Override
