@@ -133,8 +133,13 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 			switch (hs) {
 				case NEED_TASK:
 					logger.trace("running tasks");
-					co.submit(new RunTask());
-					return true;
+//					co.submit(new RunTask());
+					Runnable task;
+					while ((task = sslEngine.getDelegatedTask()) != null)
+						task.run();
+					hs = sslEngine.getHandshakeStatus();
+//					return true;
+					break;
 				case NEED_UNWRAP:
 				case NEED_UNWRAP_AGAIN:
 					rawIn.flip();
