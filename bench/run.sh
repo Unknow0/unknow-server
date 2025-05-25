@@ -1,7 +1,7 @@
 #!/bin/bash
 
 unknow_start() {
-	java -Dorg.slf4j.simpleLogger.showDateTime=true -Dorg.slf4j.simpleLogger.defaultLogLevel=debug -jar unknow-server-test/unknow-server-test-jar/target/server.jar --shutdown :8009 --http-addr :8080 --https-addr :8443 --keystore store.jks --keypass 123456 > logs/unknow.log 2>&1 &
+	java -jar unknow-server-test/unknow-server-test-jar/target/server.jar --shutdown :8009 --http-addr :8080 --https-addr :8443 --keystore store.jks --keypass 123456 > logs/unknow.log 2>&1 &
 	pid=$!
 }
 unknow_stop() {
@@ -41,7 +41,7 @@ keytool -genkey -alias server -keyalg RSA -validity 365 -keystore store.jks -sto
 ${1}_start
 sleep 10
 echo -e "\nWarming up"
-bash bench/tests.sh 127.0.0.1  1  50000 out/warm-$1
+bash bench/tests.sh 127.0.0.1  1  50000
 
 sleep 10
 echo -e "\nTesting.."
