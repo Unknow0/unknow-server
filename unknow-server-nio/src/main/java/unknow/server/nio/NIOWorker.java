@@ -183,7 +183,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	}
 
 	private void doWrite(NIOConnection co, long now) throws IOException {
-		co.beforeWrite();
+		co.beforeWrite(now);
 		if (co.channel.write(co.writes, 0, co.writesLength) > 0) {
 			co.onWrite(now);
 			toTail(co, now);

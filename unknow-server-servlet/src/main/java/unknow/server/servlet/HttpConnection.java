@@ -68,7 +68,7 @@ public final class HttpConnection implements NIOConnectionHandler {
 	}
 
 	@Override
-	public void onHandshakeDone(SSLEngine sslEngine) throws IOException {
+	public void onHandshakeDone(SSLEngine sslEngine, long now) throws IOException {
 		if ("h2".equals(sslEngine.getApplicationProtocol()))
 			p = new Http2Processor(this);
 		else

@@ -18,8 +18,8 @@ public class NIOHandlerDelegate implements NIOConnectionHandler {
 	}
 
 	@Override
-	public void onHandshakeDone(SSLEngine sslEngine) throws IOException {
-		handler.onHandshakeDone(sslEngine);
+	public void onHandshakeDone(SSLEngine sslEngine, long now) throws IOException {
+		handler.onHandshakeDone(sslEngine, now);
 	}
 
 	@Override
@@ -28,8 +28,8 @@ public class NIOHandlerDelegate implements NIOConnectionHandler {
 	}
 
 	@Override
-	public ByteBuffer beforeWrite(ByteBuffer b) throws IOException {
-		return handler.beforeWrite(b);
+	public ByteBuffer beforeWrite(ByteBuffer b, long now) throws IOException {
+		return handler.beforeWrite(b, now);
 	}
 
 	@Override

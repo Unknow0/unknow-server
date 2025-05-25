@@ -151,9 +151,9 @@ public final class NIOConnection extends NIOHandlerDelegate {
 		return out.isClosed() && writesLength == 0;
 	}
 
-	protected final void beforeWrite() throws IOException {
+	protected final void beforeWrite(long now) throws IOException {
 		while (writesLength < writes.length && !pending.isEmpty()) {
-			ByteBuffer b = handler.beforeWrite(pending.poll());
+			ByteBuffer b = handler.beforeWrite(pending.poll(), now);
 			if (b != null && b.hasRemaining())
 				writes[writesLength++] = b;
 		}

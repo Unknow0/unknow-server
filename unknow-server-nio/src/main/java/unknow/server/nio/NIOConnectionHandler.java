@@ -23,9 +23,10 @@ public interface NIOConnectionHandler {
 	 * called when the handshake process finish
 	 * 
 	 * @param sslEngine the sslEngine
+	 * @param now currentTimeMillis
 	 * @throws IOException on io exception
 	 */
-	default void onHandshakeDone(SSLEngine sslEngine) throws IOException { // ok
+	default void onHandshakeDone(SSLEngine sslEngine, long now) throws IOException { // ok
 	}
 
 	/**
@@ -41,10 +42,11 @@ public interface NIOConnectionHandler {
 	/**
 	 * called before a buffer is written
 	 * @param b buffer to be written
+	 * @param now currentTimeMillis
 	 * @return new buffer to write
 	 * @throws IOException on io exception
 	 */
-	default ByteBuffer beforeWrite(ByteBuffer b) throws IOException {
+	default ByteBuffer beforeWrite(ByteBuffer b, long now) throws IOException {
 		return b;
 	}
 
