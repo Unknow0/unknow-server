@@ -44,6 +44,10 @@ public class FrameGoAway extends FrameReader {
 		logger.info("goaway last: {} err: {}", frame.lastId, Http2Processor.error(err));
 		frame.size -= 8;
 		p.close(frame.lastId);
-		super.process(p, frame, buf);
+
+		int r = Math.min(frame.size, buf.remaining());
+		logger.info("	dbg: {}", new String(buf.array(), buf.position(), r));
+		buf.position(buf.position() + r);
+		frame.size -= r;
 	}
 }
