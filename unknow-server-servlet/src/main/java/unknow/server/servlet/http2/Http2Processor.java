@@ -23,10 +23,13 @@ import unknow.server.servlet.http2.frame.FrameWindowUpdate;
 import unknow.server.servlet.http2.frame.Http2Frame;
 import unknow.server.servlet.http2.header.Http2HeadersDecoder;
 import unknow.server.servlet.http2.header.Http2HeadersEncoder;
-import unknow.server.servlet.http2.header.Http2HeadersEncoder.ByteBufferConsumer;
 import unknow.server.servlet.impl.ServletResponseImpl;
+import unknow.server.util.ConsumerWithException;
 import unknow.server.util.data.IntArrayMap;
 
+/**
+ * processor for http/2 protocol
+ */
 public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 	static final Logger logger = LoggerFactory.getLogger(Http2Processor.class);
 
@@ -61,23 +64,33 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 		READERS.set(9, FrameHeader.INSTANCE);
 	}
 
+	/** the connection */
 	public final HttpConnection co;
+	/** stream started */
 	public final IntArrayMap<Http2Stream> streams;
+	/** stream waiting completion */
 	public final IntArrayMap<Http2Stream> pending;
+	/** header encoder */
 	public final Http2HeadersEncoder headersEncoder;
+	/** headers decoder */
 	public final Http2HeadersDecoder headersDecoder;
+
 	private final Http2Frame frame;
+
 	private int window;
 	private int closingId;
 
 //	private boolean allowPush;
 //	private int concurrent;
+	/** initial flow control window for stream */
 	public int initialWindow;
+	/** max frame size */
 	public int frameSize;
 //	private int headerList;
 
 	private int lastId;
 
+	/** want continuation frame */
 	public boolean wantContinuation;
 
 	public Http2Processor(HttpConnection co) throws IOException {
@@ -185,7 +198,7 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 	 * @return
 	 * @
 	 */
-	private void readFrame(ByteBuffer buf) throws IOException {
+	private void readFrame(ByteBuffer buf) {
 		if (!frame.read(buf))
 			return;
 		logger.debug("{} read frame: {}", co, frame);
@@ -243,7 +256,7 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 	@SuppressWarnings("resource")
 	public void sendHeaders(int id, ServletResponseImpl res) throws IOException {
 		List<ByteBuffer> list = new ArrayList<>();
-		ByteBufferConsumer c = list::add;
+		ConsumerWithException<ByteBuffer, RuntimeException> c = list::add;
 
 		synchronized (headersEncoder) {
 			headersEncoder.encode(":status", Integer.toString(res.getStatus()), c);

@@ -88,6 +88,13 @@ public class Http2Huffman {
 		return (val & m) >> s.cnt;
 	}
 
+	/**
+	 * decode data into string
+	 * @param b data to decode
+	 * @param s state
+	 * @param sb output
+	 * @throws IOException in case of error
+	 */
 	public static void decode(ByteBuffer b, S s, StringBuilder sb) throws IOException {
 		char c;
 		while ((s.max > 0 || s.cnt > 0) && (c = read(s, b)) != 256)
@@ -159,14 +166,22 @@ public class Http2Huffman {
 		}
 	}
 
+	/**
+	 * reentrant huffman state
+	 */
 	public static class S {
 		int bit;
 		int cnt;
 		int max;
 
+		/** new state */
 		public S() {
 		}
 
+		/**
+		 * new state
+		 * @param max max bytes to read
+		 */
 		public S(int max) {
 			this.max = max;
 		}

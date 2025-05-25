@@ -1,6 +1,5 @@
 package unknow.server.servlet.http2.frame;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import unknow.server.servlet.http2.Http2Processor;
@@ -24,6 +23,11 @@ public class Http2Frame {
 		this.b = new byte[9];
 	}
 
+	/**
+	 * try to read a frame from buf
+	 * @param buf the buf to read
+	 * @return true if the frame is full
+	 */
 	public boolean read(ByteBuffer buf) {
 		int m = Math.min(9 - l, buf.remaining());
 		buf.get(b, l, m);
@@ -43,10 +47,8 @@ public class Http2Frame {
 	* 
 	* @param p the processor
 	* @param buf where to read
-	* @return the pad length or -1 is case of error
-	* @throws IOException in case of ioexception
 	*/
-	public void readPad(Http2Processor p, ByteBuffer buf) throws IOException {
+	public void readPad(Http2Processor p, ByteBuffer buf) {
 		if ((flags & 0x8) == 0)
 			return;
 		flags &= ~0x8;

@@ -4,40 +4,53 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
+import unknow.server.util.ConsumerWithException;
+
 public class Http2HeadersEncoder extends Http2Headers {
 	private ByteBuffer buf;
 
+	/**
+	 * new encoder
+	 * @param maxSize size of the header table
+	 */
 	public Http2HeadersEncoder(int maxSize) {
 		super(maxSize);
 		buf = ByteBuffer.allocate(8192);
 	}
 
-	private void put(byte b, ByteBufferConsumer c) throws IOException {
+	private <E extends Throwable> void put(byte b, ConsumerWithException<ByteBuffer, E> c) throws E {
 		buf.put(b);
 		if (buf.hasRemaining())
 			return;
 		doFlush(c);
 	}
 
-	public void flush(ByteBufferConsumer c) throws IOException {
+	/**
+	 * flush pending data
+	 * @param <E> exception thown by the consumer
+	 * @param c consumer of encoded header
+	 * @throws E in case of error in the consumer
+	 */
+	public <E extends Throwable> void flush(ConsumerWithException<ByteBuffer, E> c) throws E {
 		if (buf.position() == 0)
 			return;
 		doFlush(c);
 	}
 
-	private void doFlush(ByteBufferConsumer c) throws IOException {
+	private <E extends Throwable> void doFlush(ConsumerWithException<ByteBuffer, E> c) throws E {
 		c.accept(buf.flip());
 		buf = ByteBuffer.allocate(8192);
 	}
 
 	/**
 	 * write a header to the output
+	 * @param <E> exception of the consumer 
 	 * @param name the header name
 	 * @param value the header value
 	 * @param c consumer of produced consumer
-	 * @throws IOException  in case of ioexception
+	 * @throws E in case of error in the consumer
 	 */
-	public void encode(String name, String value, ByteBufferConsumer c) throws IOException {
+	public <E extends Throwable> void encode(String name, String value, ConsumerWithException<ByteBuffer, E> c) throws E {
 		int o = -1;
 		for (int i = 0; i < TABLE.length; i++) {
 			Entry e = TABLE[i];
@@ -78,7 +91,7 @@ public class Http2HeadersEncoder extends Http2Headers {
 	* @param v the value
 	* @throws IOException 
 	*/
-	private void encodeInt(int p, int n, int v, ByteBufferConsumer c) throws IOException {
+	private <E extends Throwable> void encodeInt(int p, int n, int v, ConsumerWithException<ByteBuffer, E> c) throws E {
 		int m = MAX[n];
 		if (v < m) {
 			put((byte) (v | p), c);
@@ -93,7 +106,7 @@ public class Http2HeadersEncoder extends Http2Headers {
 		put((byte) v, c);
 	}
 
-	private void writeData(String value, ByteBufferConsumer c) throws IOException {
+	private <E extends Throwable> void writeData(String value, ConsumerWithException<ByteBuffer, E> c) throws E {
 		byte[] bytes = value.getBytes(StandardCharsets.US_ASCII);
 		if (buf.remaining() < bytes.length)
 			flush(c);
@@ -117,9 +130,5 @@ public class Http2HeadersEncoder extends Http2Headers {
 					doFlush(c);
 			}
 		}
-	}
-
-	public static interface ByteBufferConsumer {
-		void accept(ByteBuffer b) throws IOException;
 	}
 }
