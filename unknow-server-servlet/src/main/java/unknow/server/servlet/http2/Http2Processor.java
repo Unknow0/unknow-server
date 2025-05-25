@@ -248,7 +248,7 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 			}
 		}
 
-		if (logger.isDebugEnabled())
+		if (logger.isInfoEnabled())
 			logger.info(String.format("%s send frame: %02x, size: %s, flags: %02x, id: %s", co, type, size, flags, id));
 		co.flush();
 	}
