@@ -6,36 +6,35 @@ import java.nio.ByteBuffer;
 import unknow.server.servlet.http2.Http2Processor;
 
 public class FramePing extends FrameReader {
-	public static final FrameBuilder BUILDER = (p, size, flags, id, buf) -> {
-		if (id != 0) {
-			p.goaway(Http2Processor.PROTOCOL_ERROR);
-			return null;
-		}
-		if (size != 8) {
-			p.goaway(Http2Processor.FRAME_SIZE_ERROR);
-			return null;
-		}
-		return new FramePing(p, size, flags, id).process(buf);
-	};
+	public static final FrameReader INSTANCE = new FramePing();
 
-	private final byte[] b;
-	private int l;
-
-	protected FramePing(Http2Processor p, int size, int flags, int id) {
-		super(p, size, flags, id);
-		this.b = new byte[8];
-		this.l = 0;
+	protected FramePing() {
 	}
 
 	@Override
-	public final FrameReader process(ByteBuffer buf) throws IOException {
-		int i = Math.min(8 - l, buf.remaining());
-		buf.get(b, l, i);
-		if ((l += i) < 8)
-			return this;
+	public void check(Http2Processor p, Http2Frame frame) {
+		if (frame.id != 0) {
+			p.goaway(Http2Processor.PROTOCOL_ERROR);
+			frame.type = -1;
+		} else if (frame.size != 8) {
+			p.goaway(Http2Processor.FRAME_SIZE_ERROR);
+			frame.type = -1;
+		}
+	};
 
-		if ((flags & 0x1) == 0)
-			p.sendFrame(8, 1, 0, ByteBuffer.wrap(b));
-		return null;
+	@Override
+	public void process(Http2Processor p, Http2Frame frame, ByteBuffer buf) throws IOException {
+		if (frame.id != 0 || frame.size != 8)
+			super.process(p, frame, buf);
+
+		int i = Math.min(8 - frame.l, buf.remaining());
+		buf.get(frame.b, frame.l, i);
+		if ((frame.l += i) < 8)
+			return;
+		frame.l = 0;
+		frame.size = 0;
+
+		if ((frame.flags & 0x1) == 0)
+			p.sendFrame(8, 1, 0, ByteBuffer.wrap(frame.b));
 	}
 }

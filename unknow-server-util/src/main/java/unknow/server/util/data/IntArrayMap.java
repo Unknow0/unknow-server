@@ -68,6 +68,11 @@ public class IntArrayMap<T> {
 		return i < 0 ? null : values[i];
 	}
 
+	public T getOrDefault(int key, T value) {
+		T t = get(key);
+		return t == null ? value : t;
+	}
+
 	/**
 	 * set a value
 	 * 
@@ -356,4 +361,5 @@ public class IntArrayMap<T> {
 			return values[i];
 		}
 	}
+
 }

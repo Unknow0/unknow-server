@@ -15,6 +15,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Future;
 
 import unknow.server.nio.NIOWorker.WorkerTask;
+import unknow.server.util.io.ByteBuffers;
 
 /**
  * used to handle raw data
@@ -37,8 +38,7 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	protected final InetSocketAddress remote;
 
 	final BlockingQueue<ByteBuffer> pending;
-	final ByteBuffer[] writes;
-	int writesLength = 0;
+	final ByteBuffers writes;
 
 	long lastCheck;
 	NIOConnection next;
@@ -72,7 +72,7 @@ public final class NIOConnection extends NIOHandlerDelegate {
 		remote = a;
 
 		this.pending = new ArrayBlockingQueue<>(16);
-		this.writes = new ByteBuffer[16];
+		this.writes = new ByteBuffers(16);
 	}
 
 	public final <T> Future<T> submit(Runnable r) {
@@ -83,8 +83,9 @@ public final class NIOConnection extends NIOHandlerDelegate {
 		worker.execute(task);
 	}
 
+	@Override
 	public boolean hasPendingWrites() {
-		return writesLength > 0 || !pending.isEmpty();
+		return !writes.isEmpty() || !pending.isEmpty() || handler.hasPendingWrites();
 	}
 
 	/**
@@ -148,30 +149,18 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	 * @return true if we should close this handler
 	 */
 	public boolean isClosed() {
-		return out.isClosed() && writesLength == 0;
+		return out.isClosed() && writes.isEmpty();
 	}
 
 	protected final void beforeWrite(long now) throws IOException {
-		while (writesLength < writes.length && !pending.isEmpty()) {
-			ByteBuffer b = handler.beforeWrite(pending.poll(), now);
-			if (b != null && b.hasRemaining())
-				writes[writesLength++] = b;
-		}
+		while (writes.len < 16 && !pending.isEmpty())
+			handler.prepareWrite(pending.poll(), now, writes);
+		handler.beforeWrite(now, writes);
 	}
 
 	@Override
 	public final void onWrite(long now) throws IOException {
-		int o = 0;
-		while (o < writesLength && !writes[o].hasRemaining())
-			o++;
-		if (o == 0)
-			return;
-
-		writesLength -= o;
-		if (writesLength > 0)
-			System.arraycopy(writes, o, writes, 0, writesLength);
-		for (int i = writesLength; i < o; i++)
-			writes[i] = null;
+		writes.compact();
 		toggleKeyOps();
 		handler.onWrite(now);
 	}

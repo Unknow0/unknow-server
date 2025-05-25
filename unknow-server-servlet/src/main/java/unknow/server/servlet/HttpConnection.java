@@ -157,10 +157,6 @@ public final class HttpConnection implements NIOConnectionHandler {
 		}
 	}
 
-	public boolean hasPendingWrites() {
-		return co.hasPendingWrites();
-	}
-
 	public ServletContextImpl getCtx() {
 		return ctx;
 	}

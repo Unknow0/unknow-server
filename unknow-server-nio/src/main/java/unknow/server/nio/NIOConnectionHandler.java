@@ -2,6 +2,7 @@ package unknow.server.nio;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.function.Consumer;
 
 import javax.net.ssl.SSLEngine;
 
@@ -40,14 +41,31 @@ public interface NIOConnectionHandler {
 	}
 
 	/**
-	 * called before a buffer is written
+	 * called before a buffer is written (allow to collect buffers)
 	 * @param b buffer to be written
 	 * @param now currentTimeMillis
-	 * @return new buffer to write
+	 * @param c consumer of generated buffers
 	 * @throws IOException on io exception
 	 */
-	default ByteBuffer beforeWrite(ByteBuffer b, long now) throws IOException {
-		return b;
+	default void prepareWrite(ByteBuffer b, long now, Consumer<ByteBuffer> c) throws IOException {
+		c.accept(b);
+	}
+
+	/**
+	 * called before a buffer is written
+	 * @param now currentTimeMillis
+	 * @param c consumer of generated buffers
+	 * @throws IOException on io exception
+	 */
+	default void beforeWrite(long now, Consumer<ByteBuffer> c) throws IOException { // ok
+	}
+
+	/**
+	 * check if this handler has some pengin write
+	 * @return true if the handler has pending write
+	 */
+	default boolean hasPendingWrites() {
+		return false;
 	}
 
 	/**

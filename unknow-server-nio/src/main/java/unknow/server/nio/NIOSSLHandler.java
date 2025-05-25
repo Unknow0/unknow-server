@@ -3,6 +3,7 @@ package unknow.server.nio;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.util.function.Consumer;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
@@ -15,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import unknow.server.nio.NIOWorker.WorkerTask;
+import unknow.server.util.io.ByteBuffers;
 
 public class NIOSSLHandler extends NIOHandlerDelegate {
 	private static final Logger logger = LoggerFactory.getLogger(NIOSSLHandler.class);
@@ -26,7 +28,8 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 	private NIOConnection co;
 	private SSLEngine sslEngine;
 	private ByteBuffer rawIn;
-	private ByteBuffer app;
+	private ByteBuffers rawOut;
+	private ByteBuffers app;
 	private boolean handshake;
 
 	private int packetBufferSize;
@@ -45,7 +48,11 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 		this.packetBufferSize = sslEngine.getSession().getPacketBufferSize();
 		this.applicationBufferSize = sslEngine.getSession().getApplicationBufferSize();
 		this.rawIn = ByteBuffer.allocate(packetBufferSize);
-		this.app = ByteBuffer.allocate(applicationBufferSize);
+		this.rawOut = new ByteBuffers(16);
+		this.app = new ByteBuffers(16);
+		for (int i = 0; i < applicationBufferSize; i += 4096)
+			app.accept(ByteBuffer.allocate(4096));
+
 		this.handshake = true;
 
 		handler.onInit(co, now, sslEngine);
@@ -56,7 +63,7 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 	@Override
 	public void onHandshakeDone(SSLEngine sslEngine, long now) throws IOException {
 		handshake = false;
-		logger.trace("{} handshake done {}", co);
+		logger.trace("{} handshake done", co);
 		handler.onHandshakeDone(sslEngine, now);
 		if (rawIn.position() > 0)
 			onRead(EMPTY, now);
@@ -72,50 +79,52 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 	public void onRead(ByteBuffer b, long now) throws IOException {
 		if (b.remaining() > rawIn.remaining())
 			rawIn = grow(rawIn, b.remaining());
-		rawIn.put(b);
+		if (b.hasRemaining())
+			rawIn.put(b);
 
 		if (handshake) {
 			rawIn.flip();
-			SSLEngineResult r = sslEngine.unwrap(rawIn, app);
+			SSLEngineResult r = sslEngine.unwrap(rawIn, app.buf, 0, app.len);
+			logger.trace("unwrap {}", r);
 			rawIn.compact();
 			if (checkHandshake(r.getHandshakeStatus(), now))
 				return;
 		}
-
+		app.collect(buf -> handler.onRead(buf, now));
 		rawIn.flip();
-		do {
-			SSLEngineResult r = sslEngine.unwrap(rawIn, app);
+		while (rawIn.hasRemaining()) {
+			SSLEngineResult r = sslEngine.unwrap(rawIn, app.buf, 0, app.len);
 			logger.trace("unwrap {}", r);
-			if (r.getStatus() == SSLEngineResult.Status.BUFFER_OVERFLOW) {
-				app.flip();
-				handler.onRead(app, now);
-				app = ByteBuffer.allocate(applicationBufferSize);
-			} else if (r.getStatus() == Status.BUFFER_UNDERFLOW || r.getStatus() == Status.CLOSED)
+			if (r.getStatus() == Status.BUFFER_UNDERFLOW || r.getStatus() == Status.CLOSED)
 				break;
-		} while (rawIn.hasRemaining());
+			if (r.getStatus() == SSLEngineResult.Status.BUFFER_OVERFLOW)
+				app.accept(ByteBuffer.allocate(4096));
+			else
+				app.collect(buf -> handler.onRead(buf, now));
+		}
 		rawIn.compact();
+	}
 
-		if (app.position() > 0) {
-			app.flip();
-			handler.onRead(app, now);
-			app = ByteBuffer.allocate(applicationBufferSize);
+	@Override
+	public void prepareWrite(ByteBuffer b, long now, Consumer<ByteBuffer> c) throws IOException {
+		handler.prepareWrite(b, now, rawOut);
+	}
+
+	@Override
+	public void beforeWrite(long now, Consumer<ByteBuffer> c) throws IOException {
+		while (!rawOut.isEmpty()) {
+			ByteBuffer out = ByteBuffer.allocate(packetBufferSize);
+			SSLEngineResult r = sslEngine.wrap(rawOut.buf, 0, rawOut.len, out);
+			logger.trace("wrap {}", r);
+			c.accept(out.flip());
+			rawOut.compact();
+			checkHandshake(r.getHandshakeStatus(), now);
 		}
 	}
 
 	@Override
-	public ByteBuffer beforeWrite(ByteBuffer b, long now) throws IOException {
-		ByteBuffer out = ByteBuffer.allocate(packetBufferSize);
-		SSLEngineResult r = sslEngine.wrap(b, out);
-		logger.trace("wrap {}", r);
-		checkHandshake(r.getHandshakeStatus(), now);
-		while (b.hasRemaining()) {
-			if (out.remaining() < packetBufferSize)
-				out = grow(out, packetBufferSize);
-			r = sslEngine.wrap(b, out);
-			logger.trace("wrap {}", r);
-			checkHandshake(r.getHandshakeStatus(), now);
-		}
-		return out.flip();
+	public boolean hasPendingWrites() {
+		return !rawOut.isEmpty() || handler.hasPendingWrites();
 	}
 
 	@Override
@@ -140,7 +149,7 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 				case NEED_UNWRAP:
 				case NEED_UNWRAP_AGAIN:
 					rawIn.flip();
-					r = sslEngine.unwrap(rawIn, app);
+					r = sslEngine.unwrap(rawIn, app.buf, 0, app.len);
 					logger.trace("unwrap {}", r);
 					rawIn.compact();
 					if (r.getStatus() == Status.BUFFER_UNDERFLOW) {

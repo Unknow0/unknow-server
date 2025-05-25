@@ -12,88 +12,73 @@ import unknow.server.servlet.http2.Http2Stream;
 public class FrameHeader extends FrameReader {
 	private static final Logger logger = LoggerFactory.getLogger(FrameHeader.class);
 
-	public static final FrameBuilder BUILDER = (p, size, flags, id, buf) -> {
-		if (id == 0 || p.streams.contains(id)) {
-			p.goaway(Http2Processor.PROTOCOL_ERROR);
-			return null;
-		}
+	public static final FrameReader INSTANCE = new FrameHeader();
 
-		Http2Stream s = new Http2Stream(p, id, p.initialWindow);
-		p.addStream(s);
-		return new FrameHeader(p, size, flags, id, s).process(buf);
-	};
-
-	public static final FrameBuilder CONTINUATION = (p, size, flags, id, buf) -> {
-		Http2Stream s = p.streams.get(id);
-		if (s == null) {
-			p.goaway(Http2Processor.PROTOCOL_ERROR);
-			return null;
-		}
-
-		return new FrameHeader(p, size, flags, id, s).process(buf);
-	};
-
-	private final Http2Stream s;
-	private int pad;
-	private int skip;
-
-	protected FrameHeader(Http2Processor p, int size, int flags, int id, Http2Stream s) {
-		super(p, size, flags, id);
-		this.s = s;
-		this.pad = -1;
-		this.skip = 5;
+	protected FrameHeader() {
 	}
 
 	@Override
-	public final FrameReader process(ByteBuffer buf) throws IOException {
-		if (pad < 0) {
-			pad = readPad(buf);
-			if (pad < 0)
-				return null;
-		}
-
-		if ((flags & 0x20) == 1) { // PRIORITY
-			int i = Math.min(skip, buf.remaining());
-			buf.position(buf.position() + i);
-			skip -= i;
-			if (skip > 0)
-				return this;
-			flags ^= 0x20;
-		}
-
-		try {
-			int l = buf.limit();
-			int i = buf.position();
-			buf.limit(size - pad + buf.position());
-			while (buf.hasRemaining())
-				p.headersDecoder.decode(buf, s::addHeader);
-			size -= buf.position() - i;
-			buf.limit(l);
-			if (size > pad)
-				return this;
-
-			if (pad > 0) {
-				i = Math.min(buf.remaining(), pad);
-				buf.position(buf.position() + i);
-				if ((pad -= i) > 0)
-					return this;
-			}
-
-			p.wantContinuation = (flags & 0x4) == 0;
-			if (!p.wantContinuation)
-				s.start();
-
-			if ((flags & 0x1) == 1) {
-				p.streams.remove(id);
-				p.pending.set(id, s);
-				s.close(false);
-			}
-
-			return null;
-		} catch (IOException e) {
-			logger.error("Failed to parse headers", e);
+	public void check(Http2Processor p, Http2Frame frame) {
+		if (frame.id == 0 || p.streams.contains(frame.id)) {
+			frame.type = -1;
 			p.goaway(Http2Processor.PROTOCOL_ERROR);
-			return null;
+		} else
+			p.addStream(frame.s = new Http2Stream(p, frame.id, p.initialWindow));
+
+		if ((frame.flags & 0x20) == 1) // PRIORITY
+			frame.skip = 5;
+		else
+			frame.skip = 0;
+	}
+
+	@Override
+	public void process(Http2Processor p, Http2Frame frame, ByteBuffer buf) throws IOException {
+		if (frame.skip > 0) {
+			int i = Math.min(frame.skip, buf.remaining());
+			buf.position(buf.position() + i);
+			if ((frame.skip -= i) > 0 || !buf.hasRemaining())
+				return;
+		}
+
+		Http2Stream s = frame.s;
+		int i = buf.position();
+		int l = buf.limit();
+		buf.limit(frame.size - frame.pad + buf.position());
+		while (buf.hasRemaining()) {
+			try {
+				p.headersDecoder.decode(buf, s::addHeader);
+			} catch (IOException e) {
+				logger.error("Failed to parse headers", e);
+				buf.limit(l);
+				frame.size -= buf.position() - i;
+				if (!(p.wantContinuation = (frame.flags & 0x4) == 0))
+					frame.s = null;
+				p.goaway(Http2Processor.PROTOCOL_ERROR);
+				p.streams.remove(s.id());
+				frame.type = -1;
+				return;
+			}
+		}
+		buf.limit(l);
+		if ((frame.size -= buf.position() - i) > frame.pad)
+			return;
+
+		if (frame.pad > 0) {
+			i = Math.min(buf.remaining(), frame.pad);
+			buf.position(buf.position() + i);
+			if ((frame.pad -= i) > 0)
+				return;
+		}
+
+		if (!(p.wantContinuation = (frame.flags & 0x4) == 0)) {
+			frame.s = null;
+			s.start();
+		}
+
+		if ((frame.flags & 0x1) == 1) {
+			p.streams.remove(s.id());
+			p.pending.set(s.id(), s);
+			s.close(false);
 		}
 	}
 }

@@ -7,39 +7,38 @@ import unknow.server.servlet.http2.Http2FlowControl;
 import unknow.server.servlet.http2.Http2Processor;
 
 public class FrameWindowUpdate extends FrameReader {
-	public static final FrameBuilder BUILDER = (p, size, flags, id, buf) -> {
-		if (size != 4) {
-			p.goaway(Http2Processor.FRAME_SIZE_ERROR);
-			return null;
-		}
-		return new FrameWindowUpdate(p, size, flags, id).process(buf);
-	};
+	public static final FrameReader INSTANCE = new FrameWindowUpdate();
 
-	private final byte[] b;
-	private int l;
-
-	protected FrameWindowUpdate(Http2Processor p, int size, int flags, int id) {
-		super(p, size, flags, id);
-		b = new byte[4];
-		l = 0;
+	protected FrameWindowUpdate() {
 	}
 
 	@Override
-	public final FrameReader process(ByteBuffer buf) throws IOException {
-		int i = Math.min(buf.remaining(), 4 - l);
-		buf.get(b, l, i);
-		if ((l += i) < 4)
-			return this;
+	public void check(Http2Processor p, Http2Frame frame) {
+		if (frame.size != 4) {
+			p.goaway(Http2Processor.FRAME_SIZE_ERROR);
+			frame.type = -1;
+		}
+	}
+
+	@Override
+	public void process(Http2Processor p, Http2Frame frame, ByteBuffer buf) throws IOException {
+		byte[] b = frame.b;
+		int i = Math.min(buf.remaining(), 4 - frame.l);
+		buf.get(b, frame.l, i);
+		if ((frame.l += i) < 4)
+			return;
+		frame.l = 0;
+		frame.size = 0;
 
 		int v = (b[0] & 0x7f) << 24 | (b[1] & 0xff) << 16 | (b[2] & 0xff) << 8 | (b[3] & 0xff);
 		if (v == 0) {
 			p.goaway(Http2Processor.PROTOCOL_ERROR);
-			return null;
+			frame.type = -1;
+			return;
 		}
 
-		Http2FlowControl f = id == 0 ? p : p.streams.get(id);
+		Http2FlowControl f = frame.id == 0 ? p : p.streams.get(frame.id);
 		if (f != null)
 			f.add(v);
-		return null;
 	}
 }

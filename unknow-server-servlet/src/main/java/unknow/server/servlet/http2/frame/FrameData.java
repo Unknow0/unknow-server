@@ -7,55 +7,45 @@ import unknow.server.servlet.http2.Http2Processor;
 import unknow.server.servlet.http2.Http2Stream;
 
 public class FrameData extends FrameReader {
-	public static final FrameBuilder BUILDER = (p, size, flags, id, buf) -> {
-		Http2Stream s = p.streams.get(id);
-		if (s == null) {
-			p.goaway(Http2Processor.PROTOCOL_ERROR);
-			return null;
-		}
+	public static final FrameReader INSTANCE = new FrameData();
 
-		return new FrameData(p, size, flags, id).process(buf);
-	};
-
-	private final Http2Stream s;
-	private int pad;
-
-	protected FrameData(Http2Processor p, int size, int flags, int id) {
-		super(p, size, flags, id);
-		this.s = p.streams.get(id);
-		this.pad = -1;
+	protected FrameData() {
 	}
 
 	@Override
-	public FrameReader process(ByteBuffer buf) throws IOException {
-		if (pad < 0) {
-			pad = readPad(buf);
-			if (pad < 0)
-				return null;
-			size -= pad;
+	public void check(Http2Processor p, Http2Frame frame) {
+		Http2Stream s = p.streams.get(frame.id);
+		if (s == null) {
+			frame.type = -1;
+			p.goaway(Http2Processor.PROTOCOL_ERROR);
 		}
+		frame.s = s;
+	}
 
-		int l = Math.min(buf.remaining(), size);
+	@Override
+	public void process(Http2Processor p, Http2Frame frame, ByteBuffer buf) throws IOException {
+		Http2Stream s = frame.s;
+
+		int l = Math.min(buf.remaining(), frame.size - frame.pad);
 		s.append(buf.slice().limit(l));
 		buf.position(buf.position() + l);
-		size -= l;
-		if (size > 0)
-			return this;
+		frame.size -= l;
+		if (frame.size - frame.pad > 0)
+			return;
 
-		if (pad > 0) {
-			l = Math.min(buf.remaining(), pad);
+		if (frame.pad > 0) {
+			l = Math.min(buf.remaining(), frame.pad);
 			buf.position(buf.position() + l);
-			pad -= l;
-			if (pad > 0)
-				return this;
+			frame.pad -= l;
+			if (frame.pad > 0)
+				return;
 		}
 
-		if ((flags & 0x1) == 1) {
-			p.streams.remove(id);
-			p.pending.set(id, s);
+		if ((frame.flags & 0x1) == 1) {
+			p.streams.remove(s.id());
+			p.pending.set(s.id(), s);
 			s.close(false);
 		}
-		return null;
 	}
 
 }

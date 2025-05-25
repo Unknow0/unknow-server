@@ -2,6 +2,7 @@ package unknow.server.nio;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.function.Consumer;
 
 import javax.net.ssl.SSLEngine;
 
@@ -28,8 +29,18 @@ public class NIOHandlerDelegate implements NIOConnectionHandler {
 	}
 
 	@Override
-	public ByteBuffer beforeWrite(ByteBuffer b, long now) throws IOException {
-		return handler.beforeWrite(b, now);
+	public void prepareWrite(ByteBuffer b, long now, Consumer<ByteBuffer> c) throws IOException {
+		handler.prepareWrite(b, now, c);
+	}
+
+	@Override
+	public void beforeWrite(long now, Consumer<ByteBuffer> c) throws IOException {
+		handler.beforeWrite(now, c);
+	}
+
+	@Override
+	public boolean hasPendingWrites() {
+		return handler.hasPendingWrites();
 	}
 
 	@Override
