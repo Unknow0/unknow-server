@@ -41,7 +41,7 @@ keytool -genkey -alias server -keyalg RSA -validity 365 -keystore store.jks -sto
 ${1}_start
 sleep 10
 echo -e "\nWarming up"
-bash bench/tests.sh 127.0.0.1  1  50000
+bash bench/tests.sh 127.0.0.1  1  50000 out/warmup-$1
 
 sleep 10
 echo -e "\nTesting.."
