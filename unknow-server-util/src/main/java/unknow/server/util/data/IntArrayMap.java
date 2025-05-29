@@ -8,6 +8,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.function.IntFunction;
 
 /**
  * @author unknow
@@ -182,6 +183,14 @@ public class IntArrayMap<T> {
 		return vSet;
 	}
 
+	protected int keyAt(int i) {
+		return keys[i];
+	}
+
+	protected T valueAt(int i) {
+		return values[i];
+	}
+
 	private class Keys implements Set<Integer> {
 
 		@Override
@@ -201,7 +210,7 @@ public class IntArrayMap<T> {
 
 		@Override
 		public Iterator<Integer> iterator() {
-			return new KeyIt();
+			return new It<>(IntArrayMap.this::keyAt);
 		}
 
 		@Override
@@ -270,7 +279,7 @@ public class IntArrayMap<T> {
 
 		@Override
 		public Iterator<T> iterator() {
-			return new ValuesIt();
+			return new It<>(IntArrayMap.this::valueAt);
 		}
 
 		@Override
@@ -320,46 +329,34 @@ public class IntArrayMap<T> {
 		}
 	}
 
-	private abstract class It<E> implements Iterator<E> {
+	private class It<E> implements Iterator<E> {
+		private final IntFunction<E> v;
 		private int i = -1;
 		private boolean remove;
 
+		public It(IntFunction<E> v) {
+			this.v = v;
+		}
+
 		@Override
 		public boolean hasNext() {
-			return i + 1 < len;
+			return i + 1 < size();
 		}
 
 		@Override
 		public E next() {
-			if (i + 1 == len)
+			if (i + 1 == size())
 				throw new NoSuchElementException();
 			remove = true;
-			return v(++i);
+			return v.apply(++i);
 		}
 
 		@Override
 		public void remove() {
 			if (!remove)
 				return;
-			IntArrayMap.this.remove(keys[i]);
+			IntArrayMap.this.remove(keyAt(i));
 			remove = true;
 		}
-
-		protected abstract E v(int i);
 	}
-
-	private class KeyIt extends It<Integer> {
-		@Override
-		public Integer v(int i) {
-			return keys[i];
-		}
-	}
-
-	private class ValuesIt extends It<T> {
-		@Override
-		protected T v(int i) {
-			return values[i];
-		}
-	}
-
 }

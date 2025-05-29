@@ -25,6 +25,7 @@ import unknow.server.servlet.http2.header.Http2HeadersDecoder;
 import unknow.server.servlet.http2.header.Http2HeadersEncoder;
 import unknow.server.servlet.impl.ServletResponseImpl;
 import unknow.server.util.ConsumerWithException;
+import unknow.server.util.data.ConcurentIntArrayMap;
 import unknow.server.util.data.IntArrayMap;
 
 /**
@@ -96,7 +97,7 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 	public Http2Processor(HttpConnection co) throws IOException {
 		this.co = co;
 		this.streams = new IntArrayMap<>();
-		this.pending = new IntArrayMap<>();
+		this.pending = new ConcurentIntArrayMap<>();
 		this.headersEncoder = new Http2HeadersEncoder(4096);
 		this.headersDecoder = new Http2HeadersDecoder(4096);
 		this.frame = new Http2Frame();
@@ -276,8 +277,10 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 
 		int flags = 0x0;
 		Http2ServletOutput sout = (Http2ServletOutput) res.getRawStream();
-		if (sout == null || sout.isDone())
+		if (sout == null || sout.isDone()) {
 			flags |= 0x1;
+			pending.remove(id);
+		}
 		int size = list.size();
 		if (size == 1) {
 			sendFrame(1, flags | 0x4, id, list.get(0));
@@ -292,6 +295,8 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 	}
 
 	public void sendData(int id, ByteBuffer data, boolean done) throws IOException {
+		if (done)
+			pending.remove(id);
 		if (data != null) {
 			while (data.remaining() > frameSize)
 				sendFrame(0, 0, id, data);

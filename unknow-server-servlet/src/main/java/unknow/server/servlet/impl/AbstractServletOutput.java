@@ -14,7 +14,7 @@ public abstract class AbstractServletOutput extends ServletOutputStream {
 	protected final ServletResponseImpl res;
 	private final int position;
 	/** the buffer */
-	protected ByteBuffer buffer;
+	private ByteBuffer buffer;
 	private int bufferSize;
 
 	private boolean closed;
@@ -28,7 +28,7 @@ public abstract class AbstractServletOutput extends ServletOutputStream {
 		this.res = res;
 		this.position = position;
 		if (res != null) {
-			this.buffer = ByteBuffer.allocate(res.getBufferSize()).position(position);
+			this.buffer = ByteBuffer.allocate(res.getBufferSize() + position).position(position);
 		} else {
 			this.buffer = null;
 			this.bufferSize = 0;
@@ -120,7 +120,7 @@ public abstract class AbstractServletOutput extends ServletOutputStream {
 		flush();
 		off += l;
 		if (len >= bufferSize) {
-			ByteBuffer buf = ByteBuffer.allocate(len + position).position(position);
+			ByteBuffer buf = ByteBuffer.allocate(len + position).position(position + len);
 			System.arraycopy(b, off, buf.array(), position, len);
 			writeBuffer(buf);
 		} else
