@@ -27,7 +27,7 @@ public class ChunckedOutputStream extends AbstractServletOutput {
 	 * @param res        the servlet response (to commit)
 	 */
 	public ChunckedOutputStream(Out out, ServletResponseImpl res) {
-		super(res);
+		super(res, 0);
 		this.out = out;
 	}
 

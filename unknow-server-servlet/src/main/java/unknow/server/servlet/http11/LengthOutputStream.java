@@ -27,7 +27,7 @@ public class LengthOutputStream extends AbstractServletOutput {
 	 * @param length the length
 	 */
 	public LengthOutputStream(Out out, ServletResponseImpl res, long length) {
-		super(res);
+		super(res, 0);
 		this.out = out;
 		this.length = length;
 	}

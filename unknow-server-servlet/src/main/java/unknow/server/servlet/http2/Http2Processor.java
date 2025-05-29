@@ -172,8 +172,8 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 			s.close(true);
 	}
 
-	public void close(int lastClienId) {
-		closingId = lastClienId;
+	public void close() {
+		closingId = lastId;
 	}
 
 	public void addStream(Http2Stream s) {
@@ -216,7 +216,7 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 	public void goaway(int err) {
 		closingId = lastId;
 		byte[] f = new byte[17];
-		formatFrame(f, 8, 7, 0, 0);
+		formatFrame(f, 0, 8, 7, 0, 0);
 		f[9] = (byte) ((lastId >> 24) & 0x7f);
 		f[10] = (byte) ((lastId >> 16) & 0xff);
 		f[11] = (byte) ((lastId >> 8) & 0xff);
@@ -226,7 +226,9 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 		f[15] = (byte) ((err >> 8) & 0xff);
 		f[16] = (byte) (err & 0xff);
 		try {
-			co.write(ByteBuffer.wrap(f));
+			synchronized (co) {
+				co.write(ByteBuffer.wrap(f));
+			}
 			logger.info("{}: send GOAWAY {}", co, error(err));
 		} catch (IOException e) {
 			logger.error("Failed to send", e);
@@ -234,18 +236,22 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 	}
 
 	public void sendFrame(int type, int flags, int id, ByteBuffer data) throws IOException {
-		int size = Math.min(frameSize, data == null ? 0 : data.remaining());
-		byte[] b = new byte[9];
-		formatFrame(b, size, type, flags, id);
-		synchronized (co) {
-			co.write(ByteBuffer.wrap(b));
-			if (size > 0 && data != null) {
-				if (size < data.remaining()) {
-					co.write(data.slice().limit(size));
-					data.position(data.position() + size);
-				} else
-					co.write(data);
+		int size = data == null ? 0 : data.remaining();
+		if (data == null || data.position() < 9 || size > frameSize) {
+			size = Math.min(frameSize, size);
+			ByteBuffer b = ByteBuffer.allocate(size + 9);
+			if (data != null) {
+				System.arraycopy(b.array(), 9, data.array(), data.position(), size);
+				data.position(data.position() + size);
 			}
+			data = b;
+		} else
+			data.position(data.position() - 9);
+
+		byte[] b = data.array();
+		formatFrame(b, data.position(), size, type, flags, id);
+		synchronized (co) {
+			co.write(data);
 		}
 
 		if (logger.isInfoEnabled())
@@ -277,29 +283,33 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 			sendFrame(1, flags | 0x4, id, list.get(0));
 			return;
 		}
-		sendFrame(1, flags, id, list.get(0));
-		for (int i = 1; i < size - 1; i++)
-			sendFrame(9, flags, id, list.get(i));
-		sendFrame(9, flags | 0x4, id, list.get(-1));
+		synchronized (co) {
+			sendFrame(1, flags, id, list.get(0));
+			for (int i = 1; i < size - 1; i++)
+				sendFrame(9, flags, id, list.get(i));
+			sendFrame(9, flags | 0x4, id, list.get(-1));
+		}
 	}
 
 	public void sendData(int id, ByteBuffer data, boolean done) throws IOException {
-		while (data.remaining() > frameSize)
-			sendFrame(0, 0, id, data);
+		if (data != null) {
+			while (data.remaining() > frameSize)
+				sendFrame(0, 0, id, data);
+		}
 		sendFrame(0, done ? 0x1 : 0, id, data);
 		co.flush();
 	}
 
-	public static void formatFrame(byte[] b, int size, int type, int flags, int id) {
-		b[0] = (byte) ((size >> 16) & 0xff);
-		b[1] = (byte) ((size >> 8) & 0xff);
-		b[2] = (byte) (size & 0xff);
-		b[3] = (byte) (type & 0xff);
-		b[4] = (byte) (flags & 0xff);
-		b[5] = (byte) ((id >> 24) & 0x7f);
-		b[6] = (byte) ((id >> 16) & 0xff);
-		b[7] = (byte) ((id >> 8) & 0xff);
-		b[8] = (byte) (id & 0xff);
+	public static void formatFrame(byte[] b, int o, int size, int type, int flags, int id) {
+		b[o++] = (byte) ((size >> 16) & 0xff);
+		b[o++] = (byte) ((size >> 8) & 0xff);
+		b[o++] = (byte) (size & 0xff);
+		b[o++] = (byte) (type & 0xff);
+		b[o++] = (byte) (flags & 0xff);
+		b[o++] = (byte) ((id >> 24) & 0x7f);
+		b[o++] = (byte) ((id >> 16) & 0xff);
+		b[o++] = (byte) ((id >> 8) & 0xff);
+		b[o++] = (byte) (id & 0xff);
 	}
 
 	public static String error(int err) {

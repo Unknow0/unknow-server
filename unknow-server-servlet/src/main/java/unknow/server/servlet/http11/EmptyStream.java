@@ -15,7 +15,7 @@ public class EmptyStream extends AbstractServletOutput {
 	public static final EmptyStream INSTANCE = new EmptyStream();
 
 	private EmptyStream() {
-		super(null);
+		super(null, 0);
 	}
 
 	@Override

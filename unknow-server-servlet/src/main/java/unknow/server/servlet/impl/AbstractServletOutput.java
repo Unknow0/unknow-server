@@ -2,7 +2,6 @@ package unknow.server.servlet.impl;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.WriteListener;
@@ -13,6 +12,7 @@ import jakarta.servlet.WriteListener;
 public abstract class AbstractServletOutput extends ServletOutputStream {
 	/** response that created this stream */
 	protected final ServletResponseImpl res;
+	private final int position;
 	/** the buffer */
 	protected ByteBuffer buffer;
 	private int bufferSize;
@@ -22,11 +22,13 @@ public abstract class AbstractServletOutput extends ServletOutputStream {
 	/**
 	 * create a new AbstractServlet
 	 * @param res the response
+	 * @param position bytebuffer position (free space in the start)
 	 */
-	protected AbstractServletOutput(ServletResponseImpl res) {
+	protected AbstractServletOutput(ServletResponseImpl res, int position) {
 		this.res = res;
+		this.position = position;
 		if (res != null) {
-			this.buffer = ByteBuffer.allocate(res.getBufferSize());
+			this.buffer = ByteBuffer.allocate(res.getBufferSize()).position(position);
 		} else {
 			this.buffer = null;
 			this.bufferSize = 0;
@@ -38,7 +40,8 @@ public abstract class AbstractServletOutput extends ServletOutputStream {
 	 * clear the buffer
 	 */
 	public final void resetBuffers() {
-		buffer.clear();
+		if (buffer != null)
+			buffer.clear();
 	}
 
 	/**
@@ -56,11 +59,15 @@ public abstract class AbstractServletOutput extends ServletOutputStream {
 		if (buffer.capacity() > bufferSize || buffer.position() > 0)
 			return;
 		this.bufferSize = bufferSize;
-		this.buffer = ByteBuffer.allocate(bufferSize);
+		this.buffer = ByteBuffer.allocate(bufferSize + position).position(position);
 	}
 
 	public boolean isClosed() {
 		return closed;
+	}
+
+	public boolean isEmpty() {
+		return buffer == null || buffer.position() == position;
 	}
 
 	/**
@@ -112,9 +119,11 @@ public abstract class AbstractServletOutput extends ServletOutputStream {
 			return;
 		flush();
 		off += l;
-		if (len >= bufferSize)
-			writeBuffer(ByteBuffer.wrap(Arrays.copyOfRange(b, off, off + len)));
-		else
+		if (len >= bufferSize) {
+			ByteBuffer buf = ByteBuffer.allocate(len + position).position(position);
+			System.arraycopy(b, off, buf.array(), position, len);
+			writeBuffer(buf);
+		} else
 			buffer.put(b, off, len);
 	}
 
@@ -130,11 +139,11 @@ public abstract class AbstractServletOutput extends ServletOutputStream {
 
 	@Override
 	public final void flush() throws IOException {
-		if (buffer.position() == 0)
+		if (isEmpty())
 			return;
 		res.commit();
-		writeBuffer(buffer.flip());
-		buffer = ByteBuffer.allocate(bufferSize);
+		writeBuffer(buffer.flip().position(position));
+		buffer = ByteBuffer.allocate(bufferSize + position).position(position);
 	}
 
 	protected abstract void writeBuffer(ByteBuffer b) throws IOException;

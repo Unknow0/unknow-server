@@ -43,11 +43,8 @@ public class FrameGoAway extends FrameReader {
 		int err = (b[4] & 0xff) << 24 | (b[5] & 0xff) << 16 | (b[6] & 0xff) << 8 | (b[7] & 0xff);
 		logger.info("goaway last: {} err: {}", frame.lastId, Http2Processor.error(err));
 		frame.size -= 8;
-		p.close(frame.lastId);
+		p.close();
 
-		int r = Math.min(frame.size, buf.remaining());
-		logger.info("	dbg: {}", new String(buf.array(), buf.position(), r));
-		buf.position(buf.position() + r);
-		frame.size -= r;
+		super.process(p, frame, buf);
 	}
 }

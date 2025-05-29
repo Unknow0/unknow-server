@@ -7,27 +7,25 @@ import unknow.server.servlet.impl.AbstractServletOutput;
 import unknow.server.servlet.impl.ServletResponseImpl;
 
 public class Http2ServletOutput extends AbstractServletOutput {
-	private static final ByteBuffer EMPTY = ByteBuffer.allocate(0);
-
 	private final Http2Processor p;
 	private final int id;
 	private boolean endStreamSend;
 
 	public Http2ServletOutput(ServletResponseImpl res, Http2Processor p, int id) {
-		super(res);
+		super(res, 9);
 		this.p = p;
 		this.id = id;
 		this.endStreamSend = false;
 	}
 
 	public boolean isDone() {
-		return isClosed() && buffer.position() == 0;
+		return isClosed() && isEmpty();
 	}
 
 	@Override
 	protected void afterClose() throws IOException {
 		if (!endStreamSend)
-			p.sendData(id, EMPTY, true);
+			p.sendData(id, null, true);
 	}
 
 	@Override

@@ -15,14 +15,13 @@ public class Http2HeadersEncoder extends Http2Headers {
 	 */
 	public Http2HeadersEncoder(int maxSize) {
 		super(maxSize);
-		buf = ByteBuffer.allocate(8192);
+		buf = ByteBuffer.allocate(8192).position(9);
 	}
 
 	private <E extends Throwable> void put(byte b, ConsumerWithException<ByteBuffer, E> c) throws E {
 		buf.put(b);
-		if (buf.hasRemaining())
-			return;
-		doFlush(c);
+		if (!buf.hasRemaining())
+			doFlush(c);
 	}
 
 	/**
@@ -38,8 +37,8 @@ public class Http2HeadersEncoder extends Http2Headers {
 	}
 
 	private <E extends Throwable> void doFlush(ConsumerWithException<ByteBuffer, E> c) throws E {
-		c.accept(buf.flip());
-		buf = ByteBuffer.allocate(8192);
+		c.accept(buf.flip().position(9));
+		buf = ByteBuffer.allocate(8192).position(9);
 	}
 
 	/**
@@ -119,9 +118,10 @@ public class Http2HeadersEncoder extends Http2Headers {
 		byte[] bytes = b.array();
 		int len = b.position();
 		int o = 0;
-		while (o < bytes.length) {
+		while (o < len) {
 			int l = Math.min(buf.remaining(), len);
 			buf.put(bytes, o, l);
+			o += l;
 			if (!buf.hasRemaining())
 				doFlush(c);
 		}
