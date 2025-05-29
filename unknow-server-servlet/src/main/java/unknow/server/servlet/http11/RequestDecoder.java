@@ -1,7 +1,6 @@
 package unknow.server.servlet.http11;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 
 import jakarta.servlet.DispatcherType;
 import unknow.server.servlet.impl.ServletRequestImpl;
@@ -16,7 +15,7 @@ public class RequestDecoder {
 	}
 
 	private final Http11Processor co;
-	private final StringBuilder sb;
+//	private final StringBuilder sb;
 	private final Utf8Decoder decoder;
 
 	private ServletRequestImpl req;
@@ -25,8 +24,7 @@ public class RequestDecoder {
 
 	public RequestDecoder(Http11Processor co) {
 		this.co = co;
-		sb = new StringBuilder();
-		decoder = new Utf8Decoder(sb, false);
+		decoder = new Utf8Decoder(new StringBuilder());
 		reset();
 	}
 
@@ -43,15 +41,13 @@ public class RequestDecoder {
 		String str;
 		switch (state) {
 			case METHOD:
-				str = readUntil(b, SPACE);
-				if (str != null) {
+				if ((str = readUntil(b, SPACE)) != null) {
 					state = State.URI;
 					req.setMethod(str);
 				}
 				break;
 			case URI:
-				str = readUntil(b, SPACE);
-				if (str != null) {
+				if ((str = readUntil(b, SPACE)) != null) {
 					state = State.PROTOCOL;
 					int i = str.indexOf('?');
 					if (i > 0) {
@@ -62,15 +58,13 @@ public class RequestDecoder {
 				}
 				break;
 			case PROTOCOL:
-				str = readUntil(b, CRLF);
-				if (str != null) {
+				if ((str = readUntil(b, CRLF)) != null) {
 					state = State.HEADER;
 					req.setProtocol(str);
 				}
 				break;
 			case HEADER:
-				str = readUntil(b, CRLF);
-				if (str != null) {
+				if ((str = readUntil(b, CRLF)) != null) {
 					if (str.isEmpty())
 						state = State.DONE;
 					else {
@@ -80,6 +74,7 @@ public class RequestDecoder {
 						req.addHeader(str.substring(0, i).trim().toLowerCase(), str.substring(i + 1).trim());
 					}
 				}
+				break;
 			case DONE:
 				return;
 		}
@@ -109,46 +104,19 @@ public class RequestDecoder {
 		int o = b.position();
 		int l = b.limit();
 
-		if (f > 0) {
-			int i = o;
-			while (i < l) {
-				byte t = a[i++];
-				if (c[f++] != t) {
-					decoder.append(c, 0, f - 1);
-					f = 0;
-					break;
-				} else if (f == c.length) {
-					f = 0;
-					b.position(i);
-					return decoder.done();
-				}
-			}
-		}
-
-		int e = l - c.length + 1;
 		int i = o;
-		while (i < e) {
-			if (Arrays.equals(a, i, i + c.length, c, 0, c.length)) {
-				String str = decoder.append(a, o, i).done();
-				b.position(i + c.length);
-				return str;
-			}
-			i++;
-		}
-		decoder.append(a, o, e);
 		while (i < l) {
 			byte t = a[i++];
-			if (c[f] == t)
-				f++;
-			else {
-				if (f > 0) {
-					decoder.append(c, 0, f);
-					f = 0;
-				}
-				decoder.append(t);
+			if (c[f++] != t) {
+				decoder.append(c, 0, f - 1);
+				f = 0;
+			} else if (f == c.length) {
+				f = 0;
+				b.position(i);
+				return decoder.append(a, o, i - c.length).done();
 			}
 		}
-
+		decoder.append(a, o, l - f);
 		b.position(l);
 		return null;
 	}

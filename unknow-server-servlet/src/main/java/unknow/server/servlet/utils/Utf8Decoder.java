@@ -2,58 +2,33 @@ package unknow.server.servlet.utils;
 
 public class Utf8Decoder {
 	private final StringBuilder sb;
-	private final boolean percent;
 
 	/** code point in building */
 	private int codePoint;
-	/** remaing octect to read */
+	/** remaining octet to read */
 	private int r;
 
-	/** hex char value */
-	private int hex;
-	/** remaining hex char to read */
-	private int p;
-
 	public Utf8Decoder() {
-		this(new StringBuilder(), false);
+		this(new StringBuilder());
 	}
 
-	public Utf8Decoder(boolean percent) {
-		this(new StringBuilder(), percent);
-	}
-
-	public Utf8Decoder(StringBuilder sb, boolean percent) {
+	public Utf8Decoder(StringBuilder sb) {
 		this.sb = sb;
-		this.percent = percent;
 		this.codePoint = 0;
-		this.r = 0;
 	}
 
 	public Utf8Decoder append(byte[] bytes, int i, int e) {
-		while (i < e) {
-			int b = bytes[i++] & 0xFF;
-
-			if (p > 0) {
-				int digit = Character.digit(b, 16);
-				if (digit < 0)
-					throw new IllegalArgumentException("Invalid percent encoding value");
-				hex = (hex << 4 | digit);
-				if (--p == 0) {
-					append(hex);
-					hex = 0;
-				}
-			} else if (percent && b == '%')
-				p = 2;
-			else if (r > 0)
-				append(b);
-
-			else
-				append(b);
-		}
+		while (i < e)
+			append(bytes[i++] & 0xFF);
 		return this;
 	}
 
-	public void append(int b) {
+	public Utf8Decoder append(byte b) {
+		append(b & 0xFF);
+		return this;
+	}
+
+	private void append(int b) {
 		if (r == 0) {
 			if ((b >> 7) == 0) // 1-byte ASCII
 				sb.append((char) b);
@@ -91,8 +66,6 @@ public class Utf8Decoder {
 	public String done() {
 		if (r > 0)
 			throw new IllegalArgumentException("Invalid UTF-8 string, truncated continuation bytes");
-		if (p > 0)
-			throw new IllegalArgumentException("Invalid percent encoded value, trucated encoding");
 		String s = sb.toString();
 		sb.setLength(0);
 		return s;

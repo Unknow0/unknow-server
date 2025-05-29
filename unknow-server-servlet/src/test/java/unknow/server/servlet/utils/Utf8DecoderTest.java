@@ -17,36 +17,32 @@ public class Utf8DecoderTest {
 		byte[] t = { (byte) 0xf0, (byte) 0x90, (byte) 0x8d, (byte) 0x84 };
 		System.out.println(new String(test));
 		return Stream.of( //
-				Arguments.of("t€ß𐍄", false, new byte[][] { test }), //
-				Arguments.of("t€ß𐍄", true, new byte[][] { test }), //
-				Arguments.of("t€ß𐍄", false, new byte[][] { { 0x74 }, e, s, t }), //
-				Arguments.of("ß", false, new byte[][] { { (byte) 0xc3 }, { (byte) 0x9f } }), //
-				Arguments.of("€", true, new byte[][] { "%E2%82%ac".getBytes() }), //
-				Arguments.of("€", true, new byte[][] { "%E2%8".getBytes(), "2%ac".getBytes() }) //
+				Arguments.of("t€ß𐍄", new byte[][] { test }), //
+				Arguments.of("t€ß𐍄", new byte[][] { { 0x74 }, e, s, t }), //
+				Arguments.of("ß", new byte[][] { { (byte) 0xc3 }, { (byte) 0x9f } }) //
 		);
 
 	}
 
 	@ParameterizedTest
 	@MethodSource
-	public void testOK(String expected, boolean percent, byte[]... chunks) {
-		Utf8Decoder d = new Utf8Decoder(percent);
+	public void testOK(String expected, byte[]... chunks) {
+		Utf8Decoder d = new Utf8Decoder();
 		for (byte[] b : chunks)
 			d.append(b, 0, b.length);
 		assertEquals(expected, d.done());
 	}
 
 	public static Stream<Arguments> testKO() {
-		return Stream.of(Arguments.of(true, new byte[][] { "%E".getBytes() }), //
-				Arguments.of(true, new byte[][] { { (byte) 0xc3 } }), //
-				Arguments.of(true, new byte[][] { { (byte) 0xe2, (byte) 0x82 } }), //
-				Arguments.of(true, new byte[][] { { (byte) 0xf0, (byte) 0x90 } }) //
+		return Stream.of(Arguments.of((Object) new byte[][] { { (byte) 0xc3 } }), //
+				Arguments.of((Object) new byte[][] { { (byte) 0xe2, (byte) 0x82 } }), //
+				Arguments.of((Object) new byte[][] { { (byte) 0xf0, (byte) 0x90 } }) //
 		);
 	}
 
 	@ParameterizedTest
 	@MethodSource
-	public void testKO(boolean percent, byte[]... chunks) {
-		assertThrows(IllegalArgumentException.class, () -> testOK(null, percent, chunks));
+	public void testKO(byte[]... chunks) {
+		assertThrows(IllegalArgumentException.class, () -> testOK(null, chunks));
 	}
 }
