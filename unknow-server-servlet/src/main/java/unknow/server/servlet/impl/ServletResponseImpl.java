@@ -4,7 +4,6 @@
 package unknow.server.servlet.impl;
 
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.nio.charset.Charset;
 import java.time.Instant;
@@ -140,7 +139,7 @@ public class ServletResponseImpl implements HttpServletResponse {
 		if (stream != null)
 			throw new IllegalStateException("output already got created with getWriter()");
 		stream = co.createOutput();
-		return writer = new PrintWriter(new OutputStreamWriter(stream, charset == null ? Charset.forName(co.ctx().getResponseCharacterEncoding()) : charset), false);
+		return writer = new PrintWriter(new ServletWriter(stream, charset == null ? Charset.forName(co.ctx().getResponseCharacterEncoding()) : charset));
 	}
 
 	public long getContentLength() {

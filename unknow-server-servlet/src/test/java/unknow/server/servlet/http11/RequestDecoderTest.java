@@ -21,7 +21,8 @@ public class RequestDecoderTest {
 				Arguments.of("GET / HTTP/1.1", new byte[][] { "GET / HTTP/1.1\r\n\r\n".getBytes() }), //
 				Arguments.of("GET / HTTP/1.1", new byte[][] { "GET / HTTP/1.1\r".getBytes(), "\n\r\n".getBytes() }), //
 				Arguments.of("GET / HTTP/1.1\nk: [v]", new byte[][] { "GET / HTTP/1.1\r\nK  :  v  \r\n\r\n".getBytes() }), //
-				Arguments.of("GET / HTTP/1.1\nk: [v\rv]", new byte[][] { "GET / HTTP/1.1\r\nK  :  v\r".getBytes(), "v\r\n\r\n".getBytes() }) //
+				Arguments.of("GET / HTTP/1.1\nk: [v\rv]", new byte[][] { "GET / HTTP/1.1\r\nK  :  v\r".getBytes(), "v\r\n\r\n".getBytes() }), //
+				Arguments.of("GET / HTTP/1.1\nk: [v\rv]", new byte[][] { "GET / HTTP/1.1\r\nK  :  v\r".getBytes(), "v\r\n\r\nblablabla".getBytes() }) //
 		);
 	}
 

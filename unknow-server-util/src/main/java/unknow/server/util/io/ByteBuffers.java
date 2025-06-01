@@ -50,6 +50,9 @@ public class ByteBuffers implements Consumer<ByteBuffer> {
 	 * @throws E from Consumer
 	 */
 	public <E extends Throwable> void collect(ConsumerWithException<ByteBuffer, E> c) throws E {
+		if (len == 0)
+			return;
+
 		int o = 0;
 		while (o < len && buf[o].position() > 0)
 			c.accept(buf[o++].flip());

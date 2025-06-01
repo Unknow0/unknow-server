@@ -29,29 +29,29 @@ public class Utf8Decoder {
 	}
 
 	private void append(int b) {
-		if (r == 0) {
-			if ((b >> 7) == 0) // 1-byte ASCII
-				sb.append((char) b);
-			else if ((b >> 5) == 0b110) {
-				r = 1;
-				codePoint = b & 0x1F;
-			} else if ((b >> 4) == 0b1110) {
-				r = 2;
-				codePoint = b & 0x0F;
-			} else if ((b >> 3) == 0b11110) {
-				r = 3;
-				codePoint = b & 0x07;
-			} else
-				throw new IllegalArgumentException("Invalid UTF-8 start byte: " + b);
-
-		} else {
+		if (r > 0) {
 			if ((b >> 6) != 0b10)
 				throw new IllegalArgumentException("Invalid UTF-8 continuation byte: " + b);
 
 			codePoint = (codePoint << 6) | (b & 0x3F);
 			if (--r == 0)
 				append();
+			return;
 		}
+
+		if ((b >> 7) == 0) // 1-byte ASCII
+			sb.append((char) b);
+		else if ((b >> 5) == 0b110) {
+			r = 1;
+			codePoint = b & 0x1F;
+		} else if ((b >> 4) == 0b1110) {
+			r = 2;
+			codePoint = b & 0x0F;
+		} else if ((b >> 3) == 0b11110) {
+			r = 3;
+			codePoint = b & 0x07;
+		} else
+			throw new IllegalArgumentException("Invalid UTF-8 start byte: " + b);
 	}
 
 	private void append() {

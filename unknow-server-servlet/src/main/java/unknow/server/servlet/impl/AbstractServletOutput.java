@@ -14,7 +14,7 @@ public abstract class AbstractServletOutput extends ServletOutputStream {
 	protected final ServletResponseImpl res;
 	private final int position;
 	/** the buffer */
-	private ByteBuffer buffer;
+	ByteBuffer buffer;
 	private int bufferSize;
 
 	private boolean closed;

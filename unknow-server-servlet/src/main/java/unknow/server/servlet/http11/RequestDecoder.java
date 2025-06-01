@@ -45,7 +45,7 @@ public class RequestDecoder {
 					state = State.URI;
 					req.setMethod(str);
 				}
-				break;
+				return;
 			case URI:
 				if ((str = readUntil(b, SPACE)) != null) {
 					state = State.PROTOCOL;
@@ -56,25 +56,25 @@ public class RequestDecoder {
 					}
 					req.setRequestUri(str);
 				}
-				break;
+				return;
 			case PROTOCOL:
 				if ((str = readUntil(b, CRLF)) != null) {
 					state = State.HEADER;
 					req.setProtocol(str);
 				}
-				break;
+				return;
 			case HEADER:
 				if ((str = readUntil(b, CRLF)) != null) {
-					if (str.isEmpty())
+					if (str.isEmpty()) {
 						state = State.DONE;
-					else {
-						int i = str.indexOf(':');
-						if (i < 0)
-							throw new IllegalArgumentException("invalid header line " + str);
-						req.addHeader(str.substring(0, i).trim().toLowerCase(), str.substring(i + 1).trim());
+						return;
 					}
+					int i = str.indexOf(':');
+					if (i < 0)
+						throw new IllegalArgumentException("invalid header line " + str);
+					req.addHeader(str.substring(0, i).trim().toLowerCase(), str.substring(i + 1).trim());
 				}
-				break;
+				return;
 			case DONE:
 				return;
 		}
