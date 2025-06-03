@@ -49,12 +49,7 @@ public final class Http11Worker extends HttpWorker {
 	@SuppressWarnings("resource")
 	@Override
 	public AbstractServletOutput createOutput() {
-		long contentLength = res.getContentLength();
-		if (contentLength < 0)
-			return new ChunckedOutputStream(co.getOut(), res);
-		if (contentLength == 0)
-			return EmptyStream.INSTANCE;
-		return new LengthOutputStream(co.getOut(), res, contentLength);
+		return new Http11OutputStream(co.getOut(), res);
 	}
 
 	@Override
@@ -74,15 +69,22 @@ public final class Http11Worker extends HttpWorker {
 		}
 
 		@SuppressWarnings("resource")
-		AbstractServletOutput rawStream = res.getRawStream();
-		if (rawStream instanceof LengthOutputStream) {
+		Http11OutputStream rawStream = (Http11OutputStream) res.getRawStream();
+		if (rawStream == null)
+			out.write(CONTENT_LENGTH0);
+		else if (rawStream.isChunked()) {
+			if (rawStream.isClosed()) {
+				rawStream.setLength(rawStream.size());
+				out.write(CONTENT_LENGTH);
+				out.write(Integer.toString(rawStream.size()).getBytes(StandardCharsets.US_ASCII));
+				out.write(CRLF);
+			} else
+				out.write(CHUNKED);
+		} else {
 			out.write(CONTENT_LENGTH);
 			out.write(Long.toString(res.getContentLength()).getBytes(StandardCharsets.US_ASCII));
 			out.write(CRLF);
-		} else if (rawStream instanceof ChunckedOutputStream) {
-			out.write(CHUNKED);
-		} else
-			out.write(CONTENT_LENGTH0);
+		}
 
 		for (Cookie c : res.getCookies())
 			writeCookie(out, c);

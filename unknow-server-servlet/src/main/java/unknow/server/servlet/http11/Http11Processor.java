@@ -1,7 +1,6 @@
 package unknow.server.servlet.http11;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,7 +44,7 @@ public final class Http11Processor implements NIOConnectionHandler {
 		return co;
 	}
 
-	InputStream content() {
+	ByteBufferInputStream content() {
 		return content;
 	}
 

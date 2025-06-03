@@ -15,10 +15,11 @@ import unknow.server.servlet.impl.ServletResponseImpl;
  * 
  * @author unknow
  */
-public class ChunckedOutputStream extends AbstractServletOutput {
+public class Http11OutputStream extends AbstractServletOutput {
 	private static final byte[] CRLF = new byte[] { '\r', '\n' };
 	private static final byte[] END = new byte[] { '0', '\r', '\n', '\r', '\n' };
 	private final Out out;
+	private long length;
 
 	/**
 	 * create new ChunckedOutputStream
@@ -26,21 +27,40 @@ public class ChunckedOutputStream extends AbstractServletOutput {
 	 * @param out        the real output
 	 * @param res        the servlet response (to commit)
 	 */
-	public ChunckedOutputStream(Out out, ServletResponseImpl res) {
+	public Http11OutputStream(Out out, ServletResponseImpl res) {
 		super(res, 0);
 		this.out = out;
+		this.length = res.getContentLength();
+	}
+
+	public void setLength(long length) {
+		this.length = length;
+	}
+
+	public boolean isChunked() {
+		return length < 0;
 	}
 
 	@Override
 	protected void afterClose() throws IOException {
-		out.write(END);
+		if (length < 0)
+			out.write(END);
+		else if (length > 0)
+			throw new IOException("Missing data");
 	}
 
 	@Override
 	protected void writeBuffer(ByteBuffer b) throws IOException {
-		out.write(Integer.toString(b.remaining(), 16).getBytes());
-		out.write(CRLF);
+		if (length < 0) { // chuncked encoding
+			out.write(Integer.toString(b.remaining(), 16).getBytes());
+			out.write(CRLF);
+			out.write(b);
+			out.write(CRLF);
+			return;
+		}
+		if (length < b.remaining())
+			throw new IOException("extraneous data");
+		length -= b.remaining();
 		out.write(b);
-		out.write(CRLF);
 	}
 }

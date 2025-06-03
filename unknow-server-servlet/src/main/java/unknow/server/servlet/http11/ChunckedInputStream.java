@@ -4,10 +4,10 @@
 package unknow.server.servlet.http11;
 
 import java.io.IOException;
-import java.io.InputStream;
 
 import jakarta.servlet.ReadListener;
 import jakarta.servlet.ServletInputStream;
+import unknow.server.util.io.ByteBufferInputStream;
 
 /**
  * Http chuncked entity
@@ -21,7 +21,7 @@ public class ChunckedInputStream extends ServletInputStream {
 	private static final int CHUNK = 1;
 	private static final int DONE = 2;
 
-	private final InputStream in;
+	private final ByteBufferInputStream in;
 
 	private int step = 0;
 	private int chunkLen;
@@ -34,7 +34,7 @@ public class ChunckedInputStream extends ServletInputStream {
 	/**
 	 * @param in raw input
 	 */
-	public ChunckedInputStream(InputStream in) {
+	public ChunckedInputStream(ByteBufferInputStream in) {
 		this.in = in;
 	}
 

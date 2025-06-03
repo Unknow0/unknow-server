@@ -62,6 +62,10 @@ public abstract class AbstractServletOutput extends ServletOutputStream {
 		this.buffer = ByteBuffer.allocate(bufferSize + position).position(position);
 	}
 
+	public int size() {
+		return buffer.position();
+	}
+
 	public boolean isClosed() {
 		return closed;
 	}
@@ -131,8 +135,8 @@ public abstract class AbstractServletOutput extends ServletOutputStream {
 	public final void close() throws IOException {
 		if (closed)
 			return;
-		res.commit();
 		closed = true;
+		res.commit();
 		flush();
 		afterClose();
 	}

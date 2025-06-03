@@ -1,13 +1,12 @@
 package unknow.server.servlet.http11;
 
-import java.io.InputStream;
-
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.ServletInputStream;
 import unknow.server.servlet.impl.ServletRequestImpl;
+import unknow.server.util.io.ByteBufferInputStream;
 
 public class Http11Request extends ServletRequestImpl {
-	private final InputStream content;
+	private final ByteBufferInputStream content;
 
 	public Http11Request(Http11Processor co, DispatcherType type) {
 		super(co.co(), type);
