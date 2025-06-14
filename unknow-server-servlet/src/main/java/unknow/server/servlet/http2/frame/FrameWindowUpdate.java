@@ -39,6 +39,6 @@ public class FrameWindowUpdate extends FrameReader {
 
 		Http2FlowControl f = frame.id == 0 ? p : p.streams.get(frame.id);
 		if (f != null)
-			f.add(v);
+			f.flowWrite(-v);
 	}
 }

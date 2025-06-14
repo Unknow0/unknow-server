@@ -25,11 +25,14 @@ public class FrameData extends FrameReader {
 	@Override
 	public void process(Http2Processor p, Http2Frame frame, ByteBuffer buf) throws IOException {
 		Http2Stream s = frame.s;
+		if (frame.readPad(p, buf))
+			s.flowRead(1);
 
 		int l = Math.min(buf.remaining(), frame.size - frame.pad);
 		s.append(buf.slice().limit(l));
 		buf.position(buf.position() + l);
 		frame.size -= l;
+		s.flowRead(l);
 		if (frame.size - frame.pad > 0)
 			return;
 
@@ -37,6 +40,7 @@ public class FrameData extends FrameReader {
 			l = Math.min(buf.remaining(), frame.pad);
 			buf.position(buf.position() + l);
 			frame.pad -= l;
+			s.flowRead(l);
 			if (frame.pad > 0)
 				return;
 		}
@@ -46,6 +50,6 @@ public class FrameData extends FrameReader {
 			p.pending.set(s.id(), s);
 			s.close(false);
 		}
-	}
 
+	}
 }

@@ -33,6 +33,7 @@ public class FrameHeader extends FrameReader {
 
 	@Override
 	public void process(Http2Processor p, Http2Frame frame, ByteBuffer buf) throws IOException {
+		frame.readPad(p, buf);
 		if (frame.skip > 0) {
 			int i = Math.min(frame.skip, buf.remaining());
 			buf.position(buf.position() + i);
@@ -74,7 +75,6 @@ public class FrameHeader extends FrameReader {
 			frame.s = null;
 			s.start();
 		}
-
 		if ((frame.flags & 0x1) == 1) {
 			p.streams.remove(s.id());
 			p.pending.set(s.id(), s);

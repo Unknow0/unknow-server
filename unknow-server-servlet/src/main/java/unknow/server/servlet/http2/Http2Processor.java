@@ -78,7 +78,6 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 
 	private final Http2Frame frame;
 
-	private int window;
 	private int closingId;
 
 //	private boolean allowPush;
@@ -88,6 +87,10 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 	/** max frame size */
 	public int frameSize;
 //	private int headerList;
+
+	private int flowRead;
+	private int flowWrite;
+	private int flowThreshold;
 
 	private int lastId;
 
@@ -103,13 +106,15 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 		this.frame = new Http2Frame();
 		this.closingId = -1;
 
-		this.window = 65535;
-
 //		this.allowPush = true;
 //		this.concurrent = Integer.MAX_VALUE;
 		this.initialWindow = 65535;
 		this.frameSize = 16384;
 //		this.headerList = Integer.MAX_VALUE;
+
+		this.flowRead = 65535;
+		this.flowWrite = 65535;
+		this.flowThreshold = 65535;
 
 		// read PRI
 		frame.type = -1;
@@ -119,19 +124,33 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 	}
 
 	@Override
+	public int flowWrite() {
+		return flowWrite;
+	}
+
+	@Override
+	public void flowWrite(int v) {
+		flowWrite -= v;
+	}
+
+	@Override
+	public int flowRead() {
+		return flowRead;
+	}
+
+	@Override
+	public void flowRead(int v) throws IOException {
+		if ((flowRead -= v) < flowThreshold)
+			sendWindowUpdate(0, flowThreshold);
+	}
+
+	@Override
 	public void onRead(ByteBuffer b, long now) throws IOException {
 		while (b.hasRemaining()) {
 			if (frame.size == 0)
 				readFrame(b);
 			READERS.getOrDefault(frame.type, FrameReader.INSTANCE).process(this, frame, b);
 		}
-	}
-
-	@Override
-	public void add(int v) {
-		window += v;
-		if (window < 0)
-			window = Integer.MAX_VALUE;
 	}
 
 	@Override
@@ -203,7 +222,6 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 		if (!frame.read(buf))
 			return;
 		logger.debug("{} read frame: {}", co, frame);
-		frame.readPad(this, buf);
 
 		if (wantContinuation && frame.type != 9 || !wantContinuation && frame.type == 9)
 			goaway(PROTOCOL_ERROR);
@@ -297,12 +315,23 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 	public void sendData(int id, ByteBuffer data, boolean done) throws IOException {
 		if (done)
 			pending.remove(id);
+
 		if (data != null) {
 			while (data.remaining() > frameSize)
 				sendFrame(0, 0, id, data);
 		}
 		sendFrame(0, done ? 0x1 : 0, id, data);
 		co.flush();
+	}
+
+	public void sendWindowUpdate(int id, int window) throws IOException {
+		ByteBuffer b = ByteBuffer.allocate(9 + 4).position(9);
+		byte[] a = b.array();
+		a[9] = (byte) ((window >> 24) & 0x7f);
+		a[10] = (byte) ((window >> 16) & 0xff);
+		a[11] = (byte) ((window >> 8) & 0xff);
+		a[12] = (byte) (window & 0xff);
+		sendFrame(8, 0, id, b);
 	}
 
 	public static void formatFrame(byte[] b, int o, int size, int type, int flags, int id) {

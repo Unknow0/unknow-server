@@ -48,14 +48,15 @@ public class Http2Frame {
 	* @param p the processor
 	* @param buf where to read
 	*/
-	public void readPad(Http2Processor p, ByteBuffer buf) {
+	public boolean readPad(Http2Processor p, ByteBuffer buf) {
 		if ((flags & 0x8) == 0)
-			return;
+			return false;
 		flags &= ~0x8;
 
 		pad = buf.get() & 0xFF;
-		if (pad >= size)
+		if (pad >= size--)
 			p.goaway(Http2Processor.PROTOCOL_ERROR);
+		return true;
 	}
 
 	@Override

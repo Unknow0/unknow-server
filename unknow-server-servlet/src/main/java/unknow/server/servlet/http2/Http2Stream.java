@@ -19,7 +19,9 @@ public class Http2Stream extends HttpWorker implements Http2FlowControl {
 	private final Http2Processor p;
 	private final Http2ServletOutput out;
 
-	private int window;
+	private int flowWrite;
+	private int flowRead;
+	private final int flowThreshold;
 
 	private volatile Future<?> exec;
 
@@ -28,8 +30,9 @@ public class Http2Stream extends HttpWorker implements Http2FlowControl {
 		this.id = id;
 		this.p = p;
 		this.out = new Http2ServletOutput(res, p, id);
-
-		this.window = window;
+		this.flowWrite = window;
+		this.flowRead = 65535;
+		this.flowThreshold = 65535;
 
 		this.exec = CompletableFuture.completedFuture(null);
 	}
@@ -46,8 +49,10 @@ public class Http2Stream extends HttpWorker implements Http2FlowControl {
 
 		if (":method".equals(name))
 			req.setMethod(value);
-		else if (":path".equals(name))
+		else if (":path".equals(name)) {
+			logger.info("path {}", value);
 			parsePath(value);
+		}
 	}
 
 	private void parsePath(String path) {
@@ -65,10 +70,26 @@ public class Http2Stream extends HttpWorker implements Http2FlowControl {
 	}
 
 	@Override
-	public void add(int v) {
-		window += v;
-		if (window < 0)
-			window = Integer.MAX_VALUE;
+	public int flowWrite() {
+		return flowWrite;
+	}
+
+	@Override
+	public void flowWrite(int v) {
+		flowWrite -= v;
+		p.flowWrite(v);
+	}
+
+	@Override
+	public int flowRead() {
+		return flowRead;
+	}
+
+	@Override
+	public void flowRead(int v) throws IOException {
+		if ((flowRead -= v) < flowThreshold)
+			p.sendWindowUpdate(id, flowThreshold);
+		p.flowRead(v);
 	}
 
 	@Override
