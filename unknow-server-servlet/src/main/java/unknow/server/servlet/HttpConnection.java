@@ -55,7 +55,7 @@ public final class HttpConnection implements NIOConnectionHandler {
 	}
 
 	@Override
-	public void onInit(NIOConnection co, long now, SSLEngine sslEngine) {
+	public void init(NIOConnection co, long now, SSLEngine sslEngine) {
 		this.co = co;
 		this.lastRead = this.lastWrite = now;
 		if (sslEngine != null) {

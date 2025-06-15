@@ -10,14 +10,21 @@ import javax.net.ssl.SSLEngine;
 public interface NIOConnectionHandler {
 
 	/**
-	 * called after the connection is initialized
+	 * @return true if the handler should be init async
+	 */
+	default boolean asyncInit() {
+		return false;
+	}
+
+	/**
+	 * called to initialize the connection
 	 * 
 	 * @param co the connection
 	 * @param now currentTimeMillis
 	 * @param sslEngine the sslEngine for ssl connection null for other
 	 * @throws IOException on io exception
 	 */
-	default void onInit(NIOConnection co, long now, SSLEngine sslEngine) throws IOException { // ok
+	default void init(NIOConnection co, long now, SSLEngine sslEngine) throws IOException { // ok
 	}
 
 	/**

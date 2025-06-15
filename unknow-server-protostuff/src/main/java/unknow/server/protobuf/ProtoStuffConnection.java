@@ -47,7 +47,7 @@ public abstract class ProtoStuffConnection<T> implements NIOConnectionHandler {
 	}
 
 	@Override
-	public final void onInit(NIOConnection co, long now, SSLEngine ssl) {
+	public final void init(NIOConnection co, long now, SSLEngine ssl) {
 		out = co.getOut();
 		lis = new LimitedInputStream(in);
 		input = new CodedInput(lis, protostuff);

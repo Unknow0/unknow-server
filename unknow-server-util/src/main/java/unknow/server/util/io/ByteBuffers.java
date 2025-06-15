@@ -26,6 +26,13 @@ public class ByteBuffers implements Consumer<ByteBuffer> {
 		return len == 0;
 	}
 
+	public int remaining() {
+		int r = 0;
+		for (int i = 0; i < len; i++)
+			r += buf[i].remaining();
+		return r;
+	}
+
 	/**
 	 * remove empty buffers
 	 */

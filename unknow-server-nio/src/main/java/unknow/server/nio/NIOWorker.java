@@ -265,7 +265,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			try {
 				socket.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.TRUE).setOption(StandardSocketOptions.TCP_NODELAY, Boolean.TRUE).configureBlocking(false);
 				socket.setOption(StandardSocketOptions.SO_RCVBUF, 64 * 1024).setOption(StandardSocketOptions.SO_SNDBUF, 64 * 1024);
-				key = socket.register(selector, SelectionKey.OP_READ);
+				key = socket.register(selector, 0);
 			} catch (IOException e) {
 				try {
 					socket.close();
@@ -276,16 +276,39 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 				return;
 			}
 			NIOConnection co = new NIOConnection(NIOWorker.this, key, factory.build());
-			listener.accepted(id, co);
-			try {
-				co.onInit(co, now, null);
-			} catch (Exception e) {
-				logger.warn("Failed to start connection", e);
-				startClose(co);
-				return;
-			}
 			key.attach(co);
+			listener.accepted(id, co);
+			if (!co.asyncInit()) {
+				try {
+					co.init(co, now, null);
+					key.interestOps(SelectionKey.OP_READ);
+				} catch (Exception e) {
+					logger.warn("Failed to init connection", e);
+					startClose(co);
+					return;
+				}
+			} else
+				submit(new AsyncInit(co));
 			toTail(co, now);
+		}
+	}
+
+	private static final class AsyncInit implements Runnable {
+		private final NIOConnection co;
+
+		public AsyncInit(NIOConnection co) {
+			this.co = co;
+		}
+
+		@Override
+		public void run() {
+			try {
+				co.init(co, System.currentTimeMillis(), null);
+				co.key.interestOps(SelectionKey.OP_READ);
+			} catch (Exception e) {
+				logger.warn("Failed to init connection", e);
+				co.key.cancel();
+			}
 		}
 	}
 }

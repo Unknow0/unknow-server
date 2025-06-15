@@ -19,7 +19,7 @@ public class ShutdownConnection implements NIOConnectionHandler {
 	}
 
 	@Override
-	public void onInit(NIOConnection co, long now, SSLEngine sslEngine) {
+	public void init(NIOConnection co, long now, SSLEngine sslEngine) {
 		server.stop();
 	}
 

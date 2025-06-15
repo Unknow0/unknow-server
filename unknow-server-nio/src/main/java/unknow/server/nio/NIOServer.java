@@ -50,8 +50,7 @@ public class NIOServer extends NIOLoop {
 	public void bind(SocketAddress a, ConnectionFactory s) throws IOException {
 		logger.info("Server bind to {}", a);
 		ServerSocketChannel open = ServerSocketChannel.open();
-		open.configureBlocking(false);
-		open.register(selector, SelectionKey.OP_ACCEPT, s);
+		open.configureBlocking(false).register(selector, SelectionKey.OP_ACCEPT, s);
 		open.bind(a);
 	}
 
@@ -97,9 +96,6 @@ public class NIOServer extends NIOLoop {
 	}
 
 	public static interface ConnectionFactory {
-//		NIOConnection build(NIOWorker worker, SelectionKey t);
-
 		NIOConnectionHandler build();
-
 	}
 }

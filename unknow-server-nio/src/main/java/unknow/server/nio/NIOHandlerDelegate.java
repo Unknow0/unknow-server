@@ -14,8 +14,13 @@ public class NIOHandlerDelegate implements NIOConnectionHandler {
 	}
 
 	@Override
-	public void onInit(NIOConnection co, long now, SSLEngine sslEngine) throws IOException {
-		handler.onInit(co, now, sslEngine);
+	public boolean asyncInit() {
+		return handler.asyncInit();
+	}
+
+	@Override
+	public void init(NIOConnection co, long now, SSLEngine sslEngine) throws IOException {
+		handler.init(co, now, sslEngine);
 	}
 
 	@Override

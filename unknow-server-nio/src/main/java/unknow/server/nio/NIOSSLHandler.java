@@ -41,7 +41,12 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 	}
 
 	@Override
-	public void onInit(NIOConnection co, long now, SSLEngine e) throws IOException {
+	public boolean asyncInit() {
+		return true;
+	}
+
+	@Override
+	public void init(NIOConnection co, long now, SSLEngine e) throws IOException {
 		InetSocketAddress remote = co.getRemote();
 		this.co = co;
 		this.sslEngine = sslContext.createSSLEngine(remote.getHostString(), remote.getPort());
@@ -55,7 +60,7 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 
 		this.handshake = true;
 
-		handler.onInit(co, now, sslEngine);
+		handler.init(co, now, sslEngine);
 		sslEngine.beginHandshake();
 		checkHandshake(sslEngine.getHandshakeStatus(), now);
 	}
@@ -89,17 +94,18 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 			rawIn.compact();
 			if (checkHandshake(r.getHandshakeStatus(), now))
 				return;
+			app.collect(buf -> handler.onRead(buf, now));
 		}
-		app.collect(buf -> handler.onRead(buf, now));
 		rawIn.flip();
 		while (rawIn.hasRemaining()) {
 			SSLEngineResult r = sslEngine.unwrap(rawIn, app.buf, 0, app.len);
 			logger.trace("unwrap {}", r);
 			if (r.getStatus() == Status.BUFFER_UNDERFLOW || r.getStatus() == Status.CLOSED)
 				break;
-			if (r.getStatus() == SSLEngineResult.Status.BUFFER_OVERFLOW)
-				app.accept(ByteBuffer.allocate(4096));
-			else
+			if (r.getStatus() == SSLEngineResult.Status.BUFFER_OVERFLOW) {
+				for (int i = app.remaining(); i < applicationBufferSize; i += 4096)
+					app.accept(ByteBuffer.allocate(4096));
+			} else
 				app.collect(buf -> handler.onRead(buf, now));
 		}
 		rawIn.compact();
