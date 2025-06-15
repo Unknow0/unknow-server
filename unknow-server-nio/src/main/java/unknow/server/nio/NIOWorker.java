@@ -300,11 +300,13 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			this.co = co;
 		}
 
+		@SuppressWarnings("resource")
 		@Override
 		public void run() {
 			try {
 				co.init(co, System.currentTimeMillis(), null);
 				co.key.interestOps(SelectionKey.OP_READ);
+				co.key.selector().wakeup();
 			} catch (Exception e) {
 				logger.warn("Failed to init connection", e);
 				co.key.cancel();
