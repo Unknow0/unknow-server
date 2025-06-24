@@ -158,7 +158,7 @@ public class ProcessResult {
 		ProcessResult process = new ProcessResult(args);
 
 		for (String s : args) {
-			Path path = Paths.get("../out", s);
+			Path path = Paths.get("out", s);
 			if (Files.exists(path)) {
 				try (DirectoryStream<Path> out = Files.newDirectoryStream(path)) {
 					for (Path p : out) {
