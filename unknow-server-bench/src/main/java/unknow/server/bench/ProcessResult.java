@@ -96,8 +96,8 @@ public class ProcessResult {
 
 	private void printResult(Formatter out) {
 		Function<Result, String> thrpt = r -> Integer.toString((int) r.thrpt());
-		Function<Result, String> time = r -> r.time.cnt() == 0 ? "" : String.format("%.2f ± %.2f (%.2f)", r.time.avg(MILLI), r.time.err(MILLI, .999), r.time.max * MILLI);
-		Function<Result, String> lattency = r -> r.latency.cnt() == 0 ? "" : String.format("%.2f ± %.2f", r.latency.avg(ΜICRO), r.latency.err(ΜICRO, .999));
+		Function<Result, String> time = r -> r.time.toString(MILLI);
+		Function<Result, String> lattency = r -> r.latency.toString(ΜICRO);
 		Function<Result, String> error = r -> Long.toString(r.err());
 
 		Map<String, Integer> lengths = new HashMap<>();
@@ -158,7 +158,7 @@ public class ProcessResult {
 		ProcessResult process = new ProcessResult(args);
 
 		for (String s : args) {
-			Path path = Paths.get("out", s);
+			Path path = Paths.get("../out", s);
 			if (Files.exists(path)) {
 				try (DirectoryStream<Path> out = Files.newDirectoryStream(path)) {
 					for (Path p : out) {
@@ -269,6 +269,16 @@ public class ProcessResult {
 			TDistribution tDist = new TDistribution(cnt - 1.);
 			double a = tDist.inverseCumulativeProbability(1 - (1 - confidence) / 2);
 			return a * sdev(scale) / Math.sqrt(cnt);
+		}
+
+		public String toString(double scale) {
+			String u = "";
+			double m = max * scale;
+			if (m >= 1000) {
+				m = m / 1000.;
+				u = "k";
+			}
+			return cnt == 0 ? "" : String.format("%.2f ± %.2f (%.2f%s)", avg(scale), err(scale, .999), m, u);
 		}
 	}
 }

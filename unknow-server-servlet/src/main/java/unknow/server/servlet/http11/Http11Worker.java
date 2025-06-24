@@ -31,6 +31,7 @@ public final class Http11Worker extends HttpWorker {
 	private static final String UNKNOWN = "Unknown";
 
 	private final Http11Processor p;
+	private final int reqId;
 	private final int keepAliveIdle;
 
 	/**
@@ -39,9 +40,10 @@ public final class Http11Worker extends HttpWorker {
 	 * @param p the connection
 	 * @param req the request
 	 */
-	public Http11Worker(Http11Processor p, ServletRequestImpl req) {
+	public Http11Worker(Http11Processor p, ServletRequestImpl req, int reqId) {
 		super(p.co(), req);
 		this.p = p;
+		this.reqId = reqId;
 		this.keepAliveIdle = co.getkeepAlive() / 1000;
 
 	}
@@ -54,6 +56,12 @@ public final class Http11Worker extends HttpWorker {
 
 	@Override
 	public void commit() throws IOException {
+		try {
+			p.waitUntil(reqId);
+		} catch (@SuppressWarnings("unused") InterruptedException e) {
+			Thread.currentThread().interrupt();
+			throw new IOException("interrupted");
+		}
 		HttpError http = HttpError.fromStatus(res.getStatus());
 		@SuppressWarnings("resource")
 		Out out = co.getOut();

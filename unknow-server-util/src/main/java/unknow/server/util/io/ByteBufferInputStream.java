@@ -97,7 +97,7 @@ public class ByteBufferInputStream extends InputStream {
 	}
 
 	public boolean isClosed() {
-		return buffers.peek() == EOF;
+		return current == EOF || buffers.peekLast() == EOF;
 	}
 
 	public boolean hasRemaining() {

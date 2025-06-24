@@ -115,6 +115,10 @@ public class ServletRequestImpl implements HttpServletRequest {
 		input.close();
 	}
 
+	public boolean isClosed() {
+		return input.isFinished();
+	}
+
 	public void setMethod(String method) {
 		this.method = method;
 	}

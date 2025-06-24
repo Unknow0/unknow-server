@@ -36,6 +36,10 @@ public class RequestDecoder {
 		req.close();
 	}
 
+	public boolean closed() {
+		return req.isClosed();
+	}
+
 	public ServletRequestImpl append(ByteBuffer b) {
 		while (b.hasRemaining()) {
 			tryDecode(b);
