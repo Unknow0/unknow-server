@@ -22,12 +22,24 @@ import unknow.server.util.io.ByteBufferInputStream;
 public final class Http11Processor implements NIOConnectionHandler {
 	private static final Logger logger = LoggerFactory.getLogger(Http11Processor.class);
 
+	private static final int START = 0;
+	private static final int CONTENT = 1;
+	private static final int CHUNKED_START = 2;
+	private static final int CHUNKED_DATA = 3;
+	private static final int CHUNKED_END = 4;
+	private static final int WAIT = 5;
+
 	private final HttpConnection co;
 
 	private volatile Future<?> exec = CompletableFuture.completedFuture(null);
 
-	private final ByteBufferInputStream content;
+	private final ByteBufferInputStream pending;
 	private final RequestDecoder dec;
+	private final StringBuilder sb;
+
+	private volatile int state = START;
+	private long contentLength;
+	private boolean cr;
 
 	/**
 	 * new http11 processor
@@ -36,24 +48,86 @@ public final class Http11Processor implements NIOConnectionHandler {
 	 */
 	public Http11Processor(HttpConnection co) {
 		this.co = co;
-		this.content = new ByteBufferInputStream();
+		this.pending = new ByteBufferInputStream();
 		this.dec = new RequestDecoder(this);
+		this.sb = new StringBuilder();
 	}
 
 	HttpConnection co() {
 		return co;
 	}
 
-	ByteBufferInputStream content() {
-		return content;
-	}
-
 	@Override
 	public void onRead(ByteBuffer b, long now) {
-		if (exec.isDone())
-			decode(b);
-		else
-			content.addBuffer(b);
+		while (b.hasRemaining()) {
+			byte c;
+			switch (state) {
+				case START:
+					dec.reset();
+					decode(b);
+					break;
+				case CONTENT:
+					if (b.remaining() < contentLength) {
+						contentLength -= b.remaining();
+						dec.addContent(b);
+					} else {
+						state = WAIT;
+						dec.addContent(b.slice().limit((int) contentLength));
+						dec.closeContent();
+						b.position(b.position() + (int) contentLength);
+						contentLength = 0;
+						break;
+					}
+					break;
+				case CHUNKED_START:
+					c = b.get();
+					if (cr) {
+						if (c != '\n')
+							; // error
+						cr = false;
+						contentLength = Integer.parseInt(sb.toString(), 16);
+						sb.setLength(0);
+						if (contentLength == 0) {
+							dec.closeContent();
+							state = WAIT;
+						} else
+							state = CHUNKED_DATA;
+						break;
+					} else if (c == '\r')
+						cr = true;
+					else
+						sb.append((char) c);
+					break;
+				case CHUNKED_DATA:
+					if (b.remaining() < contentLength) {
+						contentLength -= b.remaining();
+						dec.addContent(b);
+					} else {
+						// read CRLF
+						state = CHUNKED_END;
+						dec.addContent(b.slice().limit((int) contentLength));
+						b.position(b.position() + (int) contentLength);
+						contentLength = 0;
+						break;
+					}
+					break;
+				case CHUNKED_END:
+					c = b.get();
+					if (cr) {
+						if (c != '\n')
+							; // error
+						cr = false;
+						state = CHUNKED_START;
+					} else if (c == '\r')
+						cr = true;
+					else
+						; // error
+					break;
+				case WAIT:
+					pending.addBuffer(b);
+					return;
+			}
+		}
 	}
 
 	@Override
@@ -63,7 +137,7 @@ public final class Http11Processor implements NIOConnectionHandler {
 
 	@Override
 	public void startClose() {
-		content.close();
+		pending.close();
 	}
 
 	@Override
@@ -75,14 +149,26 @@ public final class Http11Processor implements NIOConnectionHandler {
 		ServletRequestImpl req = dec.append(b);
 		if (req == null)
 			return false;
-		content.addBuffer(b);
+		if ("chunked".equalsIgnoreCase(req.getHeader("transfer-encoding"))) {
+			state = CHUNKED_START;
+			contentLength = 0;
+		} else {
+			if ((contentLength = req.getContentLengthLong()) > 0)
+				state = CONTENT;
+			if (contentLength <= 0) {
+				dec.closeContent();
+				state = WAIT;
+			}
+		}
 		exec = co.submit(new Http11Worker(this, req));
-		dec.reset();
 		return true;
 	}
 
 	protected void requestDone() {
-		if (content.hasRemaining())
+		logger.info("{} done", this);
+		state = START;
+
+		if (pending.hasRemaining())
 			co.execute(new NextRequest());
 	}
 
@@ -90,11 +176,8 @@ public final class Http11Processor implements NIOConnectionHandler {
 
 		@Override
 		public void run(long now) {
-			if (!exec.isDone())
-				return;
-
 			List<ByteBuffer> list = new ArrayList<>();
-			content.drain(list);
+			pending.drain(list);
 			try {
 				for (ByteBuffer b : list)
 					co.onRead(b, now);

@@ -1,4 +1,4 @@
-package unknow.server.servlet.http2;
+package unknow.server.servlet.impl;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -7,11 +7,16 @@ import jakarta.servlet.ReadListener;
 import jakarta.servlet.ServletInputStream;
 import unknow.server.util.io.ByteBufferInputStream;
 
-public class Http2ServletInput extends ServletInputStream {
+public class ServletInputStreamImpl extends ServletInputStream {
 	private final ByteBufferInputStream in;
 
-	public Http2ServletInput() {
-		this.in = new ByteBufferInputStream();
+	@SuppressWarnings("resource")
+	public ServletInputStreamImpl() {
+		this(new ByteBufferInputStream());
+	}
+
+	public ServletInputStreamImpl(ByteBufferInputStream in) {
+		this.in = in;
 	}
 
 	public void append(ByteBuffer b) {

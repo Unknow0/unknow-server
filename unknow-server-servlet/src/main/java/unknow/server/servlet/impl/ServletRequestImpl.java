@@ -11,6 +11,7 @@ import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.security.Principal;
 import java.time.DateTimeException;
 import java.time.Instant;
@@ -52,7 +53,7 @@ import unknow.server.util.data.ArrayMap;
 /**
  * @author unknow
  */
-public abstract class ServletRequestImpl implements HttpServletRequest {
+public class ServletRequestImpl implements HttpServletRequest {
 	private static final Logger logger = LoggerFactory.getLogger(ServletRequestImpl.class);
 
 	private static final Cookie[] EMPTY = new Cookie[0];
@@ -61,6 +62,7 @@ public abstract class ServletRequestImpl implements HttpServletRequest {
 
 	protected final HttpConnection co;
 	private final DispatcherType type;
+	private final ServletInputStreamImpl input;
 
 	private String requestUri;
 	private int pathInfoIndex;
@@ -90,7 +92,6 @@ public abstract class ServletRequestImpl implements HttpServletRequest {
 	private List<Locale> locales;
 
 	private BufferedReader reader;
-	private ServletInputStream input;
 
 	/**
 	 * create new ServletRequestImpl
@@ -101,11 +102,18 @@ public abstract class ServletRequestImpl implements HttpServletRequest {
 	public ServletRequestImpl(HttpConnection co, DispatcherType type) {
 		this.co = co;
 		this.type = type;
+		this.input = new ServletInputStreamImpl();
 
 		this.headers = new HashMap<>();
 	}
 
-	protected abstract ServletInputStream createInput();
+	public void append(ByteBuffer buf) {
+		input.append(buf);
+	}
+
+	public void close() {
+		input.close();
+	}
 
 	public void setMethod(String method) {
 		this.method = method;
@@ -165,7 +173,7 @@ public abstract class ServletRequestImpl implements HttpServletRequest {
 	 * @throws IOException
 	 */
 	private void parseContentParam(Map<String, List<String>> p) throws IOException {
-		try (BufferedReader r = new BufferedReader(new InputStreamReader(createInput(), getCharacterEncoding()))) {
+		try (BufferedReader r = new BufferedReader(new InputStreamReader(input, getCharacterEncoding()))) {
 			PathUtils.pathQuery(r, p);
 		}
 		contentLength = 0;
@@ -181,8 +189,6 @@ public abstract class ServletRequestImpl implements HttpServletRequest {
 	}
 
 	public void clearInput() throws IOException {
-		if (input == null)
-			input = createInput();
 		while (!input.isFinished())
 			input.skip(Long.MAX_VALUE);
 	}
@@ -317,8 +323,6 @@ public abstract class ServletRequestImpl implements HttpServletRequest {
 	public ServletInputStream getInputStream() throws IOException {
 		if (reader != null)
 			throw new IllegalStateException("getReader() called");
-		if (input == null)
-			input = createInput();
 		return input;
 	}
 
@@ -326,9 +330,9 @@ public abstract class ServletRequestImpl implements HttpServletRequest {
 	public BufferedReader getReader() throws IOException {
 		if (reader != null)
 			return reader;
-		if (input != null)
-			throw new IllegalStateException("getInputStream() called");
-		return reader = new BufferedReader(new InputStreamReader(input = createInput(), getCharacterEncoding()));
+//		if (input != null)
+//			throw new IllegalStateException("getInputStream() called");
+		return reader = new BufferedReader(new InputStreamReader(input, getCharacterEncoding()));
 	}
 
 	@Override

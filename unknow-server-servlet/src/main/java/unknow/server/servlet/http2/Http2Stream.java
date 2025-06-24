@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import jakarta.servlet.DispatcherType;
 import unknow.server.servlet.HttpWorker;
 import unknow.server.servlet.impl.AbstractServletOutput;
+import unknow.server.servlet.impl.ServletRequestImpl;
 
 public class Http2Stream extends HttpWorker implements Http2FlowControl {
 	private static final Logger logger = LoggerFactory.getLogger(Http2Stream.class);
@@ -26,7 +27,8 @@ public class Http2Stream extends HttpWorker implements Http2FlowControl {
 	private volatile Future<?> exec;
 
 	public Http2Stream(Http2Processor p, int id, int window) {
-		super(p.co, new Http2Request(p.co, DispatcherType.REQUEST));
+		super(p.co, new ServletRequestImpl(p.co, DispatcherType.REQUEST));
+		req.setProtocol("HTTP/2");
 		this.id = id;
 		this.p = p;
 		this.out = new Http2ServletOutput(res, p, id);
@@ -112,7 +114,7 @@ public class Http2Stream extends HttpWorker implements Http2FlowControl {
 	}
 
 	public final void close(boolean stop) {
-		((Http2Request) req).close();
+		req.close();
 		if (stop)
 			exec.cancel(true);
 	}
@@ -122,6 +124,6 @@ public class Http2Stream extends HttpWorker implements Http2FlowControl {
 	}
 
 	public void append(ByteBuffer buf) {
-		((Http2Request) req).append(buf);
+		req.append(buf);
 	}
 }

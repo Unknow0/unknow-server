@@ -28,6 +28,14 @@ public class RequestDecoder {
 		reset();
 	}
 
+	public void addContent(ByteBuffer b) {
+		req.append(b);
+	}
+
+	public void closeContent() {
+		req.close();
+	}
+
 	public ServletRequestImpl append(ByteBuffer b) {
 		while (b.hasRemaining()) {
 			tryDecode(b);
@@ -123,6 +131,6 @@ public class RequestDecoder {
 
 	public void reset() {
 		state = State.METHOD;
-		req = new Http11Request(co, DispatcherType.REQUEST);
+		req = new ServletRequestImpl(co.co(), DispatcherType.REQUEST);
 	}
 }
