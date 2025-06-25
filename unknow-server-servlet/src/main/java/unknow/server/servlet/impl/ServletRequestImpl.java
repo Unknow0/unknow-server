@@ -398,7 +398,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public boolean isSecure() {
-		return false;
+		return co.isSecure();
 	}
 
 	@Override
@@ -650,18 +650,17 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public String getRequestId() { // TODO add value for keep-alive connection
-		return getServletConnection().getConnectionId();
+		return co.getConnectionId();
 	}
 
 	@Override
 	public String getProtocolRequestId() {
-		return getServletConnection().getProtocolConnectionId();
+		return co.getProtocolConnectionId();
 	}
 
 	@Override
 	public ServletConnection getServletConnection() {
-		// TODO Auto-generated method stub
-		return null;
+		return co;
 	}
 
 	private static String getAddr(InetSocketAddress a) {

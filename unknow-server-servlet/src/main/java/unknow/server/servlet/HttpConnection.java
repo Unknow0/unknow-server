@@ -8,6 +8,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
@@ -15,6 +16,7 @@ import javax.net.ssl.SSLParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import jakarta.servlet.ServletConnection;
 import unknow.server.nio.NIOConnection;
 import unknow.server.nio.NIOConnection.Out;
 import unknow.server.nio.NIOConnectionHandler;
@@ -25,16 +27,19 @@ import unknow.server.servlet.impl.ServletContextImpl;
 import unknow.server.servlet.utils.EventManager;
 import unknow.server.servlet.utils.ServletManager;
 
-public final class HttpConnection implements NIOConnectionHandler {
+public final class HttpConnection implements NIOConnectionHandler, ServletConnection {
 	private static final Logger logger = LoggerFactory.getLogger(HttpConnection.class);
+	private static final AtomicInteger ID = new AtomicInteger();
 
 	private final ServletContextImpl ctx;
 	private final ServletManager manager;
 	private final EventManager events;
 	private final int keepAliveMs;
+	private final String coId;
 
 	private NIOConnection co;
 	private NIOConnectionHandler p;
+	private boolean ssl;
 
 	private long lastRead;
 	private long lastWrite;
@@ -52,6 +57,7 @@ public final class HttpConnection implements NIOConnectionHandler {
 		this.manager = manager;
 		this.events = events;
 		this.keepAliveMs = keepAliveIdle;
+		this.coId = Integer.toString(ID.incrementAndGet(), 36);
 	}
 
 	@Override
@@ -59,6 +65,7 @@ public final class HttpConnection implements NIOConnectionHandler {
 		this.co = co;
 		this.lastRead = this.lastWrite = now;
 		if (sslEngine != null) {
+			ssl = true;
 			sslEngine.setUseClientMode(false);
 
 			SSLParameters params = new SSLParameters();
@@ -79,7 +86,7 @@ public final class HttpConnection implements NIOConnectionHandler {
 	public final void onRead(ByteBuffer b, long now) throws IOException {
 		lastRead = now;
 		if (p == null) {
-			if (Arrays.equals(b.array(), b.position(), b.limit(), Http2Processor.PRI, 0, Http2Processor.PRI.length))
+			if (Arrays.equals(b.array(), b.position(), b.position() + Http2Processor.PRI.length, Http2Processor.PRI, 0, Http2Processor.PRI.length))
 				p = new Http2Processor(this);
 			else
 				p = new Http11Processor(this);
@@ -193,5 +200,29 @@ public final class HttpConnection implements NIOConnectionHandler {
 	@Override
 	public String toString() {
 		return co.toString();
+	}
+
+	@Override
+	public String getConnectionId() {
+		return coId;
+	}
+
+	@Override
+	public String getProtocol() {
+		if (p instanceof Http11Processor)
+			return "http/1.1";
+		if (p instanceof Http2Processor)
+			return "h2";
+		return "unknown";
+	}
+
+	@Override
+	public String getProtocolConnectionId() {
+		return "";
+	}
+
+	@Override
+	public boolean isSecure() {
+		return ssl;
 	}
 }
