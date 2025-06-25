@@ -334,8 +334,6 @@ public class ServletRequestImpl implements HttpServletRequest {
 	public BufferedReader getReader() throws IOException {
 		if (reader != null)
 			return reader;
-//		if (input != null)
-//			throw new IllegalStateException("getInputStream() called");
 		return reader = new BufferedReader(new InputStreamReader(input, getCharacterEncoding()));
 	}
 

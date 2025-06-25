@@ -20,7 +20,7 @@ public class FramePing extends FrameReader {
 			p.goaway(Http2Processor.FRAME_SIZE_ERROR);
 			frame.type = -1;
 		}
-	};
+	}
 
 	@Override
 	public void process(Http2Processor p, Http2Frame frame, ByteBuffer buf) throws IOException {

@@ -10,12 +10,11 @@ public class RequestDecoder {
 	private static final byte[] CRLF = { '\r', '\n' };
 	private static final byte SPACE = ' ';
 
-	private static enum State {
+	private enum State {
 		METHOD, URI, PROTOCOL, HEADER, DONE
 	}
 
 	private final Http11Processor co;
-//	private final StringBuilder sb;
 	private final Utf8Decoder decoder;
 
 	private ServletRequestImpl req;

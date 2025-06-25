@@ -45,71 +45,75 @@ public final class Http11Processor implements NIOConnectionHandler {
 
 	@Override
 	public void onRead(ByteBuffer b, long now) {
-		while (b.hasRemaining()) {
-			byte c;
-			switch (state) {
-				case START:
-					dec.reset();
-					decode(b);
+		while (b.hasRemaining())
+			process(b);
+	}
+
+	private final void process(ByteBuffer b) {
+		byte c;
+		switch (state) {
+			case START:
+				dec.reset();
+				decode(b);
+				break;
+			case CONTENT:
+				if (b.remaining() < contentLength) {
+					contentLength -= b.remaining();
+					dec.addContent(b);
+				} else {
+					state = START;
+					dec.addContent(b.slice().limit((int) contentLength));
+					dec.closeContent();
+					b.position(b.position() + (int) contentLength);
+					contentLength = 0;
 					break;
-				case CONTENT:
-					if (b.remaining() < contentLength) {
-						contentLength -= b.remaining();
-						dec.addContent(b);
-					} else {
-						state = START;
-						dec.addContent(b.slice().limit((int) contentLength));
-						dec.closeContent();
-						b.position(b.position() + (int) contentLength);
-						contentLength = 0;
-						break;
-					}
-					break;
-				case CHUNKED_START:
-					c = b.get();
-					if (cr) {
-						if (c != '\n')
-							; // error
-						cr = false;
-						contentLength = Integer.parseInt(sb.toString(), 16);
-						sb.setLength(0);
-						if (contentLength == 0) {
-							dec.closeContent();
-							state = CHUNKED_END;
-						} else
-							state = CHUNKED_DATA;
-						break;
-					} else if (c == '\r')
-						cr = true;
-					else
-						sb.append((char) c);
-					break;
-				case CHUNKED_DATA:
-					if (b.remaining() < contentLength) {
-						contentLength -= b.remaining();
-						dec.addContent(b.slice());
-						b.position(b.limit());
-					} else {
-						// read CRLF
-						state = CHUNKED_END;
-						dec.addContent(b.slice().limit((int) contentLength));
-						b.position(b.position() + (int) contentLength);
-						contentLength = 0;
-					}
-					break;
-				case CHUNKED_END:
-					c = b.get();
-					if (cr) {
-						if (c != '\n')
-							; // error
-						cr = false;
-						state = dec.closed() ? START : CHUNKED_START;
-					} else if (c == '\r')
-						cr = true;
-					else
+				}
+				break;
+			case CHUNKED_START:
+				c = b.get();
+				if (cr) {
+					if (c != '\n')
 						; // error
+					cr = false;
+					contentLength = Integer.parseInt(sb.toString(), 16);
+					sb.setLength(0);
+					if (contentLength == 0) {
+						dec.closeContent();
+						state = CHUNKED_END;
+					} else
+						state = CHUNKED_DATA;
 					break;
-			}
+				} else if (c == '\r')
+					cr = true;
+				else
+					sb.append((char) c);
+				break;
+			case CHUNKED_DATA:
+				if (b.remaining() < contentLength) {
+					contentLength -= b.remaining();
+					dec.addContent(b.slice());
+					b.position(b.limit());
+				} else {
+					// read CRLF
+					state = CHUNKED_END;
+					dec.addContent(b.slice().limit((int) contentLength));
+					b.position(b.position() + (int) contentLength);
+					contentLength = 0;
+				}
+				break;
+			case CHUNKED_END:
+				c = b.get();
+				if (cr) {
+					if (c != '\n')
+						; // error
+					cr = false;
+					state = dec.closed() ? START : CHUNKED_START;
+				} else if (c == '\r')
+					cr = true;
+				else
+					; // error
+				break;
+			default:
 		}
 	}
 

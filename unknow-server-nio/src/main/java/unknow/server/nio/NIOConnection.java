@@ -296,7 +296,6 @@ public final class NIOConnection extends NIOHandlerDelegate {
 			try {
 				h.write(buf.flip());
 				buf = ByteBuffer.allocate(4096);
-				return;
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
 				throw new IOException(e);

@@ -21,7 +21,7 @@ public class FrameGoAway extends FrameReader {
 		if (frame.id != 0)
 			p.goaway(Http2Processor.PROTOCOL_ERROR);
 		frame.lastId = -1;
-	};
+	}
 
 	@Override
 	public void process(Http2Processor p, Http2Frame frame, ByteBuffer buf) throws IOException {

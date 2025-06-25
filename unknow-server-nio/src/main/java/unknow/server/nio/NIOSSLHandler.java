@@ -174,6 +174,7 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 					}
 				case FINISHED:
 					onHandshakeDone(sslEngine, now);
+					// fallthrough
 				default:
 					return false;
 			}

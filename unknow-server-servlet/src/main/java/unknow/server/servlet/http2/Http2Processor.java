@@ -80,13 +80,10 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 
 	private int closingId;
 
-//	private boolean allowPush;
-//	private int concurrent;
 	/** initial flow control window for stream */
 	public int initialWindow;
 	/** max frame size */
 	public int frameSize;
-//	private int headerList;
 
 	private int flowRead;
 	private int flowWrite;
@@ -106,11 +103,8 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 		this.frame = new Http2Frame();
 		this.closingId = -1;
 
-//		this.allowPush = true;
-//		this.concurrent = Integer.MAX_VALUE;
 		this.initialWindow = 65535;
 		this.frameSize = 16384;
-//		this.headerList = Integer.MAX_VALUE;
 
 		this.flowRead = 65535;
 		this.flowWrite = 65535;

@@ -61,7 +61,7 @@ public class ByteBufferInputStream extends InputStream {
 		ByteBuffer b = buffer();
 		if (b == EOF)
 			return -1;
-		return b.get();
+		return b.get() & 0xFF;
 	}
 
 	@Override

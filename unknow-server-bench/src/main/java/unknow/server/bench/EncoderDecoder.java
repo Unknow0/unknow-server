@@ -12,12 +12,12 @@ import unknow.server.servlet.utils.Utf8Decoder;
 import unknow.server.servlet.utils.Utf8Encoder;
 
 public class EncoderDecoder {
-	private static final String data = "Hello world!\nÇa va bien ?\nПривет, как дела?\n你好，世界\nこんにちは世界\n👋🌍✨🔥🚀\nLorem ipsum dolor sit amet, consectetur adipiscing elit.";
+	private static final String DATA = "Hello world!\nÇa va bien ?\nПривет, как дела?\n你好，世界\nこんにちは世界\n👋🌍✨🔥🚀\nLorem ipsum dolor sit amet, consectetur adipiscing elit.";
 
 	@Benchmark
 	public String utf8Encoder() {
 		ByteBuffer b = ByteBuffer.allocate(4096);
-		Utf8Encoder.encode(data, b);
+		Utf8Encoder.encode(DATA, b);
 		return new Utf8Decoder().append(b.array(), 0, b.position()).done();
 	}
 
@@ -25,7 +25,7 @@ public class EncoderDecoder {
 	public String charset() {
 		ByteBuffer b = ByteBuffer.allocate(4096);
 		CharsetEncoder e = StandardCharsets.UTF_8.newEncoder();
-		e.encode(CharBuffer.wrap(data), b, true);
+		e.encode(CharBuffer.wrap(DATA), b, true);
 
 		b.flip();
 		CharsetDecoder d = StandardCharsets.UTF_8.newDecoder();
