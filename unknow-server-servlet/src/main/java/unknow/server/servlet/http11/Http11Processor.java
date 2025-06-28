@@ -77,6 +77,7 @@ public final class Http11Processor implements NIOConnectionHandler {
 					if (c != '\n') {
 						co.write(ByteBuffer.wrap(HttpError.BAD_REQUEST.encoded));
 						co.getOut().close();
+						b.position(b.limit());
 						return;
 					}
 					cr = false;
@@ -112,6 +113,7 @@ public final class Http11Processor implements NIOConnectionHandler {
 					if (c != '\n') {
 						co.write(ByteBuffer.wrap(HttpError.BAD_REQUEST.encoded));
 						co.getOut().close();
+						b.position(b.limit());
 						return;
 					}
 					cr = false;
@@ -121,7 +123,7 @@ public final class Http11Processor implements NIOConnectionHandler {
 				else {
 					co.write(ByteBuffer.wrap(HttpError.BAD_REQUEST.encoded));
 					co.getOut().close();
-					return;
+					b.position(b.limit());
 				}
 				break;
 			default:
