@@ -1,9 +1,11 @@
 package unknow.server.servlet.http11;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import unknow.server.nio.NIOConnectionHandler;
 import unknow.server.servlet.HttpConnection;
+import unknow.server.servlet.HttpError;
 import unknow.server.servlet.impl.ServletRequestImpl;
 import unknow.server.servlet.utils.OrderedLock;
 
@@ -44,12 +46,12 @@ public final class Http11Processor implements NIOConnectionHandler {
 	}
 
 	@Override
-	public void onRead(ByteBuffer b, long now) {
+	public void onRead(ByteBuffer b, long now) throws IOException {
 		while (b.hasRemaining())
 			process(b);
 	}
 
-	private final void process(ByteBuffer b) {
+	private final void process(ByteBuffer b) throws IOException {
 		byte c;
 		switch (state) {
 			case START:
@@ -72,8 +74,11 @@ public final class Http11Processor implements NIOConnectionHandler {
 			case CHUNKED_START:
 				c = b.get();
 				if (cr) {
-					if (c != '\n')
-						; // error
+					if (c != '\n') {
+						co.write(ByteBuffer.wrap(HttpError.BAD_REQUEST.encoded));
+						co.getOut().close();
+						return;
+					}
 					cr = false;
 					contentLength = Integer.parseInt(sb.toString(), 16);
 					sb.setLength(0);
@@ -104,14 +109,20 @@ public final class Http11Processor implements NIOConnectionHandler {
 			case CHUNKED_END:
 				c = b.get();
 				if (cr) {
-					if (c != '\n')
-						; // error
+					if (c != '\n') {
+						co.write(ByteBuffer.wrap(HttpError.BAD_REQUEST.encoded));
+						co.getOut().close();
+						return;
+					}
 					cr = false;
 					state = dec.closed() ? START : CHUNKED_START;
 				} else if (c == '\r')
 					cr = true;
-				else
-					; // error
+				else {
+					co.write(ByteBuffer.wrap(HttpError.BAD_REQUEST.encoded));
+					co.getOut().close();
+					return;
+				}
 				break;
 			default:
 		}

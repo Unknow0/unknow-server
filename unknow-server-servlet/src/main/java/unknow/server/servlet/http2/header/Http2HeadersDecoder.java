@@ -37,34 +37,14 @@ public class Http2HeadersDecoder extends Http2Headers {
 	*/
 	public void decode(ByteBuffer chunk, BiConsumer<String, String> h) throws IOException {
 		while (chunk.hasRemaining())
-			process(chunk, h);
+			decodeOne(chunk, h);
 	}
 
-	private void process(ByteBuffer chunk, BiConsumer<String, String> h) throws IOException {
+	private void decodeOne(ByteBuffer chunk, BiConsumer<String, String> h) throws IOException {
 		int bb;
 		switch (state) {
 			case READ_HEADER_FIRST:
-				int b = chunk.get() & 0xFF;
-				int prefix;
-				if ((b & 0b1000_0000) != 0) {      // indexed
-					type = 1;
-					prefix = 7;
-				} else if ((b & 0b0100_0000) != 0) { // literal + indexing
-					type = 2;
-					prefix = 6;
-				} else if ((b & 0b0010_0000) != 0) { // table size update
-					type = 3;
-					prefix = 5;
-				} else {                             // literal no indexing
-					type = 4;
-					prefix = 4;
-				}
-				value = b & MASK[prefix];
-				if (value == MAX[prefix]) { // on continue l'entier
-					shift = 0;
-					state = State.READ_INT_CONT;
-				} else
-					onIntegerDecoded(h);
+				decodeHeader(chunk, h);
 				break;
 			case READ_INT_CONT:
 				bb = chunk.get() & 0xFF;
@@ -122,6 +102,30 @@ public class Http2HeadersDecoder extends Http2Headers {
 		}
 	}
 
+	private void decodeHeader(ByteBuffer chunk, BiConsumer<String, String> h) throws IOException {
+		int b = chunk.get() & 0xFF;
+		int prefix;
+		if ((b & 0b1000_0000) != 0) {      // indexed
+			type = 1;
+			prefix = 7;
+		} else if ((b & 0b0100_0000) != 0) { // literal + indexing
+			type = 2;
+			prefix = 6;
+		} else if ((b & 0b0010_0000) != 0) { // table size update
+			type = 3;
+			prefix = 5;
+		} else {                             // literal no indexing
+			type = 4;
+			prefix = 4;
+		}
+		value = b & MASK[prefix];
+		if (value == MAX[prefix]) { // on continue l'entier
+			shift = 0;
+			state = State.READ_INT_CONT;
+		} else
+			onIntegerDecoded(h);
+	}
+
 	private boolean decodeString(ByteBuffer b) throws IOException {
 		if (huffman) {
 			Http2Huffman.decode(b, s, sb);
@@ -161,6 +165,7 @@ public class Http2HeadersDecoder extends Http2Headers {
 				ensureMax();
 				state = State.READ_HEADER_FIRST;
 				break;
+			default:
 		}
 	}
 }
