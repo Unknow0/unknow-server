@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.net.URI;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -28,7 +30,6 @@ import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.NewCookie;
 import jakarta.ws.rs.core.Response;
 import unknow.server.http.jaxrs.JaxrsRuntime;
-import unknow.server.util.io.Buffers;
 
 /**
  * @author unknow
@@ -39,7 +40,7 @@ public class ResponseImpl extends Response {
 	private final Annotation[] annotations;
 	private final MultivaluedMap<String, Object> headers;
 
-	private Buffers buffers;
+	private List<ByteBuffer> buffers;
 
 	/**
 	 * create new ResponseBuilderImpl.ResponseImpl
@@ -115,16 +116,18 @@ public class ResponseImpl extends Response {
 		if (!(entity instanceof InputStream))
 			return false;
 		try (InputStream is = (InputStream) entity) {
-
-			buffers = new Buffers();
-			byte[] b = new byte[4096];
+			buffers = new ArrayList<>();
+			ByteBuffer b = ByteBuffer.allocate(4096);
 			int l;
-			while ((l = is.read(b)) != -1)
-				buffers.write(b, 0, l);
+			while ((l = is.read(b.array(), b.position(), b.remaining())) != -1) {
+				b.position(b.position() + l);
+				if (!b.hasRemaining()) {
+					buffers.add(b.flip());
+					b = ByteBuffer.allocate(4096);
+				}
+			}
+			buffers.add(b.flip());
 			return true;
-		} catch (InterruptedException e) {
-			Thread.currentThread().interrupt();
-			throw new ProcessingException(e);
 		} catch (IOException e) {
 			throw new ProcessingException(e);
 		}

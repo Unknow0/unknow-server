@@ -22,7 +22,6 @@ import unknow.server.maven.servlet.Names;
 import unknow.server.maven.servlet.descriptor.Descriptor;
 import unknow.server.maven.servlet.descriptor.SD;
 import unknow.server.servlet.impl.FilterConfigImpl;
-import unknow.server.servlet.impl.ServletContextImpl;
 import unknow.server.util.data.ArraySet;
 
 /**
@@ -35,7 +34,7 @@ public class CreateFilters extends Builder {
 		TypeCache types = ctx.type();
 		ClassOrInterfaceType t = types.getClass(FilterConfigImpl.class);
 		BlockStmt b = ctx.self().addMethod("createFilters", Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL).setType(types.array(FilterConfigImpl.class))
-				.addMarkerAnnotation(Override.class).addParameter(types.getClass(ServletContextImpl.class), "ctx").createBody();
+				.addMarkerAnnotation(Override.class).createBody();
 
 		NodeList<Expression> filters = new NodeList<>();
 		for (SD f : descriptor.filters) {

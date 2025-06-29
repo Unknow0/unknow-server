@@ -3,9 +3,6 @@ package unknow.server.servlet.utils;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-/**
- * lock to reorder response
- */
 public class OrderedLock {
 	private final ReentrantLock lock;
 	private final Condition cond;
@@ -16,6 +13,10 @@ public class OrderedLock {
 	public OrderedLock() {
 		lock = new ReentrantLock();
 		cond = lock.newCondition();
+	}
+
+	public boolean isDone() {
+		return id == nextId;
 	}
 
 	public int nextId() {

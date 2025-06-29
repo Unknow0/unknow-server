@@ -42,10 +42,7 @@ public class ServletResource extends HttpServlet {
 	 * @param content if true file content will be sent
 	 * @throws IOException
 	 */
-	private final void process(HttpServletRequest req, HttpServletResponse resp, boolean content) throws IOException {
-		Integer code = (Integer) req.getAttribute("javax.servlet.error.status_code");
-		if (code != null)
-			resp.setStatus(code);
+	private final void process(HttpServletResponse resp, boolean content) throws IOException {
 		resp.setContentLengthLong(size);
 		resp.setContentType(mimeType);
 
@@ -64,12 +61,12 @@ public class ServletResource extends HttpServlet {
 
 	@Override
 	protected final void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-		process(req, resp, true);
+		process(resp, true);
 	}
 
 	@Override
 	protected final void doHead(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-		process(req, resp, false);
+		process(resp, false);
 	}
 
 	@Override

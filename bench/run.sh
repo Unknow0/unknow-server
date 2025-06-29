@@ -5,11 +5,7 @@ unknow_start() {
 	pid=$!
 }
 unknow_stop() {
-	kill -3 $pid
 	echo 'shutdown' | nc 127.0.0.1 8009
-	sleep 10
-	kill -9 $pid 2>/dev/null
-	pid=
 }
 native_start() {
 	chmod a+x server-native
@@ -18,9 +14,6 @@ native_start() {
 }
 native_stop() {
 	echo 'shutdown' | nc 127.0.0.1 8009
-	sleep 10
-	kill -9 $pid 2>/dev/null
-	pid=
 }
 tomcat_start() {
 	cp unknow-server-test/unknow-server-test-tomcat/target/*.war $CATALINA_HOME/webapps/ROOT.war || exit 1
@@ -29,9 +22,6 @@ tomcat_start() {
 }
 tomcat_stop() {
 	$CATALINA_HOME/bin/shutdown.sh
-	sleep 2
-	kill -9 $pid
-	pid=
 }
 
 cxf_start() {
@@ -39,23 +29,24 @@ cxf_start() {
 	$CATALINA_HOME/bin/catalina.sh run > logs/tomcat.log 2>&1 || exit 1 &
 	pid=$!
 }
-cxf_stop() { tomcat_stop; }
+cxf_stop() { 
+	$CATALINA_HOME/bin/shutdown.sh
+ }
 
-mkdir -p out
+mkdir -p out logs
 trap '[[ "$pid" ]] && kill -9 $pid' EXIT
 
 keytool -genkey -alias server -keyalg RSA -validity 365 -keystore store.jks -storepass 123456 -storetype JKS -keypass 123456 -dname "C=FR"
 
-mkdir -p out logs
-
 ${1}_start
 sleep 10
 echo -e "\nWarming up"
-bash bench/tests.sh 127.0.0.1 1  50000 30 $pid
+bash bench/tests.sh 127.0.0.1  1  50000
 
 sleep 10
 echo -e "\nTesting.."
-bash bench/tests.sh 127.0.0.1 10 100000 90 $pid out/$1
+bash bench/tests.sh 127.0.0.1 10 1000000 out/$1
 
-${1}_stop
+${1}_stop &
 sleep 10
+kill -9 $(jobs -p) || true

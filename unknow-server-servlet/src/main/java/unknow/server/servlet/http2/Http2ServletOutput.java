@@ -1,33 +1,38 @@
 package unknow.server.servlet.http2;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http2.DefaultHttp2DataFrame;
-import io.netty.handler.codec.http2.Http2FrameStream;
 import unknow.server.servlet.impl.AbstractServletOutput;
+import unknow.server.servlet.impl.ServletResponseImpl;
 
-public class Http2ServletOutput extends AbstractServletOutput<Http2ServletResponse> {
+public class Http2ServletOutput extends AbstractServletOutput {
+	private final Http2Processor p;
+	private final int id;
+	private boolean endStreamSend;
 
-	private final Http2FrameStream stream;
+	public Http2ServletOutput(ServletResponseImpl res, Http2Processor p, int id) {
+		super(res, 9);
+		this.p = p;
+		this.id = id;
+		this.endStreamSend = false;
+	}
 
-	protected Http2ServletOutput(ChannelHandlerContext out, Http2ServletResponse res, Http2FrameStream stream) {
-		super(out, res);
-		this.stream = stream;
+	public boolean isDone() {
+		return isClosed() && isEmpty();
 	}
 
 	@Override
-	protected void writebuffer() throws IOException {
-		DefaultHttp2DataFrame h = new DefaultHttp2DataFrame(buffer, isClosed()).stream(stream);
-		if (h.isEndStream())
-			ctx.writeAndFlush(h);
-		else
-			ctx.write(h);
-		buffer = ctx.alloc().buffer(getBufferSize() < 8192 ? 8192 : getBufferSize());
+	protected void afterClose() throws IOException {
+		if (!endStreamSend)
+			p.sendData(id, null, true);
 	}
 
 	@Override
-	public String toString() {
-		return stream.toString();
+	protected void writeBuffer(ByteBuffer b) throws IOException {
+		boolean closed = isClosed();
+		p.sendData(id, b, closed);
+		if (closed)
+			endStreamSend = true;
 	}
 }

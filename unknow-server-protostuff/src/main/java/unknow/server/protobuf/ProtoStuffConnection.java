@@ -5,6 +5,7 @@ package unknow.server.protobuf;
  */
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import javax.net.ssl.SSLEngine;
 
@@ -12,7 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.protostuff.CodedInput;
-import io.protostuff.LimitedInputStream;
 import io.protostuff.LinkedBuffer;
 import io.protostuff.Message;
 import io.protostuff.Output;
@@ -20,10 +20,11 @@ import io.protostuff.ProtobufOutput;
 import io.protostuff.ProtostuffOutput;
 import io.protostuff.Schema;
 import io.protostuff.WriteSession;
-import unknow.server.nio.NIOConnectionAbstract;
-import unknow.server.nio.NIOConnectionAbstract.Out;
+import unknow.server.nio.NIOConnection;
+import unknow.server.nio.NIOConnection.Out;
 import unknow.server.nio.NIOConnectionHandler;
-import unknow.server.util.io.Buffers;
+import unknow.server.util.io.ByteBufferInputStream;
+import unknow.server.util.io.LimitedInputStream;
 
 /**
  * @author unknow
@@ -35,18 +36,20 @@ public abstract class ProtoStuffConnection<T> implements NIOConnectionHandler {
 	private final boolean protostuff;
 
 	private Out out;
+	private ByteBufferInputStream in;
 	private LimitedInputStream lis;
 	private CodedInput input;
 
 	protected ProtoStuffConnection(Schema<T> schema, boolean protostuff) {
 		this.schema = schema;
 		this.protostuff = protostuff;
+		this.in = new ByteBufferInputStream();
 	}
 
 	@Override
-	public final void onInit(NIOConnectionAbstract co, SSLEngine ssl) {
+	public final void init(NIOConnection co, long now, SSLEngine ssl) {
 		out = co.getOut();
-		lis = new LimitedInputStream(co.getIn(), Integer.MAX_VALUE);
+		lis = new LimitedInputStream(in);
 		input = new CodedInput(lis, protostuff);
 	}
 
@@ -71,19 +74,17 @@ public abstract class ProtoStuffConnection<T> implements NIOConnectionHandler {
 	}
 
 	@Override
-	public final void onWrite() throws InterruptedException, IOException { // ok
-	}
-
-	@Override
-	public final void onRead(Buffers b) {
+	public final void onRead(ByteBuffer b, long now) throws IOException {
+		in.addBuffer(b);
 		lis.mark(48);
 		try {
 			int size = input.readUInt32();
-			if (b.length() < size) {
+			if (b.remaining() < size) {
 				lis.reset();
 				return;
 			}
 
+			lis.setLimit(size);
 			T m = schema.newMessage();
 			schema.mergeFrom(input, m);
 			process(m);
@@ -91,14 +92,6 @@ public abstract class ProtoStuffConnection<T> implements NIOConnectionHandler {
 			logger.warn("", e);
 			out.close();
 		}
-	}
-
-	@Override
-	public final void onHandshakeDone(SSLEngine sslEngine) throws InterruptedException { // ok
-	}
-
-	@Override
-	public final void onFree() throws IOException { // ok
 	}
 
 	protected abstract void process(T t) throws IOException;

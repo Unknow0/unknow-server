@@ -1,60 +1,125 @@
 package unknow.server.nio;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.function.Consumer;
 
 import javax.net.ssl.SSLEngine;
 
-import unknow.server.util.io.Buffers;
-
+@SuppressWarnings("unused")
 public interface NIOConnectionHandler {
 
 	/**
-	 * called after the connection is initialized
+	 * @return true if the handler should be init async
+	 */
+	default boolean asyncInit() {
+		return false;
+	}
+
+	/**
+	 * called to initialize the connection
 	 * 
 	 * @param co the connection
+	 * @param now currentTimeMillis
 	 * @param sslEngine the sslEngine for ssl connection null for other
-	 * @throws InterruptedException on interrupt
+	 * @throws IOException on io exception
 	 */
-	void onInit(NIOConnectionAbstract co, SSLEngine sslEngine) throws InterruptedException;
+	default void init(NIOConnection co, long now, SSLEngine sslEngine) throws IOException { // ok
+	}
 
 	/**
 	 * called when the handshake process finish
 	 * 
 	 * @param sslEngine the sslEngine
-	 * @throws InterruptedException on interrupt
+	 * @param now currentTimeMillis
+	 * @throws IOException on io exception
 	 */
-	void onHandshakeDone(SSLEngine sslEngine) throws InterruptedException;
+	default void onHandshakeDone(SSLEngine sslEngine, long now) throws IOException { // ok
+	}
 
 	/**
 	 * called after some data has been read
 	 * 
 	 * @param b the read buffers
-	 * @throws InterruptedException on interrupt
+	 * @param now currentTimeMillis
 	 * @throws IOException on io exception
 	 */
-	void onRead(Buffers b) throws InterruptedException, IOException;
+	default void onRead(ByteBuffer b, long now) throws IOException { // ok
+	}
+
+	/**
+	 * called before a buffer is written (allow to collect buffers)
+	 * @param b buffer to be written
+	 * @param now currentTimeMillis
+	 * @param c consumer of generated buffers
+	 * @throws IOException on io exception
+	 */
+	default void prepareWrite(ByteBuffer b, long now, Consumer<ByteBuffer> c) throws IOException {
+		c.accept(b);
+	}
+
+	/**
+	 * called before a buffer is written
+	 * @param now currentTimeMillis
+	 * @param c consumer of generated buffers
+	 * @throws IOException on io exception
+	 */
+	default void beforeWrite(long now, Consumer<ByteBuffer> c) throws IOException { // ok
+	}
+
+	/**
+	 * check if this handler has some pengin write
+	 * @return true if the handler has pending write
+	 */
+	default boolean hasPendingWrites() {
+		return false;
+	}
 
 	/**
 	 * called after data has been written
 	 * 
-	 * @throws InterruptedException on interrupt
+	 * @param now currentTimeMillis
 	 * @throws IOException on io exception
 	 */
-	void onWrite() throws InterruptedException, IOException;
+	default void onWrite(long now) throws IOException { // ok
+	}
 
 	/**
-	 * check if the connection is closed and should be stoped
+	 * called when the output is closed
+	 */
+	default void onOutputClosed() { // ok
+	}
+
+	/**
+	 * check if the connection can be closed
 	 * 
-	 * @param now System.currentMillis()
+	 * @param now currentTimeMillis
 	 * @param stop if true the server is in stop phase
-	 * @return true is the collection is closed
+	 * @return true is the collection can be closed
 	 */
-	boolean closed(long now, boolean stop);
+	default boolean canClose(long now, boolean stop) {
+		return false;
+	}
 
 	/**
-	 * called when the connection is free
-	 * 
-	 * @throws IOException on io exception
+	 * start the closing of the connection
 	 */
-	void onFree() throws IOException;
+	default void startClose() { // ok
+	}
+
+	/**
+	 * try to finish the closing
+	 * @param now currentTimeMillis
+	 * @return true if the connection is closed
+	 */
+	default boolean finishClosing(long now) {
+		return true;
+	}
+
+	/**
+	 * called when the connection is closed
+	 */
+	default void doneClosing() { // ok
+	}
+
 }

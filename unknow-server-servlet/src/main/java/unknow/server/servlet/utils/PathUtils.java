@@ -58,8 +58,7 @@ public class PathUtils {
 			if (c == '=')
 				c = readParam(sb, r, false);
 
-			if (!key.isEmpty())
-				p.computeIfAbsent(key, k -> new ArrayList<>(1)).add(sb.toString());
+			p.computeIfAbsent(key, k -> new ArrayList<>(1)).add(sb.toString());
 			sb.setLength(0);
 		} while (c != -1);
 	}

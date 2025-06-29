@@ -8,14 +8,18 @@ import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
-import java.util.ArrayDeque;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Queue;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Function;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import unknow.server.nio.NIOServer.ConnectionFactory;
 
 /**
  * Thread responsible of all io
@@ -27,74 +31,119 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 
 	/** this worker id */
 	private final int id;
+	/** executor for delegating task */
+	private final ExecutorService executor;
 	/** the listener */
 	private final NIOServerListener listener;
 
-	/** used for all synchronization */
-	private final Lock mutex;
 	/** buffer to read/write */
 	private final ByteBuffer buf;
 
-	private final Queue<SelectionKey> init;
+	private final Queue<WorkerTask> tasks;
 
-	private long lastCheck;
+	private final List<NIOConnection> closing;
+
+	private NIOConnection head;
+	private NIOConnection tail;
 
 	/**
 	 * create new IOWorker
 	 * 
 	 * @param id the worker id
+	 * @param executor executor for delegated task
 	 * @param listener listener to use
 	 * @param timeout the timeout on select
 	 * @throws IOException on ioexception
 	 */
-	public NIOWorker(int id, NIOServerListener listener, long timeout) throws IOException {
+	public NIOWorker(int id, ExecutorService executor, NIOServerListener listener, long timeout) throws IOException {
 		super("NIOWorker-" + id, timeout);
 		this.id = id;
+		this.executor = executor;
 		this.listener = listener;
 
-		this.mutex = new ReentrantLock();
-		this.buf = ByteBuffer.allocateDirect(25000);
-		this.init = new ArrayDeque<>();
+		this.buf = ByteBuffer.allocateDirect(16000);
+		this.tasks = new ConcurrentLinkedQueue<>();
+		this.closing = new LinkedList<>();
+	}
+
+	protected final void execute(WorkerTask task) {
+		tasks.add(task);
+		selector.wakeup();
 	}
 
 	/**
 	 * register a new socket to this thread
 	 * 
 	 * @param socket the socket to register
-	 * @param pool the connection factory
-	 * @throws IOException on ioexception
-	 * @throws InterruptedException on interrupt
+	 * @param factory the connection factory
 	 */
-	@SuppressWarnings("resource")
 	@Override
-	public final void register(SocketChannel socket, Function<SelectionKey, NIOConnectionAbstract> pool) throws IOException, InterruptedException {
-		socket.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.TRUE).configureBlocking(false);
-		mutex.lockInterruptibly();
-		try {
-			selector.wakeup();
-			SelectionKey key = socket.register(selector, 0);
-			init.add(key);
-			key.attach(pool.apply(key));
-		} finally {
-			mutex.unlock();
+	public final void register(SocketChannel socket, ConnectionFactory factory) {
+		execute(new RegisterTask(socket, factory));
+	}
+
+	@Override
+	protected void onSelect(long now, boolean close) {
+		WorkerTask r;
+		while ((r = tasks.poll()) != null)
+			r.run(now);
+
+		checkPending(now, close);
+		finishClosing(now);
+	}
+
+	private void checkPending(long now, boolean close) {
+		if (head == null)
+			return;
+		long end = now - 1000;
+		NIOConnection co = head;
+		while (co != null && co.lastCheck < end) {
+			NIOConnection next = co.next;
+			if (!co.key.isValid() || co.canClose(now, close))
+				startClose(co);
+			else
+				co.lastCheck = now;
+			co = next;
+		}
+
+		// move all to tail
+		if (co != null && co.prev != null) {
+			tail.next = head;
+			head.prev = tail;
+
+			tail = co.prev;
+			tail.next = null;
+
+			co.prev = null;
+			head = co;
+		}
+	}
+
+	private void finishClosing(long now) {
+		if (closing.isEmpty())
+			return;
+
+		Iterator<NIOConnection> it = closing.iterator();
+		while (it.hasNext()) {
+			NIOConnection co = it.next();
+			if (!co.key.isValid() || !co.hasPendingWrites() && co.finishClosing(now)) {
+				it.remove();
+				doneClose(co);
+			}
 		}
 	}
 
 	@Override
-	@SuppressWarnings("resource")
-	protected final void selected(SelectionKey key) throws IOException, InterruptedException {
-		NIOConnectionAbstract h = (NIOConnectionAbstract) key.attachment();
-		SocketChannel channel = (SocketChannel) key.channel();
+	protected final void selected(long now, SelectionKey key) throws IOException {
+		NIOConnection co = (NIOConnection) key.attachment();
 
 		if (key.isValid() && key.isWritable()) {
 			try {
-				h.writeInto(buf);
-			} catch (InterruptedException e) {
-				logger.error("failed to write {}", h, e);
-				Thread.currentThread().interrupt();
+				doWrite(co, now);
 			} catch (Exception e) {
-				logger.error("failed to write {}", h, e);
-				channel.close();
+				logger.error("failed to write {}", co, e);
+				remove(co);
+				doneClose(co);
 			} finally {
 				buf.clear();
 			}
@@ -103,53 +152,165 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		// Tests whether this key's channel is ready to accept a new socket connection
 		if (key.isValid() && key.isReadable()) {
 			try {
-				h.readFrom(buf);
-			} catch (InterruptedException e) {
-				logger.error("failed to read {}", h, e);
-				Thread.currentThread().interrupt();
+				doRead(co, now);
 			} catch (Exception e) {
-				logger.error("failed to read {}", h, e);
-				channel.close();
+				logger.error("failed to read {}", co, e);
+				remove(co);
+				doneClose(co);
 			} finally {
 				buf.clear();
 			}
 		}
 	}
 
-	@Override
-	protected void onSelect(boolean close) throws InterruptedException {
-		mutex.lock();
-		try {
-			SelectionKey k;
-			while ((k = init.poll()) != null) {
-				k.interestOps(SelectionKey.OP_READ);
-				NIOConnectionAbstract co = (NIOConnectionAbstract) k.attachment();
-				listener.accepted(id, co);
-				co.onInit();
-			}
+	private void doRead(NIOConnection co, long now) throws IOException {
+		int l;
+		l = co.channel.read(buf);
+		if (l == -1) {
+			co.key.interestOpsAnd(~SelectionKey.OP_READ);
+			startClose(co);
+			return;
+		}
+		if (l == 0) {
+			toTail(co, now);
+			return;
+		}
+		buf.flip();
+		ByteBuffer data = ByteBuffer.allocate(buf.remaining());
+		data.put(buf);
+		data.flip();
+		co.onRead(data, now);
+	}
 
-			long now = System.currentTimeMillis();
-			if (now - lastCheck < timeout)
-				return;
-			lastCheck = now;
-			for (SelectionKey key : selector.keys()) {
-				NIOConnectionAbstract co = (NIOConnectionAbstract) key.attachment();
-				if (!key.isValid() || co.closed(now, close)) {
-					listener.closed(id, co);
-					key.cancel();
-					try {
-						key.channel().close();
-					} catch (@SuppressWarnings("unused") IOException e) { // ignore
-					}
-					try {
-						co.free();
-					} catch (Exception e) {
-						logger.warn("Failed to free connection {}", co, e);
-					}
+	private void doWrite(NIOConnection co, long now) throws IOException {
+		co.beforeWrite(now);
+		if (co.channel.write(co.writes.buf, 0, co.writes.len) > 0) {
+			co.onWrite(now);
+			toTail(co, now);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	public final <T> Future<T> submit(Runnable r) {
+		return (Future<T>) executor.submit(r);
+	}
+
+	private void startClose(NIOConnection co) {
+		logger.debug("{} start closing", co);
+		closing.add(co);
+		remove(co);
+		co.startClose();
+	}
+
+	private void doneClose(NIOConnection co) {
+		listener.closed(id, co);
+		try {
+			co.doneClosing();
+		} catch (Exception e) {
+			logger.warn("Failed to free connection {}", co, e);
+		}
+	}
+
+	public static interface WorkerTask {
+		void run(long now);
+	}
+
+	private final void unlink(NIOConnection co) {
+		if (co.prev != null)
+			co.prev.next = co.next;
+		if (co.next != null)
+			co.next.prev = co.prev;
+
+		if (head == co)
+			head = co.next;
+		if (tail == co)
+			tail = co.prev;
+	}
+
+	private final void remove(NIOConnection co) {
+		unlink(co);
+		co.next = co.prev = co;
+	}
+
+	private final void toTail(NIOConnection co, long now) {
+		co.lastCheck = now;
+
+		if (tail == co || co.next == co)
+			return;
+		unlink(co);
+
+		co.next = null;
+		co.prev = tail;
+
+		if (tail != null)
+			tail.next = co;
+		tail = co;
+		if (head == null)
+			head = co;
+	}
+
+	private final class RegisterTask implements WorkerTask {
+		private final SocketChannel socket;
+		private final ConnectionFactory factory;
+
+		public RegisterTask(SocketChannel socket, ConnectionFactory factory) {
+			this.socket = socket;
+			this.factory = factory;
+		}
+
+		@SuppressWarnings("resource")
+		@Override
+		public void run(long now) {
+			SelectionKey key = null;
+			try {
+				socket.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.TRUE).setOption(StandardSocketOptions.TCP_NODELAY, Boolean.TRUE).configureBlocking(false);
+				socket.setOption(StandardSocketOptions.SO_RCVBUF, 64 * 1024).setOption(StandardSocketOptions.SO_SNDBUF, 64 * 1024);
+				key = socket.register(selector, 0);
+			} catch (IOException e) {
+				try {
+					socket.close();
+				} catch (IOException ex) {
+					e.addSuppressed(ex);
 				}
+				logger.warn("Failed to register socket", e);
+				return;
 			}
-		} finally {
-			mutex.unlock();
+			NIOConnection co = new NIOConnection(NIOWorker.this, key, factory.build());
+			key.attach(co);
+			listener.accepted(id, co);
+			if (!co.asyncInit()) {
+				try {
+					co.init(co, now, null);
+					key.interestOps(SelectionKey.OP_READ);
+				} catch (Exception e) {
+					logger.warn("Failed to init connection", e);
+					startClose(co);
+					return;
+				}
+			} else
+				submit(new AsyncInit(co));
+			toTail(co, now);
+		}
+	}
+
+	private static final class AsyncInit implements Runnable {
+		private final NIOConnection co;
+
+		public AsyncInit(NIOConnection co) {
+			this.co = co;
+		}
+
+		@SuppressWarnings("resource")
+		@Override
+		public void run() {
+			try {
+				co.init(co, System.currentTimeMillis(), null);
+				co.key.interestOps(SelectionKey.OP_READ);
+				co.key.selector().wakeup();
+			} catch (Exception e) {
+				logger.warn("Failed to init connection", e);
+				co.key.cancel();
+			}
 		}
 	}
 }

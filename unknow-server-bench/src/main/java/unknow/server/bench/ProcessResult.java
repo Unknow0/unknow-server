@@ -96,8 +96,8 @@ public class ProcessResult {
 
 	private void printResult(Formatter out) {
 		Function<Result, String> thrpt = r -> Integer.toString((int) r.thrpt());
-		Function<Result, String> time = r -> r.time.cnt() == 0 ? "" : String.format("%.2f ± %.2f", r.time.avg(MILLI), r.time.err(MILLI, .999));
-		Function<Result, String> lattency = r -> r.latency.cnt() == 0 ? "" : String.format("%.2f ± %.2f", r.latency.avg(ΜICRO), r.latency.err(ΜICRO, .999));
+		Function<Result, String> time = r -> r.time.toString(MILLI);
+		Function<Result, String> lattency = r -> r.latency.toString(ΜICRO);
 		Function<Result, String> error = r -> Long.toString(r.err());
 
 		Map<String, Integer> lengths = new HashMap<>();
@@ -240,12 +240,13 @@ public class ProcessResult {
 		private long cnt;
 		private double sum;
 		private double sum2;
+		private double max = 0;
 
 		public void add(double v) {
 			cnt++;
 			sum += v;
 			sum2 += v * v;
-
+			max = Math.max(v, max);
 		}
 
 		public long cnt() {
@@ -268,6 +269,16 @@ public class ProcessResult {
 			TDistribution tDist = new TDistribution(cnt - 1.);
 			double a = tDist.inverseCumulativeProbability(1 - (1 - confidence) / 2);
 			return a * sdev(scale) / Math.sqrt(cnt);
+		}
+
+		public String toString(double scale) {
+			String u = "";
+			double m = max * scale;
+			if (m >= 1000) {
+				m = m / 1000.;
+				u = "k";
+			}
+			return cnt == 0 ? "" : String.format("%.2f ± %.2f (%.2f%s)", avg(scale), err(scale, .999), m, u);
 		}
 	}
 }

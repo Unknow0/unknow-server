@@ -8,7 +8,6 @@ import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,11 +47,10 @@ public class NIOServer extends NIOLoop {
 	 * @throws IOException on ioException
 	 */
 	@SuppressWarnings("resource")
-	public void bind(SocketAddress a, Function<SelectionKey, NIOConnectionAbstract> s) throws IOException {
+	public void bind(SocketAddress a, ConnectionFactory s) throws IOException {
 		logger.info("Server bind to {}", a);
 		ServerSocketChannel open = ServerSocketChannel.open();
-		open.configureBlocking(false);
-		open.register(selector, SelectionKey.OP_ACCEPT, s);
+		open.configureBlocking(false).register(selector, SelectionKey.OP_ACCEPT, s);
 		open.bind(a);
 	}
 
@@ -64,10 +62,9 @@ public class NIOServer extends NIOLoop {
 
 	@SuppressWarnings("resource")
 	@Override
-	protected void selected(SelectionKey key) throws IOException, InterruptedException {
+	protected void selected(long now, SelectionKey key) throws IOException, InterruptedException {
 		try {
-			@SuppressWarnings("unchecked")
-			Function<SelectionKey, NIOConnectionAbstract> factory = (Function<SelectionKey, NIOConnectionAbstract>) key.attachment();
+			ConnectionFactory factory = (ConnectionFactory) key.attachment();
 			SocketChannel socket = ((ServerSocketChannel) key.channel()).accept();
 			workers.register(socket, factory);
 		} catch (IOException e) {
@@ -96,5 +93,9 @@ public class NIOServer extends NIOLoop {
 		StringBuilder sb = new StringBuilder("NIOServer[");
 		// TODO
 		return sb.append(']').toString();
+	}
+
+	public static interface ConnectionFactory {
+		NIOConnectionHandler build();
 	}
 }

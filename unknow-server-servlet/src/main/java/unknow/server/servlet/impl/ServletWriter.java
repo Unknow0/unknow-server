@@ -2,45 +2,57 @@ package unknow.server.servlet.impl;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.nio.CharBuffer;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
+import java.nio.charset.CharsetEncoder;
+import java.nio.charset.CoderResult;
+import java.nio.charset.CodingErrorAction;
 
 public class ServletWriter extends Writer {
-	private final AbstractServletOutput<?> out;
-	private final Charset charset;
+	private final AbstractServletOutput out;
+	private final CharsetEncoder enc;
 
-	public ServletWriter(AbstractServletOutput<?> out, Charset charset) {
+	public ServletWriter(AbstractServletOutput out, Charset c) {
 		this.out = out;
-		this.charset = charset;
+		this.enc = c.newEncoder().onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT);
+	}
+
+	public void write(CharBuffer cbuf) throws IOException {
+		if (out.isClosed())
+			throw new IOException("closed");
+		CoderResult r = enc.encode(cbuf, out.buffer, false);
+		if (r.isError())
+			throw new IOException("Invalid caracter found");
+		while (r.isOverflow()) {
+			out.flush();
+			r = enc.encode(cbuf, out.buffer, false);
+			if (r.isError())
+				throw new IOException("Invalid caracter found");
+		}
 	}
 
 	@Override
 	public void write(int c) throws IOException {
-		if (charset == StandardCharsets.UTF_8) {
-			if (c <= 0x7F) { // ASCII (1 byte)
-				out.write((byte) c);
-			} else if (c <= 0x7FF) { // 2-byte UTF-8
-				out.write((byte) (0xC0 | (c >> 6)));
-				out.write((byte) (0x80 | (c & 0x3F)));
-			} else { // 3-byte UTF-8 (valide pour BMP, UTF-16 basique)
-				out.write((byte) (0xE0 | (c >> 12)));
-				out.write((byte) (0x80 | ((c >> 6) & 0x3F)));
-				out.write((byte) (0x80 | (c & 0x3F)));
-			}
-		} else if (charset == StandardCharsets.US_ASCII)
-			out.write(c);
-		else
-			write(Character.toString(c));
-	}
-
-	@Override
-	public void write(char[] cbuf, int off, int len) throws IOException {
-		out.write(new String(cbuf, off, len).getBytes(charset));
+		if (out.isClosed())
+			throw new IOException("closed");
+		CharBuffer cbuf = CharBuffer.allocate(1);
+		cbuf.put((char) c);
+		write(cbuf.flip());
 	}
 
 	@Override
 	public void write(String str, int off, int len) throws IOException {
-		out.write(str.substring(off, off + len).getBytes(charset));
+		if (out.isClosed())
+			throw new IOException("closed");
+		write(CharBuffer.wrap(str, off, off + len));
+	}
+
+	@Override
+	public void write(char[] buf, int off, int len) throws IOException {
+		if (out.isClosed())
+			throw new IOException("closed");
+		write(CharBuffer.wrap(buf, off, len));
+
 	}
 
 	@Override
@@ -52,5 +64,4 @@ public class ServletWriter extends Writer {
 	public void close() throws IOException {
 		out.close();
 	}
-
 }

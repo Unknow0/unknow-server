@@ -1,111 +1,64 @@
 package unknow.server.servlet.impl;
 
 import java.io.IOException;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.ReentrantLock;
+import java.nio.ByteBuffer;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.PooledByteBufAllocator;
 import jakarta.servlet.ReadListener;
 import jakarta.servlet.ServletInputStream;
+import unknow.server.util.io.ByteBufferInputStream;
 
 public class ServletInputStreamImpl extends ServletInputStream {
+	private final ByteBufferInputStream in;
 
-	private final CompositeByteBuf buffers;
-	private final ReentrantLock lock;
-	private final Condition cond;
-	private boolean closed;
-
+	@SuppressWarnings("resource")
 	public ServletInputStreamImpl() {
-		buffers = PooledByteBufAllocator.DEFAULT.compositeBuffer();
-		lock = new ReentrantLock();
-		cond = lock.newCondition();
+		this(new ByteBufferInputStream());
 	}
 
-	public void add(ByteBuf b) {
-		lock.lock();
-		try {
-			if (closed)
-				return;
-			buffers.addComponent(true, b.retain());
-			cond.signalAll();
-		} finally {
-			lock.unlock();
-		}
+	public ServletInputStreamImpl(ByteBufferInputStream in) {
+		this.in = in;
 	}
 
-	public void release() {
-		close();
-		buffers.release();
+	public void append(ByteBuffer b) {
+		in.addBuffer(b);
 	}
 
 	@Override
 	public void close() {
-		lock.lock();
-		try {
-			closed = true;
-			cond.signalAll();
-		} finally {
-			lock.unlock();
-		}
+		in.close();
 	}
 
 	@Override
 	public boolean isFinished() {
-		lock.lock();
-		try {
-			return closed && buffers.isReadable();
-		} finally {
-			lock.unlock();
-		}
+		return in.isClosed();
 	}
 
 	@Override
 	public boolean isReady() {
-		try {
-			return !closed && buffers.isReadable();
-		} finally {
-			lock.unlock();
-		}
+		return in.available() > 0;
 	}
 
 	@Override
-	public void setReadListener(ReadListener readListener) {
-		// TODO Auto-generated method stub
+	public void setReadListener(ReadListener readListener) { // ok
 	}
 
 	@Override
 	public int read() throws IOException {
-		lock.lock();
-		try {
-			while (!closed && !buffers.isReadable())
-				cond.await();
-			return !buffers.isReadable() ? -1 : buffers.readByte() & 0xFF;
-		} catch (InterruptedException e) {
-			Thread.currentThread().interrupt();
-			throw new IOException(e);
-		} finally {
-			lock.unlock();
-		}
+		return in.read();
 	}
 
 	@Override
 	public int read(byte[] b, int off, int len) throws IOException {
-		lock.lock();
-		try {
-			while (!closed && !buffers.isReadable())
-				cond.await();
-			if (!buffers.isReadable())
-				return -1;
-			len = Math.min(len, buffers.readableBytes());
-			buffers.readBytes(b, off, len);
-			return len;
-		} catch (InterruptedException e) {
-			Thread.currentThread().interrupt();
-			throw new IOException(e);
-		} finally {
-			lock.unlock();
-		}
+		return in.read(b, off, len);
+	}
+
+	@Override
+	public int available() throws IOException {
+		return in.available();
+	}
+
+	@Override
+	public long skip(long n) throws IOException {
+		return in.skip(n);
 	}
 }

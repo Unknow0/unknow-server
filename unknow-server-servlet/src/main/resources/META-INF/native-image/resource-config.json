@@ -1,0 +1,11 @@
+{
+	"bundles": [
+		{"name": "jakarta.servlet.http.LocalStrings", "locales":[""]},
+		{"name": "jakarta.servlet.LocalStrings", "locales":[""]}
+	],
+	"resources": {
+		"includes": [
+			{"pattern": "\\QMETA-INF/nioserver.properties\\E"}
+		]
+	}
+}
