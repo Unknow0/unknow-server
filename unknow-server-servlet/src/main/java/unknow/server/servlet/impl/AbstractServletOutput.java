@@ -28,7 +28,8 @@ public abstract class AbstractServletOutput extends ServletOutputStream {
 		this.res = res;
 		this.position = position;
 		if (res != null) {
-			this.buffer = ByteBuffer.allocate(res.getBufferSize() + position).position(position);
+			this.bufferSize = Math.max(res.getBufferSize(), 4096);
+			this.buffer = ByteBuffer.allocate(bufferSize + position).position(position);
 		} else {
 			this.buffer = null;
 			this.bufferSize = 0;
@@ -119,9 +120,10 @@ public abstract class AbstractServletOutput extends ServletOutputStream {
 		int l = Math.min(len, buffer.remaining());
 		buffer.put(b, off, l);
 		len -= l;
+		if (!buffer.hasRemaining())
+			flush();
 		if (len == 0)
 			return;
-		flush();
 		off += l;
 		if (len >= bufferSize) {
 			ByteBuffer buf = ByteBuffer.allocate(len + position).position(position + len);
