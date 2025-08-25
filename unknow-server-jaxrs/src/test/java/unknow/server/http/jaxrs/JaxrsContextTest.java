@@ -26,17 +26,17 @@ public class JaxrsContextTest {
 
 	public static final Stream<Arguments> params() throws NoSuchFieldException, SecurityException {
 		Class<?> c = JaxrsContextTest.class;
-		return Stream.of(
-				Arguments.of(String.class, c.getDeclaredField("s").getGenericType()),
-				Arguments.of(String.class, c.getDeclaredField("l").getGenericType()),
-				Arguments.of(String.class, c.getDeclaredField("d").getGenericType()),
-				Arguments.of(String.class, c.getDeclaredField("a").getGenericType()),
+		return Stream.of( //
+				Arguments.of(String.class, c.getDeclaredField("s").getGenericType()), //
+				Arguments.of(String.class, c.getDeclaredField("l").getGenericType()), //
+				Arguments.of(String.class, c.getDeclaredField("d").getGenericType()), //
+				Arguments.of(String.class, c.getDeclaredField("a").getGenericType()), //
 				Arguments.of(c.getDeclaredField("l").getGenericType(), c.getDeclaredField("g").getGenericType()));
 	}
 
 	@ParameterizedTest
 	@MethodSource
-	 void params(Type expected, Type t) {
+	void params(Type expected, Type t) {
 		assertEquals(expected, JaxrsContext.getParamType(t));
 	}
 

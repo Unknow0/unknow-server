@@ -33,6 +33,7 @@ import jakarta.ws.rs.ext.MessageBodyWriter;
 import jakarta.ws.rs.ext.ParamConverter;
 import jakarta.ws.rs.ext.ParamConverterProvider;
 import unknow.server.http.jaxrs.impl.DefaultConvert;
+import unknow.server.http.jaxrs.impl.JavaTimeTypesConverter;
 import unknow.server.http.jaxrs.impl.MessageByte;
 import unknow.server.http.jaxrs.impl.MessageRW;
 import unknow.server.http.jaxrs.impl.MessageReader;
@@ -47,7 +48,7 @@ import unknow.server.http.jaxrs.impl.MessageString;
 public class JaxrsContext {
 	private static final Logger logger = LoggerFactory.getLogger(JaxrsContext.class);
 	private static final String[] ALL = { "*/*" };
-	private static final List<ParamConverterProvider> params = new ArrayList<>(Arrays.asList(new DefaultConvert()));
+	private static final List<ParamConverterProvider> params = new ArrayList<>(Arrays.asList(new DefaultConvert(), new JavaTimeTypesConverter()));
 	private static final Map<Class, ExceptionMapper> exceptions = new HashMap<>();
 
 	private static final Map<String, List<MessageBodyWriter<Object>>> writers = new HashMap<>();
@@ -176,6 +177,11 @@ public class JaxrsContext {
 	}
 
 	public static Type getParamType(Type t) {
+		Type r = findParamType(t);
+		return r == null ? t : r;
+	}
+
+	private static Type findParamType(Type t) {
 		if (t instanceof GenericArrayType)
 			return ((GenericArrayType) t).getGenericComponentType();
 		if (t instanceof Class) {
@@ -184,8 +190,7 @@ public class JaxrsContext {
 				return cl.getComponentType();
 		}
 
-		Type r = getCollectionType(t, Collections.emptyMap());
-		return r != null ? r : t;
+		return getCollectionType(t, Collections.emptyMap());
 	}
 
 	private static Type getCollectionType(Type p, Map<String, Type> params) {
@@ -204,7 +209,7 @@ public class JaxrsContext {
 			if (r != null)
 				return r;
 		}
-		return getParamType(c.getGenericSuperclass());
+		return findParamType(c.getGenericSuperclass());
 	}
 
 	private static Type getCollectionType(ParameterizedType p, Map<String, Type> params) {
