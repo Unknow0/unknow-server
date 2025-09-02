@@ -51,10 +51,8 @@ public class Http2Stream extends HttpWorker implements Http2FlowControl {
 
 		if (":method".equals(name))
 			req.setMethod(value);
-		else if (":path".equals(name)) {
-			logger.info("path {}", value);
+		else if (":path".equals(name))
 			parsePath(value);
-		}
 	}
 
 	private void parsePath(String path) {

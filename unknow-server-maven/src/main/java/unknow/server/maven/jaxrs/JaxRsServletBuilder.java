@@ -372,7 +372,8 @@ public class JaxRsServletBuilder {
 	private void buildCall(JaxrsMapping mapping, Map<String, NameExpr> services) {
 		BlockStmt b = cl.addMethod(mapping.v + "$call", Utils.PSF).addParameter(types.getClass(JaxrsReq.class), "r")
 				.addParameter(types.getClass(HttpServletResponse.class), "res").addThrownException(types.getClass(Exception.class)).createBody();
-		b.addStatement(new MethodCallExpr(new NameExpr("req"), "setAttribute", Utils.list(Utils.text("requestPattern"), Utils.text(mapping.path))));
+		b.addStatement(
+				new MethodCallExpr(new MethodCallExpr(new NameExpr("r"), "getRequest"), "setAttribute", Utils.list(Utils.text("requestPattern"), Utils.text(mapping.path))));
 		NameExpr n = pathParams.get(mapping);
 		if (n != null)
 			b.addStatement(new MethodCallExpr(new NameExpr("r"), "initPaths", Utils.list(n)));
