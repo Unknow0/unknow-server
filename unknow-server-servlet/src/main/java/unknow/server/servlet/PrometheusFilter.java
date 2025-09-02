@@ -4,7 +4,6 @@ import java.io.IOException;
 
 import io.prometheus.client.Counter;
 import io.prometheus.client.Histogram;
-import io.prometheus.client.Histogram.Timer;
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.FilterConfig;
@@ -18,11 +17,10 @@ public class PrometheusFilter implements Filter {
 	private static final String HELP = "The time taken fulfilling servlet requests";
 	private static final String METRIC = "http_requests";
 	private static final double[] DEFAULT_BUCKET = { .001, .01, .1, 1, 2, 5, 10, 60 };
-	private static final int pathComponents = -1;
 
 	private Histogram times;
 	private Counter status;
-	private Counter inProgress;
+	private Counter started;
 
 	@Override
 	public void init(FilterConfig filterConfig) throws ServletException {
@@ -37,7 +35,7 @@ public class PrometheusFilter implements Filter {
 		times = Histogram.build(METRIC, HELP).labelNames("path", "method", "ip").buckets(buckets).register();
 
 		status = Counter.build(METRIC + "_status_total", "HTTP status codes").labelNames("path", "method", "ip", "status").register();
-		inProgress = Counter.build(METRIC + "_started", "HTTP request in progress").labelNames("path", "method", "ip").register();
+		started = Counter.build(METRIC + "_started", "HTTP request in progress").labelNames("method", "ip").register();
 	}
 
 	@Override
@@ -48,35 +46,23 @@ public class PrometheusFilter implements Filter {
 		}
 		HttpServletRequest req = (HttpServletRequest) request;
 		String method = req.getMethod();
-		String components = getComponents(req.getRequestURI());
 		String ip = req.getHeader("X-Forwarded-For");
 		if (ip != null)
 			ip = ip.split(",", 2)[0];
 		else
 			ip = req.getRemoteAddr();
 
-		inProgress.labels(components, method, ip).inc();
-		try (Timer timer = times.labels(components, method, ip).startTimer()) {
+		started.labels(method, ip).inc();
+		long start = System.nanoTime();
+		try {
 			chain.doFilter(request, response);
 		} finally {
 			String code = Integer.toString(((HttpServletResponse) response).getStatus());
-			status.labels(components, method, ip, code).inc();
+			String path = (String) req.getAttribute("requestPattern");
+			if (path == null)
+				path = req.getRequestURI();
+			status.labels(path, method, ip, code).inc();
+			times.labels(path, method, ip).observe((System.nanoTime() - start) / 1.e9);
 		}
-	}
-
-	@SuppressWarnings("unused")
-	private static String getComponents(String str) {
-		if (str == null || pathComponents < 1)
-			return str;
-		int count = 0;
-		int i = -1;
-		do {
-			i = str.indexOf("/", i + 1);
-			if (i < 0)
-				return str;
-			count++;
-		} while (count <= pathComponents);
-
-		return str.substring(0, i);
 	}
 }
