@@ -47,8 +47,6 @@ sleep 10
 echo -e "\nTesting.."
 bash bench/tests.sh 127.0.0.1 10 1000000 out/$1
 
-curl -XGET http://127.0.0.1:8080/-/metrics -o out/$1/metrics
-
 ${1}_stop &
 sleep 10
 kill -9 $(jobs -p) || true
