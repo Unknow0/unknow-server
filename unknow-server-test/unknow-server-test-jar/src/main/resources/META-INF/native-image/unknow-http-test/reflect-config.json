@@ -1267,5 +1267,9 @@
 {
   "name":"unknow.server.nio.cli.ObjectConverter",
   "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name": "unknow.server.nio.PrometheusListener",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
 }
 ]

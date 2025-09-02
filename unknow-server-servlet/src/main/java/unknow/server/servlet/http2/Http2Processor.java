@@ -153,7 +153,8 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 			return true;
 		Iterator<Http2Stream> it = pending.values().iterator();
 		while (it.hasNext()) {
-			if (it.next().isClosed())
+			Http2Stream next = it.next();
+			if (next != null && next.isClosed())
 				it.remove();
 		}
 		if (!pending.isEmpty() || !streams.isEmpty())
@@ -215,7 +216,7 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 	private void readFrame(ByteBuffer buf) {
 		if (!frame.read(buf))
 			return;
-		logger.debug("{} read frame: {}", co, frame);
+		logger.trace("{} read frame: {}", co, frame);
 
 		if (wantContinuation && frame.type != 9 || !wantContinuation && frame.type == 9)
 			goaway(PROTOCOL_ERROR);
@@ -267,8 +268,8 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 			co.write(data);
 		}
 
-		if (logger.isDebugEnabled())
-			logger.debug(String.format("%s send frame: %02x, size: %s, flags: %02x, id: %s", co, type, size, flags, id));
+		if (logger.isTraceEnabled())
+			logger.trace(String.format("%s send frame: %02x, size: %s, flags: %02x, id: %s", co, type, size, flags, id));
 		co.flush();
 	}
 

@@ -20,7 +20,7 @@ public interface NIOConnectionHandler {
 	 * called to initialize the connection
 	 * 
 	 * @param co the connection
-	 * @param now currentTimeMillis
+	 * @param now nanoTime
 	 * @param sslEngine the sslEngine for ssl connection null for other
 	 * @throws IOException on io exception
 	 */
@@ -31,7 +31,7 @@ public interface NIOConnectionHandler {
 	 * called when the handshake process finish
 	 * 
 	 * @param sslEngine the sslEngine
-	 * @param now currentTimeMillis
+	 * @param now nanoTime
 	 * @throws IOException on io exception
 	 */
 	default void onHandshakeDone(SSLEngine sslEngine, long now) throws IOException { // ok
@@ -41,7 +41,7 @@ public interface NIOConnectionHandler {
 	 * called after some data has been read
 	 * 
 	 * @param b the read buffers
-	 * @param now currentTimeMillis
+	 * @param now nanoTime
 	 * @throws IOException on io exception
 	 */
 	default void onRead(ByteBuffer b, long now) throws IOException { // ok
@@ -50,7 +50,7 @@ public interface NIOConnectionHandler {
 	/**
 	 * called before a buffer is written (allow to collect buffers)
 	 * @param b buffer to be written
-	 * @param now currentTimeMillis
+	 * @param now nanoTime
 	 * @param c consumer of generated buffers
 	 * @throws IOException on io exception
 	 */
@@ -60,7 +60,7 @@ public interface NIOConnectionHandler {
 
 	/**
 	 * called before a buffer is written
-	 * @param now currentTimeMillis
+	 * @param now nanoTime
 	 * @param c consumer of generated buffers
 	 * @throws IOException on io exception
 	 */
@@ -78,7 +78,7 @@ public interface NIOConnectionHandler {
 	/**
 	 * called after data has been written
 	 * 
-	 * @param now currentTimeMillis
+	 * @param now nanoTime
 	 * @throws IOException on io exception
 	 */
 	default void onWrite(long now) throws IOException { // ok
@@ -93,7 +93,7 @@ public interface NIOConnectionHandler {
 	/**
 	 * check if the connection can be closed
 	 * 
-	 * @param now currentTimeMillis
+	 * @param now nanoTime
 	 * @param stop if true the server is in stop phase
 	 * @return true is the collection can be closed
 	 */
@@ -109,7 +109,7 @@ public interface NIOConnectionHandler {
 
 	/**
 	 * try to finish the closing
-	 * @param now currentTimeMillis
+	 * @param now nanoTime
 	 * @return true if the connection is closed
 	 */
 	default boolean finishClosing(long now) {
