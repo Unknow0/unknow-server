@@ -153,7 +153,8 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 			return true;
 		Iterator<Http2Stream> it = pending.values().iterator();
 		while (it.hasNext()) {
-			if (it.next().isClosed())
+			Http2Stream next = it.next();
+			if (next != null && next.isClosed())
 				it.remove();
 		}
 		if (!pending.isEmpty() || !streams.isEmpty())
