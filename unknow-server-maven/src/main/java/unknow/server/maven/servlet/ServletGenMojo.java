@@ -47,6 +47,7 @@ import unknow.server.maven.servlet.descriptor.Descriptor;
 import unknow.server.maven.servlet.descriptor.SD;
 import unknow.server.servlet.AbstractHttpServer;
 import unknow.server.servlet.AccessLogFilter;
+import unknow.server.servlet.PrometheusFilter;
 import unknow.server.servlet.utils.Resource;
 import unknow.server.servlet.utils.ServletResource;
 import unknow.server.servlet.utils.ServletResourceStatic;
@@ -65,14 +66,6 @@ public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderCont
 
 	private static final Path WEBXML = Paths.get("WEB-INF", "web.xml");
 	private static final Path INITIALIZER = Paths.get("META-INF", "services", ServletContainerInitializer.class.getName());
-
-	private static final SD ACCESSLOG = new SD(0);
-	static {
-		ACCESSLOG.clazz = AccessLogFilter.class.getName();
-		ACCESSLOG.dispatcher.add(DispatcherType.REQUEST);
-		ACCESSLOG.pattern.add("/*");
-		ACCESSLOG.name = "acessLog";
-	}
 
 	private final CompilationUnit cu = new CompilationUnit();
 
@@ -108,7 +101,13 @@ public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderCont
 
 		cu.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolSolver);
 		if (addAccessLog)
-			descriptor.filters.add(ACCESSLOG);
+			descriptor.filters.add(new SD(descriptor.filters.size()).pattern("/*").clazz(AccessLogFilter.class.getName()).name("acessLog").dispatcher(DispatcherType.REQUEST));
+		try {
+			Class.forName("io.prometheus.client.Counter");
+			descriptor.filters
+					.add(new SD(descriptor.filters.size()).pattern("/*").clazz(PrometheusFilter.class.getName()).name("prometeus").dispatcher(DispatcherType.REQUEST));
+		} catch (Throwable t) { // ok
+		}
 
 		process(descriptor);
 		processResources(this::process);

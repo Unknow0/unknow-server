@@ -34,7 +34,7 @@ public final class HttpConnection implements NIOConnectionHandler, ServletConnec
 	private final ServletContextImpl ctx;
 	private final ServletManager manager;
 	private final EventManager events;
-	private final int keepAliveMs;
+	private final long keepAliveNano;
 	private final String coId;
 
 	private NIOConnection co;
@@ -50,13 +50,13 @@ public final class HttpConnection implements NIOConnectionHandler, ServletConnec
 	 * @param ctx the servlet context
 	 * @param manager servet manager
 	 * @param events event manager
-	 * @param keepAliveIdle max idle time in ms
+	 * @param keepAliveIdle max idle time in ns
 	 */
-	protected HttpConnection(ServletContextImpl ctx, ServletManager manager, EventManager events, int keepAliveIdle) {
+	protected HttpConnection(ServletContextImpl ctx, ServletManager manager, EventManager events, long keepAliveIdle) {
 		this.ctx = ctx;
 		this.manager = manager;
 		this.events = events;
-		this.keepAliveMs = keepAliveIdle;
+		this.keepAliveNano = keepAliveIdle;
 		this.coId = Integer.toString(ID.incrementAndGet(), 36);
 	}
 
@@ -107,7 +107,7 @@ public final class HttpConnection implements NIOConnectionHandler, ServletConnec
 			return p == null || p.canClose(now, stop);
 
 		if (p == null) {
-			if (lastRead < now - 1000) {
+			if (lastRead < now - 1000000000) {
 				logger.warn("request timeout {}", co);
 				return true;
 			}
@@ -137,8 +137,8 @@ public final class HttpConnection implements NIOConnectionHandler, ServletConnec
 	}
 
 	public boolean keepAliveReached(long now) {
-		if (keepAliveMs > 0) {
-			long e = now - keepAliveMs - 500;
+		if (keepAliveNano > 0) {
+			long e = now - keepAliveNano;
 			if (lastRead <= e && lastWrite <= e) {
 				logger.info("keep alive idle reached {}", co);
 				return true;
@@ -168,8 +168,8 @@ public final class HttpConnection implements NIOConnectionHandler, ServletConnec
 		return ctx;
 	}
 
-	public int getkeepAlive() {
-		return keepAliveMs;
+	public long getkeepAlive() {
+		return keepAliveNano;
 	}
 
 	public ServletManager getServlet() {

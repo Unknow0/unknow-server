@@ -108,7 +108,7 @@ public abstract class AbstractHttpServer extends NIOServerBuilder {
 
 		SSLContext sslContext = addressHttps == null ? null : sslContext(ks, keystorePass.value(cli));
 
-		int keepAliveIdle = parseInt(cli, keepAlive, -1) * 1000;
+		long keepAliveIdle = parseInt(cli, keepAlive, -1) * 1000_000_000L;
 		if (addressHttps != null)
 			server.bind(addressHttps, () -> new NIOSSLHandler(sslContext, new HttpConnection(ctx, manager, events, keepAliveIdle)));
 		if (addressHttp != null)

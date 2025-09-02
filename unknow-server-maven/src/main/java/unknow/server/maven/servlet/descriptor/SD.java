@@ -53,8 +53,29 @@ public class SD extends WithParams {
 		});
 	}
 
+	public SD pattern(String pattern) {
+		this.pattern.add(pattern);
+		return this;
+	}
+
+	public SD clazz(String clazz) {
+		this.clazz = clazz;
+		return this;
+	}
+
+	public SD name(String name) {
+		this.name = name;
+		return this;
+	}
+
+	public SD dispatcher(DispatcherType d) {
+		this.dispatcher.add(d);
+		return this;
+	}
+
 	@Override
 	public String toString() {
 		return name == null ? clazz : name + (dispatcher.isEmpty() ? "" : dispatcher);
 	}
+
 }

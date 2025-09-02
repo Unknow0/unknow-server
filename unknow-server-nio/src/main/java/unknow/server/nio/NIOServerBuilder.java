@@ -204,7 +204,11 @@ public class NIOServerBuilder {
 			return NIOServerListener.NOP;
 		if ("LOG".equals(l))
 			return NIOServerListener.LOG;
-		throw new IllegalArgumentException("listener should be one of NOP, LOG");
+		try {
+			return (NIOServerListener) Class.forName(l).getConstructor().newInstance();
+		} catch (@SuppressWarnings("unused") Exception e) {
+			throw new IllegalArgumentException("listener should be one of NOP, LOG, class");
+		}
 	}
 
 	private void readProperties() {

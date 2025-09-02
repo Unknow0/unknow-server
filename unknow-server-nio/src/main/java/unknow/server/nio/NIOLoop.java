@@ -17,10 +17,14 @@ import org.slf4j.LoggerFactory;
 public class NIOLoop implements Runnable {
 	private static final Logger logger = LoggerFactory.getLogger(NIOLoop.class);
 
+	/** the name */
+	protected final String name;
 	/** the thread that will run the loop */
 	private final Thread t;
 	/** the selection timeout */
 	protected final long timeout;
+	/** the listener */
+	protected final NIOServerListener listener;
 	/** the selector */
 	protected final Selector selector;
 
@@ -30,11 +34,14 @@ public class NIOLoop implements Runnable {
 	 * create new loop
 	 * @param name the thread name
 	 * @param timeout selection timeout
+	 * @param listener listener to use
 	 * @throws IOException on ioexception
 	 */
-	public NIOLoop(String name, long timeout) throws IOException {
+	public NIOLoop(String name, long timeout, NIOServerListener listener) throws IOException {
+		this.name = name;
 		this.t = new Thread(this, name);
 		this.timeout = timeout;
+		this.listener = listener;
 		this.selector = Selector.open();
 	}
 
@@ -102,9 +109,10 @@ public class NIOLoop implements Runnable {
 	}
 
 	private final void select(long timeout, boolean close) throws IOException, InterruptedException {
-		long now = System.currentTimeMillis();
-		onSelect(now, close);
-		if (selector.select(timeout) > 0) {
+
+		int l = selector.select(timeout);
+		long now = System.nanoTime();
+		if (l > 0) {
 			Iterator<SelectionKey> it = selector.selectedKeys().iterator();
 			while (it.hasNext()) {
 				SelectionKey next = it.next();
@@ -117,7 +125,8 @@ public class NIOLoop implements Runnable {
 				}
 			}
 		}
-
+		onSelect(now, close);
+		listener.onSelect(name, now);
 	}
 
 	/**
@@ -128,7 +137,7 @@ public class NIOLoop implements Runnable {
 
 	/**
 	 * call for each selected key
-	 * @param now currentTimeMillis
+	 * @param now nanoTime
 	 * @param key the selected key
 	 * 
 	 * @throws IOException on ioexception
@@ -140,7 +149,7 @@ public class NIOLoop implements Runnable {
 
 	/**
 	 * process after each selection loop
-	 * @param now currentTimeMillis
+	 * @param now nanoTime
 	 * @param close true if we are closing
 	 * 
 	 * @throws InterruptedException on interrupt

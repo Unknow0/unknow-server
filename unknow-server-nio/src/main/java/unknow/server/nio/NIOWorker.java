@@ -29,12 +29,8 @@ import unknow.server.nio.NIOServer.ConnectionFactory;
 public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	private static final Logger logger = LoggerFactory.getLogger(NIOWorker.class);
 
-	/** this worker id */
-	private final int id;
 	/** executor for delegating task */
 	private final ExecutorService executor;
-	/** the listener */
-	private final NIOServerListener listener;
 
 	/** buffer to read/write */
 	private final ByteBuffer buf;
@@ -56,10 +52,8 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	 * @throws IOException on ioexception
 	 */
 	public NIOWorker(int id, ExecutorService executor, NIOServerListener listener, long timeout) throws IOException {
-		super("NIOWorker-" + id, timeout);
-		this.id = id;
+		super("NIOWorker-" + id, timeout, listener);
 		this.executor = executor;
-		this.listener = listener;
 
 		this.buf = ByteBuffer.allocateDirect(16000);
 		this.tasks = new ConcurrentLinkedQueue<>();
@@ -203,7 +197,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	}
 
 	private void doneClose(NIOConnection co) {
-		listener.closed(id, co);
+		listener.closed(name, co);
 		try {
 			co.doneClosing();
 		} catch (Exception e) {
@@ -277,7 +271,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			}
 			NIOConnection co = new NIOConnection(NIOWorker.this, key, factory.build());
 			key.attach(co);
-			listener.accepted(id, co);
+			listener.accepted(name, co);
 			if (!co.asyncInit()) {
 				try {
 					co.init(co, now, null);
@@ -304,7 +298,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		@Override
 		public void run() {
 			try {
-				co.init(co, System.currentTimeMillis(), null);
+				co.init(co, System.nanoTime(), null);
 				co.key.interestOps(SelectionKey.OP_READ);
 				co.key.selector().wakeup();
 			} catch (Exception e) {

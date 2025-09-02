@@ -22,8 +22,6 @@ public class NIOServer extends NIOLoop {
 
 	/** the workers to handle the connection */
 	private final NIOWorkers workers;
-	/** the listener */
-	private final NIOServerListener listener;
 
 	/**
 	 * create new Server
@@ -34,9 +32,8 @@ public class NIOServer extends NIOLoop {
 	 * @throws IOException on ioException
 	 */
 	public NIOServer(NIOWorkers workers, NIOServerListener listener) throws IOException {
-		super("NIOServer", 0);
+		super("NIOServer", 0, listener == null ? NIOServerListener.NOP : listener);
 		this.workers = workers;
-		this.listener = listener == null ? NIOServerListener.NOP : listener;
 	}
 
 	/**

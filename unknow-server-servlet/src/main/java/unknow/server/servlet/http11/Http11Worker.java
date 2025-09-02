@@ -44,7 +44,7 @@ public final class Http11Worker extends HttpWorker {
 		super(p.co(), req);
 		this.p = p;
 		this.reqId = reqId;
-		this.keepAliveIdle = co.getkeepAlive() / 1000;
+		this.keepAliveIdle = (int) (co.getkeepAlive() / 1000_000_000L);
 
 	}
 

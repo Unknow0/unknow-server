@@ -77,5 +77,4 @@ public class NIOHandlerDelegate implements NIOConnectionHandler {
 	public void doneClosing() {
 		handler.doneClosing();
 	}
-
 }

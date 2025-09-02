@@ -25,18 +25,18 @@ public interface NIOServerListener {
 	/**
 	 * a new connection is created
 	 * 
-	 * @param id worker id
+	 * @param name worker name
 	 * @param h  client handler
 	 */
-	void accepted(int id, NIOConnection h);
+	void accepted(String name, NIOConnection h);
 
 	/**
 	 * a connection is closed
 	 * 
-	 * @param id worker id
+	 * @param name worker name
 	 * @param h  client handler
 	 */
-	void closed(int id, NIOConnection h);
+	void closed(String name, NIOConnection h);
 
 	/**
 	 * call before the server stop
@@ -47,6 +47,13 @@ public interface NIOServerListener {
 	void closing(NIOServer server, Exception e);
 
 	/**
+	 * call after selection done
+	 * @param name the worker name
+	 * @param now start of selection
+	 */
+	void onSelect(String name, long now);
+
+	/**
 	 * do nothing
 	 */
 	public static final NIOServerListener NOP = new NIOServerListener() {
@@ -55,15 +62,19 @@ public interface NIOServerListener {
 		}
 
 		@Override
-		public void accepted(int id, NIOConnection h) { // OK
+		public void accepted(String name, NIOConnection h) { // OK
 		}
 
 		@Override
-		public void closed(int id, NIOConnection h) { // OK
+		public void closed(String name, NIOConnection h) { // OK
 		}
 
 		@Override
 		public void closing(NIOServer server, Exception e) { // OK
+		}
+
+		@Override
+		public void onSelect(String name, long now) { // ok
 		}
 
 		@Override
@@ -86,18 +97,23 @@ public interface NIOServerListener {
 		}
 
 		@Override
-		public void accepted(int id, NIOConnection h) {
-			logger.info("Worker-{} accepted {} ({})", id, h, c.incrementAndGet());
+		public void accepted(String name, NIOConnection h) {
+			logger.info("{} accepted {} ({})", name, h, c.incrementAndGet());
 		}
 
 		@Override
-		public void closed(int id, NIOConnection h) {
-			logger.info("Worker-{} closed {} ({})", id, h, c.decrementAndGet());
+		public void closed(String name, NIOConnection h) {
+			logger.info("{} closed {} ({})", name, h, c.decrementAndGet());
 		}
 
 		@Override
 		public void closing(NIOServer server, Exception e) {
 			logger.info("closing {}", server, e);
+		}
+
+		@Override
+		public void onSelect(String name, long now) { // ok
+			logger.trace("{} selection duration: {}", name, System.nanoTime() - now);
 		}
 
 		@Override
@@ -138,21 +154,27 @@ public interface NIOServerListener {
 		}
 
 		@Override
-		public void accepted(int id, NIOConnection h) {
+		public void accepted(String name, NIOConnection h) {
 			for (int i = 0; i < listeners.length; i++)
-				listeners[i].accepted(id, h);
+				listeners[i].accepted(name, h);
 		}
 
 		@Override
-		public void closed(int id, NIOConnection h) {
+		public void closed(String name, NIOConnection h) {
 			for (int i = 0; i < listeners.length; i++)
-				listeners[i].closed(id, h);
+				listeners[i].closed(name, h);
 		}
 
 		@Override
 		public void closing(NIOServer server, Exception e) {
 			for (int i = 0; i < listeners.length; i++)
 				listeners[i].closing(server, e);
+		}
+
+		@Override
+		public void onSelect(String name, long now) {
+			for (int i = 0; i < listeners.length; i++)
+				listeners[i].onSelect(name, now);
 		}
 
 		@Override
