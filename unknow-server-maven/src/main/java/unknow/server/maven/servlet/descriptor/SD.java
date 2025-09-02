@@ -53,7 +53,7 @@ public class SD extends WithParams {
 		});
 	}
 
-	public SD pattern(String pattern) {
+	public SD addPattern(String pattern) {
 		this.pattern.add(pattern);
 		return this;
 	}
@@ -68,7 +68,7 @@ public class SD extends WithParams {
 		return this;
 	}
 
-	public SD dispatcher(DispatcherType d) {
+	public SD addDispatcher(DispatcherType d) {
 		this.dispatcher.add(d);
 		return this;
 	}

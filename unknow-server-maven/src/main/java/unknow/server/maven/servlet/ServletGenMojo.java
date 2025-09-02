@@ -101,11 +101,11 @@ public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderCont
 
 		cu.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolSolver);
 		if (addAccessLog)
-			descriptor.filters.add(new SD(descriptor.filters.size()).pattern("/*").clazz(AccessLogFilter.class.getName()).name("acessLog").dispatcher(DispatcherType.REQUEST));
+			descriptor.filters.add(new SD(descriptor.filters.size()).addPattern("/*").clazz(AccessLogFilter.class.getName()).name("acessLog").addDispatcher(DispatcherType.REQUEST));
 		try {
 			classLoader.loadClass("io.prometheus.client.Counter");
 			descriptor.filters
-					.add(new SD(descriptor.filters.size()).pattern("/*").clazz(PrometheusFilter.class.getName()).name("prometeus").dispatcher(DispatcherType.REQUEST));
+					.add(new SD(descriptor.filters.size()).addPattern("/*").clazz(PrometheusFilter.class.getName()).name("prometeus").addDispatcher(DispatcherType.REQUEST));
 		} catch (@SuppressWarnings("unused") Throwable t) { // ok
 		}
 
