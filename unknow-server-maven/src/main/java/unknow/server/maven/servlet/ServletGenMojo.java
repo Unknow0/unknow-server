@@ -103,10 +103,10 @@ public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderCont
 		if (addAccessLog)
 			descriptor.filters.add(new SD(descriptor.filters.size()).pattern("/*").clazz(AccessLogFilter.class.getName()).name("acessLog").dispatcher(DispatcherType.REQUEST));
 		try {
-			Class.forName("io.prometheus.client.Counter");
+			classLoader.loadClass("io.prometheus.client.Counter");
 			descriptor.filters
 					.add(new SD(descriptor.filters.size()).pattern("/*").clazz(PrometheusFilter.class.getName()).name("prometeus").dispatcher(DispatcherType.REQUEST));
-		} catch (Throwable t) { // ok
+		} catch (@SuppressWarnings("unused") Throwable t) { // ok
 		}
 
 		process(descriptor);

@@ -89,7 +89,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	private void checkPending(long now, boolean close) {
 		if (head == null)
 			return;
-		long end = now - 1000;
+		long end = now - 1_000_000_000L;
 		NIOConnection co = head;
 		while (co != null && co.lastCheck < end) {
 			NIOConnection next = co.next;

@@ -109,7 +109,6 @@ public class NIOLoop implements Runnable {
 	}
 
 	private final void select(long timeout, boolean close) throws IOException, InterruptedException {
-
 		int l = selector.select(timeout);
 		long now = System.nanoTime();
 		if (l > 0) {

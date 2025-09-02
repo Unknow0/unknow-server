@@ -107,7 +107,7 @@ public final class HttpConnection implements NIOConnectionHandler, ServletConnec
 			return p == null || p.canClose(now, stop);
 
 		if (p == null) {
-			if (lastRead < now - 1000000000) {
+			if (lastRead < now - 1_000_000_000L) {
 				logger.warn("request timeout {}", co);
 				return true;
 			}
