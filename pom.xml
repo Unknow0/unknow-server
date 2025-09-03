@@ -479,14 +479,6 @@
 							<deploymentName>${project.groupId}:${project.version}</deploymentName>
 							<autoPublish>true</autoPublish>
 							<waitUntil>published</waitUntil>
-							<excludeArtifacts>
-								<excludeArtifact>unknow-server-bench</excludeArtifact>
-								<excludeArtifact>unknow-server-test</excludeArtifact>
-								<excludeArtifact>unknow-server-cxf</excludeArtifact>
-								<excludeArtifact>unknow-server-jar</excludeArtifact>
-								<excludeArtifact>unknow-server-pojo</excludeArtifact>
-								<excludeArtifact>unknow-server-tomcat</excludeArtifact>
-							</excludeArtifacts>
 						</configuration>
 					</plugin>
 				</plugins>
