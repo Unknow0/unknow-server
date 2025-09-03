@@ -123,11 +123,9 @@
 						<groupId>org.sonatype.central</groupId>
 						<artifactId>central-publishing-maven-plugin</artifactId>
 						<extensions>true</extensions>
-						<executions>
-							<execution>
-								<phase>none</phase>
-							</execution>
-						</executions>
+						<configuration>
+							<skipBundling>true</skipBundling>
+						</configuration>
 					</plugin>
 				</plugins>
 			</build>
