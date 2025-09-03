@@ -124,8 +124,7 @@ public final class Http11Worker extends HttpWorker {
 	protected void doDone() throws IOException {
 		if (!"keep-alive".equalsIgnoreCase(res.getHeader("connection")))
 			co.getOut().close();
-		else
-			p.requestDone();
+		p.requestDone();
 	}
 
 	/**
