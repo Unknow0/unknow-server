@@ -79,14 +79,6 @@
 							</execution>
 						</executions>
 					</plugin>
-					<plugin>
-						<groupId>org.sonatype.central</groupId>
-						<artifactId>central-publishing-maven-plugin</artifactId>
-						<extensions>true</extensions>
-						<configuration>
-							<skipBundling>true</skipBundling>
-						</configuration>
-					</plugin>
 				</plugins>
 			</build>
 		</profile>
