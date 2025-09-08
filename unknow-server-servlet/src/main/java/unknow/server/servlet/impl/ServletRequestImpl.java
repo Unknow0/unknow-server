@@ -265,7 +265,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 		if (header == null)
 			return -1;
 		try {
-			Instant from = Instant.from(DateTimeFormatter.RFC_1123_DATE_TIME.parse(name));
+			Instant from = Instant.from(DateTimeFormatter.RFC_1123_DATE_TIME.parse(header));
 			return from.getEpochSecond() * 1000 + from.getNano() / 1000000;
 		} catch (DateTimeException e) {
 			throw new IllegalArgumentException(e);
