@@ -18,6 +18,7 @@ import jakarta.ws.rs.GET;
 import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.MatrixParam;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -34,32 +35,35 @@ public class Rest {
 
 	@GET
 	@Path("t")
-	public void t() throws InterruptedException {
+	@SuppressWarnings("unused")
+	public void t(@PathParam("q") String q) throws InterruptedException {
 		Thread.sleep(3000);
 		throw new NullPointerException("test");
 	}
 
 	@GET
 	@Path("q/{v}")
-	public void q() { // ok
+	@SuppressWarnings("unused")
+	public void q(@PathParam("q") String q, @PathParam("v") String v) { // ok
 	}
 
-	@GET
+	@POST
 	public void oneWay(@PathParam("q") String q, @BeanParam Bean bean) {
 		logger.info("oneWay>> q: '{}' bean: {}", q, bean);
 	}
 
-	@GET
+	@PUT
 	@Consumes({ "application/json", "application/x-ndjson" })
-	public Response response(@PathParam("q") String q, @BeanParam Bean bean) {
-		logger.info("response>> q: '{}' bean: {}", q, bean);
+	public Response response(@PathParam("q") String q, @FormParam("k") String k) {
+		logger.info("response>> q: '{}' bean: {}", q, k);
 		return Response.status(200).entity("echo").build();
 	}
 
 	@POST
 	@Consumes({ "application/x-protobuf", "application/json", "application/jsonl", "application/x-ndjson" })
 	@Produces({ "application/x-protobuf", "application/json", "application/jsonl", "application/x-ndjson" })
-	public Truc call(Truc truc) {
+	@SuppressWarnings("unused")
+	public Truc call(@PathParam("q") String q, Truc truc) {
 		return truc;
 	}
 
@@ -67,7 +71,8 @@ public class Rest {
 	@Path("list")
 	@Consumes({ "application/x-protobuf", "application/json", "application/jsonl", "application/x-ndjson" })
 	@Produces({ "application/x-protobuf", "application/json", "application/jsonl", "application/x-ndjson" })
-	public Collection<Truc> list(Collection<Truc> truc) {
+	@SuppressWarnings("unused")
+	public Collection<Truc> list(@PathParam("q") String q, Collection<Truc> truc) {
 		return truc;
 	}
 

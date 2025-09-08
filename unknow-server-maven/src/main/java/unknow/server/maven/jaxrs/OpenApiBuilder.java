@@ -15,6 +15,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.maven.plugin.MojoExecutionException;
@@ -22,8 +24,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.databind.BeanDescription;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationConfig;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.ser.BeanPropertyWriter;
+import com.fasterxml.jackson.databind.ser.BeanSerializerModifier;
 
 import io.swagger.v3.oas.annotations.tags.Tags;
 import io.swagger.v3.oas.models.OpenAPI;
@@ -41,6 +48,7 @@ import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam.JaxrsBeanFieldParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBodyParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsCookieParam;
+import unknow.server.maven.jaxrs.JaxrsParam.JaxrsFormParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsHeaderParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsMatrixParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsPathParam;
@@ -134,9 +142,10 @@ public class OpenApiBuilder {
 	private final Map<String, Schema> schemas = new HashMap<>();
 
 	public void build(OpenAPI spec, JaxrsModel model, String file) throws MojoExecutionException {
+		SimpleModule module = new SimpleModule().setSerializerModifier(new IgnoreOpenapiField());
 
 		ObjectMapper m = new ObjectMapper().enable(SerializationFeature.WRITE_ENUMS_USING_TO_STRING).disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-				.setDefaultPropertyInclusion(Include.NON_EMPTY);
+				.setDefaultPropertyInclusion(Include.NON_EMPTY).registerModule(module);
 		Path path = java.nio.file.Paths.get(file);
 		try {
 			Files.createDirectories(path.getParent());
@@ -172,9 +181,6 @@ public class OpenApiBuilder {
 				o.setTags(tags);
 			}
 
-			ApiResponses responses = new ApiResponses();
-			o.setResponses(responses);
-
 			if (a != null) {
 				a.member("tags").filter(v -> v.isSet()).map(v -> v.asArrayLiteral()).filter(v -> v.length > 0).ifPresent(v -> o.setTags(Arrays.asList(v)));
 				a.member("summary").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> o.setSummary(v));
@@ -187,12 +193,13 @@ public class OpenApiBuilder {
 				// TODO externalDocs, responses, security, servers, extensions
 			}
 
-			if (responses.isEmpty() && !m.m.type().isVoid()) {
+			if (!m.m.type().isVoid()) {
 				Content c = new Content();
 				for (String s : m.produce)
 					c.addMediaType(s, new MediaType().schema(schema(m.m.type())));
-				responses.addApiResponse("default", new ApiResponse().content(c));
-			}
+				o.setResponses(new ApiResponses().addApiResponse("default", new ApiResponse().description("default").content(c)));
+			} else
+				o.setResponses(new ApiResponses().addApiResponse("default", new ApiResponse().description("empty")));
 
 			for (JaxrsParam<?> param : m.params)
 				addParameters(o, param);
@@ -215,16 +222,24 @@ public class OpenApiBuilder {
 		}
 
 		if (param instanceof JaxrsBodyParam) {
-			MediaType mdi = new MediaType();
-			mdi.examples(null);
-			mdi.schema(schema(param.type));
+			MediaType mdi = new MediaType().schema(schema(param.type));
 			Content content = new Content();
 			content.addMediaType("*/*", mdi);
 			o.setRequestBody(new RequestBody().content(content));
 			return;
 		}
 
-		Parameter p = new Parameter().name(param.value).schema(schema(param.type));
+		Optional<AnnotationModel> annotation = param.p.annotation(io.swagger.v3.oas.annotations.media.Schema.class);
+		if (param instanceof JaxrsFormParam) {
+			RequestBody b = o.getRequestBody();
+			if (b == null)
+				o.setRequestBody(b = new RequestBody().content(new Content()));
+			MediaType mdi = b.getContent().computeIfAbsent("application/x-www-form-urlencoded", k -> new MediaType().schema(new Schema<>().type("object")));
+			mdi.getSchema().addProperty(param.value, fillFrom(schema(param.type), annotation));
+			return;
+		}
+
+		Parameter p = new Parameter().name(param.value).schema(fillFrom(schema(param.type), annotation));
 		if (param instanceof JaxrsHeaderParam)
 			p.setIn("header");
 		else if (param instanceof JaxrsQueryParam)
@@ -303,14 +318,31 @@ public class OpenApiBuilder {
 			List<String> requied = new ArrayList<>();
 			s.type("object").setRequired(requied);
 			ClassModel c = type.asClass();
+			fillFrom(s, c.annotation(io.swagger.v3.oas.annotations.media.Schema.class));
 
 			for (FieldModel f : c.fields()) {
-				s.addProperty(f.name(), schema(f.type()));
+				if (f.isStatic() || f.isTransient())
+					continue;
+				Optional<AnnotationModel> a = f.annotation(io.swagger.v3.oas.annotations.media.Schema.class);
+				if (a.flatMap(o -> o.member("hidden")).map(o -> o.asBoolean()).orElse(false))
+					continue;
+
+				s.addProperty(f.name(), fillFrom(schema(f.type()), a));
 				// TODO add required value from jackson
 			}
 			// TODO exemple
 		}
 		return new Schema<>().$ref("#/components/schemas/" + n);
+	}
+
+	private Schema<?> fillFrom(Schema<?> s, Optional<AnnotationModel> annotation) {
+		if (annotation.isEmpty())
+			return s;
+		AnnotationModel a = annotation.get();
+		a.member("name").filter(v -> v.isSet()).ifPresent(v -> s.setName(v.asLiteral()));
+		a.member("title").filter(v -> v.isSet()).ifPresent(v -> s.setTitle(v.asLiteral()));
+		a.member("description").filter(v -> v.isSet()).ifPresent(v -> s.setDescription(v.asLiteral()));
+		return s;
 	}
 
 	/**
@@ -393,5 +425,23 @@ public class OpenApiBuilder {
 	@SuppressWarnings("rawtypes")
 	public Map<String, Schema> getSchemas() {
 		return schemas;
+	}
+
+	private static final class IgnoreOpenapiField extends BeanSerializerModifier {
+		private static final long serialVersionUID = 1L;
+		private static final Set<String> fieldsToIgnore = Set.of("exampleSetFlag");
+
+		@Override
+		public List<BeanPropertyWriter> changeProperties(SerializationConfig config, BeanDescription beanDesc, List<BeanPropertyWriter> beanProperties) {
+
+			// On filtre les propriétés à ignorer
+			List<BeanPropertyWriter> newProps = new ArrayList<>();
+			for (BeanPropertyWriter writer : beanProperties) {
+				if (!fieldsToIgnore.contains(writer.getName())) {
+					newProps.add(writer);
+				}
+			}
+			return newProps;
+		}
 	}
 }
