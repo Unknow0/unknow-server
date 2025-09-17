@@ -59,12 +59,14 @@ public final class Http11Processor implements NIOConnectionHandler {
 				decode(b);
 				break;
 			case CONTENT:
+				ByteBuffer slice = b.slice();
 				if (b.remaining() < contentLength) {
 					contentLength -= b.remaining();
-					dec.addContent(b);
+					dec.addContent(slice);
+					b.position(b.limit());
 				} else {
 					state = START;
-					dec.addContent(b.slice().limit((int) contentLength));
+					dec.addContent(slice.limit((int) contentLength));
 					dec.closeContent();
 					b.position(b.position() + (int) contentLength);
 					contentLength = 0;
