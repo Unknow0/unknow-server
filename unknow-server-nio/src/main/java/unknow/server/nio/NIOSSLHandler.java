@@ -40,7 +40,6 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 		this.sslContext = sslContext;
 	}
 
-
 	@Override
 	public boolean asyncInit() {
 		return true;
@@ -159,10 +158,8 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 					r = sslEngine.unwrap(rawIn, app.buf, 0, app.len);
 					logger.trace("unwrap {}", r);
 					rawIn.compact();
-					if (r.getStatus() == Status.BUFFER_UNDERFLOW) {
-						co.toggleKeyOps();
+					if (r.getStatus() == Status.BUFFER_UNDERFLOW)
 						return true;
-					}
 					hs = r.getHandshakeStatus();
 					break;
 				case NEED_WRAP:

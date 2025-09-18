@@ -94,27 +94,28 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	 * @throws InterruptedException  in case of interruption
 	 */
 	public final void write(ByteBuffer buf) throws InterruptedException {
+		if (!buf.hasRemaining())
+			return;
 		if (pending.size() > 10)
 			flush();
 		pending.put(buf);
-		toggleKeyOps();
-
+		key.interestOpsOr(SelectionKey.OP_WRITE);
 	}
 
-	public final void toggleKeyOps() {
-		if (!key.isValid())
-			return;
-		if (hasPendingWrites())
-			key.interestOpsOr(SelectionKey.OP_WRITE);
-		else
-			key.interestOpsAnd(~SelectionKey.OP_WRITE);
-	}
+//	public final void toggleKeyOps() {
+//		if (!key.isValid())
+//			return;
+//		if (hasPendingWrites())
+//			key.interestOpsOr(SelectionKey.OP_WRITE);
+//		else
+//			key.interestOpsAnd(~SelectionKey.OP_WRITE);
+//	}
 
 	@SuppressWarnings("resource")
 	public final void flush() {
 		if (!hasPendingWrites())
 			return;
-		toggleKeyOps();
+		key.interestOpsOr(SelectionKey.OP_WRITE);
 		key.selector().wakeup();
 	}
 
@@ -161,7 +162,8 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	@Override
 	public final void onWrite(long now) throws IOException {
 		writes.compact();
-		toggleKeyOps();
+		if (!hasPendingWrites())
+			key.interestOpsAnd(~SelectionKey.OP_WRITE);
 		handler.onWrite(now);
 	}
 

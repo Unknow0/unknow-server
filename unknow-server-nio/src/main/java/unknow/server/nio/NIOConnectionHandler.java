@@ -68,7 +68,7 @@ public interface NIOConnectionHandler {
 	}
 
 	/**
-	 * check if this handler has some pengin write
+	 * check if this handler has some pending write
 	 * @return true if the handler has pending write
 	 */
 	default boolean hasPendingWrites() {
