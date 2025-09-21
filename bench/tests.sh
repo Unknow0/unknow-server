@@ -36,4 +36,4 @@ test http2   -m 0.09 -XGET -k --http2 https://$h:8443/test?[1-$c]
 
 # connection close take ~10x more time 
 c=$(($c/10))
-test close   -m 0.02 -XPOST -d@data -k -H 'Connection: close' --http1.1 https://$h:8443/test?[1-$c]
+test close   -m 0.02 -XPOST -d@data -k -H 'Connection: close' http://$h:8443/test?[1-$c]
