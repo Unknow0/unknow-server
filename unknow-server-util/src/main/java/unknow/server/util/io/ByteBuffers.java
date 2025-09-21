@@ -57,25 +57,19 @@ public class ByteBuffers implements Consumer<ByteBuffer> {
 	}
 
 	/**
-	 * collect and remove buffers with data
+	 * drain buffers
 	 * @param <E> exception thrown from consumer
 	 * @param c consumer of buffer
 	 * @throws E from Consumer
 	 */
-	public <E extends Throwable> void collect(ConsumerWithException<ByteBuffer, E> c) throws E {
+	public <E extends Throwable> void drain(ConsumerWithException<ByteBuffer, E> c) throws E {
 		if (len == 0)
 			return;
 
-		int o = 0;
-		while (o < len && buf[o].position() > 0)
-			c.accept(buf[o++].flip());
-		if (o == 0)
-			return;
-
-		len -= o;
-		if (len > 0)
-			System.arraycopy(buf, o, buf, 0, len);
-		for (int i = len; i < len + o; i++)
+		for (int i = 0; i < len; i++) {
+			c.accept(buf[i].flip());
 			buf[i] = null;
+		}
+		len = 0;
 	}
 }

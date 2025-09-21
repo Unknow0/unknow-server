@@ -3,6 +3,7 @@ package unknow.server.nio;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import javax.net.ssl.SSLContext;
@@ -94,7 +95,7 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 			rawIn.compact();
 			if (checkHandshake(r.getHandshakeStatus(), now))
 				return;
-			app.collect(buf -> handler.onRead(buf, now));
+			app.drain(buf -> handler.onRead(buf, now));
 		}
 		rawIn.flip();
 		while (rawIn.hasRemaining()) {
@@ -106,7 +107,7 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 				for (int i = app.remaining(); i < applicationBufferSize; i += 4096)
 					app.accept(ByteBuffer.allocate(4096));
 			} else
-				app.collect(buf -> handler.onRead(buf, now));
+				app.drain(buf -> handler.onRead(buf, now));
 		}
 		rawIn.compact();
 	}
@@ -121,13 +122,15 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 		while (!rawOut.isEmpty()) {
 			ByteBuffer out = ByteBuffer.allocate(packetBufferSize);
 			SSLEngineResult r = sslEngine.wrap(rawOut.buf, 0, rawOut.len, out);
-			if (r.getStatus() == Status.CLOSED) {
-				logger.warn("{} remaining data {}", co, rawOut.remaining());
-				rawOut.clear();
-				break;
-			}
 			logger.trace("wrap {}", r);
 			c.accept(out.flip());
+			if (r.getStatus() == Status.CLOSED) {
+				AtomicInteger l = new AtomicInteger(0);
+				rawOut.drain(b -> l.getAndAdd(b.remaining()));
+				if (l.get() > 0)
+					logger.warn("{} remaining data {}", co, l);
+				break;
+			}
 			rawOut.compact();
 			checkHandshake(r.getHandshakeStatus(), now);
 		}
