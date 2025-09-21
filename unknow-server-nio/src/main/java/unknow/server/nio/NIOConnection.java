@@ -16,6 +16,9 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingDeque;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import unknow.server.nio.NIOWorker.WorkerTask;
 import unknow.server.util.io.ByteBuffers;
 
@@ -25,6 +28,7 @@ import unknow.server.util.io.ByteBuffers;
  * @author unknow
  */
 public final class NIOConnection extends NIOHandlerDelegate {
+	private static final Logger logger = LoggerFactory.getLogger(NIOConnection.class);
 	private static final InetSocketAddress DISCONECTED = InetSocketAddress.createUnresolved("", 0);
 	private static final Runnable NONE = () -> { // ok
 	};
@@ -183,13 +187,10 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	 */
 	@Override
 	public final void doneClosing() {
+		out.h = null;
 		key.cancel();
 		try {
 			key.channel().close();
-		} catch (@SuppressWarnings("unused") IOException e) { // ignore
-		}
-		try {
-			out.close();
 		} catch (@SuppressWarnings("unused") IOException e) { // ignore
 		}
 		handler.doneClosing();
@@ -277,7 +278,7 @@ public final class NIOConnection extends NIOHandlerDelegate {
 		public synchronized void close() throws IOException {
 			if (h == null)
 				return;
-			flush(h::onOutputClosed);
+			flush(new OnClose(h));
 			h = null;
 		}
 
@@ -312,6 +313,22 @@ public final class NIOConnection extends NIOHandlerDelegate {
 				Thread.currentThread().interrupt();
 				throw new IOException(e);
 			}
+		}
+	}
+
+	private static final class OnClose implements Runnable {
+		private final NIOConnectionHandler h;
+//		private final long start;
+
+		public OnClose(NIOConnectionHandler h) {
+			this.h = h;
+//			this.start = System.currentTimeMillis();
+		}
+
+		@Override
+		public void run() {
+			h.onOutputClosed();
+//			logger.warn("flush delay {}", System.currentTimeMillis() - start);
 		}
 	}
 }
