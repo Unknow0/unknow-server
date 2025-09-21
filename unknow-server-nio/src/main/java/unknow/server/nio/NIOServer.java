@@ -48,7 +48,7 @@ public class NIOServer extends NIOLoop {
 		logger.info("Server bind to {}", a);
 		ServerSocketChannel open = ServerSocketChannel.open();
 		open.configureBlocking(false).register(selector, SelectionKey.OP_ACCEPT, s);
-		open.bind(a);
+		open.bind(a, Integer.MAX_VALUE);
 	}
 
 	@Override

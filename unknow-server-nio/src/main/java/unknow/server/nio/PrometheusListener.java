@@ -9,6 +9,8 @@ public class PrometheusListener implements NIOServerListener {
 	private static final Histogram SELECT = Histogram.build("nio_select_time", "Duration of the selection process").labelNames("name").buckets(.0001, .0005, .001, .005, .01)
 			.register();
 
+	public static final NIOServerListener INSTANCE = new PrometheusListener();
+
 	@Override
 	public void starting(NIOServer server) { // ok
 	}
