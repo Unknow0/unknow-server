@@ -10,9 +10,11 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.Arrays;
-import java.util.concurrent.ArrayBlockingQueue;
+import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingDeque;
 
 import unknow.server.nio.NIOWorker.WorkerTask;
 import unknow.server.util.io.ByteBuffers;
@@ -24,6 +26,8 @@ import unknow.server.util.io.ByteBuffers;
  */
 public final class NIOConnection extends NIOHandlerDelegate {
 	private static final InetSocketAddress DISCONECTED = InetSocketAddress.createUnresolved("", 0);
+	private static final Runnable NONE = () -> { // ok
+	};
 
 	/** Output stream */
 	protected final Out out;
@@ -39,6 +43,8 @@ public final class NIOConnection extends NIOHandlerDelegate {
 
 	final BlockingQueue<ByteBuffer> pending;
 	final ByteBuffers writes;
+
+	private final Queue<Runnable> onWriteDone;
 
 	long lastCheck;
 	NIOConnection next;
@@ -71,8 +77,9 @@ public final class NIOConnection extends NIOHandlerDelegate {
 		}
 		remote = a;
 
-		this.pending = new ArrayBlockingQueue<>(16);
+		this.pending = new LinkedBlockingDeque<>();
 		this.writes = new ByteBuffers(16);
+		this.onWriteDone = new ConcurrentLinkedQueue<>();
 	}
 
 	public final <T> Future<T> submit(Runnable r) {
@@ -92,29 +99,24 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	 * add a buffers to the writing queue
 	 * @param buf buffer to be written
 	 * @throws InterruptedException  in case of interruption
+	 * @throws IOException 
 	 */
-	public final void write(ByteBuffer buf) throws InterruptedException {
-		if (!buf.hasRemaining())
-			return;
+	public final void write(ByteBuffer buf) throws InterruptedException, IOException {
+		if (!key.isValid())
+			throw new IOException("already closed");
 		if (pending.size() > 10)
-			flush();
+			flush(NONE);
 		pending.put(buf);
 		key.interestOpsOr(SelectionKey.OP_WRITE);
 	}
 
-//	public final void toggleKeyOps() {
-//		if (!key.isValid())
-//			return;
-//		if (hasPendingWrites())
-//			key.interestOpsOr(SelectionKey.OP_WRITE);
-//		else
-//			key.interestOpsAnd(~SelectionKey.OP_WRITE);
-//	}
-
 	@SuppressWarnings("resource")
-	public final void flush() {
-		if (!hasPendingWrites())
+	public final void flush(Runnable ondone) {
+		if (!hasPendingWrites()) {
+			ondone.run();
 			return;
+		}
+		onWriteDone.add(ondone);
 		key.interestOpsOr(SelectionKey.OP_WRITE);
 		key.selector().wakeup();
 	}
@@ -162,8 +164,12 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	@Override
 	public final void onWrite(long now) throws IOException {
 		writes.compact();
-		if (!hasPendingWrites())
+		if (!hasPendingWrites()) {
 			key.interestOpsAnd(~SelectionKey.OP_WRITE);
+			Runnable r;
+			while ((r = onWriteDone.poll()) != null)
+				r.run();
+		}
 		handler.onWrite(now);
 	}
 
@@ -271,8 +277,7 @@ public final class NIOConnection extends NIOHandlerDelegate {
 		public synchronized void close() throws IOException {
 			if (h == null)
 				return;
-			flush();
-			h.onOutputClosed();
+			flush(h::onOutputClosed);
 			h = null;
 		}
 
@@ -287,9 +292,14 @@ public final class NIOConnection extends NIOHandlerDelegate {
 
 		@Override
 		public synchronized void flush() throws IOException {
+			flush(NONE);
+		}
+
+		public synchronized void flush(Runnable ondone) throws IOException {
+			if (h == null)
+				return;
 			writeBuffer();
-			if (h != null)
-				h.flush();
+			h.flush(ondone);
 		}
 
 		private void writeBuffer() throws IOException {

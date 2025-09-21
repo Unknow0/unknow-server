@@ -26,6 +26,12 @@ public class ByteBuffers implements Consumer<ByteBuffer> {
 		return len == 0;
 	}
 
+	public void clear() {
+		for (int i = 0; i < len; i++)
+			buf[i] = null;
+		len = 0;
+	}
+
 	public int remaining() {
 		int r = 0;
 		for (int i = 0; i < len; i++)

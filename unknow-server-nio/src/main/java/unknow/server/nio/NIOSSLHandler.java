@@ -121,6 +121,11 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 		while (!rawOut.isEmpty()) {
 			ByteBuffer out = ByteBuffer.allocate(packetBufferSize);
 			SSLEngineResult r = sslEngine.wrap(rawOut.buf, 0, rawOut.len, out);
+			if (r.getStatus() == Status.CLOSED) {
+				logger.warn("{} remaining data {}", co, rawOut.remaining());
+				rawOut.clear();
+				break;
+			}
 			logger.trace("wrap {}", r);
 			c.accept(out.flip());
 			rawOut.compact();
@@ -138,6 +143,7 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 		sslEngine.closeOutbound();
 		try {
 			co.write(EMPTY);
+		} catch (@SuppressWarnings("unused") IOException e) { // ok
 		} catch (@SuppressWarnings("unused") InterruptedException e) {
 			Thread.currentThread().interrupt();
 		}
