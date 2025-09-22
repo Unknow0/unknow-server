@@ -86,7 +86,8 @@ public final class HttpConnection implements NIOConnectionHandler, ServletConnec
 	public final void onRead(ByteBuffer b, long now) throws IOException {
 		lastRead = now;
 		if (p == null) {
-			if (Arrays.equals(b.array(), b.position(), b.position() + Http2Processor.PRI.length, Http2Processor.PRI, 0, Http2Processor.PRI.length))
+			if (b.remaining() > Http2Processor.PRI.length
+					&& Arrays.equals(b.array(), b.position(), b.position() + Http2Processor.PRI.length, Http2Processor.PRI, 0, Http2Processor.PRI.length))
 				p = new Http2Processor(this);
 			else
 				p = new Http11Processor(this);

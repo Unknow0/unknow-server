@@ -283,13 +283,14 @@ public final class NIOConnection extends NIOHandlerDelegate {
 
 		private void writeBuffer() throws IOException {
 			if (h == null || buf.position() == 0)
-				try {
-					h.write(buf.flip());
-					buf = ByteBuffer.allocate(4096);
-				} catch (InterruptedException e) {
-					Thread.currentThread().interrupt();
-					throw new IOException(e);
-				}
+				return;
+			try {
+				h.write(buf.flip());
+				buf = ByteBuffer.allocate(4096);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+				throw new IOException(e);
+			}
 		}
 	}
 }
