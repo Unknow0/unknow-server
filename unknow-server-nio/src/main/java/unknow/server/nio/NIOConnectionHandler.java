@@ -85,12 +85,6 @@ public interface NIOConnectionHandler {
 	}
 
 	/**
-	 * called when the output is closed
-	 */
-	default void onOutputClosed() { // ok
-	}
-
-	/**
 	 * check if the connection can be closed
 	 * 
 	 * @param now nanoTime

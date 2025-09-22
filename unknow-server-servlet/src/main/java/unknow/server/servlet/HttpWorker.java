@@ -111,6 +111,5 @@ public abstract class HttpWorker implements Runnable, HttpAdapter {
 		co.getEvents().fireRequestDestroyed(req);
 		req.clearInput();
 		res.close();
-		co.flush();
 	}
 }

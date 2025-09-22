@@ -142,7 +142,12 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 	}
 
 	@Override
-	public void onOutputClosed() {
+	public boolean finishClosing(long now) {
+		if (!handler.finishClosing(now))
+			return false;
+		if (sslEngine.isOutboundDone())
+			return true;
+
 		sslEngine.closeOutbound();
 		try {
 			co.write(EMPTY);
@@ -150,7 +155,7 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 		} catch (@SuppressWarnings("unused") InterruptedException e) {
 			Thread.currentThread().interrupt();
 		}
-		handler.onOutputClosed();
+		return false;
 	}
 
 	private boolean checkHandshake(HandshakeStatus hs, long now) throws IOException {

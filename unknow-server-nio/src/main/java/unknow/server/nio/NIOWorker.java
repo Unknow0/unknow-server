@@ -135,7 +135,8 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			try {
 				doWrite(co, now);
 			} catch (Exception e) {
-				logger.error("failed to write {}", co, e);
+				if (co.next != co)
+					logger.error("failed to write {}", co, e);
 				remove(co);
 				doneClose(co);
 			} finally {
@@ -148,7 +149,8 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			try {
 				doRead(co, now);
 			} catch (Exception e) {
-				logger.error("failed to read {}", co, e);
+				if (co.next != co)
+					logger.error("failed to read {}", co, e);
 				remove(co);
 				doneClose(co);
 			} finally {
@@ -165,10 +167,9 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			startClose(co);
 			return;
 		}
-		if (l == 0) {
-			toTail(co, now);
+		toTail(co, now);
+		if (l == 0)
 			return;
-		}
 		buf.flip();
 		ByteBuffer data = ByteBuffer.allocate(buf.remaining());
 		data.put(buf);
@@ -199,6 +200,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 
 	private void doneClose(NIOConnection co) {
 		listener.closed(name, co);
+		logger.debug("{} done closing", co);
 		try {
 			co.doneClosing();
 		} catch (Exception e) {
@@ -232,9 +234,9 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 
 	private final void toTail(NIOConnection co, long now) {
 		co.lastCheck = now;
-
 		if (tail == co || co.next == co)
 			return;
+
 		unlink(co);
 
 		co.next = null;
