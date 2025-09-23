@@ -34,8 +34,8 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	protected final SelectionKey key;
 	protected final SocketChannel channel;
 
-	protected final InetSocketAddress local;
-	protected final InetSocketAddress remote;
+	private InetSocketAddress local;
+	private InetSocketAddress remote;
 
 	final BlockingQueue<ByteBuffer> pending;
 	final ByteBuffers writes;
@@ -57,20 +57,6 @@ public final class NIOConnection extends NIOHandlerDelegate {
 		this.key = key;
 		this.channel = (SocketChannel) key.channel();
 		this.out = new Out(this);
-		InetSocketAddress a;
-		try {
-			a = (InetSocketAddress) channel.getLocalAddress();
-		} catch (@SuppressWarnings("unused") Exception e) {
-			a = DISCONECTED;
-		}
-		local = a;
-		try {
-			a = (InetSocketAddress) channel.getRemoteAddress();
-		} catch (@SuppressWarnings("unused") Exception e) {
-			a = DISCONECTED;
-		}
-		remote = a;
-
 		this.pending = new LinkedBlockingDeque<>();
 		this.writes = new ByteBuffers(16);
 	}
@@ -125,6 +111,13 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	 * @return the remote address
 	 */
 	public final InetSocketAddress getRemote() {
+		if (remote == null) {
+			try {
+				remote = (InetSocketAddress) channel.getRemoteAddress();
+			} catch (@SuppressWarnings("unused") Exception e) {
+				remote = DISCONECTED;
+			}
+		}
 		return remote;
 	}
 
@@ -134,6 +127,13 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	 * @return the local address
 	 */
 	public final InetSocketAddress getLocal() {
+		if (local == null) {
+			try {
+				local = (InetSocketAddress) channel.getLocalAddress();
+			} catch (@SuppressWarnings("unused") Exception e) {
+				local = DISCONECTED;
+			}
+		}
 		return local;
 	}
 
@@ -181,7 +181,7 @@ public final class NIOConnection extends NIOHandlerDelegate {
 
 	@Override
 	public String toString() {
-		return getClass() + "[local=" + local + " remote=" + remote + "]";
+		return getClass() + "[local=" + getLocal() + " remote=" + getRemote() + "]";
 	}
 
 	/** output stream for this connection */

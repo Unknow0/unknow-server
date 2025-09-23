@@ -185,7 +185,9 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 
 	private void doWrite(NIOConnection co, long now) throws IOException {
 		co.beforeWrite(now);
-		if (co.channel.write(co.writes.buf, 0, co.writes.len) > 0) {
+		long l = co.channel.write(co.writes.buf, 0, co.writes.len);
+		logger.trace("{} writen {}", co, l);
+		if (l > 0) {
 			co.onWrite(now);
 			toTail(co, now);
 		}
@@ -258,21 +260,15 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	private final class RegisterTask implements WorkerTask {
 		private final SelectionKey key;
 		private final ConnectionFactory factory;
-		private final long start;
 
 		public RegisterTask(SelectionKey key, ConnectionFactory factory) {
 			this.key = key;
 			this.factory = factory;
-			this.start = System.nanoTime();
 		}
 
-		@SuppressWarnings("resource")
 		@Override
 		public void run(long now) {
-			long s = System.nanoTime();
-			logger.debug("init delay {}", (s - start) / 1e6);
 			NIOConnection co = new NIOConnection(NIOWorker.this, key, factory.build());
-			logger.debug("init co create {}", (System.nanoTime() - s) / 1e6);
 			key.attach(co);
 			listener.accepted(name, co);
 			if (!co.asyncInit()) {
@@ -285,10 +281,8 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 					return;
 				}
 			} else
-
 				submit(new AsyncInit(co));
 			toTail(co, now);
-			logger.debug("init duration {}", (System.nanoTime() - s) / 1e6);
 		}
 	}
 
