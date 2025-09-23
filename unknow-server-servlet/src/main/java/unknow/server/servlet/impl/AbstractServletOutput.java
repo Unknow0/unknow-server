@@ -21,6 +21,7 @@ public abstract class AbstractServletOutput extends ServletOutputStream {
 
 	/**
 	 * create a new AbstractServlet
+	 * 
 	 * @param res the response
 	 * @param position bytebuffer position (free space in the start)
 	 */
@@ -54,6 +55,7 @@ public abstract class AbstractServletOutput extends ServletOutputStream {
 
 	/**
 	 * set the buffer size
+	 * 
 	 * @param bufferSize the size
 	 */
 	public final void setBufferSize(int bufferSize) {
@@ -85,6 +87,7 @@ public abstract class AbstractServletOutput extends ServletOutputStream {
 
 	/**
 	 * called after the stream is closed
+	 * 
 	 * @throws IOException on error
 	 */
 	protected void afterClose() throws IOException { // for override
@@ -126,7 +129,7 @@ public abstract class AbstractServletOutput extends ServletOutputStream {
 			return;
 		off += l;
 		if (len >= bufferSize) {
-			ByteBuffer buf = ByteBuffer.allocate(len + position).position(position + len);
+			ByteBuffer buf = ByteBuffer.allocate(len + position).position(position);
 			System.arraycopy(b, off, buf.array(), position, len);
 			writeBuffer(buf);
 		} else
