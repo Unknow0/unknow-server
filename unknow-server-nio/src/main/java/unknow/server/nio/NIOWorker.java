@@ -70,10 +70,16 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	 * 
 	 * @param socket the socket to register
 	 * @param factory the connection factory
+	 * @throws IOException in case of error
 	 */
+	@SuppressWarnings("resource")
 	@Override
-	public final void register(SocketChannel socket, ConnectionFactory factory) {
-		execute(new RegisterTask(socket, factory));
+	public final void register(SocketChannel socket, ConnectionFactory factory) throws IOException {
+		socket.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.TRUE).setOption(StandardSocketOptions.TCP_NODELAY, Boolean.TRUE)
+				.setOption(StandardSocketOptions.SO_RCVBUF, 64 * 1024).setOption(StandardSocketOptions.SO_SNDBUF, 64 * 1024).configureBlocking(false);
+		SelectionKey key = socket.register(selector, 0);
+
+		execute(new RegisterTask(key, factory));
 	}
 
 	@Override
@@ -250,32 +256,23 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	}
 
 	private final class RegisterTask implements WorkerTask {
-		private final SocketChannel socket;
+		private final SelectionKey key;
 		private final ConnectionFactory factory;
+		private final long start;
 
-		public RegisterTask(SocketChannel socket, ConnectionFactory factory) {
-			this.socket = socket;
+		public RegisterTask(SelectionKey key, ConnectionFactory factory) {
+			this.key = key;
 			this.factory = factory;
+			this.start = System.nanoTime();
 		}
 
 		@SuppressWarnings("resource")
 		@Override
 		public void run(long now) {
-			SelectionKey key = null;
-			try {
-				socket.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.TRUE).setOption(StandardSocketOptions.TCP_NODELAY, Boolean.TRUE).configureBlocking(false);
-				socket.setOption(StandardSocketOptions.SO_RCVBUF, 64 * 1024).setOption(StandardSocketOptions.SO_SNDBUF, 64 * 1024);
-				key = socket.register(selector, 0);
-			} catch (IOException e) {
-				try {
-					socket.close();
-				} catch (IOException ex) {
-					e.addSuppressed(ex);
-				}
-				logger.warn("Failed to register socket", e);
-				return;
-			}
+			long s = System.nanoTime();
+			logger.debug("init delay {}", (s - start) / 1e6);
 			NIOConnection co = new NIOConnection(NIOWorker.this, key, factory.build());
+			logger.debug("init co create {}", (System.nanoTime() - s) / 1e6);
 			key.attach(co);
 			listener.accepted(name, co);
 			if (!co.asyncInit()) {
@@ -288,8 +285,10 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 					return;
 				}
 			} else
+
 				submit(new AsyncInit(co));
 			toTail(co, now);
+			logger.debug("init duration {}", (System.nanoTime() - s) / 1e6);
 		}
 	}
 

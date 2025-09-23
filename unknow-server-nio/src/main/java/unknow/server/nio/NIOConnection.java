@@ -97,10 +97,11 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	public final void write(ByteBuffer buf) throws InterruptedException, IOException {
 		if (!key.isValid())
 			throw new IOException("already closed");
+		pending.put(buf);
 		if (pending.size() > 10)
 			flush();
-		pending.put(buf);
-		key.interestOpsOr(SelectionKey.OP_WRITE);
+		else
+			key.interestOpsOr(SelectionKey.OP_WRITE);
 	}
 
 	@SuppressWarnings("resource")
