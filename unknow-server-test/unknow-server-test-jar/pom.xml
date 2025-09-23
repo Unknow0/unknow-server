@@ -60,7 +60,7 @@
 						</goals>
 						<phase>generate-sources</phase>
 						<configuration>
-							<addAccessLog>false</addAccessLog>
+							<addAccessLog>true</addAccessLog>
 							<packageName>unknow.server.http.test.generated</packageName>
 							<!--sessionFactory>bla</sessionFactory -->
 							<artifacts>

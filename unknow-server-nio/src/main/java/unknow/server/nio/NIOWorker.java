@@ -70,10 +70,16 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	 * 
 	 * @param socket the socket to register
 	 * @param factory the connection factory
+	 * @throws IOException in case of error
 	 */
+	@SuppressWarnings("resource")
 	@Override
-	public final void register(SocketChannel socket, ConnectionFactory factory) {
-		execute(new RegisterTask(socket, factory));
+	public final void register(SocketChannel socket, ConnectionFactory factory) throws IOException {
+		socket.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.TRUE).setOption(StandardSocketOptions.TCP_NODELAY, Boolean.TRUE)
+				.setOption(StandardSocketOptions.SO_RCVBUF, 64 * 1024).setOption(StandardSocketOptions.SO_SNDBUF, 64 * 1024).configureBlocking(false);
+		SelectionKey key = socket.register(selector, 0);
+
+		execute(new RegisterTask(key, factory));
 	}
 
 	@Override
@@ -135,7 +141,8 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			try {
 				doWrite(co, now);
 			} catch (Exception e) {
-				logger.error("failed to write {}", co, e);
+				if (co.next != co)
+					logger.error("failed to write {}", co, e);
 				remove(co);
 				doneClose(co);
 			} finally {
@@ -148,7 +155,8 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			try {
 				doRead(co, now);
 			} catch (Exception e) {
-				logger.error("failed to read {}", co, e);
+				if (co.next != co)
+					logger.error("failed to read {}", co, e);
 				remove(co);
 				doneClose(co);
 			} finally {
@@ -165,10 +173,9 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			startClose(co);
 			return;
 		}
-		if (l == 0) {
-			toTail(co, now);
+		toTail(co, now);
+		if (l == 0)
 			return;
-		}
 		buf.flip();
 		ByteBuffer data = ByteBuffer.allocate(buf.remaining());
 		data.put(buf);
@@ -178,7 +185,9 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 
 	private void doWrite(NIOConnection co, long now) throws IOException {
 		co.beforeWrite(now);
-		if (co.channel.write(co.writes.buf, 0, co.writes.len) > 0) {
+		long l = co.channel.write(co.writes.buf, 0, co.writes.len);
+		logger.trace("{} writen {}", co, l);
+		if (l > 0) {
 			co.onWrite(now);
 			toTail(co, now);
 		}
@@ -199,6 +208,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 
 	private void doneClose(NIOConnection co) {
 		listener.closed(name, co);
+		logger.debug("{} done closing", co);
 		try {
 			co.doneClosing();
 		} catch (Exception e) {
@@ -232,9 +242,9 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 
 	private final void toTail(NIOConnection co, long now) {
 		co.lastCheck = now;
-
 		if (tail == co || co.next == co)
 			return;
+
 		unlink(co);
 
 		co.next = null;
@@ -248,31 +258,16 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	}
 
 	private final class RegisterTask implements WorkerTask {
-		private final SocketChannel socket;
+		private final SelectionKey key;
 		private final ConnectionFactory factory;
 
-		public RegisterTask(SocketChannel socket, ConnectionFactory factory) {
-			this.socket = socket;
+		public RegisterTask(SelectionKey key, ConnectionFactory factory) {
+			this.key = key;
 			this.factory = factory;
 		}
 
-		@SuppressWarnings("resource")
 		@Override
 		public void run(long now) {
-			SelectionKey key = null;
-			try {
-				socket.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.TRUE).setOption(StandardSocketOptions.TCP_NODELAY, Boolean.TRUE).configureBlocking(false);
-				socket.setOption(StandardSocketOptions.SO_RCVBUF, 64 * 1024).setOption(StandardSocketOptions.SO_SNDBUF, 64 * 1024);
-				key = socket.register(selector, 0);
-			} catch (IOException e) {
-				try {
-					socket.close();
-				} catch (IOException ex) {
-					e.addSuppressed(ex);
-				}
-				logger.warn("Failed to register socket", e);
-				return;
-			}
 			NIOConnection co = new NIOConnection(NIOWorker.this, key, factory.build());
 			key.attach(co);
 			listener.accepted(name, co);

@@ -199,15 +199,25 @@ public class NIOServerBuilder {
 				});
 	}
 
-	private NIOServerListener getListener(String l) {
+	private NIOServerListener getListener(String listener) {
+		String[] split = listener.split(",");
+		NIOServerListener[] l = new NIOServerListener[split.length];
+		for (int i = 0; i < split.length; i++)
+			l[i] = createListener(split[i]);
+		return l.length == 1 ? l[0] : new NIOServerListener.Composite(l);
+	}
+
+	private NIOServerListener createListener(String l) {
 		if ("NOP".equals(l))
 			return NIOServerListener.NOP;
 		if ("LOG".equals(l))
 			return NIOServerListener.LOG;
+		if ("PROMETHEUS".equals(l))
+			return PrometheusListener.INSTANCE;
 		try {
 			return (NIOServerListener) Class.forName(l).getConstructor().newInstance();
 		} catch (@SuppressWarnings("unused") Exception e) {
-			throw new IllegalArgumentException("listener should be one of NOP, LOG, class");
+			throw new IllegalArgumentException("listener should be one of NOP, LOG, PROMETHEUS, class");
 		}
 	}
 

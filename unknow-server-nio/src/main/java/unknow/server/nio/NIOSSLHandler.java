@@ -3,6 +3,7 @@ package unknow.server.nio;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import javax.net.ssl.SSLContext;
@@ -39,7 +40,6 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 		super(handler);
 		this.sslContext = sslContext;
 	}
-
 
 	@Override
 	public boolean asyncInit() {
@@ -95,7 +95,7 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 			rawIn.compact();
 			if (checkHandshake(r.getHandshakeStatus(), now))
 				return;
-			app.collect(buf -> handler.onRead(buf, now));
+			app.drain(buf -> handler.onRead(buf, now));
 		}
 		rawIn.flip();
 		while (rawIn.hasRemaining()) {
@@ -107,7 +107,7 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 				for (int i = app.remaining(); i < applicationBufferSize; i += 4096)
 					app.accept(ByteBuffer.allocate(4096));
 			} else
-				app.collect(buf -> handler.onRead(buf, now));
+				app.drain(buf -> handler.onRead(buf, now));
 		}
 		rawIn.compact();
 	}
@@ -124,6 +124,13 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 			SSLEngineResult r = sslEngine.wrap(rawOut.buf, 0, rawOut.len, out);
 			logger.trace("wrap {}", r);
 			c.accept(out.flip());
+			if (r.getStatus() == Status.CLOSED) {
+				AtomicInteger l = new AtomicInteger(0);
+				rawOut.drain(b -> l.getAndAdd(b.remaining()));
+				if (l.get() > 0)
+					logger.warn("{} remaining data {}", co, l);
+				break;
+			}
 			rawOut.compact();
 			checkHandshake(r.getHandshakeStatus(), now);
 		}
@@ -135,14 +142,20 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 	}
 
 	@Override
-	public void onOutputClosed() {
+	public boolean finishClosing(long now) {
+		if (!handler.finishClosing(now))
+			return false;
+		if (sslEngine.isOutboundDone())
+			return true;
+
 		sslEngine.closeOutbound();
 		try {
 			co.write(EMPTY);
+		} catch (@SuppressWarnings("unused") IOException e) { // ok
 		} catch (@SuppressWarnings("unused") InterruptedException e) {
 			Thread.currentThread().interrupt();
 		}
-		handler.onOutputClosed();
+		return false;
 	}
 
 	private boolean checkHandshake(HandshakeStatus hs, long now) throws IOException {
@@ -159,10 +172,8 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 					r = sslEngine.unwrap(rawIn, app.buf, 0, app.len);
 					logger.trace("unwrap {}", r);
 					rawIn.compact();
-					if (r.getStatus() == Status.BUFFER_UNDERFLOW) {
-						co.toggleKeyOps();
+					if (r.getStatus() == Status.BUFFER_UNDERFLOW)
 						return true;
-					}
 					hs = r.getHandshakeStatus();
 					break;
 				case NEED_WRAP:

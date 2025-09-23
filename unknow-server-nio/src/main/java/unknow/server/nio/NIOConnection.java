@@ -10,9 +10,9 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.Arrays;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingDeque;
 
 import unknow.server.nio.NIOWorker.WorkerTask;
 import unknow.server.util.io.ByteBuffers;
@@ -34,8 +34,8 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	protected final SelectionKey key;
 	protected final SocketChannel channel;
 
-	protected final InetSocketAddress local;
-	protected final InetSocketAddress remote;
+	private InetSocketAddress local;
+	private InetSocketAddress remote;
 
 	final BlockingQueue<ByteBuffer> pending;
 	final ByteBuffers writes;
@@ -57,21 +57,7 @@ public final class NIOConnection extends NIOHandlerDelegate {
 		this.key = key;
 		this.channel = (SocketChannel) key.channel();
 		this.out = new Out(this);
-		InetSocketAddress a;
-		try {
-			a = (InetSocketAddress) channel.getLocalAddress();
-		} catch (@SuppressWarnings("unused") Exception e) {
-			a = DISCONECTED;
-		}
-		local = a;
-		try {
-			a = (InetSocketAddress) channel.getRemoteAddress();
-		} catch (@SuppressWarnings("unused") Exception e) {
-			a = DISCONECTED;
-		}
-		remote = a;
-
-		this.pending = new ArrayBlockingQueue<>(16);
+		this.pending = new LinkedBlockingDeque<>();
 		this.writes = new ByteBuffers(16);
 	}
 
@@ -92,29 +78,23 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	 * add a buffers to the writing queue
 	 * @param buf buffer to be written
 	 * @throws InterruptedException  in case of interruption
+	 * @throws IOException 
 	 */
-	public final void write(ByteBuffer buf) throws InterruptedException {
+	public final void write(ByteBuffer buf) throws InterruptedException, IOException {
+		if (!key.isValid())
+			throw new IOException("already closed");
+		pending.put(buf);
 		if (pending.size() > 10)
 			flush();
-		pending.put(buf);
-		toggleKeyOps();
-
-	}
-
-	public final void toggleKeyOps() {
-		if (!key.isValid())
-			return;
-		if (hasPendingWrites())
-			key.interestOpsOr(SelectionKey.OP_WRITE);
 		else
-			key.interestOpsAnd(~SelectionKey.OP_WRITE);
+			key.interestOpsOr(SelectionKey.OP_WRITE);
 	}
 
 	@SuppressWarnings("resource")
 	public final void flush() {
 		if (!hasPendingWrites())
 			return;
-		toggleKeyOps();
+		key.interestOpsOr(SelectionKey.OP_WRITE);
 		key.selector().wakeup();
 	}
 
@@ -131,6 +111,13 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	 * @return the remote address
 	 */
 	public final InetSocketAddress getRemote() {
+		if (remote == null) {
+			try {
+				remote = (InetSocketAddress) channel.getRemoteAddress();
+			} catch (@SuppressWarnings("unused") Exception e) {
+				remote = DISCONECTED;
+			}
+		}
 		return remote;
 	}
 
@@ -140,6 +127,13 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	 * @return the local address
 	 */
 	public final InetSocketAddress getLocal() {
+		if (local == null) {
+			try {
+				local = (InetSocketAddress) channel.getLocalAddress();
+			} catch (@SuppressWarnings("unused") Exception e) {
+				local = DISCONECTED;
+			}
+		}
 		return local;
 	}
 
@@ -161,7 +155,8 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	@Override
 	public final void onWrite(long now) throws IOException {
 		writes.compact();
-		toggleKeyOps();
+		if (!hasPendingWrites())
+			key.interestOpsAnd(~SelectionKey.OP_WRITE);
 		handler.onWrite(now);
 	}
 
@@ -175,13 +170,10 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	 */
 	@Override
 	public final void doneClosing() {
+		out.h = null;
 		key.cancel();
 		try {
 			key.channel().close();
-		} catch (@SuppressWarnings("unused") IOException e) { // ignore
-		}
-		try {
-			out.close();
 		} catch (@SuppressWarnings("unused") IOException e) { // ignore
 		}
 		handler.doneClosing();
@@ -189,7 +181,7 @@ public final class NIOConnection extends NIOHandlerDelegate {
 
 	@Override
 	public String toString() {
-		return getClass() + "[local=" + local + " remote=" + remote + "]";
+		return getClass() + "[local=" + getLocal() + " remote=" + getRemote() + "]";
 	}
 
 	/** output stream for this connection */
@@ -270,7 +262,6 @@ public final class NIOConnection extends NIOHandlerDelegate {
 			if (h == null)
 				return;
 			flush();
-			h.onOutputClosed();
 			h = null;
 		}
 
@@ -285,9 +276,10 @@ public final class NIOConnection extends NIOHandlerDelegate {
 
 		@Override
 		public synchronized void flush() throws IOException {
+			if (h == null)
+				return;
 			writeBuffer();
-			if (h != null)
-				h.flush();
+			h.flush();
 		}
 
 		private void writeBuffer() throws IOException {

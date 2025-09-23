@@ -54,11 +54,6 @@ public class NIOHandlerDelegate implements NIOConnectionHandler {
 	}
 
 	@Override
-	public void onOutputClosed() {
-		handler.onOutputClosed();
-	}
-
-	@Override
 	public boolean canClose(long now, boolean stop) {
 		return handler.canClose(now, stop);
 	}

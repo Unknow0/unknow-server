@@ -68,7 +68,7 @@ public interface NIOConnectionHandler {
 	}
 
 	/**
-	 * check if this handler has some pengin write
+	 * check if this handler has some pending write
 	 * @return true if the handler has pending write
 	 */
 	default boolean hasPendingWrites() {
@@ -82,12 +82,6 @@ public interface NIOConnectionHandler {
 	 * @throws IOException on io exception
 	 */
 	default void onWrite(long now) throws IOException { // ok
-	}
-
-	/**
-	 * called when the output is closed
-	 */
-	default void onOutputClosed() { // ok
 	}
 
 	/**

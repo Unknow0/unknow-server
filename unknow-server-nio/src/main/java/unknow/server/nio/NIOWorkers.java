@@ -3,6 +3,7 @@
  */
 package unknow.server.nio;
 
+import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
 import unknow.server.nio.NIOServer.ConnectionFactory;
@@ -16,8 +17,9 @@ public interface NIOWorkers {
 	 * 
 	 * @param socket  the socket to register
 	 * @param factory the connection factory
+	 * @throws IOException in case of error
 	 */
-	void register(SocketChannel socket, ConnectionFactory factory);
+	void register(SocketChannel socket, ConnectionFactory factory) throws IOException;
 
 	/**
 	 * start the IOWorker
@@ -50,7 +52,7 @@ public interface NIOWorkers {
 		}
 
 		@Override
-		public synchronized void register(SocketChannel socket, ConnectionFactory factory) {
+		public synchronized void register(SocketChannel socket, ConnectionFactory factory) throws IOException {
 			w[o++].register(socket, factory);
 			if (o == w.length)
 				o = 0;
