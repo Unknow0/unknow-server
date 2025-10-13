@@ -39,6 +39,7 @@ import com.github.javaparser.ast.type.Type;
 import jakarta.xml.bind.JAXBElement;
 import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Unmarshaller;
+import unknow.model.api.TypeModel;
 import unknow.server.jaxb.StrReader;
 import unknow.server.jaxb.UnmarshallerImpl;
 import unknow.server.jaxb.XmlHandler;
@@ -52,7 +53,6 @@ import unknow.server.maven.jaxb.model.XmlElement;
 import unknow.server.maven.jaxb.model.XmlElements;
 import unknow.server.maven.jaxb.model.XmlType;
 import unknow.server.maven.jaxb.model.XmlTypeComplex;
-import unknow.server.maven.model.TypeModel;
 
 public class HandlerObjectReader extends AbstractSourceBuilder<HandlerContext> {
 	private static final String INSTANCE = "INSTANCE";

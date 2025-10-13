@@ -32,9 +32,9 @@ import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.ServletContainerInitializer;
+import unknow.model.api.ModelLoader;
 import unknow.server.maven.AbstractGeneratorMojo;
 import unknow.server.maven.TypeCache;
-import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.servlet.Builder.BuilderContext;
 import unknow.server.maven.servlet.builder.CreateContext;
 import unknow.server.maven.servlet.builder.CreateEventManager;

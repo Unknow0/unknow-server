@@ -45,6 +45,8 @@ import com.github.javaparser.ast.stmt.SwitchStmt;
 
 import jakarta.xml.bind.JAXBContextFactory;
 import jakarta.xml.bind.annotation.XmlRootElement;
+import unknow.model.api.AnnotationModel;
+import unknow.model.api.TypeModel;
 import unknow.server.jaxb.ContextFactory;
 import unknow.server.jaxb.handler.BigDecimalHandler;
 import unknow.server.jaxb.handler.BigIntegerHandler;
@@ -71,8 +73,6 @@ import unknow.server.maven.jaxb.builder.HandlerBuilder;
 import unknow.server.maven.jaxb.model.XmlCollection;
 import unknow.server.maven.jaxb.model.XmlLoader;
 import unknow.server.maven.jaxb.model.XmlType;
-import unknow.server.maven.model.AnnotationModel;
-import unknow.server.maven.model.TypeModel;
 
 /**
  * @author unknow

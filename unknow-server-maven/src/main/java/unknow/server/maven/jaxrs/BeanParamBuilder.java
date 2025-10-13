@@ -31,6 +31,8 @@ import com.github.javaparser.ast.stmt.TryStmt;
 
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.ext.ParamConverter;
+import unknow.model.api.TypeModel;
+import unknow.model.jvm.JvmModelLoader;
 import unknow.server.http.jaxrs.JaxrsContext;
 import unknow.server.http.jaxrs.JaxrsEntityReader;
 import unknow.server.http.jaxrs.JaxrsReq;
@@ -41,8 +43,6 @@ import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam.JaxrsBeanFieldParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBodyParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsFormParam;
-import unknow.server.maven.model.TypeModel;
-import unknow.server.maven.model.jvm.JvmModelLoader;
 
 /**
  * @author unknow

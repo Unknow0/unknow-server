@@ -13,11 +13,11 @@ import javax.xml.namespace.QName;
 
 import org.junit.jupiter.api.Test;
 
+import unknow.model.api.PrimitiveModel;
+import unknow.model.jvm.JvmModelLoader;
+import unknow.model.simple.SimpleAnnotationArray;
+import unknow.model.simple.SimpleClass;
 import unknow.server.maven.jaxb.model.XmlElements.XmlGroup;
-import unknow.server.maven.model.PrimitiveModel;
-import unknow.server.maven.model.jvm.JvmModelLoader;
-import unknow.server.maven.model.simple.SimpleAnnotationArray;
-import unknow.server.maven.model.simple.SimpleClass;
 
 public class XmlLoaderTest {
 

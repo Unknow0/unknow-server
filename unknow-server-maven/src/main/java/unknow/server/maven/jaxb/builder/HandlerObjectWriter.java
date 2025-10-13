@@ -39,6 +39,7 @@ import com.github.javaparser.ast.stmt.ThrowStmt;
 import jakarta.xml.bind.JAXBElement;
 import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Marshaller;
+import unknow.model.api.TypeModel;
 import unknow.server.jaxb.MarshallerImpl;
 import unknow.server.maven.SourceBuilder.AbstractSourceBuilder;
 import unknow.server.maven.TypeCache;
@@ -49,7 +50,6 @@ import unknow.server.maven.jaxb.model.XmlCollection;
 import unknow.server.maven.jaxb.model.XmlElement;
 import unknow.server.maven.jaxb.model.XmlType;
 import unknow.server.maven.jaxb.model.XmlTypeComplex;
-import unknow.server.maven.model.TypeModel;
 
 public class HandlerObjectWriter extends AbstractSourceBuilder<HandlerContext> {
 	private static final String INSTANCE = "INSTANCE";

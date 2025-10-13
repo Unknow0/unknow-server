@@ -61,6 +61,11 @@ import jakarta.ws.rs.NotAcceptableException;
 import jakarta.ws.rs.NotSupportedException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.ext.ParamConverter;
+import unknow.model.api.ClassModel;
+import unknow.model.api.MethodModel;
+import unknow.model.api.ParamModel;
+import unknow.model.api.TypeModel;
+import unknow.model.jvm.JvmModelLoader;
 import unknow.server.http.jaxrs.JaxrsContext;
 import unknow.server.http.jaxrs.JaxrsEntityReader;
 import unknow.server.http.jaxrs.JaxrsEntityWriter;
@@ -72,11 +77,6 @@ import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBodyParam;
-import unknow.server.maven.model.ClassModel;
-import unknow.server.maven.model.MethodModel;
-import unknow.server.maven.model.ParamModel;
-import unknow.server.maven.model.TypeModel;
-import unknow.server.maven.model.jvm.JvmModelLoader;
 
 /**
  * @author unknow
@@ -202,7 +202,7 @@ public class JaxRsServletBuilder {
 			TypeModel type = m.m.type();
 			if (!type.isVoid()) {
 				if (type.isPrimitive())
-					type = type.asPrimitive().boxed();
+					type = JvmModelLoader.GLOBAL.get(type.asPrimitive().boxed());
 				ClassOrInterfaceType c = types.getClass(type.genericName());
 				cl.addField(types.getClass(JaxrsEntityWriter.class, c), m.v + "$r", Utils.PSF);
 				b.addStatement(new AssignExpr(new NameExpr(m.v + "$r"), new MethodCallExpr(new TypeExpr(types.getClass(JaxrsEntityWriter.class)), "create",

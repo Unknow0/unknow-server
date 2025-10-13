@@ -78,6 +78,23 @@
 			<artifactId>unknow-server-jaxrs</artifactId>
 			<version>${project.version}</version>
 		</dependency>
+		<dependency>
+			<groupId>io.github.unknow0.model</groupId>
+			<artifactId>unknow-model-api</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.github.unknow0.model</groupId>
+			<artifactId>unknow-model-ast</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.github.unknow0.model</groupId>
+			<artifactId>unknow-model-jvm</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.github.unknow0.model</groupId>
+			<artifactId>unknow-model-simple</artifactId>
+			<scope>test</scope>
+		</dependency>
 
 		<dependency>
 			<groupId>com.github.javaparser</groupId>

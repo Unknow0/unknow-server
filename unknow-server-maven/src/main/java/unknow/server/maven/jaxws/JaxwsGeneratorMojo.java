@@ -30,11 +30,11 @@ import org.slf4j.LoggerFactory;
 import com.github.javaparser.ast.CompilationUnit;
 
 import jakarta.jws.WebService;
+import unknow.model.api.AnnotationModel;
 import unknow.server.maven.AbstractGeneratorMojo;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.jaxb.model.XmlLoader;
 import unknow.server.maven.jaxws.binding.Service;
-import unknow.server.maven.model.AnnotationModel;
 
 /**
  * @author unknow

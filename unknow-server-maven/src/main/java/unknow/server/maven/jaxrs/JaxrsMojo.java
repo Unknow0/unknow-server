@@ -59,14 +59,14 @@ import jakarta.ws.rs.Priorities;
 import jakarta.ws.rs.ext.ParamConverter;
 import jakarta.ws.rs.ext.ParamConverterProvider;
 import jakarta.ws.rs.ext.RuntimeDelegate;
+import unknow.model.api.ClassModel;
+import unknow.model.api.TypeModel;
 import unknow.server.http.jaxrs.JaxrsContext;
 import unknow.server.http.jaxrs.JaxrsRuntime;
 import unknow.server.http.jaxrs.protostuff.ProtostuffSchema;
 import unknow.server.maven.AbstractGeneratorMojo;
 import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
-import unknow.server.maven.model.ClassModel;
-import unknow.server.maven.model.TypeModel;
 
 /**
  * @author unknow

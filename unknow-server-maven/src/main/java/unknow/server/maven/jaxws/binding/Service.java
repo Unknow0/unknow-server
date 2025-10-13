@@ -19,14 +19,14 @@ import jakarta.jws.soap.SOAPBinding;
 import jakarta.jws.soap.SOAPBinding.ParameterStyle;
 import jakarta.jws.soap.SOAPBinding.Style;
 import jakarta.jws.soap.SOAPBinding.Use;
+import unknow.model.api.AnnotationModel;
+import unknow.model.api.ClassModel;
+import unknow.model.api.MethodModel;
+import unknow.model.api.ModelLoader;
+import unknow.model.api.ParamModel;
+import unknow.model.api.TypeModel;
 import unknow.server.jaxws.WebServiceUrl;
 import unknow.server.maven.jaxb.model.XmlLoader;
-import unknow.server.maven.model.AnnotationModel;
-import unknow.server.maven.model.ClassModel;
-import unknow.server.maven.model.MethodModel;
-import unknow.server.maven.model.ModelLoader;
-import unknow.server.maven.model.ParamModel;
-import unknow.server.maven.model.TypeModel;
 
 /**
  * @author unknow

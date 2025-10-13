@@ -21,6 +21,7 @@ import com.github.javaparser.ast.stmt.ThrowStmt;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 
 import jakarta.xml.bind.JAXBException;
+import unknow.model.api.TypeModel;
 import unknow.server.jaxb.XmlRootHandler;
 import unknow.server.jaxb.XmlSimpleHandler;
 import unknow.server.maven.SourceBuilder.AbstractSourceBuilder;
@@ -28,7 +29,6 @@ import unknow.server.maven.Utils;
 import unknow.server.maven.jaxb.HandlerContext;
 import unknow.server.maven.jaxb.JaxbGeneratorMojo;
 import unknow.server.maven.jaxb.model.XmlEnum;
-import unknow.server.maven.model.TypeModel;
 
 public class HandlerEnum extends AbstractSourceBuilder<HandlerContext> {
 

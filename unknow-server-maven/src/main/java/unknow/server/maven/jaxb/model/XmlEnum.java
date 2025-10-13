@@ -9,8 +9,8 @@ import java.util.List;
 import javax.xml.namespace.QName;
 
 import jakarta.xml.bind.annotation.XmlEnumValue;
-import unknow.server.maven.model.EnumModel;
-import unknow.server.maven.model.EnumModel.EnumConstant;
+import unknow.model.api.EnumModel;
+import unknow.model.api.EnumModel.EnumConstant;
 
 /**
  * @author unknow

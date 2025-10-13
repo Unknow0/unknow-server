@@ -4,9 +4,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 
+import unknow.model.api.ModelLoader;
+import unknow.model.api.TypeModel;
 import unknow.server.maven.jaxb.model.XmlType;
-import unknow.server.maven.model.ModelLoader;
-import unknow.server.maven.model.TypeModel;
 
 public class HandlerContext {
 	private final Map<XmlType, String> handlers;

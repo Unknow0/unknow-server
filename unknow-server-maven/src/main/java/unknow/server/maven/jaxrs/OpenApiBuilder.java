@@ -44,6 +44,12 @@ import io.swagger.v3.oas.models.parameters.Parameter.StyleEnum;
 import io.swagger.v3.oas.models.parameters.RequestBody;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
+import unknow.model.api.AnnotationModel;
+import unknow.model.api.ClassModel;
+import unknow.model.api.EnumModel;
+import unknow.model.api.FieldModel;
+import unknow.model.api.MethodModel;
+import unknow.model.api.TypeModel;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam.JaxrsBeanFieldParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBodyParam;
@@ -53,12 +59,6 @@ import unknow.server.maven.jaxrs.JaxrsParam.JaxrsHeaderParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsMatrixParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsPathParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsQueryParam;
-import unknow.server.maven.model.AnnotationModel;
-import unknow.server.maven.model.ClassModel;
-import unknow.server.maven.model.EnumModel;
-import unknow.server.maven.model.FieldModel;
-import unknow.server.maven.model.MethodModel;
-import unknow.server.maven.model.TypeModel;
 
 public class OpenApiBuilder {
 	private static final Logger logger = LoggerFactory.getLogger(OpenApiBuilder.class);

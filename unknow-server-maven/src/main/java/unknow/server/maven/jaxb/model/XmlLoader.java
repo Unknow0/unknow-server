@@ -37,14 +37,14 @@ import jakarta.xml.bind.annotation.XmlAccessorType;
 import jakarta.xml.bind.annotation.XmlSchema;
 import jakarta.xml.bind.annotation.XmlTransient;
 import jakarta.xml.bind.annotation.XmlValue;
+import unknow.model.api.AnnotationModel;
+import unknow.model.api.BeanProperty;
+import unknow.model.api.ClassModel;
+import unknow.model.api.PrimitiveModel;
+import unknow.model.api.TypeModel;
+import unknow.model.jvm.JvmModelLoader;
 import unknow.server.maven.jaxb.model.XmlElements.XmlGroup;
 import unknow.server.maven.jaxb.model.XmlTypeComplex.Factory;
-import unknow.server.maven.model.AnnotationModel;
-import unknow.server.maven.model.BeanProperty;
-import unknow.server.maven.model.ClassModel;
-import unknow.server.maven.model.PrimitiveModel;
-import unknow.server.maven.model.TypeModel;
-import unknow.server.maven.model.jvm.JvmModelLoader;
 
 /**
  * @author unknow
