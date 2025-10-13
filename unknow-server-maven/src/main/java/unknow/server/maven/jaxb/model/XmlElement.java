@@ -9,8 +9,8 @@ import java.util.function.Supplier;
 
 import javax.xml.namespace.QName;
 
-import unknow.server.maven.model.BeanProperty;
-import unknow.server.maven.model.TypeModel;
+import unknow.model.api.BeanProperty;
+import unknow.model.api.TypeModel;
 
 /**
  * @author unknow

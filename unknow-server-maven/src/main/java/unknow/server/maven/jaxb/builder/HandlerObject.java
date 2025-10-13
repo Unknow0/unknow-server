@@ -15,6 +15,7 @@ import com.github.javaparser.ast.expr.StringLiteralExpr;
 import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 
+import unknow.model.api.TypeModel;
 import unknow.server.jaxb.XmlHandler;
 import unknow.server.jaxb.XmlRootHandler;
 import unknow.server.maven.SourceBuilder.AbstractSourceBuilder;
@@ -27,7 +28,6 @@ import unknow.server.maven.jaxb.model.XmlCollection;
 import unknow.server.maven.jaxb.model.XmlElement;
 import unknow.server.maven.jaxb.model.XmlType;
 import unknow.server.maven.jaxb.model.XmlTypeComplex;
-import unknow.server.maven.model.TypeModel;
 
 public class HandlerObject extends AbstractSourceBuilder<HandlerContext> {
 	private static final List<AbstractSourceBuilder<HandlerContext>> methods = Arrays.asList(new HandlerObjectWriter(), new HandlerObjectReader());

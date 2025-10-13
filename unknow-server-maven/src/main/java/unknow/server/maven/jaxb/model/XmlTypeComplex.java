@@ -9,8 +9,8 @@ import java.util.Set;
 
 import javax.xml.namespace.QName;
 
-import unknow.server.maven.model.ClassModel;
-import unknow.server.maven.model.TypeModel;
+import unknow.model.api.ClassModel;
+import unknow.model.api.TypeModel;
 
 /**
  * @author unknow

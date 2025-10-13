@@ -5,8 +5,8 @@ package unknow.server.maven.jaxrs;
 
 import java.util.List;
 
-import unknow.server.maven.model.ClassModel;
-import unknow.server.maven.model.MethodModel;
+import unknow.model.api.ClassModel;
+import unknow.model.api.MethodModel;
 
 public class JaxrsMapping {
 	public final String v;

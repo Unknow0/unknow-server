@@ -10,8 +10,8 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 
 import jakarta.servlet.DispatcherType;
-import unknow.server.maven.model.ClassModel;
-import unknow.server.maven.model.ModelLoader;
+import unknow.model.api.ClassModel;
+import unknow.model.api.ModelLoader;
 import unknow.server.maven.servlet.descriptor.Descriptor;
 import unknow.server.maven.servlet.descriptor.LD;
 import unknow.server.maven.servlet.descriptor.SD;

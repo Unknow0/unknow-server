@@ -5,8 +5,8 @@ package unknow.server.maven.servlet;
 
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 
+import unknow.model.api.ModelLoader;
 import unknow.server.maven.TypeCache;
-import unknow.server.maven.model.ModelLoader;
 import unknow.server.maven.servlet.descriptor.Descriptor;
 
 /**

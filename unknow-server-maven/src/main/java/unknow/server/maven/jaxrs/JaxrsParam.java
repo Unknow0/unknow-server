@@ -8,15 +8,15 @@ import java.util.function.Consumer;
 
 import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.Encoded;
-import unknow.server.maven.model.BeanProperty;
-import unknow.server.maven.model.ClassModel;
-import unknow.server.maven.model.MethodModel;
-import unknow.server.maven.model.ParamModel;
-import unknow.server.maven.model.PrimitiveModel;
-import unknow.server.maven.model.TypeModel;
-import unknow.server.maven.model.util.WithAnnotation;
-import unknow.server.maven.model.util.WithName;
-import unknow.server.maven.model.util.WithType;
+import unknow.model.api.BeanProperty;
+import unknow.model.api.ClassModel;
+import unknow.model.api.MethodModel;
+import unknow.model.api.ParamModel;
+import unknow.model.api.PrimitiveModel;
+import unknow.model.api.TypeModel;
+import unknow.model.api.WithAnnotation;
+import unknow.model.api.WithName;
+import unknow.model.api.WithType;
 
 /**
  * @author unknow

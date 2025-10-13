@@ -19,9 +19,9 @@ import com.github.javaparser.ast.type.Type;
 import com.github.javaparser.ast.type.UnknownType;
 import com.github.javaparser.ast.type.WildcardType;
 
-import unknow.server.maven.model.ModelLoader;
-import unknow.server.maven.model.PrimitiveModel;
-import unknow.server.maven.model.TypeModel;
+import unknow.model.api.ModelLoader;
+import unknow.model.api.PrimitiveModel;
+import unknow.model.api.TypeModel;
 
 /**
  * @author unknow

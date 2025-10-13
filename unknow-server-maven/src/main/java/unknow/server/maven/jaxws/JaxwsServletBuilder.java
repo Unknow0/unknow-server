@@ -52,6 +52,8 @@ import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.JAXBElement;
 import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Unmarshaller;
+import unknow.model.api.ClassModel;
+import unknow.model.api.TypeModel;
 import unknow.server.jaxws.AbstractWs;
 import unknow.server.jaxws.Envelope;
 import unknow.server.jaxws.OperationWrapper;
@@ -60,8 +62,6 @@ import unknow.server.maven.TypeCache;
 import unknow.server.maven.Utils;
 import unknow.server.maven.jaxws.binding.Operation;
 import unknow.server.maven.jaxws.binding.Service;
-import unknow.server.maven.model.ClassModel;
-import unknow.server.maven.model.TypeModel;
 
 /**
  * @author unknow

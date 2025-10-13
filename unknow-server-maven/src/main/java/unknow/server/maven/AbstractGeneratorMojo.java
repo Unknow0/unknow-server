@@ -52,10 +52,10 @@ import com.github.javaparser.symbolsolver.resolution.typesolvers.ClassLoaderType
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver;
 
-import unknow.server.maven.model.ModelLoader;
-import unknow.server.maven.model.TypeModel;
-import unknow.server.maven.model.ast.AstModelLoader;
-import unknow.server.maven.model.jvm.JvmModelLoader;
+import unknow.model.api.ModelLoader;
+import unknow.model.api.TypeModel;
+import unknow.model.ast.AstModelLoader;
+import unknow.model.jvm.JvmModelLoader;
 
 /**
  * @author unknow

@@ -7,7 +7,7 @@ import java.util.Set;
 
 import javax.xml.namespace.QName;
 
-import unknow.server.maven.model.TypeModel;
+import unknow.model.api.TypeModel;
 
 public class XmlChoice implements XmlType {
 	private final Collection<XmlElement> choice;

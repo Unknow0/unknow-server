@@ -62,6 +62,18 @@ import jakarta.ws.rs.ext.MessageBodyReader;
 import jakarta.ws.rs.ext.MessageBodyWriter;
 import jakarta.ws.rs.ext.ParamConverterProvider;
 import jakarta.ws.rs.ext.Provider;
+import unknow.model.api.AncestrorIterator;
+import unknow.model.api.AnnotationModel;
+import unknow.model.api.BeanProperty;
+import unknow.model.api.ClassModel;
+import unknow.model.api.MethodModel;
+import unknow.model.api.ModelLoader;
+import unknow.model.api.ParamModel;
+import unknow.model.api.TypeModel;
+import unknow.model.api.WithAnnotation;
+import unknow.model.api.WithName;
+import unknow.model.api.WithType;
+import unknow.model.jvm.JvmModelLoader;
 import unknow.server.http.jaxrs.protostuff.ProtostuffJsonListAbstract.ProtostuffJsonLineProvider;
 import unknow.server.http.jaxrs.protostuff.ProtostuffJsonListAbstract.ProtostuffJsonListProvider;
 import unknow.server.http.jaxrs.protostuff.ProtostuffJsonProvider;
@@ -78,17 +90,6 @@ import unknow.server.maven.jaxrs.JaxrsParam.JaxrsHeaderParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsMatrixParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsPathParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsQueryParam;
-import unknow.server.maven.model.AnnotationModel;
-import unknow.server.maven.model.BeanProperty;
-import unknow.server.maven.model.ClassModel;
-import unknow.server.maven.model.MethodModel;
-import unknow.server.maven.model.ModelLoader;
-import unknow.server.maven.model.ParamModel;
-import unknow.server.maven.model.TypeModel;
-import unknow.server.maven.model.util.AncestrorIterator;
-import unknow.server.maven.model.util.WithAnnotation;
-import unknow.server.maven.model.util.WithName;
-import unknow.server.maven.model.util.WithType;
 
 /**
  * @author unknow
@@ -355,7 +356,7 @@ public class JaxrsModel {
 		if (type.isArray())
 			type = type.asArray().type();
 		if (type.isPrimitive())
-			return type.asPrimitive().boxed();
+			return JvmModelLoader.GLOBAL.get(type.asPrimitive().boxed());
 
 		if (!type.isClass())
 			return type;
