@@ -5,10 +5,14 @@ on: workflow_dispatch
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
     - name: test
-      run: |
-        echo "MAVEN_CENTRAL_USER $(${{ secrets.MAVEN_CENTRAL_USER }} | base64)"
-        echo "MAVEN_CENTRAL_PASS $(${{ secrets.MAVEN_CENTRAL_PASS }} | base64)"
-        echo "MAVEN_GPG_KEY $(${{ secrets.MAVEN_GPG_KEY }} | base64)"
+      run: |-
+        echo "MAVEN_CENTRAL_USER $(echo -n $MAVEN_USER | base64)"
+        echo "MAVEN_CENTRAL_PASS $(echo -n $MAVEN_PASS | base64)"
+        echo "MAVEN_GPG_KEY $(echo -n $MAVEN_GPG_KEY | base64)"
+      env:
+        MAVEN_USER: ${{secrets.MAVEN_CENTRAL_USER}}
+        MAVEN_PASS: ${{secrets.MAVEN_CENTRAL_PASS}}
+        MAVEN_GPG_KEY: ${{secrets.MAVEN_GPG_KEY}}
+
