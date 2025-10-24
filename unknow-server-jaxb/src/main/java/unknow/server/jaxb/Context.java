@@ -15,7 +15,7 @@ import jakarta.xml.bind.Unmarshaller;
 /**
  * @author unknow
  */
-public class Context extends JAXBContext {
+public final class Context extends JAXBContext {
 
 	private final Map<QName, XmlRootHandler<?>> rootElements;
 	private final Map<Class<?>, XmlRootHandler<?>> rootHandlers;

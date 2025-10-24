@@ -86,6 +86,9 @@ public abstract class AbstractGeneratorMojo extends AbstractMojo {
 	@Parameter(name = "artifacts")
 	protected List<String> artifacts;
 
+	@Parameter(name = "prettyPrint")
+	protected PrettyPrintConfiguration ppConfig = new PrettyPrintConfiguration();
+
 	protected Output out;
 
 	/** created with init() */
@@ -136,7 +139,7 @@ public abstract class AbstractGeneratorMojo extends AbstractMojo {
 		addResource(resources);
 
 		try {
-			out = new Output(output, packageName);
+			out = new Output(output, packageName, ppConfig.toPrinterConfiguration());
 		} catch (IOException e) {
 			throw new MojoFailureException("failed to create output folders", e);
 		}

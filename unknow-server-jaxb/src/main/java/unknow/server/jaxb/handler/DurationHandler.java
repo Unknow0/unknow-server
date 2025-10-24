@@ -11,6 +11,11 @@ public class DurationHandler implements XmlSimpleHandler<Duration> {
 	}
 
 	@Override
+	public Class<Duration> clazz() {
+		return Duration.class;
+	}
+
+	@Override
 	public String toString(Duration t) {
 		return t.toString();
 	}

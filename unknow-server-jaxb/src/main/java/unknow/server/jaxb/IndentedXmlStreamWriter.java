@@ -266,7 +266,7 @@ public class IndentedXmlStreamWriter implements XMLStreamWriter {
 		if (depth > 0 && stack[depth] == WROTE_MARKUP) { // but not data
 			try {
 				writeNewLine(depth - 1);
-			} catch (Exception ignored) { // ok
+			} catch (@SuppressWarnings("unused") Exception e) { // ok
 			}
 		}
 	}

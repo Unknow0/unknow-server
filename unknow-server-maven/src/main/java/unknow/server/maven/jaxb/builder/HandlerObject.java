@@ -9,10 +9,12 @@ import javax.xml.namespace.QName;
 import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.expr.ArrayInitializerExpr;
+import com.github.javaparser.ast.expr.ClassExpr;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
 import com.github.javaparser.ast.expr.StringLiteralExpr;
 import com.github.javaparser.ast.stmt.BlockStmt;
+import com.github.javaparser.ast.stmt.ReturnStmt;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 
 import unknow.model.api.TypeModel;
@@ -58,6 +60,9 @@ public class HandlerObject extends AbstractSourceBuilder<HandlerContext> {
 			b.addStatement(new MethodCallExpr(null, "super", Utils.list(new ObjectCreationExpr(null, types.getClass(QName.class),
 					Utils.list(new StringLiteralExpr(qname.getNamespaceURI()), new StringLiteralExpr(qname.getLocalPart()))))));
 		}
+
+		cl.addMethod("clazz", Utils.PUBLIC).setType(types.getClass(Class.class, types.getClass(t))).addMarkerAnnotation(Override.class).createBody()
+				.addStatement(new ReturnStmt(new ClassExpr(types.getClass(t))));
 
 		for (AbstractSourceBuilder<HandlerContext> m : methods)
 			m.process(cl, types, ctx);

@@ -17,6 +17,11 @@ public class ZonedDateTimeHandler implements XmlSimpleHandler<ZonedDateTime> {
 	}
 
 	@Override
+	public Class<ZonedDateTime> clazz() {
+		return ZonedDateTime.class;
+	}
+
+	@Override
 	public String toString(ZonedDateTime t) {
 		return t.format(FMT);
 	}

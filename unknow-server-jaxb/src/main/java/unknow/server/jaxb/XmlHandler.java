@@ -16,6 +16,10 @@ import jakarta.xml.bind.Marshaller;
  * @param <T> xmlElement
  */
 public interface XmlHandler<T> {
+	/**
+	 * @return mapped class
+	 */
+	Class<T> clazz();
 
 	/**
 	 * write object content

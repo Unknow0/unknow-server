@@ -3,6 +3,7 @@
  */
 package unknow.server.maven.jaxrs;
 
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.Writer;
 import java.lang.annotation.Annotation;
@@ -131,6 +132,8 @@ public class JaxrsMojo extends AbstractGeneratorMojo {
 		new OpenApiBuilder().build(openapi.getSpec(project), model, resources + basePath + "/openapi.json");
 		beans.save(out);
 		mt.save(out);
+
+		generateGraalvmResources();
 	}
 
 	/**
@@ -262,4 +265,20 @@ public class JaxrsMojo extends AbstractGeneratorMojo {
 				new ObjectCreationExpr(null, types.getClass(ParamConverter.class, TypeCache.EMPTY), null, Utils.list(), methods), Utils.PSF);
 	}
 
+	private void generateGraalvmResources() throws MojoFailureException {
+		if (!graalvm)
+			return;
+
+		try {
+			Path path = Paths.get(resources + "/META-INF/native-image/" + id() + "/resource-config.json");
+			Files.createDirectories(path.getParent());
+			try (BufferedWriter w = Files.newBufferedWriter(path)) {
+				w.write("{\"resources\":{\"includes\":[");
+				w.append("{\"pattern\":\"\\\\Q").append(basePath).write("/openapi.json\\\\E\"}");
+				w.write("]}}");
+			}
+		} catch (IOException e) {
+			throw new MojoFailureException("failed generate graalvm resources", e);
+		}
+	}
 }

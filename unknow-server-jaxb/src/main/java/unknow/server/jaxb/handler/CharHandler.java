@@ -16,6 +16,11 @@ public class CharHandler implements XmlSimpleHandler<Character> {
 	}
 
 	@Override
+	public Class<Character> clazz() {
+		return Character.class;
+	}
+
+	@Override
 	public String toString(Character t) {
 		return Character.toString(t);
 	}

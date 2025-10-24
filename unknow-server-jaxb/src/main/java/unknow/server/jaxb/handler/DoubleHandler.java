@@ -16,6 +16,11 @@ public class DoubleHandler implements XmlSimpleHandler<Double> {
 	}
 
 	@Override
+	public Class<Double> clazz() {
+		return Double.class;
+	}
+
+	@Override
 	public String toString(Double t) {
 		return Double.toString(t);
 	}

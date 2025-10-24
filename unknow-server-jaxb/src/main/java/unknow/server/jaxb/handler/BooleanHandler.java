@@ -16,6 +16,11 @@ public class BooleanHandler implements XmlSimpleHandler<Boolean> {
 	}
 
 	@Override
+	public Class<Boolean> clazz() {
+		return Boolean.class;
+	}
+
+	@Override
 	public String toString(Boolean t) {
 		return Boolean.toString(t);
 	}

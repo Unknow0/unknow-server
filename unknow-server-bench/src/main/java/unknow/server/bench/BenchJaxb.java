@@ -12,6 +12,7 @@ import org.openjdk.jmh.annotations.Benchmark;
 import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.JAXBException;
 import unknow.server.http.test.xml.Complex;
+import unknow.server.jaxb.ContextFactory;
 
 public class BenchJaxb {
 	private static final ClassLoader cl = BenchJaxb.class.getClassLoader();
@@ -23,7 +24,7 @@ public class BenchJaxb {
 
 	static {
 		try {
-			UNKNOW = new unknow.server.http.test.generated.JaxbContextFactory().createContext(CLASS, null);
+			UNKNOW = new ContextFactory().createContext(CLASS, null);
 			JAXB = new org.glassfish.jaxb.runtime.v2.JAXBContextFactory().createContext(CLASS, null);
 			MOXY = new org.eclipse.persistence.jaxb.XMLBindingContextFactory().createContext(CLASS, null);
 		} catch (JAXBException e) {

@@ -27,6 +27,11 @@ public class OHandler extends XmlRootHandler<O> {
 	}
 
 	@Override
+	public Class<O> clazz() {
+		return O.class;
+	}
+
+	@Override
 	public void write(XMLStreamWriter w, O t, MarshallerImpl m, Marshaller.Listener listener) throws XMLStreamException {
 		w.writeAttribute("a", Integer.toString(t.a));
 		// or write CDATA
@@ -58,4 +63,5 @@ public class OHandler extends XmlRootHandler<O> {
 		}
 		throw new XMLStreamException("EOF");
 	}
+
 }

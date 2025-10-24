@@ -7,6 +7,7 @@ import javax.xml.namespace.QName;
 import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.expr.BinaryExpr;
+import com.github.javaparser.ast.expr.ClassExpr;
 import com.github.javaparser.ast.expr.FieldAccessExpr;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.NameExpr;
@@ -50,6 +51,9 @@ public class HandlerEnum extends AbstractSourceBuilder<HandlerContext> {
 			b.addStatement(new MethodCallExpr(null, "super", Utils.list(new ObjectCreationExpr(null, types.getClass(QName.class),
 					Utils.list(new StringLiteralExpr(qname.getNamespaceURI()), new StringLiteralExpr(qname.getLocalPart()))))));
 		}
+
+		cl.addMethod("clazz", Utils.PUBLIC).setType(types.getClass(Class.class, types.getClass(t))).addMarkerAnnotation(Override.class).createBody()
+				.addStatement(new ReturnStmt(new ClassExpr(types.getClass(t))));
 
 		NodeList<SwitchEntry> list = xml.entries().stream()
 				.map(e -> new SwitchEntry().setLabels(Utils.list(new NameExpr(e.name()))).addStatement(new ReturnStmt(new StringLiteralExpr(e.value()))))

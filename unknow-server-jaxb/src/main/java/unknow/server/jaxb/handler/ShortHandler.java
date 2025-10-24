@@ -16,6 +16,11 @@ public class ShortHandler implements XmlSimpleHandler<Short> {
 	}
 
 	@Override
+	public Class<Short> clazz() {
+		return Short.class;
+	}
+
+	@Override
 	public String toString(Short t) {
 		return Short.toString(t);
 	}

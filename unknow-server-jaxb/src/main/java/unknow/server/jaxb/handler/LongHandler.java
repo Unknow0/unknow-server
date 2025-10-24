@@ -16,6 +16,11 @@ public class LongHandler implements XmlSimpleHandler<Long> {
 	}
 
 	@Override
+	public Class<Long> clazz() {
+		return Long.class;
+	}
+
+	@Override
 	public String toString(Long t) {
 		return Long.toString(t);
 	}

@@ -14,6 +14,11 @@ public class LocalDateTimeHandler implements XmlSimpleHandler<LocalDateTime> {
 	}
 
 	@Override
+	public Class<LocalDateTime> clazz() {
+		return LocalDateTime.class;
+	}
+
+	@Override
 	public String toString(LocalDateTime t) {
 		return t.format(FMT);
 	}
