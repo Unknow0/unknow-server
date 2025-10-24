@@ -19,6 +19,11 @@ public class BigDecimalHandler implements XmlSimpleHandler<BigDecimal> {
 	}
 
 	@Override
+	public Class<BigDecimal> clazz() {
+		return BigDecimal.class;
+	}
+
+	@Override
 	public String toString(BigDecimal t) {
 		return t.toString();
 	}
@@ -27,4 +32,5 @@ public class BigDecimalHandler implements XmlSimpleHandler<BigDecimal> {
 	public BigDecimal toObject(String s) throws JAXBException {
 		return new BigDecimal(s);
 	}
+
 }

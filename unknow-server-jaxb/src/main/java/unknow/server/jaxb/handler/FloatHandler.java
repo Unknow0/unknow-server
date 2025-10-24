@@ -16,6 +16,11 @@ public class FloatHandler implements XmlSimpleHandler<Float> {
 	}
 
 	@Override
+	public Class<Float> clazz() {
+		return Float.class;
+	}
+
+	@Override
 	public String toString(Float t) {
 		return Float.toString(t);
 	}

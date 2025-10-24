@@ -16,6 +16,11 @@ public class ByteHandler implements XmlSimpleHandler<Byte> {
 	}
 
 	@Override
+	public Class<Byte> clazz() {
+		return Byte.class;
+	}
+
+	@Override
 	public String toString(Byte t) {
 		return Byte.toString(t);
 	}

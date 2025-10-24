@@ -19,6 +19,11 @@ public class BigIntegerHandler implements XmlSimpleHandler<BigInteger> {
 	}
 
 	@Override
+	public Class<BigInteger> clazz() {
+		return BigInteger.class;
+	}
+
+	@Override
 	public String toString(BigInteger t) {
 		return t.toString();
 	}

@@ -16,6 +16,11 @@ public final class StringHandler implements XmlSimpleHandler<String> {
 	}
 
 	@Override
+	public Class<String> clazz() {
+		return String.class;
+	}
+
+	@Override
 	public final String toString(String t) {
 		return t;
 	}

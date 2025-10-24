@@ -16,6 +16,11 @@ public class OffsetDateTimeHandler implements XmlSimpleHandler<OffsetDateTime> {
 	}
 
 	@Override
+	public Class<OffsetDateTime> clazz() {
+		return OffsetDateTime.class;
+	}
+
+	@Override
 	public String toString(OffsetDateTime t) {
 		return t.format(FMT);
 	}

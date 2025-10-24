@@ -23,7 +23,7 @@ import jakarta.xml.bind.JAXBException;
  */
 public class ContextFactoryTest {
 	private static final XMLInputFactory f = XMLInputFactory.newInstance();
-
+	
 	@Test
 	void test() throws JAXBException {
 		JAXBContext.newInstance(O.class);

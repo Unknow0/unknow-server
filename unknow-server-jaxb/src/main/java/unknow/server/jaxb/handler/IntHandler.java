@@ -16,6 +16,11 @@ public class IntHandler implements XmlSimpleHandler<Integer> {
 	}
 
 	@Override
+	public Class<Integer> clazz() {
+		return Integer.class;
+	}
+
+	@Override
 	public String toString(Integer t) {
 		return Integer.toString(t);
 	}

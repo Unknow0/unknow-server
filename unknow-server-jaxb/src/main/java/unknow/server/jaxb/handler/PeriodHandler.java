@@ -11,6 +11,11 @@ public class PeriodHandler implements XmlSimpleHandler<Period> {
 	}
 
 	@Override
+	public Class<Period> clazz() {
+		return Period.class;
+	}
+
+	@Override
 	public String toString(Period t) {
 		return t.toString();
 	}

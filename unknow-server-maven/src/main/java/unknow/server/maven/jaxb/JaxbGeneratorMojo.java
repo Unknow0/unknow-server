@@ -5,19 +5,16 @@ package unknow.server.maven.jaxb;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.stream.Collectors;
 
 import javax.xml.namespace.QName;
 
@@ -28,26 +25,19 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 
 import com.github.javaparser.ast.CompilationUnit;
-import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
-import com.github.javaparser.ast.expr.ClassExpr;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.FieldAccessExpr;
 import com.github.javaparser.ast.expr.MethodCallExpr;
-import com.github.javaparser.ast.expr.NameExpr;
-import com.github.javaparser.ast.expr.StringLiteralExpr;
 import com.github.javaparser.ast.expr.TypeExpr;
-import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.stmt.ReturnStmt;
-import com.github.javaparser.ast.stmt.SwitchEntry;
-import com.github.javaparser.ast.stmt.SwitchStmt;
 
-import jakarta.xml.bind.JAXBContextFactory;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import unknow.model.api.AnnotationModel;
 import unknow.model.api.TypeModel;
-import unknow.server.jaxb.ContextFactory;
+import unknow.server.jaxb.XmlHandler;
+import unknow.server.jaxb.XmlHandlerLoader;
 import unknow.server.jaxb.handler.BigDecimalHandler;
 import unknow.server.jaxb.handler.BigIntegerHandler;
 import unknow.server.jaxb.handler.BooleanHandler;
@@ -120,6 +110,11 @@ public class JaxbGeneratorMojo extends AbstractGeneratorMojo {
 				xmlLoader.add(type);
 		});
 
+		if (xmlLoader.types().isEmpty()) {
+			getLog().warn("No xml binding found");
+			return;
+		}
+
 		int i = 0;
 		List<XmlType> list = new ArrayList<>(xmlLoader.types());
 		list.sort((a, b) -> a.name().toString().compareTo(b.name().toString()));
@@ -128,10 +123,12 @@ public class JaxbGeneratorMojo extends AbstractGeneratorMojo {
 				handlers.put(t, packageName + "." + t.type().simpleName() + "_" + i++);
 		}
 
+		writeXmlLoader();
+
 		for (XmlType t : xmlLoader.types())
 			buildHandler(t);
 
-		buildContext();
+		generateGraalVmResources();
 	}
 
 	private void buildHandler(XmlType xml) throws MojoExecutionException {
@@ -149,50 +146,52 @@ public class JaxbGeneratorMojo extends AbstractGeneratorMojo {
 		out.save(cu);
 	}
 
-	private void buildContext() throws MojoExecutionException {
+	private void writeXmlLoader() throws MojoExecutionException {
 		CompilationUnit cu = newCu();
 		TypeCache types = new TypeCache(cu, existingClass);
-		ClassOrInterfaceDeclaration cl = cu.addClass("JaxbContextFactory").addExtendedType(types.getClass(ContextFactory.class));
-		Map<String, List<TypeModel>> classes = new HashMap<>();
+		ClassOrInterfaceDeclaration cl = cu.addClass("XmlLoader", Utils.PUBLIC).addImplementedType(types.getClass(XmlHandlerLoader.class));
 
-		BlockStmt b = new BlockStmt();
-		for (Entry<String, XmlType> t : xmlLoader.entries()) {
-			String h = handlers.get(t.getValue());
-			if (h == null || XmlLoader.XS.equals(t.getValue().name().getNamespaceURI()))
+		cl.addMethod("contextPath", Utils.PUBLIC).addMarkerAnnotation(Override.class).setType(types.getClass(String.class)).createBody()
+				.addStatement(new ReturnStmt(Utils.text(packageName)));
+
+		NodeList<Expression> list = new NodeList<>();
+		for (Entry<XmlType, String> e : handlers.entrySet()) {
+			if (XmlLoader.XS.equals(e.getKey().name().getNamespaceURI()))
 				continue;
-			TypeModel type = loader.get(t.getKey());
-			b.addStatement(
-					new MethodCallExpr(null, "register", Utils.list(new ClassExpr(types.get(t.getKey())), new FieldAccessExpr(new TypeExpr(types.get(h)), "INSTANCE"))));
-			classes.computeIfAbsent(type.packageName(), k -> new ArrayList<>()).add(type);
+			list.add(new FieldAccessExpr(new TypeExpr(types.get(e.getValue())), "INSTANCE"));
 		}
 
-		int i = 0;
-		NodeList<SwitchEntry> entries = new NodeList<>();
-		for (Entry<String, List<TypeModel>> e : classes.entrySet()) {
-			String n = "p$" + i++;
-			Expression c = new MethodCallExpr(new TypeExpr(types.get(Arrays.class)), "asList",
-					e.getValue().stream().map(v -> new ClassExpr(types.get(v))).collect(Collectors.toCollection(() -> Utils.list())));
-			cl.addFieldWithInitializer(types.getClass(Collection.class, types.getClass(Class.class, TypeCache.ANY)), n, c, Utils.PSF);
-			entries.add(new SwitchEntry().setLabels(Utils.list(new StringLiteralExpr(e.getKey()))).addStatement(new ReturnStmt(new NameExpr(n))));
-		}
+		cl.addMethod("handlers", Utils.PUBLIC).addMarkerAnnotation(Override.class).setType(types.getClass(Collection.class, types.getClass(XmlHandler.class, TypeCache.ANY)))
+				.createBody().addStatement(new ReturnStmt(new MethodCallExpr(new TypeExpr(types.get(Arrays.class)), "asList", list)));
 
-		entries.add(new SwitchEntry().addStatement(new ReturnStmt(new MethodCallExpr(new TypeExpr(types.get(Collections.class)), "emptyList"))));
-
-		cl.addConstructor(Modifier.Keyword.PUBLIC).setBody(b);
-		cl.addMethod("getClasses", Utils.PUBLIC).addMarkerAnnotation(Override.class).setType(types.getClass(Collection.class, types.getClass(Class.class, TypeCache.ANY)))
-				.addParameter(types.get(String.class), "contextPackage").createBody().addStatement(new SwitchStmt(new NameExpr("contextPackage"), entries));
 		out.save(cu);
 
-		Path path = Paths.get(resources, "META-INF", "services", JAXBContextFactory.class.getName());
+		Path path = Paths.get(resources, "META-INF", "services", XmlHandlerLoader.class.getName());
 		try {
 			Files.createDirectories(path.getParent());
+			try (BufferedWriter w = Files.newBufferedWriter(path)) {
+				w.append(packageName).write(".XmlLoader\n");
+			}
 		} catch (IOException e) {
 			throw new MojoExecutionException(e);
 		}
-		try (BufferedWriter w = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
-			w.append(packageName).write(".JaxbContextFactory\n");
+
+	}
+
+	private void generateGraalVmResources() throws MojoFailureException {
+		if (!graalvm)
+			return;
+
+		try {
+			Path path = Paths.get(resources + "/META-INF/native-image/" + id() + "/resource-config.json");
+			Files.createDirectories(path.getParent());
+			try (BufferedWriter w = Files.newBufferedWriter(path)) {
+				w.write("{\"resources\":{\"includes\":[");
+				w.append("{\"pattern\":\"\\\\Q").append("META-INF/services/").append(XmlHandlerLoader.class.getName()).write("\\\\E\"}");
+				w.write("]}}");
+			}
 		} catch (IOException e) {
-			throw new MojoExecutionException(e);
+			throw new MojoFailureException("failed generate graalvm resources", e);
 		}
 	}
 
