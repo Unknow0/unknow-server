@@ -3,7 +3,6 @@ package unknow.server.bench;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.Reader;
 import java.io.StringReader;
 
@@ -49,7 +48,7 @@ public class BenchJaxb {
 		}
 		if (!(o instanceof Complex))
 			throw new JAXBException(o.getClass().getName());
-		c.createMarshaller().marshal(o, DUMP);
+		c.createMarshaller().marshal(o, NullOutputStream.INSTANCE);
 	}
 
 	@Benchmark
@@ -66,18 +65,4 @@ public class BenchJaxb {
 	public void moxy() throws JAXBException, IOException {
 		bench(MOXY);
 	}
-
-	private static final OutputStream DUMP = new OutputStream() {
-		@Override
-		public void write(int b) throws IOException { // OK
-		}
-
-		@Override
-		public void write(byte[] b) throws IOException { // OK
-		}
-
-		@Override
-		public void write(byte[] b, int off, int len) throws IOException { // OK
-		}
-	};
 }

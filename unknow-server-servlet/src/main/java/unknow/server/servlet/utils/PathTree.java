@@ -51,7 +51,7 @@ public class PathTree {
 			if (n == null)
 				break;
 			if (l < 0) {
-				req.setPathInfo(i - 1);
+				req.setPathInfo(path.length());
 				return n.exact;
 			}
 			last = n;

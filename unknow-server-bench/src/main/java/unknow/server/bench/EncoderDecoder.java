@@ -33,4 +33,10 @@ public class EncoderDecoder {
 		d.decode(b, c, true);
 		return c.flip().toString();
 	}
+
+	@Benchmark
+	public String string() {
+		byte[] bytes = DATA.getBytes(StandardCharsets.UTF_8);
+		return new String(bytes, StandardCharsets.UTF_8);
+	}
 }
