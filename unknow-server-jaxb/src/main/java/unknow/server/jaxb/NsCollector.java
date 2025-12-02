@@ -172,8 +172,12 @@ public final class NsCollector implements XMLStreamWriter {
 		if (map.isEmpty())
 			map.put(it.next(), "");
 		int i = 0;
-		while (it.hasNext())
-			map.put(it.next(), prefix(i++));
+		while (it.hasNext()) {
+			String p = prefix(i++);
+			if (p.equals("xml") || p.equals("xmlns"))
+				p = prefix(i++);
+			map.put(it.next(), p);
+		}
 		return map;
 	}
 
@@ -196,7 +200,7 @@ public final class NsCollector implements XMLStreamWriter {
 		int i = t % PREFIX_FIRST.length;
 		sb.append(PREFIX_FIRST[i]);
 		t -= i;
-		while (t > PREFIX_OTHER.length) {
+		while (t >= PREFIX_OTHER.length) {
 			i = t % PREFIX_OTHER.length;
 			sb.append(PREFIX_OTHER[i]);
 			t -= i;
