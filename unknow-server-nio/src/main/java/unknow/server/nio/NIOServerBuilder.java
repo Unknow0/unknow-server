@@ -50,7 +50,8 @@ public class NIOServerBuilder {
 		closing = withOpt("select")
 				.withCli(Option.builder().longOpt("closing").argName("num").hasArg().type(Integer.class).desc("timeout on graceful connection closing in sec").build())
 				.withValue("3600");
-		listener = withOpt("listener").withCli(Option.builder().longOpt("listener").argName("NOP|LOG").hasArg().type(String.class).desc("set the listener").build())
+		listener = withOpt("listener")
+				.withCli(Option.builder().longOpt("listener").argName("NOP|LOG|PROMETHEUS").hasArg().type(String.class).desc("list of listener separated by a ,").build())
 				.withValue("NOP");
 		shutdown = withOpt("shutdown").withCli(
 				Option.builder().longOpt("shutdown").argName("port|addr:port").hasArg().type(Integer.class).desc("addr:port to gracefuly shutdown the server").build());

@@ -138,6 +138,9 @@ public final class HttpConnection implements NIOConnectionHandler, ServletConnec
 	}
 
 	public boolean keepAliveReached(long now) {
+		if (co.isClosed())
+			return true;
+
 		if (keepAliveNano > 0) {
 			long e = now - keepAliveNano;
 			if (lastRead <= e && lastWrite <= e) {

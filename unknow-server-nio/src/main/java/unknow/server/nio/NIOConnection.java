@@ -145,7 +145,7 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	 * @return true if we should close this handler
 	 */
 	public boolean isClosed() {
-		return out.isClosed() && writes.isEmpty();
+		return out.isClosed() && !hasPendingWrites();
 	}
 
 	protected final void beforeWrite(long now) throws IOException {
