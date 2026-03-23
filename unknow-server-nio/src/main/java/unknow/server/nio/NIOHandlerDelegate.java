@@ -59,8 +59,8 @@ public class NIOHandlerDelegate implements NIOConnectionHandler {
 	}
 
 	@Override
-	public void startClose() {
-		handler.startClose();
+	public void startClose(long now) {
+		handler.startClose(now);
 	}
 
 	@Override

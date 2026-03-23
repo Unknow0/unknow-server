@@ -163,7 +163,7 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 	}
 
 	@Override
-	public void startClose() {
+	public void startClose(long now) {
 		goaway(NO_ERROR);
 		for (Http2Stream s : streams.values())
 			s.close(false);
@@ -303,7 +303,7 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 			sendFrame(1, flags, id, list.get(0));
 			for (int i = 1; i < size - 1; i++)
 				sendFrame(9, flags, id, list.get(i));
-			sendFrame(9, flags | 0x4, id, list.get(-1));
+			sendFrame(9, flags | 0x4, id, list.get(size - 1));
 		}
 	}
 

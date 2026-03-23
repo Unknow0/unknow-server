@@ -5,6 +5,8 @@ package unknow.server.nio;
 
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
+import java.util.Arrays;
+import java.util.Collection;
 
 import unknow.server.nio.NIOServer.ConnectionFactory;
 
@@ -15,7 +17,7 @@ public interface NIOWorkers {
 	/**
 	 * register a socket to an IOWorker
 	 * 
-	 * @param socket  the socket to register
+	 * @param socket the socket to register
 	 * @param factory the connection factory
 	 * @throws IOException in case of error
 	 */
@@ -35,6 +37,11 @@ public interface NIOWorkers {
 	 * wait for the worker to stop
 	 */
 	void await();
+
+	/**
+	 * list all workers
+	 */
+	Collection<NIOWorker> workers();
 
 	/**
 	 * socket will register between workers in round robin
@@ -74,6 +81,11 @@ public interface NIOWorkers {
 		public void await() {
 			for (int i = 0; i < w.length; i++)
 				w[i].await();
+		}
+
+		@Override
+		public Collection<NIOWorker> workers() {
+			return Arrays.asList(w);
 		}
 	}
 }

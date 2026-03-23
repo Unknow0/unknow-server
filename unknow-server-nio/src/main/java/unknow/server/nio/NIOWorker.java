@@ -8,10 +8,14 @@ import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -32,6 +36,9 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	/** executor for delegating task */
 	private final ExecutorService executor;
 
+	/** graceful connection timeout */
+	private final long closingTimeout;
+
 	/** buffer to read/write */
 	private final ByteBuffer buf;
 
@@ -49,12 +56,13 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	 * @param executor executor for delegated task
 	 * @param listener listener to use
 	 * @param timeout the timeout on select
+	 * @param closingTimeout timeout on graceful connection closing in sec
 	 * @throws IOException on ioexception
 	 */
-	public NIOWorker(int id, ExecutorService executor, NIOServerListener listener, long timeout) throws IOException {
+	public NIOWorker(int id, ExecutorService executor, NIOServerListener listener, long timeout, long closingTimeout) throws IOException {
 		super("NIOWorker-" + id, timeout, listener);
 		this.executor = executor;
-
+		this.closingTimeout = closingTimeout * 1000_000_000L;
 		this.buf = ByteBuffer.allocateDirect(16000);
 		this.tasks = new ConcurrentLinkedQueue<>();
 		this.closing = new LinkedList<>();
@@ -83,6 +91,11 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	}
 
 	@Override
+	public Collection<NIOWorker> workers() {
+		return Arrays.asList(this);
+	}
+
+	@Override
 	protected void onSelect(long now, boolean close) {
 		WorkerTask r;
 		while ((r = tasks.poll()) != null)
@@ -100,7 +113,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		while (co != null && co.lastCheck < end) {
 			NIOConnection next = co.next;
 			if (!co.key.isValid() || co.canClose(now, close))
-				startClose(co);
+				startClose(co, now);
 			else
 				co.lastCheck = now;
 			co = next;
@@ -126,11 +139,25 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		Iterator<NIOConnection> it = closing.iterator();
 		while (it.hasNext()) {
 			NIOConnection co = it.next();
-			if (!co.key.isValid() || !co.hasPendingWrites() && co.finishClosing(now)) {
+			if (!co.key.isValid() || !co.hasPendingWrites() && co.finishClosing(now) || closingTimeout(co, now)) {
 				it.remove();
 				doneClose(co);
 			}
 		}
+	}
+
+	private boolean closingTimeout(NIOConnection co, long now) {
+		if (co.closingTime + closingTimeout < now) {
+			logger.warn("{} closing timeout reach", co);
+			return true;
+		}
+		return false;
+	}
+
+	public Future<Collection<ConnectionStats>> connectionStats() {
+		StatCollector statCollector = new StatCollector();
+		execute(statCollector);
+		return statCollector;
 	}
 
 	@Override
@@ -170,7 +197,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		l = co.channel.read(buf);
 		if (l == -1) {
 			co.key.interestOpsAnd(~SelectionKey.OP_READ);
-			startClose(co);
+			startClose(co, now);
 			return;
 		}
 		toTail(co, now);
@@ -198,12 +225,12 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		return (Future<T>) executor.submit(r);
 	}
 
-	private void startClose(NIOConnection co) {
+	private void startClose(NIOConnection co, long now) {
 		if (!remove(co))
 			return;
 		logger.debug("{} start closing", co);
 		closing.add(co);
-		co.startClose();
+		co.startClose(now);
 	}
 
 	private void doneClose(NIOConnection co) {
@@ -214,6 +241,14 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		} catch (Exception e) {
 			logger.warn("Failed to free connection {}", co, e);
 		}
+	}
+
+	protected int nbClosing() {
+		return closing.size();
+	}
+
+	protected int nbTask() {
+		return tasks.size();
 	}
 
 	public static interface WorkerTask {
@@ -277,7 +312,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 					key.interestOps(SelectionKey.OP_READ);
 				} catch (Exception e) {
 					logger.warn("Failed to init connection", e);
-					startClose(co);
+					startClose(co, now);
 					return;
 				}
 			} else
@@ -305,5 +340,21 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 				co.key.cancel();
 			}
 		}
+	}
+
+	private class StatCollector extends CompletableFuture<Collection<ConnectionStats>> implements WorkerTask {
+		@Override
+		public void run(long now) {
+			List<ConnectionStats> list = new ArrayList<>();
+			NIOConnection co = head;
+			while (co != null) {
+				list.add(new ConnectionStats(co.hasPendingWrites(), false, co.lastCheck, co.closingTime));
+				co = co.next;
+			}
+			for (NIOConnection c : closing)
+				list.add(new ConnectionStats(c.hasPendingWrites(), false, c.lastCheck, c.closingTime));
+			complete(list);
+		}
+
 	}
 }

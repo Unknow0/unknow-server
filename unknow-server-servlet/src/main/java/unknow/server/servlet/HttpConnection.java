@@ -119,9 +119,9 @@ public final class HttpConnection implements NIOConnectionHandler, ServletConnec
 	}
 
 	@Override
-	public void startClose() {
+	public void startClose(long now) {
 		if (p != null)
-			p.startClose();
+			p.startClose(now);
 	}
 
 	@Override

@@ -41,6 +41,7 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	final ByteBuffers writes;
 
 	long lastCheck;
+	long closingTime;
 	NIOConnection next;
 	NIOConnection prev;
 
@@ -76,9 +77,10 @@ public final class NIOConnection extends NIOHandlerDelegate {
 
 	/**
 	 * add a buffers to the writing queue
+	 * 
 	 * @param buf buffer to be written
-	 * @throws InterruptedException  in case of interruption
-	 * @throws IOException 
+	 * @throws InterruptedException in case of interruption
+	 * @throws IOException
 	 */
 	public final void write(ByteBuffer buf) throws InterruptedException, IOException {
 		if (!key.isValid())
@@ -161,8 +163,9 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	}
 
 	@Override
-	public void startClose() {
-		handler.startClose();
+	public void startClose(long now) {
+		closingTime = now;
+		handler.startClose(now);
 	}
 
 	/**
@@ -242,6 +245,7 @@ public final class NIOConnection extends NIOHandlerDelegate {
 
 		/**
 		 * write a raw buffer
+		 * 
 		 * @param b buffer to write
 		 * @throws IOException in case of ioexception
 		 */

@@ -37,6 +37,7 @@ public class NIOServerBuilder {
 
 	private Opt iothread;
 	private Opt select;
+	private Opt closing;
 	private Opt listener;
 	private Opt shutdown;
 
@@ -46,6 +47,9 @@ public class NIOServerBuilder {
 				.withValue(Integer.toString(Runtime.getRuntime().availableProcessors()));
 		select = withOpt("select").withCli(Option.builder().longOpt("select").argName("num").hasArg().type(Integer.class).desc("timeout on Selector.select").build())
 				.withValue("200");
+		closing = withOpt("select")
+				.withCli(Option.builder().longOpt("closing").argName("num").hasArg().type(Integer.class).desc("timeout on graceful connection closing in sec").build())
+				.withValue("3600");
 		listener = withOpt("listener").withCli(Option.builder().longOpt("listener").argName("NOP|LOG").hasArg().type(String.class).desc("set the listener").build())
 				.withValue("NOP");
 		shutdown = withOpt("shutdown").withCli(
@@ -165,7 +169,7 @@ public class NIOServerBuilder {
 
 		NIOServerListener l = getListener(listener.value(cli));
 
-		NIOWorkers workers = createWorkers(parseInt(cli, iothread, 0), parseInt(cli, select, 0), l);
+		NIOWorkers workers = createWorkers(parseInt(cli, iothread, 0), parseInt(cli, select, 0), parseInt(cli, closing, 0), l);
 
 		NIOServer server = new NIOServer(workers, l);
 		process(server, cli);
@@ -175,13 +179,13 @@ public class NIOServerBuilder {
 		return server;
 	}
 
-	private NIOWorkers createWorkers(int i, int selectTime, NIOServerListener l) throws IOException {
+	private NIOWorkers createWorkers(int i, long selectTime, long closingTime, NIOServerListener l) throws IOException {
 		ExecutorService executor = getExecutor();
 		if (i == 1)
-			return new NIOWorker(0, executor, l, selectTime);
+			return new NIOWorker(0, executor, l, selectTime, closingTime * 1_000_000);
 		NIOWorker[] w = new NIOWorker[i];
 		while (i > 0)
-			w[--i] = new NIOWorker(i, executor, l, selectTime);
+			w[--i] = new NIOWorker(i, executor, l, selectTime, closingTime * 1_000_000);
 		return new RoundRobin(w);
 	}
 
