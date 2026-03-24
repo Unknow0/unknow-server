@@ -124,7 +124,7 @@ public final class Http11Processor implements NIOConnectionHandler {
 			return false;
 		}
 		ByteBuffer data = ByteBuffer.allocate((int) contentLength);
-		data.put(b.slice().limit(b.position() + (int) contentLength));
+		data.put(b.slice().limit((int) contentLength));
 		dec.addContent(data.flip());
 		b.position(b.position() + (int) contentLength);
 		contentLength = 0;
