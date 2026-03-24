@@ -100,15 +100,12 @@ public final class NIOConnection extends NIOHandlerDelegate {
 		pending.put(buf);
 		if (pending.size() > 10)
 			flush();
-		else
-			key.interestOpsOr(SelectionKey.OP_WRITE);
 	}
 
 	@SuppressWarnings("resource")
 	public final void flush() {
 		if (!hasPendingWrites())
 			return;
-		key.interestOpsOr(SelectionKey.OP_WRITE);
 		key.selector().wakeup();
 	}
 
