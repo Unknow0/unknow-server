@@ -59,19 +59,9 @@ public final class Http11Processor implements NIOConnectionHandler {
 				decode(b);
 				break;
 			case CONTENT:
-				if (b.remaining() < contentLength) {
-					contentLength -= b.remaining();
-					ByteBuffer data = ByteBuffer.allocate(b.remaining());
-					data.put(b);
-					dec.addContent(data);
-				} else {
+				if (readContent(b)) {
 					state = START;
-					ByteBuffer data = ByteBuffer.allocate((int) contentLength);
-					data.put(b.slice().limit((int) contentLength));
-					dec.addContent(data);
 					dec.closeContent();
-					b.position(b.position() + (int) contentLength);
-					contentLength = 0;
 				}
 				break;
 			case CHUNKED_START:
@@ -98,15 +88,8 @@ public final class Http11Processor implements NIOConnectionHandler {
 					sb.append((char) c);
 				break;
 			case CHUNKED_DATA:
-				if (b.remaining() < contentLength) {
-					contentLength -= b.remaining();
-					dec.addContent(b.slice());
-					b.position(b.limit());
-				} else {
-					// read CRLF
+				if (readContent(b)) {
 					state = CHUNKED_END;
-					dec.addContent(b.slice().limit((int) contentLength));
-					b.position(b.position() + (int) contentLength);
 					contentLength = 0;
 				}
 				break;
@@ -131,6 +114,22 @@ public final class Http11Processor implements NIOConnectionHandler {
 				break;
 			default:
 		}
+	}
+
+	private boolean readContent(ByteBuffer b) {
+		if (b.remaining() < contentLength) {
+			contentLength -= b.remaining();
+			ByteBuffer data = ByteBuffer.allocate(b.remaining());
+			data.put(b);
+			dec.addContent(data);
+			return false;
+		}
+		ByteBuffer data = ByteBuffer.allocate((int) contentLength);
+		data.put(b.slice().limit(b.position() + (int) contentLength));
+		dec.addContent(data);
+		b.position(b.position() + (int) contentLength);
+		contentLength = 0;
+		return true;
 	}
 
 	@Override
