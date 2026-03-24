@@ -49,6 +49,7 @@ public interface NIOConnectionHandler {
 
 	/**
 	 * called before a buffer is written (allow to collect buffers)
+	 * 
 	 * @param b buffer to be written
 	 * @param now nanoTime
 	 * @param c consumer of generated buffers
@@ -60,6 +61,7 @@ public interface NIOConnectionHandler {
 
 	/**
 	 * called before a buffer is written
+	 * 
 	 * @param now nanoTime
 	 * @param c consumer of generated buffers
 	 * @throws IOException on io exception
@@ -69,6 +71,7 @@ public interface NIOConnectionHandler {
 
 	/**
 	 * check if this handler has some pending write
+	 * 
 	 * @return true if the handler has pending write
 	 */
 	default boolean hasPendingWrites() {
@@ -97,12 +100,15 @@ public interface NIOConnectionHandler {
 
 	/**
 	 * start the closing of the connection
+	 * 
+	 * @param now nanoTime
 	 */
-	default void startClose() { // ok
+	default void startClose(long now) { // ok
 	}
 
 	/**
 	 * try to finish the closing
+	 * 
 	 * @param now nanoTime
 	 * @return true if the connection is closed
 	 */

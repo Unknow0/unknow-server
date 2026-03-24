@@ -8,6 +8,7 @@ import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.Collection;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +27,7 @@ public class NIOServer extends NIOLoop {
 	/**
 	 * create new Server
 	 * 
-	 * @param workers  workers handler
+	 * @param workers workers handler
 	 * @param listener listener
 	 * 
 	 * @throws IOException on ioException
@@ -36,11 +37,15 @@ public class NIOServer extends NIOLoop {
 		this.workers = workers;
 	}
 
+	protected Collection<NIOWorker> workers() {
+		return workers.workers();
+	}
+
 	/**
 	 * bind the server on an address
 	 * 
 	 * @param a the address to bind to
-	 * @param s factory for the connection 
+	 * @param s factory for the connection
 	 * @throws IOException on ioException
 	 */
 	@SuppressWarnings("resource")

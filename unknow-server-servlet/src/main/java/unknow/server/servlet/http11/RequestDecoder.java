@@ -93,8 +93,8 @@ public class RequestDecoder {
 
 	private String readUntil(ByteBuffer b, byte c) {
 		byte[] a = b.array();
-		int o = b.position();
-		int l = b.limit();
+		int o = b.position() + b.arrayOffset();
+		int l = b.limit() + b.arrayOffset();
 
 		int i = o;
 		while (i < l) {
@@ -112,8 +112,9 @@ public class RequestDecoder {
 
 	private String readUntil(ByteBuffer b, byte[] c) {
 		byte[] a = b.array();
-		int o = b.position();
-		int l = b.limit();
+		int base = b.arrayOffset();
+		int o = b.position() + base;
+		int l = b.limit() + base;
 
 		int i = o;
 		while (i < l) {
@@ -123,7 +124,7 @@ public class RequestDecoder {
 				f = 0;
 			} else if (f == c.length) {
 				f = 0;
-				b.position(i);
+				b.position(i - base);
 				return decoder.append(a, o, i - c.length).done();
 			}
 		}
@@ -134,6 +135,7 @@ public class RequestDecoder {
 
 	public void reset() {
 		state = State.METHOD;
+		f = 0;
 		req = new ServletRequestImpl(co.co(), DispatcherType.REQUEST);
 	}
 }

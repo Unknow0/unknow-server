@@ -41,9 +41,6 @@ public final class HttpConnection implements NIOConnectionHandler, ServletConnec
 	private NIOConnectionHandler p;
 	private boolean ssl;
 
-	private long lastRead;
-	private long lastWrite;
-
 	/**
 	 * create new RequestBuilder
 	 * 
@@ -63,7 +60,6 @@ public final class HttpConnection implements NIOConnectionHandler, ServletConnec
 	@Override
 	public void init(NIOConnection co, long now, SSLEngine sslEngine) {
 		this.co = co;
-		this.lastRead = this.lastWrite = now;
 		if (sslEngine != null) {
 			ssl = true;
 			sslEngine.setUseClientMode(false);
@@ -84,7 +80,6 @@ public final class HttpConnection implements NIOConnectionHandler, ServletConnec
 
 	@Override
 	public final void onRead(ByteBuffer b, long now) throws IOException {
-		lastRead = now;
 		if (p == null) {
 			if (b.remaining() > Http2Processor.PRI.length
 					&& Arrays.equals(b.array(), b.position(), b.position() + Http2Processor.PRI.length, Http2Processor.PRI, 0, Http2Processor.PRI.length))
@@ -97,7 +92,6 @@ public final class HttpConnection implements NIOConnectionHandler, ServletConnec
 
 	@Override
 	public void onWrite(long now) throws IOException {
-		lastWrite = now;
 		if (p != null)
 			p.onWrite(now);
 	}
@@ -108,7 +102,7 @@ public final class HttpConnection implements NIOConnectionHandler, ServletConnec
 			return p == null || p.canClose(now, stop);
 
 		if (p == null) {
-			if (lastRead < now - 1_000_000_000L) {
+			if (co.lastAction() < now - 1_000_000_000L) {
 				logger.warn("request timeout {}", co);
 				return true;
 			}
@@ -119,9 +113,9 @@ public final class HttpConnection implements NIOConnectionHandler, ServletConnec
 	}
 
 	@Override
-	public void startClose() {
+	public void startClose(long now) {
 		if (p != null)
-			p.startClose();
+			p.startClose(now);
 	}
 
 	@Override
@@ -138,9 +132,12 @@ public final class HttpConnection implements NIOConnectionHandler, ServletConnec
 	}
 
 	public boolean keepAliveReached(long now) {
+		if (co.isClosed())
+			return true;
+
 		if (keepAliveNano > 0) {
 			long e = now - keepAliveNano;
-			if (lastRead <= e && lastWrite <= e) {
+			if (co.lastAction() <= e) {
 				logger.info("keep alive idle reached {}", co);
 				return true;
 			}

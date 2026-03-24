@@ -70,7 +70,6 @@ public final class Http11Processor implements NIOConnectionHandler {
 					dec.closeContent();
 					b.position(b.position() + (int) contentLength);
 					contentLength = 0;
-					break;
 				}
 				break;
 			case CHUNKED_START:

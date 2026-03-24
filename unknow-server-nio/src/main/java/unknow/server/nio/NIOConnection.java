@@ -14,6 +14,8 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingDeque;
 
+import javax.net.ssl.SSLEngine;
+
 import unknow.server.nio.NIOWorker.WorkerTask;
 import unknow.server.util.io.ByteBuffers;
 
@@ -41,6 +43,7 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	final ByteBuffers writes;
 
 	long lastCheck;
+	long lastAction;
 	NIOConnection next;
 	NIOConnection prev;
 
@@ -74,11 +77,22 @@ public final class NIOConnection extends NIOHandlerDelegate {
 		return !writes.isEmpty() || !pending.isEmpty() || handler.hasPendingWrites();
 	}
 
+	public long lastAction() {
+		return lastAction;
+	}
+
+	@Override
+	public void init(NIOConnection co, long now, SSLEngine sslEngine) throws IOException {
+		lastAction = now;
+		handler.init(co, now, sslEngine);
+	}
+
 	/**
 	 * add a buffers to the writing queue
+	 * 
 	 * @param buf buffer to be written
-	 * @throws InterruptedException  in case of interruption
-	 * @throws IOException 
+	 * @throws InterruptedException in case of interruption
+	 * @throws IOException
 	 */
 	public final void write(ByteBuffer buf) throws InterruptedException, IOException {
 		if (!key.isValid())
@@ -143,7 +157,7 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	 * @return true if we should close this handler
 	 */
 	public boolean isClosed() {
-		return out.isClosed() && writes.isEmpty();
+		return out.isClosed() && !hasPendingWrites();
 	}
 
 	protected final void beforeWrite(long now) throws IOException {
@@ -154,6 +168,7 @@ public final class NIOConnection extends NIOHandlerDelegate {
 
 	@Override
 	public final void onWrite(long now) throws IOException {
+		lastAction = now;
 		writes.compact();
 		if (!hasPendingWrites())
 			key.interestOpsAnd(~SelectionKey.OP_WRITE);
@@ -161,8 +176,15 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	}
 
 	@Override
-	public void startClose() {
-		handler.startClose();
+	public final void onRead(ByteBuffer b, long now) throws IOException {
+		lastAction = now;
+		handler.onRead(b, now);
+	}
+
+	@Override
+	public void startClose(long now) {
+		lastAction = now;
+		handler.startClose(now);
 	}
 
 	/**
@@ -242,6 +264,7 @@ public final class NIOConnection extends NIOHandlerDelegate {
 
 		/**
 		 * write a raw buffer
+		 * 
 		 * @param b buffer to write
 		 * @throws IOException in case of ioexception
 		 */
