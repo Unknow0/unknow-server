@@ -33,6 +33,8 @@ import unknow.server.nio.NIOServer.ConnectionFactory;
 public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	private static final Logger logger = LoggerFactory.getLogger(NIOWorker.class);
 
+	private static final int BUF_LEN = 16000;
+
 	/** executor for delegating task */
 	private final ExecutorService executor;
 
@@ -63,7 +65,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		super("NIOWorker-" + id, timeout, listener);
 		this.executor = executor;
 		this.closingTimeout = closingTimeout * 1000_000_000L;
-		this.buf = ByteBuffer.allocateDirect(16000);
+		this.buf = ByteBuffer.allocateDirect(BUF_LEN);
 		this.tasks = new ConcurrentLinkedQueue<>();
 		this.closing = new LinkedList<>();
 	}
@@ -191,21 +193,25 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	}
 
 	private void doRead(NIOConnection co, long now) throws IOException {
-		int l;
-		l = co.channel.read(buf);
-		if (l == -1) {
-			co.key.interestOpsAnd(~SelectionKey.OP_READ);
-			startClose(co, now);
-			return;
+		while (true) {
+			int l = co.channel.read(buf);
+			if (l == -1) {
+				co.key.interestOpsAnd(~SelectionKey.OP_READ);
+				startClose(co, now);
+				return;
+			}
+			toTail(co, now);
+			if (l == 0)
+				return;
+			buf.flip();
+			ByteBuffer data = ByteBuffer.allocate(buf.remaining());
+			data.put(buf);
+			data.flip();
+			co.onRead(data, now);
+			if (l < BUF_LEN)
+				return;
+			buf.compact();
 		}
-		toTail(co, now);
-		if (l == 0)
-			return;
-		buf.flip();
-		ByteBuffer data = ByteBuffer.allocate(buf.remaining());
-		data.put(buf);
-		data.flip();
-		co.onRead(data, now);
 	}
 
 	private void doWrite(NIOConnection co, long now) throws IOException {
