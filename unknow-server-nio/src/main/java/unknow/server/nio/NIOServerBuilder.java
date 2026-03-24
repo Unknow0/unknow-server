@@ -49,7 +49,7 @@ public class NIOServerBuilder {
 				.withValue("200");
 		closing = withOpt("select")
 				.withCli(Option.builder().longOpt("closing").argName("num").hasArg().type(Integer.class).desc("timeout on graceful connection closing in sec").build())
-				.withValue("3600");
+				.withValue("60");
 		listener = withOpt("listener")
 				.withCli(Option.builder().longOpt("listener").argName("NOP|LOG|PROMETHEUS").hasArg().type(String.class).desc("list of listener separated by a ,").build())
 				.withValue("NOP");

@@ -147,7 +147,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	}
 
 	private boolean closingTimeout(NIOConnection co, long now) {
-		if (co.closingTime + closingTimeout < now) {
+		if (co.lastAction + closingTimeout < now) {
 			logger.warn("{} closing timeout reach", co);
 			return true;
 		}
@@ -349,11 +349,11 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			List<ConnectionStats> list = new ArrayList<>();
 			NIOConnection co = head;
 			while (co != null) {
-				list.add(new ConnectionStats(co.hasPendingWrites(), false, co.lastCheck, co.closingTime));
+				list.add(new ConnectionStats(co.hasPendingWrites(), false, co.lastCheck, co.lastAction));
 				co = co.next;
 			}
 			for (NIOConnection c : closing)
-				list.add(new ConnectionStats(c.hasPendingWrites(), true, c.lastCheck, c.closingTime));
+				list.add(new ConnectionStats(c.hasPendingWrites(), true, c.lastCheck, c.lastAction));
 			complete(list);
 		}
 

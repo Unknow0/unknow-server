@@ -80,7 +80,7 @@ public class PrometheusListener implements NIOServerListener {
 								i++;
 						}
 						writes.addMetric(labels, i);
-					} catch (InterruptedException e) {
+					} catch (@SuppressWarnings("unused") InterruptedException e) {
 						Thread.currentThread().interrupt();
 						return Collections.emptyList();
 					} catch (ExecutionException e) {

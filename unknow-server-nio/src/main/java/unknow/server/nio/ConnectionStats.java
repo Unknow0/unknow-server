@@ -4,13 +4,13 @@ public class ConnectionStats {
 	private final boolean hasPengingWrite;
 	private final boolean closing;
 	private final long lastCheck;
-	private final long closingTime;
+	private final long lastAction;
 
-	public ConnectionStats(boolean hasPengingWrite, boolean closing, long lastCheck, long closingTime) {
+	public ConnectionStats(boolean hasPengingWrite, boolean closing, long lastCheck, long lastAction) {
 		this.hasPengingWrite = hasPengingWrite;
 		this.closing = closing;
 		this.lastCheck = lastCheck;
-		this.closingTime = closingTime;
+		this.lastAction = lastAction;
 	}
 
 	public boolean hasPengingWrite() {
@@ -25,8 +25,8 @@ public class ConnectionStats {
 		return lastCheck;
 	}
 
-	public long closingTime() {
-		return closingTime;
+	public long lastAction() {
+		return lastAction;
 	}
 
 }
