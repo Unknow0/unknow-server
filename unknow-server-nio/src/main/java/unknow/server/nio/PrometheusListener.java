@@ -3,6 +3,7 @@ package unknow.server.nio;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
@@ -79,12 +80,15 @@ public class PrometheusListener implements NIOServerListener {
 								i++;
 						}
 						writes.addMetric(labels, i);
-					} catch (InterruptedException | ExecutionException e) {
+					} catch (InterruptedException e) {
+						Thread.currentThread().interrupt();
+						return Collections.emptyList();
+					} catch (ExecutionException e) {
 						logger.warn("Failed to get connection stats", e);
 					}
 				}
 			}
-			return Arrays.asList(closing, tasks);
+			return Arrays.asList(closing, tasks, writes);
 		}
 	}
 }

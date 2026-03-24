@@ -183,10 +183,10 @@ public class NIOServerBuilder {
 	private NIOWorkers createWorkers(int i, long selectTime, long closingTime, NIOServerListener l) throws IOException {
 		ExecutorService executor = getExecutor();
 		if (i == 1)
-			return new NIOWorker(0, executor, l, selectTime, closingTime * 1_000_000);
+			return new NIOWorker(0, executor, l, selectTime, closingTime);
 		NIOWorker[] w = new NIOWorker[i];
 		while (i > 0)
-			w[--i] = new NIOWorker(i, executor, l, selectTime, closingTime * 1_000_000);
+			w[--i] = new NIOWorker(i, executor, l, selectTime, closingTime);
 		return new RoundRobin(w);
 	}
 
