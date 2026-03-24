@@ -203,14 +203,10 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			toTail(co, now);
 			if (l == 0)
 				return;
-			buf.flip();
-			ByteBuffer data = ByteBuffer.allocate(buf.remaining());
-			data.put(buf);
-			data.flip();
-			co.onRead(data, now);
+			co.onRead(buf.flip(), now);
 			if (l < BUF_LEN)
 				return;
-			buf.compact();
+			buf.clear();
 		}
 	}
 

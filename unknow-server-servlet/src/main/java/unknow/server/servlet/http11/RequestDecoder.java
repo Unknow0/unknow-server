@@ -16,14 +16,18 @@ public class RequestDecoder {
 
 	private final Http11Processor co;
 	private final Utf8Decoder decoder;
+	private final byte[] buf;
 
 	private ServletRequestImpl req;
 	private State state;
 	private int f;
+	private int o;
+	private int l;
 
 	public RequestDecoder(Http11Processor co) {
 		this.co = co;
 		decoder = new Utf8Decoder(new StringBuilder());
+		buf = new byte[4096];
 		reset();
 	}
 
@@ -41,24 +45,32 @@ public class RequestDecoder {
 
 	public ServletRequestImpl append(ByteBuffer b) {
 		while (b.hasRemaining()) {
-			tryDecode(b);
-			if (state == State.DONE)
-				return req;
+			int s = b.position();
+			l = Math.min(b.remaining(), buf.length);
+			b.get(buf, 0, l);
+			o = 0;
+			while (o < l) {
+				tryDecode();
+				if (state == State.DONE) {
+					b.position(s + o);
+					return req;
+				}
+			}
 		}
 		return null;
 	}
 
-	private void tryDecode(ByteBuffer b) {
+	private void tryDecode() {
 		String str;
 		switch (state) {
 			case METHOD:
-				if ((str = readUntil(b, SPACE)) != null) {
+				if ((str = readUntil(SPACE)) != null) {
 					state = State.URI;
 					req.setMethod(str);
 				}
 				return;
 			case URI:
-				if ((str = readUntil(b, SPACE)) != null) {
+				if ((str = readUntil(SPACE)) != null) {
 					state = State.PROTOCOL;
 					int i = str.indexOf('?');
 					if (i > 0) {
@@ -69,13 +81,13 @@ public class RequestDecoder {
 				}
 				return;
 			case PROTOCOL:
-				if ((str = readUntil(b, CRLF)) != null) {
+				if ((str = readUntil(CRLF)) != null) {
 					state = State.HEADER;
 					req.setProtocol(str);
 				}
 				return;
 			case HEADER:
-				if ((str = readUntil(b, CRLF)) != null) {
+				if ((str = readUntil(CRLF)) != null) {
 					if (str.isEmpty()) {
 						state = State.DONE;
 						return;
@@ -91,45 +103,38 @@ public class RequestDecoder {
 		}
 	}
 
-	private String readUntil(ByteBuffer b, byte c) {
-		byte[] a = b.array();
-		int o = b.position() + b.arrayOffset();
-		int l = b.limit() + b.arrayOffset();
-
+	private String readUntil(byte c) {
 		int i = o;
 		while (i < l) {
-			if (a[i] == c) {
-				String str = decoder.append(a, o, i).done();
-				b.position(i + 1);
+			if (buf[i] == c) {
+				String str = decoder.append(buf, o, i).done();
+				o = i + 1;
 				return str;
 			}
 			i++;
 		}
-		decoder.append(a, o, l);
-		b.position(l);
+		decoder.append(buf, o, l);
+		o = l;
 		return null;
 	}
 
-	private String readUntil(ByteBuffer b, byte[] c) {
-		byte[] a = b.array();
-		int base = b.arrayOffset();
-		int o = b.position() + base;
-		int l = b.limit() + base;
-
+	private String readUntil(byte[] c) {
 		int i = o;
 		while (i < l) {
-			byte t = a[i++];
+			byte t = buf[i++];
 			if (c[f++] != t) {
 				decoder.append(c, 0, f - 1);
 				f = 0;
 			} else if (f == c.length) {
+				if (i > c.length)
+					decoder.append(buf, o, i - c.length);
 				f = 0;
-				b.position(i - base);
-				return decoder.append(a, o, i - c.length).done();
+				o = i;
+				return decoder.done();
 			}
 		}
-		decoder.append(a, o, l - f);
-		b.position(l);
+		decoder.append(buf, o, l - f);
+		o = l;
 		return null;
 	}
 

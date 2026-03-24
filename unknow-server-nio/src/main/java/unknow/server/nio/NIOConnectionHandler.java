@@ -40,7 +40,7 @@ public interface NIOConnectionHandler {
 	/**
 	 * called after some data has been read
 	 * 
-	 * @param b the read buffers
+	 * @param b the read buffers (should read all or copy content)
 	 * @param now nanoTime
 	 * @throws IOException on io exception
 	 */
