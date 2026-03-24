@@ -120,13 +120,12 @@ public final class Http11Processor implements NIOConnectionHandler {
 		if (b.remaining() < contentLength) {
 			contentLength -= b.remaining();
 			ByteBuffer data = ByteBuffer.allocate(b.remaining());
-			data.put(b);
-			dec.addContent(data);
+			dec.addContent(data.put(b).flip());
 			return false;
 		}
 		ByteBuffer data = ByteBuffer.allocate((int) contentLength);
 		data.put(b.slice().limit(b.position() + (int) contentLength));
-		dec.addContent(data);
+		dec.addContent(data.flip());
 		b.position(b.position() + (int) contentLength);
 		contentLength = 0;
 		return true;
