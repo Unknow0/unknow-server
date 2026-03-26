@@ -216,7 +216,7 @@ public final class NIOConnection extends NIOHandlerDelegate {
 
 	/** output stream for this connection */
 	public static final class Out extends OutputStream {
-		private static final int BUF_SIZE = 8192;
+		private static final int BUF_SIZE = 16 * 1024;
 		private NIOConnection h;
 
 		private ByteBuffer buf;

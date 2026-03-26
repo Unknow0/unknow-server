@@ -33,7 +33,7 @@ import unknow.server.nio.NIOServer.ConnectionFactory;
 public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	private static final Logger logger = LoggerFactory.getLogger(NIOWorker.class);
 
-	private static final int BUF_LEN = 16000;
+	private static final int BUF_LEN = 64 * 1024;
 
 	/** executor for delegating task */
 	private final ExecutorService executor;

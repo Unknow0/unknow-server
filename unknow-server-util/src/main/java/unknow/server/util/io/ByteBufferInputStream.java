@@ -30,13 +30,17 @@ public class ByteBufferInputStream extends InputStream {
 		buffers.drainTo(list);
 	}
 
+	public boolean isOef() throws IOException {
+		return buffer() == EOF;
+	}
+
 	/**
 	 * get next buffer to read (wait if no buffer available)
 	 * @return
 	 * @throws InterruptedException
 	 * @throws IOException 
 	 */
-	private final ByteBuffer buffer() throws IOException {
+	final ByteBuffer buffer() throws IOException {
 		if (current == null || current != EOF && !current.hasRemaining()) {
 			try {
 				current = buffers.take();
