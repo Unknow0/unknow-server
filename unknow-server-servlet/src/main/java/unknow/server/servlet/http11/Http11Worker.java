@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import jakarta.servlet.http.Cookie;
 import unknow.server.nio.NIOConnection.Out;
 import unknow.server.servlet.HttpError;
@@ -13,6 +16,7 @@ import unknow.server.servlet.impl.ServletRequestImpl;
 
 /** http/1.1 worker */
 public final class Http11Worker extends HttpWorker {
+	private static final Logger logger = LoggerFactory.getLogger(Http11Worker.class);
 
 	private static final byte[] CRLF = { '\r', '\n' };
 	private static final byte[] QUOTE = new byte[] { '\\', '"' };
@@ -102,6 +106,7 @@ public final class Http11Worker extends HttpWorker {
 	@SuppressWarnings("resource")
 	@Override
 	public final boolean doStart() throws IOException, InterruptedException {
+		logger.debug("{} doStart", co);
 		if ("100-continue".equals(req.getHeader("expect"))) {
 			Out out = co.getOut();
 			out.write(HttpError.CONTINUE.encoded);
@@ -122,7 +127,9 @@ public final class Http11Worker extends HttpWorker {
 
 	@Override
 	protected void doDone() throws IOException {
-		if (!"keep-alive".equalsIgnoreCase(res.getHeader("connection")))
+		String header = res.getHeader("connection");
+		logger.debug("{} doDone {}", co, header);
+		if (!"keep-alive".equalsIgnoreCase(header))
 			co.getOut().close();
 		else
 			co.flush();

@@ -6,6 +6,8 @@ import java.util.function.Consumer;
 
 import javax.net.ssl.SSLEngine;
 
+import unknow.server.util.io.ByteBuffers;
+
 @SuppressWarnings("unused")
 public interface NIOConnectionHandler {
 
@@ -48,25 +50,13 @@ public interface NIOConnectionHandler {
 	}
 
 	/**
-	 * called before a buffer is written (allow to collect buffers)
+	 * called before some buffers are written
 	 * 
-	 * @param b buffer to be written
+	 * @param buffers buffers to be written
 	 * @param now nanoTime
-	 * @param c consumer of generated buffers
 	 * @throws IOException on io exception
 	 */
-	default void prepareWrite(ByteBuffer b, long now, Consumer<ByteBuffer> c) throws IOException {
-		c.accept(b);
-	}
-
-	/**
-	 * called before a buffer is written
-	 * 
-	 * @param now nanoTime
-	 * @param c consumer of generated buffers
-	 * @throws IOException on io exception
-	 */
-	default void beforeWrite(long now, Consumer<ByteBuffer> c) throws IOException { // ok
+	default void transformWrite(ByteBuffers buffers, long now) throws IOException { // ok
 	}
 
 	/**
