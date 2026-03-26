@@ -110,17 +110,14 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	private void checkPending(long now, boolean close) {
 		if (head == null)
 			return;
-//		long end = now - 1_000_000_000L;
+		long end = now - 1_000_000_000L;
 		NIOConnection co = head;
-		while (co != null /*&& co.lastCheck < end*/) {
+		while (co != null && co.lastCheck < end) {
 			NIOConnection next = co.next;
 			if (!co.key.isValid() || co.canClose(now, close))
 				startClose(co, now);
-			else {
-				if (co.hasPendingWrites())
-					co.key.interestOpsOr(SelectionKey.OP_WRITE);
+			else
 				co.lastCheck = now;
-			}
 			co = next;
 		}
 

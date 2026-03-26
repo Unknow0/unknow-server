@@ -13,6 +13,7 @@ import java.util.Arrays;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.net.ssl.SSLEngine;
 
@@ -35,6 +36,9 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	/** selection key */
 	protected final SelectionKey key;
 	protected final SocketChannel channel;
+
+	private final AtomicBoolean writeScheduled;
+	private final WriteCheck writeCheck;
 
 	private InetSocketAddress local;
 	private InetSocketAddress remote;
@@ -59,6 +63,8 @@ public final class NIOConnection extends NIOHandlerDelegate {
 		this.worker = worker;
 		this.key = key;
 		this.channel = (SocketChannel) key.channel();
+		this.writeScheduled = new AtomicBoolean(false);
+		this.writeCheck = new WriteCheck();
 		this.out = new Out(this);
 		this.pending = new LinkedBlockingDeque<>();
 		this.writes = new ByteBuffers(16);
@@ -98,8 +104,8 @@ public final class NIOConnection extends NIOHandlerDelegate {
 		if (!key.isValid())
 			throw new IOException("already closed");
 		pending.put(buf);
-		if (pending.size() > 10)
-			flush();
+		if (writeScheduled.compareAndSet(false, true))
+			execute(writeCheck);
 	}
 
 	@SuppressWarnings("resource")
@@ -167,8 +173,13 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	public final void onWrite(long now) throws IOException {
 		lastAction = now;
 		writes.compact();
-		if (!hasPendingWrites())
-			key.interestOpsAnd(~SelectionKey.OP_WRITE);
+		if (!hasPendingWrites()) {
+			writeScheduled.set(false);
+			if (!hasPendingWrites())
+				key.interestOpsAnd(~SelectionKey.OP_WRITE);
+			else
+				writeScheduled.set(true);
+		}
 		handler.onWrite(now);
 	}
 
@@ -312,6 +323,17 @@ public final class NIOConnection extends NIOHandlerDelegate {
 				Thread.currentThread().interrupt();
 				throw new IOException(e);
 			}
+		}
+	}
+
+	private class WriteCheck implements WorkerTask {
+
+		@Override
+		public void run(long now) {
+			if (hasPendingWrites())
+				key.interestOpsOr(SelectionKey.OP_WRITE);
+			else
+				writeScheduled.set(false);
 		}
 	}
 }
