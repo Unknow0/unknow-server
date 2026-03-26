@@ -128,6 +128,7 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 			checkHandshake(r.getHandshakeStatus(), now);
 			rawOut.compact();
 		}
+		handler.transformWrite(buffers, now);
 	}
 
 	@Override
@@ -137,10 +138,10 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 
 	@Override
 	public boolean finishClosing(long now) {
-		if (!handler.finishClosing(now))
-			return false;
 		if (sslEngine.isOutboundDone())
 			return true;
+		if (!handler.finishClosing(now))
+			return false;
 
 		sslEngine.closeOutbound();
 		try {

@@ -119,7 +119,7 @@ public final class HttpConnection implements NIOConnectionHandler, ServletConnec
 
 	@Override
 	public boolean finishClosing(long now) {
-		return p == null || p.finishClosing(now);
+		return co.hasPendingWrites() || p == null || p.finishClosing(now);
 	}
 
 	@Override

@@ -141,7 +141,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		Iterator<NIOConnection> it = closing.iterator();
 		while (it.hasNext()) {
 			NIOConnection co = it.next();
-			if (!co.key.isValid() || !co.hasPendingWrites() && co.finishClosing(now) || closingTimeout(co, now)) {
+			if (!co.key.isValid() || co.finishClosing(now) || closingTimeout(co, now)) {
 				it.remove();
 				doneClose(co);
 			}
@@ -211,9 +211,10 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	}
 
 	private void doWrite(NIOConnection co, long now) throws IOException {
-		co.beforeWrite(now);
+		if (co.writes.isEmpty())
+			co.beforeWrite(now);
 		long l = co.channel.write(co.writes.buf, 0, co.writes.len);
-		logger.trace("{} writen {}", co, l);
+		logger.trace("{} writen {} {}", co, l, co.key);
 		if (l > 0) {
 			co.onWrite(now);
 			if (co.isClosed())
