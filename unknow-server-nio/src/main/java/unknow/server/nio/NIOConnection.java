@@ -105,7 +105,10 @@ public final class NIOConnection extends NIOHandlerDelegate {
 			throw new IOException("already closed");
 		pending.put(buf);
 		if (writeScheduled.compareAndSet(false, true))
-			execute(writeCheck);
+			key.interestOpsOr(SelectionKey.OP_WRITE);
+		if (pending.size() > 10)
+			flush();
+//			execute(writeCheck);
 	}
 
 	@SuppressWarnings("resource")
