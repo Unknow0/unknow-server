@@ -105,17 +105,14 @@ public final class NIOConnection extends NIOHandlerDelegate {
 			throw new IOException("already closed");
 		pending.put(buf);
 		if (writeScheduled.compareAndSet(false, true))
-			key.interestOpsOr(SelectionKey.OP_WRITE);
-		if (pending.size() > 10)
-			flush();
-//			execute(writeCheck);
+			execute(writeCheck);
 	}
 
 	@SuppressWarnings("resource")
 	public final void flush() {
-		if (!hasPendingWrites())
-			return;
-		key.selector().wakeup();
+//		if (!hasPendingWrites())
+//			return;
+//		key.selector().wakeup();
 	}
 
 	/**
@@ -180,8 +177,8 @@ public final class NIOConnection extends NIOHandlerDelegate {
 			writeScheduled.set(false);
 			if (!hasPendingWrites())
 				key.interestOpsAnd(~SelectionKey.OP_WRITE);
-			else
-				writeScheduled.set(true);
+			else if (writeScheduled.compareAndSet(false, true))
+				key.interestOpsOr(SelectionKey.OP_WRITE);
 		}
 		handler.onWrite(now);
 	}
@@ -214,7 +211,7 @@ public final class NIOConnection extends NIOHandlerDelegate {
 
 	@Override
 	public String toString() {
-		return getClass() + "[local=" + getLocal() + " remote=" + getRemote() + "]";
+		return getClass() + "[local=" + getLocal() + " remote=" + getRemote() + "] writes: " + hasPendingWrites();
 	}
 
 	/** output stream for this connection */
@@ -330,7 +327,6 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	}
 
 	private class WriteCheck implements WorkerTask {
-
 		@Override
 		public void run(long now) {
 			if (hasPendingWrites())
