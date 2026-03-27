@@ -29,7 +29,7 @@ public class ByteBuffers implements Consumer<ByteBuffer> {
 	public void accept(ByteBuffers buffers) {
 		if (buffers.isEmpty())
 			return;
-		ensureCapacity(len + buf.length);
+		ensureCapacity(len + buffers.len);
 		System.arraycopy(buffers.buf, 0, buf, len, buffers.len);
 		len += buffers.len;
 		buffers.clear();
