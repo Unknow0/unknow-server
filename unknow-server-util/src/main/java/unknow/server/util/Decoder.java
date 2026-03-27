@@ -3,6 +3,8 @@ package unknow.server.util;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CoderResult;
 import java.nio.charset.StandardCharsets;
 
 public interface Decoder {
@@ -20,4 +22,19 @@ public interface Decoder {
 	 * @param endOfInput the data is done
 	 */
 	void decode(ByteBuffer bbuf, CharBuffer cbuf, boolean endOfInput);
+
+	public class DefaultDecoder implements Decoder {
+		private final CharsetDecoder dec;
+
+		public DefaultDecoder(CharsetDecoder dec) {
+			this.dec = dec;
+		}
+
+		@Override
+		public void decode(ByteBuffer bbuf, CharBuffer cbuf, boolean endOfInput) {
+			CoderResult r = dec.decode(bbuf, cbuf, endOfInput);
+			if (r.isError())
+				throw new IllegalArgumentException(r.toString());
+		}
+	}
 }

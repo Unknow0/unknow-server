@@ -47,8 +47,8 @@ public class Utf8Decoder implements Decoder {
 			} else if (b < 0x80) { // 1-byte ASCII
 				carr[cpos++] = (char) b;
 				while (bpos < blim && cpos < clim) {
-					b = barr[bpos] & 0xFF;
-					if (b >= 0x80)
+					b = barr[bpos];
+					if (b < 0)
 						break;
 					carr[cpos++] = (char) b;
 					bpos++;
