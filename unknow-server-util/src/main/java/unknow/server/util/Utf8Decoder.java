@@ -20,97 +20,55 @@ public class Utf8Decoder implements Decoder {
 			throw new IllegalArgumentException("Invalid UTF-8 string, truncated continuation bytes");
 	}
 
-//	private void fastDecode(ByteBuffer bbuf, CharBuffer cbuf) {
-//		byte[] barr = bbuf.array();
-//		int bpos = bbuf.position() + bbuf.arrayOffset();
-//		int blim = bbuf.limit() + bbuf.arrayOffset();
-//
-//		char[] carr = cbuf.array();
-//		int cpos = cbuf.position() + cbuf.arrayOffset();
-//		int clim = cbuf.limit() - 1 + cbuf.arrayOffset();
-//		while (bpos < blim && cpos < clim) {
-//			int b = barr[bpos++] & 0xFF;
-//			if (r > 0) {
-//				if ((b >> 6) != 0b10)
-//					throw new IllegalArgumentException("Invalid UTF-8 continuation byte: " + b);
-//
-//				codePoint = (codePoint << 6) | (b & 0x3F);
-//				if (--r == 0) {
-//					if (codePoint > 0xFFFF) { // Surrogate pair
-//						int cp = codePoint - 0x10000;
-//						carr[cpos++] = (char) ((cp >> 10) + 0xD800);
-//						carr[cpos++] = (char) ((cp & 0x3FF) + 0xDC00);
-//					} else
-//						carr[cpos++] = (char) codePoint;
-//					codePoint = 0;
-//				}
-//			} else if (b < 0x80) { // 1-byte ASCII
-//				carr[cpos++] = (char) barr[bpos++];
-//				while (bpos < blim && (barr[bpos] & 0x80) == 0 && cpos < clim)
-//					carr[cpos++] = (char) barr[bpos++];
-//			} else if (b < 0xc0)
-//				throw new IllegalArgumentException("Invalid UTF-8 start byte: " + b);
-//			else if (b < 0xe0) {
-//				r = 1;
-//				codePoint = b & 0x1F;
-//			} else if (b < 0xf0) {
-//				r = 2;
-//				codePoint = b & 0x0F;
-//			} else if (b <= 0xfa) {
-//				r = 3;
-//				codePoint = b & 0x07;
-//			} else
-//				throw new IllegalArgumentException("Invalid UTF-8 start byte: " + b);
-//		}
-//		bbuf.position(bpos - bbuf.arrayOffset());
-//		cbuf.position(cpos - cbuf.arrayOffset());
-//	}
-
 	private void fastDecode(ByteBuffer bbuf, CharBuffer cbuf) {
 		byte[] barr = bbuf.array();
 		int bpos = bbuf.position() + bbuf.arrayOffset();
 		int blim = bbuf.limit() + bbuf.arrayOffset();
+
 		char[] carr = cbuf.array();
 		int cpos = cbuf.position() + cbuf.arrayOffset();
 		int clim = cbuf.limit() - 1 + cbuf.arrayOffset();
-		while (bpos < blim && cpos < clim)
-			cpos = fastAppend(barr[bpos++] & 0xFF, carr, cpos);
+		while (bpos < blim && cpos < clim) {
+			int b = barr[bpos++] & 0xFF;
+			if (r > 0) {
+				if ((b >> 6) != 0b10)
+					throw new IllegalArgumentException("Invalid UTF-8 continuation byte: " + b);
+
+				codePoint = (codePoint << 6) | (b & 0x3F);
+				if (--r == 0) {
+					if (codePoint > 0xFFFF) { // Surrogate pair
+						int cp = codePoint - 0x10000;
+						carr[cpos++] = (char) ((cp >> 10) + 0xD800);
+						carr[cpos++] = (char) ((cp & 0x3FF) + 0xDC00);
+					} else
+						carr[cpos++] = (char) codePoint;
+					codePoint = 0;
+				}
+			} else if (b < 0x80) { // 1-byte ASCII
+				carr[cpos++] = (char) b;
+				while (bpos < blim && cpos < clim) {
+					b = barr[bpos] & 0xFF;
+					if (b >= 0x80)
+						break;
+					carr[cpos++] = (char) b;
+					bpos++;
+				}
+			} else if (b < 0xc0)
+				throw new IllegalArgumentException("Invalid UTF-8 start byte: " + b);
+			else if (b < 0xe0) {
+				r = 1;
+				codePoint = b & 0x1F;
+			} else if (b < 0xf0) {
+				r = 2;
+				codePoint = b & 0x0F;
+			} else if (b < 0xfb) {
+				r = 3;
+				codePoint = b & 0x07;
+			} else
+				throw new IllegalArgumentException("Invalid UTF-8 start byte: " + b);
+		}
 		bbuf.position(bpos - bbuf.arrayOffset());
 		cbuf.position(cpos - cbuf.arrayOffset());
-	}
-
-	private int fastAppend(int b, char[] cbuf, int cpos) {
-		if (r > 0) {
-			if ((b >> 6) != 0b10)
-				throw new IllegalArgumentException("Invalid UTF-8 continuation byte: " + b);
-			codePoint = (codePoint << 6) | (b & 0x3F);
-			if (--r == 0)
-				return fastAppend(cbuf, cpos);
-		} else if ((b >> 7) == 0) // 1-byte ASCII
-			cbuf[cpos++] = (char) b;
-		else if ((b >> 5) == 0b110) {
-			r = 1;
-			codePoint = b & 0x1F;
-		} else if ((b >> 4) == 0b1110) {
-			r = 2;
-			codePoint = b & 0x0F;
-		} else if ((b >> 3) == 0b11110) {
-			r = 3;
-			codePoint = b & 0x07;
-		} else
-			throw new IllegalArgumentException("Invalid UTF-8 start byte: " + b);
-		return cpos;
-	}
-
-	private int fastAppend(char[] cbuf, int cpos) {
-		if (codePoint > 0xFFFF) {  // Surrogate pair
-			int cp = codePoint - 0x10000;
-			cbuf[cpos++] = (char) ((cp >> 10) + 0xD800);
-			cbuf[cpos++] = (char) ((cp & 0x3FF) + 0xDC00);
-		} else
-			cbuf[cpos++] = (char) codePoint;
-		codePoint = 0;
-		return cpos;
 	}
 
 	private void slowDecode(ByteBuffer bbuf, CharBuffer cbuf) {
@@ -137,7 +95,7 @@ public class Utf8Decoder implements Decoder {
 		} else if (b < 0xf0) {
 			r = 2;
 			codePoint = b & 0x0F;
-		} else if (b <= 0xfa) {
+		} else if (b < 0xfb) {
 			r = 3;
 			codePoint = b & 0x07;
 		} else
