@@ -26,7 +26,7 @@ public class RequestDecoder {
 
 	public RequestDecoder(Http11Processor co) {
 		this.co = co;
-		decoder = new Utf8Decoder(new StringBuilder());
+		decoder = new Utf8Decoder();
 		buf = new byte[4096];
 		reset();
 	}

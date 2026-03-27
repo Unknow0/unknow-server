@@ -4,36 +4,30 @@ import java.io.IOException;
 import java.io.Reader;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
-import java.nio.charset.CoderResult;
+
+import unknow.server.util.Decoder;
 
 public class ByteBufferReader extends Reader {
 	private final ByteBufferInputStream in;
-	private final CharsetDecoder decoder;
+	private final Decoder decoder;
 	private final CharBuffer buf;
 
 	public ByteBufferReader(ByteBufferInputStream in, String charset) {
-		this(in, Charset.forName(charset).newDecoder());
+		this(in, Charset.forName(charset));
 	}
 
 	public ByteBufferReader(ByteBufferInputStream in, Charset charset) {
-		this(in, charset.newDecoder());
-	}
-
-	public ByteBufferReader(ByteBufferInputStream in, CharsetDecoder decoder) {
 		this.in = in;
-		this.decoder = decoder;
-		buf = CharBuffer.allocate(8192);
+		this.decoder = Decoder.from(charset);
+		buf = CharBuffer.allocate(8192).flip();
 	}
 
 	private void decode() throws IOException {
 		if (buf.hasRemaining() || in.isOef())
 			return;
 		buf.compact();
-		CoderResult r = decoder.decode(in.buffer(), buf, in.hasRemaining() && in.isClosed());
+		decoder.decode(in.buffer(), buf, in.hasRemaining() && in.isClosed());
 		buf.flip();
-		if (r.isError())
-			r.throwException();
 	}
 
 	@Override

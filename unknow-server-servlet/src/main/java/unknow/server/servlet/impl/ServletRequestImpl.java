@@ -5,7 +5,6 @@ package unknow.server.servlet.impl;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
@@ -48,6 +47,7 @@ import jakarta.servlet.http.Part;
 import unknow.server.servlet.HttpConnection;
 import unknow.server.servlet.impl.session.SessionFactory;
 import unknow.server.servlet.utils.PathUtils;
+import unknow.server.servlet.utils.UrlDecoder;
 import unknow.server.util.data.ArrayMap;
 import unknow.server.util.io.ByteBufferInputStream;
 import unknow.server.util.io.ByteBufferReader;
@@ -164,8 +164,10 @@ public class ServletRequestImpl implements HttpServletRequest {
 		}
 
 		try {
-			if ("POST".equals(getMethod()) && "application/x-www-form-urlencoded".equalsIgnoreCase(getContentType()))
-				parseContentParam(map);
+			if ("POST".equals(getMethod()) && "application/x-www-form-urlencoded".equalsIgnoreCase(getContentType())) {
+				new UrlDecoder(input).process(map);
+				contentLength = 0;
+			}
 		} catch (IOException e) {
 			logger.error("failed to parse params from content", e);
 		}
@@ -173,17 +175,6 @@ public class ServletRequestImpl implements HttpServletRequest {
 		String[] s = new String[0];
 		for (Entry<String, List<String>> e : map.entrySet())
 			parameter.put(e.getKey(), e.getValue().toArray(s));
-	}
-
-	/**
-	 * @param p
-	 * @throws IOException
-	 */
-	private void parseContentParam(Map<String, List<String>> p) throws IOException {
-		try (BufferedReader r = new BufferedReader(new InputStreamReader(input, getCharacterEncoding()))) {
-			PathUtils.pathQuery(r, p);
-		}
-		contentLength = 0;
 	}
 
 	/**
