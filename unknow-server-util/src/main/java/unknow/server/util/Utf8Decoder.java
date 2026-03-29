@@ -6,6 +6,7 @@ import java.nio.CharBuffer;
 public class Utf8Decoder implements Decoder {
 	/** code point in building */
 	private int codePoint;
+
 	/** remaining octet to read */
 	private int r;
 
@@ -28,12 +29,140 @@ public class Utf8Decoder implements Decoder {
 		char[] carr = cbuf.array();
 		int cpos = cbuf.position() + cbuf.arrayOffset();
 		int clim = cbuf.limit() - 1 + cbuf.arrayOffset();
-		while (bpos < blim && cpos < clim) {
+
+		int maxAscii = Math.min(clim, cpos + blim - bpos);
+		int codePoint = this.codePoint;
+		int r = this.r;
+
+		if (r > 0) {
+			if (bpos + r <= blim) { // can read all
+				int b;
+				switch (r) {
+					case 3:
+						b = barr[bpos++] & 0xFF;
+						if ((b >> 6) != 0b10)
+							throw new IllegalArgumentException("Invalid UTF-8 continuation byte: " + b);
+						codePoint = (codePoint << 6) | (b & 0x3F);
+					case 2:
+						b = barr[bpos++] & 0xFF;
+						if ((b >> 6) != 0b10)
+							throw new IllegalArgumentException("Invalid UTF-8 continuation byte: " + b);
+						codePoint = (codePoint << 6) | (b & 0x3F);
+					case 1:
+						b = barr[bpos++] & 0xFF;
+						if ((b >> 6) != 0b10)
+							throw new IllegalArgumentException("Invalid UTF-8 continuation byte: " + b);
+						codePoint = (codePoint << 6) | (b & 0x3F);
+				}
+				if (codePoint > 0xFFFF) { // Surrogate pair
+					int cp = codePoint - 0x10000;
+					carr[cpos++] = (char) ((cp >> 10) + 0xD800);
+					carr[cpos++] = (char) ((cp & 0x3FF) + 0xDC00);
+				} else
+					carr[cpos++] = (char) codePoint;
+				r = 0;
+			} else {
+				while (bpos < blim && cpos < clim) {
+					int b = barr[bpos++] & 0xFF;
+					if ((b >> 6) != 0b10)
+						throw new IllegalArgumentException("Invalid UTF-8 continuation byte: " + b);
+					codePoint = (codePoint << 6) | (b & 0x3F);
+					if (--r == 0) {
+						if (codePoint > 0xFFFF) { // Surrogate pair
+							int cp = codePoint - 0x10000;
+							carr[cpos++] = (char) ((cp >> 10) + 0xD800);
+							carr[cpos++] = (char) ((cp & 0x3FF) + 0xDC00);
+						} else
+							carr[cpos++] = (char) codePoint;
+					}
+				}
+			}
+		}
+
+		while (bpos < blim && cpos < clim)
+
+		{
 			int b = barr[bpos++] & 0xFF;
-			if (r > 0) {
+			if (b < 0x80) { // 1-byte ASCII
+				carr[cpos++] = (char) b;
+				while (cpos < maxAscii && barr[bpos] >= 0)
+					carr[cpos++] = (char) barr[bpos++];
+			} else if (b < 0xc0)
+				throw new IllegalArgumentException("Invalid UTF-8 start byte: " + b);
+			else {
+				if (b < 0xe0) {
+					codePoint = b & 0x1F;
+					if (bpos < blim) {
+						b = barr[bpos++] & 0xFF;
+						if ((b >> 6) != 0b10)
+							throw new IllegalArgumentException("Invalid UTF-8 continuation byte: " + b);
+						codePoint = (codePoint << 6) | (b & 0x3F);
+						if (codePoint > 0xFFFF) { // Surrogate pair
+							int cp = codePoint - 0x10000;
+							carr[cpos++] = (char) ((cp >> 10) + 0xD800);
+							carr[cpos++] = (char) ((cp & 0x3FF) + 0xDC00);
+						} else
+							carr[cpos++] = (char) codePoint;
+					} else {
+						r = 1;
+						break;
+					}
+				} else if (b < 0xf0) {
+					codePoint = b & 0x0F;
+					if (bpos + 1 < blim) {
+						b = barr[bpos++] & 0xFF;
+						if ((b >> 6) != 0b10)
+							throw new IllegalArgumentException("Invalid UTF-8 continuation byte: " + b);
+						codePoint = (codePoint << 6) | (b & 0x3F);
+						b = barr[bpos++] & 0xFF;
+						if ((b >> 6) != 0b10)
+							throw new IllegalArgumentException("Invalid UTF-8 continuation byte: " + b);
+						codePoint = (codePoint << 6) | (b & 0x3F);
+						if (codePoint > 0xFFFF) { // Surrogate pair
+							int cp = codePoint - 0x10000;
+							carr[cpos++] = (char) ((cp >> 10) + 0xD800);
+							carr[cpos++] = (char) ((cp & 0x3FF) + 0xDC00);
+						} else
+							carr[cpos++] = (char) codePoint;
+					} else {
+						r = 2;
+						break;
+					}
+				} else if (b < 0xf4) {
+					codePoint = b & 0x07;
+					if (bpos + 2 < blim) {
+						b = barr[bpos++] & 0xFF;
+						if ((b >> 6) != 0b10)
+							throw new IllegalArgumentException("Invalid UTF-8 continuation byte: " + b);
+						codePoint = (codePoint << 6) | (b & 0x3F);
+						b = barr[bpos++] & 0xFF;
+						if ((b >> 6) != 0b10)
+							throw new IllegalArgumentException("Invalid UTF-8 continuation byte: " + b);
+						codePoint = (codePoint << 6) | (b & 0x3F);
+						b = barr[bpos++] & 0xFF;
+						if ((b >> 6) != 0b10)
+							throw new IllegalArgumentException("Invalid UTF-8 continuation byte: " + b);
+						codePoint = (codePoint << 6) | (b & 0x3F);
+						if (codePoint > 0xFFFF) { // Surrogate pair
+							int cp = codePoint - 0x10000;
+							carr[cpos++] = (char) ((cp >> 10) + 0xD800);
+							carr[cpos++] = (char) ((cp & 0x3FF) + 0xDC00);
+						} else
+							carr[cpos++] = (char) codePoint;
+					} else {
+						r = 3;
+						break;
+					}
+				} else
+					throw new IllegalArgumentException("Invalid UTF-8 start byte: " + b);
+			}
+		}
+
+		if (r > 0) {
+			while (bpos < blim && cpos < clim) {
+				int b = barr[bpos++] & 0xFF;
 				if ((b >> 6) != 0b10)
 					throw new IllegalArgumentException("Invalid UTF-8 continuation byte: " + b);
-
 				codePoint = (codePoint << 6) | (b & 0x3F);
 				if (--r == 0) {
 					if (codePoint > 0xFFFF) { // Surrogate pair
@@ -42,31 +171,13 @@ public class Utf8Decoder implements Decoder {
 						carr[cpos++] = (char) ((cp & 0x3FF) + 0xDC00);
 					} else
 						carr[cpos++] = (char) codePoint;
-					codePoint = 0;
 				}
-			} else if (b < 0x80) { // 1-byte ASCII
-				carr[cpos++] = (char) b;
-				while (bpos < blim && cpos < clim) {
-					b = barr[bpos];
-					if (b < 0)
-						break;
-					carr[cpos++] = (char) b;
-					bpos++;
-				}
-			} else if (b < 0xc0)
-				throw new IllegalArgumentException("Invalid UTF-8 start byte: " + b);
-			else if (b < 0xe0) {
-				r = 1;
-				codePoint = b & 0x1F;
-			} else if (b < 0xf0) {
-				r = 2;
-				codePoint = b & 0x0F;
-			} else if (b < 0xfb) {
-				r = 3;
-				codePoint = b & 0x07;
-			} else
-				throw new IllegalArgumentException("Invalid UTF-8 start byte: " + b);
+			}
 		}
+
+		this.r = r;
+		this.codePoint = codePoint;
+
 		bbuf.position(bpos - bbuf.arrayOffset());
 		cbuf.position(cpos - cbuf.arrayOffset());
 	}

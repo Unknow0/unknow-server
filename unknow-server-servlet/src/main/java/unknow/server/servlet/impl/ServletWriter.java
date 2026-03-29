@@ -4,30 +4,26 @@ import java.io.IOException;
 import java.io.Writer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
-import java.nio.charset.CharsetEncoder;
-import java.nio.charset.CoderResult;
-import java.nio.charset.CodingErrorAction;
+
+import unknow.server.util.Encoder;
 
 public class ServletWriter extends Writer {
 	private final AbstractServletOutput out;
-	private final CharsetEncoder enc;
+	private final Encoder enc;
 
 	public ServletWriter(AbstractServletOutput out, Charset c) {
 		this.out = out;
-		this.enc = c.newEncoder().onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT);
+		this.enc = Encoder.from(c);
 	}
 
 	public void write(CharBuffer cbuf) throws IOException {
 		if (out.isClosed())
 			throw new IOException("closed");
-		CoderResult r = enc.encode(cbuf, out.buffer, false);
-		if (r.isError())
-			throw new IOException("Invalid caracter found");
-		while (r.isOverflow()) {
+
+		enc.encode(cbuf, out.buffer, false);
+		while (cbuf.hasRemaining()) {
 			out.flush();
-			r = enc.encode(cbuf, out.buffer, false);
-			if (r.isError())
-				throw new IOException("Invalid caracter found");
+			enc.encode(cbuf, out.buffer, false);
 		}
 	}
 
