@@ -106,7 +106,7 @@ public class EncoderDecoder {
 
 	@State(Scope.Thread)
 	public static class Data {
-		@Param({ /* "latin", "simple",*/ "complex" })
+		@Param({  "latin", "simple", "complex" })
 		String name;
 		CharBuffer cbuf;
 		ByteBuffer bytes;

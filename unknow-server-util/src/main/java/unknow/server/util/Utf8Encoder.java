@@ -26,8 +26,9 @@ public class Utf8Encoder implements Encoder {
 		int blim = bbuf.limit() - 3 + bbuf.arrayOffset();
 
 		if (surrogate != 0) {
-			int low = carr[cpos++];
+			int low = carr[cpos];
 			if (low >= 0xDC00 && low <= 0xDFFF) {
+				cpos++;
 				int code = 0x10000 + ((surrogate - 0xD800) << 10) + (low - 0xDC00);
 				barr[bpos++] = (byte) (0xF0 | (code >> 18));
 				barr[bpos++] = (byte) (0x80 | ((code >> 12) & 0x3F));
@@ -56,8 +57,9 @@ public class Utf8Encoder implements Encoder {
 				int i = code >> 10;
 				if (i == 0b110110) { // high surrogate
 					if (cpos < clim) {
-						int low = carr[cpos++];
+						int low = carr[cpos];
 						if (low >= 0xDC00 && low <= 0xDFFF) {
+							cpos++;
 							int c = 0x10000 + ((code - 0xD800) << 10) + (low - 0xDC00);
 							barr[bpos++] = (byte) (0xF0 | (c >> 18));
 							barr[bpos++] = (byte) (0x80 | ((c >> 12) & 0x3F));
@@ -93,24 +95,30 @@ public class Utf8Encoder implements Encoder {
 
 	private void slowEncode(CharBuffer cbuf, ByteBuffer bbuf, boolean endOfInput) {
 		if (surrogate != 0) {
-			int low = cbuf.get();
-			if (low < 0xDC00 || low > 0xDFFF)
+			int low = cbuf.get(cbuf.position());
+			if (low >= 0xDC00 && low <= 0xDFFF) {
+				slowAppend(0x10000 + ((surrogate - 0xD800) << 10) + (low - 0xDC00), bbuf);
+				cbuf.position(cbuf.position() + 1);
+			} else
 				slowAppend(0xFFFD, bbuf);
-			else
-				slowAppend(0x10000 + ((surrogate - 0xD800) << 10) + (cbuf.get() - 0xDC00), bbuf);
 			surrogate = 0;
 		}
 		int cpos = bbuf.position();
-		int maxAscii = cpos + Math.min(cbuf.remaining(), bbuf.remaining());
+		int maxAscii = Math.min(cbuf.limit(), cpos + bbuf.remaining());
 		while (cpos < maxAscii && cbuf.get(cpos++) <= 0x7f)
 			bbuf.put((byte) cbuf.get());
 		while (cbuf.hasRemaining() && bbuf.remaining() >= 4) {
 			int code = cbuf.get();
 			int i = code >> 10;
 			if (i == 0b110110) { // high surrogate
-				if (cbuf.hasRemaining())
-					code = 0x10000 + ((code - 0xD800) << 10) + (cbuf.get() - 0xDC00);
-				else if (endOfInput)
+				if (cbuf.hasRemaining()) {
+					int low = cbuf.get(cbuf.position());
+					if (low >= 0xDC00 && low <= 0xDFFF) {
+						code = 0x10000 + ((code - 0xD800) << 10) + (low - 0xDC00);
+						cbuf.position(cbuf.position() + 1);
+					} else
+						code = 0xFFFD;
+				} else if (endOfInput)
 					code = 0xFFFD;
 				else {
 					surrogate = code;

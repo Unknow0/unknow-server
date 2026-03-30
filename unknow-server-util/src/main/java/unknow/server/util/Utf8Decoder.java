@@ -43,11 +43,15 @@ public class Utf8Decoder implements Decoder {
 						if ((b >> 6) != 0b10)
 							throw new IllegalArgumentException("Invalid UTF-8 continuation byte: " + b);
 						codePoint = (codePoint << 6) | (b & 0x3F);
+						if (codePoint < 0x10)
+							throw new IllegalArgumentException("Invalid UTF-8 overlong sequence");
 					case 2:
 						b = barr[bpos++] & 0xFF;
 						if ((b >> 6) != 0b10)
 							throw new IllegalArgumentException("Invalid UTF-8 continuation byte: " + b);
 						codePoint = (codePoint << 6) | (b & 0x3F);
+						if (codePoint < 0x20)
+							throw new IllegalArgumentException("Invalid UTF-8 overlong sequence");
 					case 1:
 						b = barr[bpos++] & 0xFF;
 						if ((b >> 6) != 0b10)
@@ -67,6 +71,8 @@ public class Utf8Decoder implements Decoder {
 					if ((b >> 6) != 0b10)
 						throw new IllegalArgumentException("Invalid UTF-8 continuation byte: " + b);
 					codePoint = (codePoint << 6) | (b & 0x3F);
+					if ((r == 2 && codePoint < 0x20) || (r == 3 && codePoint < 0x10))
+						throw new IllegalArgumentException("Invalid UTF-8 overlong sequence");
 					if (--r == 0) {
 						if (codePoint > 0xFFFF) { // Surrogate pair
 							int cp = codePoint - 0x10000;
@@ -79,23 +85,23 @@ public class Utf8Decoder implements Decoder {
 			}
 		}
 
-		while (bpos < blim && cpos < clim)
-
-		{
+		while (bpos < blim && cpos < clim) {
 			int b = barr[bpos++] & 0xFF;
 			if (b < 0x80) { // 1-byte ASCII
 				carr[cpos++] = (char) b;
 				while (cpos < maxAscii && barr[bpos] >= 0)
 					carr[cpos++] = (char) barr[bpos++];
 			} else if (b < 0xc0)
-				throw new IllegalArgumentException("Invalid UTF-8 start byte: " + b);
+				throw new IllegalArgumentException("Invalid UTF-8 start byte: 0x" + Integer.toString(b, 16));
 			else {
 				if (b < 0xe0) {
 					codePoint = b & 0x1F;
+					if (codePoint < 2)
+						throw new IllegalArgumentException("Invalid UTF-8 overlong sequence");
 					if (bpos < blim) {
 						b = barr[bpos++] & 0xFF;
 						if ((b >> 6) != 0b10)
-							throw new IllegalArgumentException("Invalid UTF-8 continuation byte: " + b);
+							throw new IllegalArgumentException("Invalid UTF-8 continuation byte: 0x" + Integer.toString(b, 16));
 						codePoint = (codePoint << 6) | (b & 0x3F);
 						if (codePoint > 0xFFFF) { // Surrogate pair
 							int cp = codePoint - 0x10000;
@@ -112,11 +118,13 @@ public class Utf8Decoder implements Decoder {
 					if (bpos + 1 < blim) {
 						b = barr[bpos++] & 0xFF;
 						if ((b >> 6) != 0b10)
-							throw new IllegalArgumentException("Invalid UTF-8 continuation byte: " + b);
+							throw new IllegalArgumentException("Invalid UTF-8 continuation byte: 0x" + Integer.toString(b, 16));
 						codePoint = (codePoint << 6) | (b & 0x3F);
+						if (codePoint < 0x20)
+							throw new IllegalArgumentException("Invalid UTF-8 overlong sequence");
 						b = barr[bpos++] & 0xFF;
 						if ((b >> 6) != 0b10)
-							throw new IllegalArgumentException("Invalid UTF-8 continuation byte: " + b);
+							throw new IllegalArgumentException("Invalid UTF-8 continuation byte: 0x" + Integer.toString(b, 16));
 						codePoint = (codePoint << 6) | (b & 0x3F);
 						if (codePoint > 0xFFFF) { // Surrogate pair
 							int cp = codePoint - 0x10000;
@@ -133,15 +141,18 @@ public class Utf8Decoder implements Decoder {
 					if (bpos + 2 < blim) {
 						b = barr[bpos++] & 0xFF;
 						if ((b >> 6) != 0b10)
-							throw new IllegalArgumentException("Invalid UTF-8 continuation byte: " + b);
+							throw new IllegalArgumentException("Invalid UTF-8 continuation byte: 0x" + Integer.toString(b, 16));
+						codePoint = (codePoint << 6) | (b & 0x3F);
+						if (codePoint < 0x10)
+							throw new IllegalArgumentException("Invalid UTF-8 overlong sequence");
+
+						b = barr[bpos++] & 0xFF;
+						if ((b >> 6) != 0b10)
+							throw new IllegalArgumentException("Invalid UTF-8 continuation byte: 0x" + Integer.toString(b, 16));
 						codePoint = (codePoint << 6) | (b & 0x3F);
 						b = barr[bpos++] & 0xFF;
 						if ((b >> 6) != 0b10)
-							throw new IllegalArgumentException("Invalid UTF-8 continuation byte: " + b);
-						codePoint = (codePoint << 6) | (b & 0x3F);
-						b = barr[bpos++] & 0xFF;
-						if ((b >> 6) != 0b10)
-							throw new IllegalArgumentException("Invalid UTF-8 continuation byte: " + b);
+							throw new IllegalArgumentException("Invalid UTF-8 continuation byte: 0x" + Integer.toString(b, 16));
 						codePoint = (codePoint << 6) | (b & 0x3F);
 						if (codePoint > 0xFFFF) { // Surrogate pair
 							int cp = codePoint - 0x10000;
@@ -154,7 +165,7 @@ public class Utf8Decoder implements Decoder {
 						break;
 					}
 				} else
-					throw new IllegalArgumentException("Invalid UTF-8 start byte: " + b);
+					throw new IllegalArgumentException("Invalid UTF-8 start byte: 0x" + Integer.toString(b, 16));
 			}
 		}
 
@@ -162,7 +173,7 @@ public class Utf8Decoder implements Decoder {
 			while (bpos < blim && cpos < clim) {
 				int b = barr[bpos++] & 0xFF;
 				if ((b >> 6) != 0b10)
-					throw new IllegalArgumentException("Invalid UTF-8 continuation byte: " + b);
+					throw new IllegalArgumentException("Invalid UTF-8 continuation byte: 0x" + Integer.toString(b, 16));
 				codePoint = (codePoint << 6) | (b & 0x3F);
 				if (--r == 0) {
 					if (codePoint > 0xFFFF) { // Surrogate pair
@@ -191,18 +202,22 @@ public class Utf8Decoder implements Decoder {
 	private void slowAppend(int b, CharBuffer cbuf) {
 		if (r > 0) {
 			if ((b >> 6) != 0b10)
-				throw new IllegalArgumentException("Invalid UTF-8 continuation byte: " + b);
+				throw new IllegalArgumentException("Invalid UTF-8 continuation byte: 0x" + Integer.toString(b, 16));
 
 			codePoint = (codePoint << 6) | (b & 0x3F);
+			if ((r == 2 && codePoint < 0x20) || (r == 3 && codePoint < 0x10))
+				throw new IllegalArgumentException("Invalid UTF-8 overlong sequence");
 			if (--r == 0)
 				slowAppend(cbuf);
 		} else if (b < 0x80) // 1-byte ASCII
 			cbuf.put((char) b);
 		else if (b < 0xc0)
-			throw new IllegalArgumentException("Invalid UTF-8 start byte: " + b);
+			throw new IllegalArgumentException("Invalid UTF-8 start byte: 0x" + Integer.toString(b, 16));
 		else if (b < 0xe0) {
 			r = 1;
 			codePoint = b & 0x1F;
+			if (codePoint < 2)
+				throw new IllegalArgumentException("Invalid UTF-8 overlong sequence");
 		} else if (b < 0xf0) {
 			r = 2;
 			codePoint = b & 0x0F;
@@ -210,7 +225,7 @@ public class Utf8Decoder implements Decoder {
 			r = 3;
 			codePoint = b & 0x07;
 		} else
-			throw new IllegalArgumentException("Invalid UTF-8 start byte: " + b);
+			throw new IllegalArgumentException("Invalid UTF-8 start byte: 0x" + Integer.toString(b, 16));
 	}
 
 	private void slowAppend(CharBuffer cbuf) {

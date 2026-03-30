@@ -9,10 +9,12 @@ import unknow.server.util.Encoder;
 
 public class ServletWriter extends Writer {
 	private final AbstractServletOutput out;
+	private final Charset c;
 	private final Encoder enc;
 
 	public ServletWriter(AbstractServletOutput out, Charset c) {
 		this.out = out;
+		this.c = c;
 		this.enc = Encoder.from(c);
 	}
 
@@ -40,7 +42,7 @@ public class ServletWriter extends Writer {
 	public void write(String str, int off, int len) throws IOException {
 		if (out.isClosed())
 			throw new IOException("closed");
-		write(CharBuffer.wrap(str, off, off + len));
+		out.write(str.getBytes(c));
 	}
 
 	@Override
