@@ -171,30 +171,6 @@ public class EncoderDecoder {
 	}
 
 	@Benchmark
-	public ByteBuffer encoderSlowUtf8(Data data) {
-		ByteBuffer b = ByteBuffer.allocate(4096);
-		Encoder e = Encoder.from(StandardCharsets.UTF_8);
-		CharBuffer cbuf = data.cbuf.asReadOnlyBuffer();
-		while (cbuf.hasRemaining()) {
-			e.encode(cbuf, b, false);
-			b.clear();
-		}
-		return b.clear();
-	}
-
-	@Benchmark
-	public CharBuffer decoderSlowUtf8(Data data) {
-		CharBuffer c = CharBuffer.allocate(4096);
-		Decoder d = Decoder.from(StandardCharsets.UTF_8);
-		ByteBuffer bbuf = data.bytes.asReadOnlyBuffer();
-		while (bbuf.hasRemaining()) {
-			d.decode(bbuf, c, false);
-			c.clear();
-		}
-		return c.clear();
-	}
-
-	@Benchmark
 	public ByteBuffer encoderCharset(Data data) {
 		ByteBuffer b = ByteBuffer.allocate(4096);
 		CharsetEncoder e = StandardCharsets.UTF_8.newEncoder();
@@ -219,7 +195,31 @@ public class EncoderDecoder {
 	}
 
 	@Benchmark
-	public ByteBuffer encoderSlowCharset(Data data) {
+	public ByteBuffer slowEncoderUtf8(Data data) {
+		ByteBuffer b = ByteBuffer.allocate(4096);
+		Encoder e = Encoder.from(StandardCharsets.UTF_8);
+		CharBuffer cbuf = data.cbuf.asReadOnlyBuffer();
+		while (cbuf.hasRemaining()) {
+			e.encode(cbuf, b, false);
+			b.clear();
+		}
+		return b.clear();
+	}
+
+	@Benchmark
+	public CharBuffer slowDecoderUtf8(Data data) {
+		CharBuffer c = CharBuffer.allocate(4096);
+		Decoder d = Decoder.from(StandardCharsets.UTF_8);
+		ByteBuffer bbuf = data.bytes.asReadOnlyBuffer();
+		while (bbuf.hasRemaining()) {
+			d.decode(bbuf, c, false);
+			c.clear();
+		}
+		return c.clear();
+	}
+
+	@Benchmark
+	public ByteBuffer slowEncoderCharset(Data data) {
 		ByteBuffer b = ByteBuffer.allocate(4096);
 		CharsetEncoder e = StandardCharsets.UTF_8.newEncoder();
 		CharBuffer cbuf = data.cbuf.asReadOnlyBuffer();
@@ -231,7 +231,7 @@ public class EncoderDecoder {
 	}
 
 	@Benchmark
-	public CharBuffer decoderSlowCharset(Data data) {
+	public CharBuffer slowDecoderCharset(Data data) {
 		CharBuffer c = CharBuffer.allocate(4096);
 		CharsetDecoder d = StandardCharsets.UTF_8.newDecoder();
 		ByteBuffer bbuf = data.bytes.asReadOnlyBuffer();
