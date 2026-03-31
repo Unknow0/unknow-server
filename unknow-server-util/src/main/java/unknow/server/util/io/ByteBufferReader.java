@@ -49,6 +49,33 @@ public class ByteBufferReader extends Reader {
 	}
 
 	@Override
+	public int read(CharBuffer target) throws IOException {
+		if (in.isOef())
+			return -1;
+		decode();
+		int l = buf.remaining();
+		int r = target.remaining();
+		if (r > l) {
+			target.put(buf);
+			return l;
+		}
+		l = buf.limit();
+		target.put(buf.limit(buf.position() + r));
+		buf.limit(l);
+		return r;
+	}
+
+	@Override
+	public long skip(long n) throws IOException {
+		if (in.isOef())
+			return 0;
+		decode();
+		int l = (int) Math.min(n, buf.remaining());
+		buf.position(buf.position() + l);
+		return n;
+	}
+
+	@Override
 	public void close() throws IOException {
 		in.close();
 	}

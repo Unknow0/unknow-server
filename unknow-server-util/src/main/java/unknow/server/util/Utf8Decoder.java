@@ -30,7 +30,6 @@ public class Utf8Decoder implements Decoder {
 		int cpos = cbuf.position() + cbuf.arrayOffset();
 		int clim = cbuf.limit() - 1 + cbuf.arrayOffset();
 
-		int maxAscii = Math.min(clim, cpos + blim - bpos);
 		int codePoint = this.codePoint;
 		int r = this.r;
 
@@ -89,6 +88,7 @@ public class Utf8Decoder implements Decoder {
 			int b = barr[bpos++] & 0xFF;
 			if (b < 0x80) { // 1-byte ASCII
 				carr[cpos++] = (char) b;
+				int maxAscii = Math.min(clim, cpos + blim - bpos);
 				while (cpos < maxAscii && barr[bpos] >= 0)
 					carr[cpos++] = (char) barr[bpos++];
 			} else if (b < 0xc0)

@@ -106,7 +106,7 @@ public class EncoderDecoder {
 
 	@State(Scope.Thread)
 	public static class Data {
-		@Param({  "latin", "simple", "complex" })
+		@Param({ "latin", "simple", "complex" })
 		String name;
 		CharBuffer cbuf;
 		ByteBuffer bytes;
@@ -131,12 +131,6 @@ public class EncoderDecoder {
 			str.getChars(0, str.length(), cbuf.array(), 0);
 			bytes = ByteBuffer.wrap(str.getBytes(StandardCharsets.UTF_8));
 		}
-	}
-
-	public static void main(String[] arg) throws Throwable {
-		Data data = new Data();
-		data.init(COMPLEX);
-		new EncoderDecoder().decoderUtf8(data);
 	}
 
 //	@Benchmark
@@ -177,7 +171,7 @@ public class EncoderDecoder {
 	}
 
 	@Benchmark
-	public ByteBuffer encoderUtf8Slow(Data data) {
+	public ByteBuffer encoderSlowUtf8(Data data) {
 		ByteBuffer b = ByteBuffer.allocate(4096);
 		Encoder e = Encoder.from(StandardCharsets.UTF_8);
 		CharBuffer cbuf = data.cbuf.asReadOnlyBuffer();
@@ -189,7 +183,7 @@ public class EncoderDecoder {
 	}
 
 	@Benchmark
-	public CharBuffer decoderUtf8Slow(Data data) {
+	public CharBuffer decoderSlowUtf8(Data data) {
 		CharBuffer c = CharBuffer.allocate(4096);
 		Decoder d = Decoder.from(StandardCharsets.UTF_8);
 		ByteBuffer bbuf = data.bytes.asReadOnlyBuffer();
@@ -217,6 +211,30 @@ public class EncoderDecoder {
 		CharBuffer c = CharBuffer.allocate(4096);
 		CharsetDecoder d = StandardCharsets.UTF_8.newDecoder();
 		ByteBuffer bbuf = data.bytes.duplicate();
+		while (bbuf.hasRemaining()) {
+			d.decode(bbuf, c, false);
+			c.clear();
+		}
+		return c.clear();
+	}
+
+	@Benchmark
+	public ByteBuffer encoderSlowCharset(Data data) {
+		ByteBuffer b = ByteBuffer.allocate(4096);
+		CharsetEncoder e = StandardCharsets.UTF_8.newEncoder();
+		CharBuffer cbuf = data.cbuf.asReadOnlyBuffer();
+		while (cbuf.hasRemaining()) {
+			e.encode(cbuf, b, false);
+			b.clear();
+		}
+		return b.clear();
+	}
+
+	@Benchmark
+	public CharBuffer decoderSlowCharset(Data data) {
+		CharBuffer c = CharBuffer.allocate(4096);
+		CharsetDecoder d = StandardCharsets.UTF_8.newDecoder();
+		ByteBuffer bbuf = data.bytes.asReadOnlyBuffer();
 		while (bbuf.hasRemaining()) {
 			d.decode(bbuf, c, false);
 			c.clear();

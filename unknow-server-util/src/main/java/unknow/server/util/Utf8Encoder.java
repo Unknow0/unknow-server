@@ -41,13 +41,11 @@ public class Utf8Encoder implements Encoder {
 			}
 			surrogate = 0;
 		}
-		int maxAscii = Math.min(clim, cpos + blim - bpos);
-		while (cpos < maxAscii && carr[cpos] <= 0x7f)
-			barr[bpos++] = (byte) carr[cpos++];
 		while (cpos < clim && bpos < blim) {
 			int code = carr[cpos++];
 			if (code <= 0x7f) {
 				barr[bpos++] = (byte) code;
+				int maxAscii = Math.min(clim, cpos + blim - bpos);
 				while (cpos < maxAscii && carr[cpos] <= 0x7f)
 					barr[bpos++] = (byte) carr[cpos++];
 			} else if (code <= 0x7FF) {
@@ -103,10 +101,6 @@ public class Utf8Encoder implements Encoder {
 				slowAppend(0xFFFD, bbuf);
 			surrogate = 0;
 		}
-		int cpos = bbuf.position();
-		int maxAscii = Math.min(cbuf.limit(), cpos + bbuf.remaining());
-		while (cpos < maxAscii && cbuf.get(cpos++) <= 0x7f)
-			bbuf.put((byte) cbuf.get());
 		while (cbuf.hasRemaining() && bbuf.remaining() >= 4) {
 			int code = cbuf.get();
 			int i = code >> 10;
