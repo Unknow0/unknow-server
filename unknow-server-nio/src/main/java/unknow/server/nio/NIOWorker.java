@@ -173,6 +173,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 				if (co.next != co)
 					logger.error("failed to write {}", co, e);
 				startClose(co, now);
+				key.cancel();
 			} finally {
 				buf.clear();
 			}
