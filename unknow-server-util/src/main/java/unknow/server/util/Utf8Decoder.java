@@ -49,14 +49,15 @@ public class Utf8Decoder implements Decoder {
 			if ((l & 0x8080808080808080L) != 0L)
 				break;
 			carr[cpos++] = (char) l;
-			carr[cpos++] = (char) (l >>> 8);
-			carr[cpos++] = (char) (l >>> 16);
-			carr[cpos++] = (char) (l >>> 24);
-			carr[cpos++] = (char) (l >>> 32);
-			carr[cpos++] = (char) (l >>> 40);
-			carr[cpos++] = (char) (l >>> 48);
-			carr[cpos++] = (char) (l >>> 56);
+			carr[cpos ++] = (char) (l >>> 8);
+			carr[cpos ++] = (char) (l >>> 16);
+			carr[cpos ++] = (char) (l >>> 24);
+			carr[cpos ++] = (char) (l >>> 32);
+			carr[cpos ++] = (char) (l >>> 40);
+			carr[cpos ++] = (char) (l >>> 48);
+			carr[cpos ++] = (char) (l >>> 56);
 			bpos += 8;
+//			cpos += 8;
 		}
 		int cp;
 		loop: while (bpos < blim && cpos < clim) {
