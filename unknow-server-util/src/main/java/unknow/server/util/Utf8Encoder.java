@@ -94,11 +94,12 @@ public class Utf8Encoder implements Encoder {
 						INT.set(barr, bpos, INT_REPL);
 						bpos += 3;
 					}
-				} else if (endOfInput) {
-					INT.set(barr, bpos, INT_REPL);
-					bpos += 3;
 				} else {
-					hi = code;
+					if (endOfInput) {
+						INT.set(barr, bpos, INT_REPL);
+						bpos += 3;
+					} else
+						hi = code;
 					break;
 				}
 			} else if (code < 0xE000) { // lone low surrogate
@@ -127,7 +128,7 @@ public class Utf8Encoder implements Encoder {
 			if (code < 0x80) {
 				bbuf.put((byte) code);
 			} else if (code < 0x800) {
-				bbuf.putShort((short) (0x80C0 | (code >> 6) | (code & 0x3F)));
+				bbuf.putShort((short) (0x80C0 | (code >> 6) | ((code << 8) & 0x3F00)));
 			} else if (code < 0xD800) {
 				int p = bbuf.position();
 				int c = 0x008080E0 | (code >> 12) | ((code << 2) & 0x3F00) | (code << 16 & 0x3F0000);
@@ -139,10 +140,11 @@ public class Utf8Encoder implements Encoder {
 					int low = cbuf.get(cpos);
 					if (slowSurrogate(bbuf, code, low))
 						cbuf.position(cpos + 1);
-				} else if (endOfInput)
-					bbuf.put(REPL);
-				else {
-					hi = code;
+				} else {
+					if (endOfInput)
+						bbuf.put(REPL);
+					else
+						hi = code;
 					break;
 				}
 			} else if (code < 0xE000)  // lone low surrogate
@@ -156,7 +158,7 @@ public class Utf8Encoder implements Encoder {
 	}
 
 	private boolean slowSurrogate(ByteBuffer bbuf, int high, int low) {
-		if (low < 0xDC00 && low > 0xDFFF) {
+		if (low < 0xDC00 || low > 0xDFFF) {
 			bbuf.put(REPL);
 			return false;
 		}

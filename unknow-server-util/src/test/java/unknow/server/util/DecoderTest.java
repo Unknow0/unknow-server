@@ -33,10 +33,8 @@ public class DecoderTest {
 
 	protected void decodeChunck(Decoder decoder, ByteBuffer input, CharBuffer cbuf) {
 		int l = input.limit();
-		for (int i = 0; i < l; i++) {
-			ByteBuffer bbuf = input.slice(i, 1);
-			decoder.decode(bbuf, cbuf, i == l - 1);
-		}
+		for (int i = 0; i < l; i++)
+			decoder.decode(input.position(i).limit(i + 1), cbuf, i == l - 1);
 		while (decoder.flush(cbuf))
 			;
 	}

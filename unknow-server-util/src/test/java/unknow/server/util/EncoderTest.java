@@ -31,10 +31,8 @@ public class EncoderTest {
 
 	private void encodeChunck(Encoder encoder, CharBuffer input, ByteBuffer bbuf) {
 		int l = input.limit();
-		for (int i = 0; i < l; i++) {
-			CharBuffer cbuf = input.slice(i, 1);
-			encoder.encode(cbuf, bbuf, i == l - 1);
-		}
+		for (int i = 0; i < l; i++)
+			encoder.encode(input.position(i).limit(i + 1), bbuf, i == l - 1);
 		while (encoder.flush(bbuf))
 			;
 	}
@@ -64,7 +62,7 @@ public class EncoderTest {
 	@MethodSource("utf8Strings")
 	void testSlowPath(String input, String expected) {
 		Encoder encoder = encoder();
-		CharBuffer cbuf = CharBuffer.wrap(input.toCharArray());
+		CharBuffer cbuf = CharBuffer.wrap(input);
 		ByteBuffer bbuf = ByteBuffer.allocate(100);
 
 		encodeAll(encoder, cbuf, bbuf);
