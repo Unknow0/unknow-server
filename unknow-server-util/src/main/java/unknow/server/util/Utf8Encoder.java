@@ -1,10 +1,17 @@
 package unknow.server.util;
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.CharBuffer;
 
 public class Utf8Encoder implements Encoder {
-	private int surrogate;
+	private static final VarHandle INT = MethodHandles.byteArrayViewVarHandle(int[].class, ByteOrder.LITTLE_ENDIAN);
+
+	private static final int repl = 0x00BDBFEF;
+
+	private int cp;
 
 	@Override
 	public void encode(CharBuffer cbuf, ByteBuffer bbuf, boolean endOfInput) {
@@ -13,7 +20,18 @@ public class Utf8Encoder implements Encoder {
 		if (cbuf.hasArray() && bbuf.hasArray())
 			fastEncode(cbuf, bbuf, endOfInput);
 		else
-			slowEncode(cbuf, bbuf, endOfInput);
+			slowEncode(cbuf, bbuf.order(ByteOrder.LITTLE_ENDIAN), endOfInput);
+	}
+
+	@Override
+	public boolean flush(ByteBuffer bbuf) {
+		if (cp != 0) {
+			if (bbuf.remaining() < 3)
+				return true;
+			bbuf.put(REPL);
+			cp = 0;
+		}
+		return false;
 	}
 
 	private void fastEncode(CharBuffer cbuf, ByteBuffer bbuf, boolean endOfInput) {
@@ -25,66 +43,70 @@ public class Utf8Encoder implements Encoder {
 		int bpos = bbuf.position() + bbuf.arrayOffset();
 		int blim = bbuf.limit() - 3 + bbuf.arrayOffset();
 
-		if (surrogate != 0) {
+		if (cp != 0) {
 			int low = carr[cpos];
 			if (low >= 0xDC00 && low <= 0xDFFF) {
 				cpos++;
-				int code = 0x10000 + ((surrogate - 0xD800) << 10) + (low - 0xDC00);
-				barr[bpos++] = (byte) (0xF0 | (code >> 18));
-				barr[bpos++] = (byte) (0x80 | ((code >> 12) & 0x3F));
-				barr[bpos++] = (byte) (0x80 | ((code >> 6) & 0x3F));
-				barr[bpos++] = (byte) (0x80 | (code & 0x3F));
+				int c = 0x10000 + ((cp & 0x7FF) << 10) + (low & 0x3FF);
+				c = 0x808080F0 | (c >> 18) | ((c >> 4) & 0x00003F00) | ((c << 10) & 0x003F0000) | (c << 24 & 0x3F000000);
+				INT.set(barr, bpos, c);
+				bpos += 4;
 			} else {
-				barr[bpos++] = (byte) 0xEF;
-				barr[bpos++] = (byte) 0xBF;
-				barr[bpos++] = (byte) 0xbd;
+				INT.set(barr, bpos, repl);
+				bpos += 3;
 			}
-			surrogate = 0;
+			cp = 0;
 		}
+
+		int max = Math.min(clim, cpos + blim - bpos);
+		int start = cpos;
+		while (cpos < max && carr[cpos] < 0x80)
+			cpos++;
+		int len = cpos - start;
+		for (int i = 0; i < len; i++)
+			barr[bpos + i] = (byte) carr[start + i];
+		bpos += len;
+
 		while (cpos < clim && bpos < blim) {
 			int code = carr[cpos++];
-			if (code <= 0x7f) {
+			if (code < 0x80) {
 				barr[bpos++] = (byte) code;
-				int maxAscii = Math.min(clim, cpos + blim - bpos);
-				while (cpos < maxAscii && carr[cpos] <= 0x7f)
-					barr[bpos++] = (byte) carr[cpos++];
-			} else if (code <= 0x7FF) {
-				barr[bpos++] = (byte) (0xC0 | (code >> 6));
-				barr[bpos++] = (byte) (0x80 | (code & 0x3F));
-			} else {
-				int i = code >> 10;
-				if (i == 0b110110) { // high surrogate
-					if (cpos < clim) {
-						int low = carr[cpos];
-						if (low >= 0xDC00 && low <= 0xDFFF) {
-							cpos++;
-							int c = 0x10000 + ((code - 0xD800) << 10) + (low - 0xDC00);
-							barr[bpos++] = (byte) (0xF0 | (c >> 18));
-							barr[bpos++] = (byte) (0x80 | ((c >> 12) & 0x3F));
-							barr[bpos++] = (byte) (0x80 | ((c >> 6) & 0x3F));
-							barr[bpos++] = (byte) (0x80 | (c & 0x3F));
-						} else {
-							barr[bpos++] = (byte) 0xEF;
-							barr[bpos++] = (byte) 0xBF;
-							barr[bpos++] = (byte) 0xbd;
-						}
-					} else if (endOfInput) {
-						barr[bpos++] = (byte) 0xEF;
-						barr[bpos++] = (byte) 0xBF;
-						barr[bpos++] = (byte) 0xbd;
+			} else if (code < 0x800) {
+				int c = 0x80C0 | (code >> 6) | ((code << 8) & 0x3F00);
+				INT.set(barr, bpos, c);
+				bpos += 2;
+			} else if (code < 0xD800) {
+				int c = 0x008080E0 | (code >> 12) | ((code << 2) & 0x3F00) | (code << 16 & 0x3F0000);
+				INT.set(barr, bpos, c);
+				bpos += 3;
+			} else if (code <= 0xDC00) {
+				// high surrogate
+				if (cpos < clim) {
+					int low = carr[cpos];
+					if (low >= 0xDC00 && low <= 0xDFFF) {
+						cpos++;
+						int c = 0x10000 + ((code & 0x7FF) << 10) + (low & 0x3FF);
+						c = 0x808080F0 | (c >> 18) | ((c >> 4) & 0x00003F00) | ((c << 10) & 0x003F0000) | (c << 24 & 0x3F000000);
+						INT.set(barr, bpos, c);
+						bpos += 4;
 					} else {
-						surrogate = code;
-						break;
+						INT.set(barr, bpos, repl);
+						bpos += 3;
 					}
-				} else if (i == 0b110111) { // lone low surrogate
-					barr[bpos++] = (byte) 0xEF;
-					barr[bpos++] = (byte) 0xBF;
-					barr[bpos++] = (byte) 0xbd;
+				} else if (endOfInput) {
+					INT.set(barr, bpos, repl);
+					bpos += 3;
 				} else {
-					barr[bpos++] = (byte) (0xE0 | (code >> 12));
-					barr[bpos++] = (byte) (0x80 | ((code >> 6) & 0x3F));
-					barr[bpos++] = (byte) (0x80 | (code & 0x3F));
+					cp = code;
+					break;
 				}
+			} else if (code < 0xE000) { // lone low surrogate
+				INT.set(barr, bpos, repl);
+				bpos += 3;
+			} else {
+				int c = 0x008080E0 | (code >> 12) | ((code << 2) & 0x3F00) | (code << 16 & 0x3F0000);
+				INT.set(barr, bpos, c);
+				bpos += 3;
 			}
 		}
 		cbuf.position(cpos - cbuf.arrayOffset());
@@ -92,53 +114,54 @@ public class Utf8Encoder implements Encoder {
 	}
 
 	private void slowEncode(CharBuffer cbuf, ByteBuffer bbuf, boolean endOfInput) {
-		if (surrogate != 0) {
-			int low = cbuf.get(cbuf.position());
-			if (low >= 0xDC00 && low <= 0xDFFF) {
-				slowAppend(0x10000 + ((surrogate - 0xD800) << 10) + (low - 0xDC00), bbuf);
-				cbuf.position(cbuf.position() + 1);
-			} else
-				slowAppend(0xFFFD, bbuf);
-			surrogate = 0;
+		if (cp != 0) {
+			int cpos = cbuf.position();
+			int low = cbuf.get(cpos);
+			if (slowSurrogate(bbuf, cp, low))
+				cbuf.position(cpos + 1);
+			cp = 0;
 		}
 		while (cbuf.hasRemaining() && bbuf.remaining() >= 4) {
 			int code = cbuf.get();
-			int i = code >> 10;
-			if (i == 0b110110) { // high surrogate
+			if (code < 0x80) {
+				bbuf.put((byte) code);
+			} else if (code < 0x800) {
+				bbuf.putShort((short) (0x80C0 | (code >> 6) | (code & 0x3F)));
+			} else if (code < 0xD800) {
+				int p = bbuf.position();
+				int c = 0x008080E0 | (code >> 12) | ((code << 2) & 0x3F00) | (code << 16 & 0x3F0000);
+				bbuf.putInt(p, c).position(p + 3);
+			} else if (code <= 0xDC00) {
+				// high surrogate
 				if (cbuf.hasRemaining()) {
-					int low = cbuf.get(cbuf.position());
-					if (low >= 0xDC00 && low <= 0xDFFF) {
-						code = 0x10000 + ((code - 0xD800) << 10) + (low - 0xDC00);
-						cbuf.position(cbuf.position() + 1);
-					} else
-						code = 0xFFFD;
+					int cpos = cbuf.position();
+					int low = cbuf.get(cpos);
+					if (slowSurrogate(bbuf, code, low))
+						cbuf.position(cpos + 1);
 				} else if (endOfInput)
-					code = 0xFFFD;
+					bbuf.put(REPL);
 				else {
-					surrogate = code;
-					return;
+					cp = code;
+					break;
 				}
-			} else if (i == 0b110111) // lone low surrogate
-				code = 0xFFFD;
-			slowAppend(code, bbuf);
+			} else if (code < 0xE000)  // lone low surrogate
+				bbuf.put(REPL);
+			else {
+				int p = bbuf.position();
+				int c = 0x008080E0 | (code >> 12) | ((code << 2) & 0x3F00) | (code << 16 & 0x3F0000);
+				bbuf.putInt(p, c).position(p + 3);
+			}
 		}
 	}
 
-	private void slowAppend(int code, ByteBuffer bbuf) {
-		if (code <= 0x7F)
-			bbuf.put((byte) code);
-		else if (code <= 0x7FF) {
-			bbuf.put((byte) (0xC0 | (code >> 6)));
-			bbuf.put((byte) (0x80 | (code & 0x3F)));
-		} else if (code <= 0xFFFF) {
-			bbuf.put((byte) (0xE0 | (code >> 12)));
-			bbuf.put((byte) (0x80 | ((code >> 6) & 0x3F)));
-			bbuf.put((byte) (0x80 | (code & 0x3F)));
-		} else {
-			bbuf.put((byte) (0xF0 | (code >> 18)));
-			bbuf.put((byte) (0x80 | ((code >> 12) & 0x3F)));
-			bbuf.put((byte) (0x80 | ((code >> 6) & 0x3F)));
-			bbuf.put((byte) (0x80 | (code & 0x3F)));
+	private boolean slowSurrogate(ByteBuffer bbuf, int high, int low) {
+		if (low < 0xDC00 && low > 0xDFFF) {
+			bbuf.put(REPL);
+			return false;
 		}
+		int c = 0x10000 + ((high & 0x7FF) << 10) + (low & 0x3FF);
+		c = 0x808080F0 | (c >> 18) | ((c >> 4) & 0x00003F00) | ((c << 10) & 0x003F0000) | (c << 24 & 0x3F000000);
+		bbuf.putInt(c);
+		return true;
 	}
 }

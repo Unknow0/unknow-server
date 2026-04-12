@@ -60,6 +60,8 @@ public class ServletWriter extends Writer {
 
 	@Override
 	public void close() throws IOException {
+		while (enc.flush(out.buffer))
+			out.flush();
 		out.close();
 	}
 }

@@ -26,23 +26,27 @@ public class ByteBufferReader extends Reader {
 		if (buf.hasRemaining() || in.isOef())
 			return;
 		buf.compact();
-		decoder.decode(in.buffer(), buf, in.hasRemaining() && in.isClosed());
+		boolean end = in.hasRemaining() && in.isClosed();
+		if (!end || in.buffer().hasRemaining())
+			decoder.decode(in.buffer(), buf, end);
+		else
+			decoder.flush(buf);
 		buf.flip();
 	}
 
 	@Override
 	public int read() throws IOException {
-		if (in.isOef())
-			return -1;
 		decode();
+		if (!buf.hasRemaining())
+			return -1;
 		return buf.get();
 	}
 
 	@Override
 	public int read(char[] cbuf, int off, int len) throws IOException {
-		if (in.isOef())
-			return -1;
 		decode();
+		if (!buf.hasRemaining())
+			return -1;
 		len = Math.min(len, buf.remaining());
 		buf.get(cbuf, off, len);
 		return len;
@@ -50,9 +54,9 @@ public class ByteBufferReader extends Reader {
 
 	@Override
 	public int read(CharBuffer target) throws IOException {
-		if (in.isOef())
-			return -1;
 		decode();
+		if (!buf.hasRemaining())
+			return -1;
 		int l = buf.remaining();
 		int r = target.remaining();
 		if (r > l) {
@@ -67,9 +71,9 @@ public class ByteBufferReader extends Reader {
 
 	@Override
 	public long skip(long n) throws IOException {
-		if (in.isOef())
-			return 0;
 		decode();
+		if (!buf.hasRemaining())
+			return 0;
 		int l = (int) Math.min(n, buf.remaining());
 		buf.position(buf.position() + l);
 		return n;
