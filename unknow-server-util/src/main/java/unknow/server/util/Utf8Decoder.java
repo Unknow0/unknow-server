@@ -5,11 +5,14 @@ import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.CharBuffer;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.StandardCharsets;
 
 public class Utf8Decoder implements Decoder {
-	private static final VarHandle LONG = MethodHandles.byteArrayViewVarHandle(long[].class, ByteOrder.LITTLE_ENDIAN);
 	private static final VarHandle INT = MethodHandles.byteArrayViewVarHandle(int[].class, ByteOrder.LITTLE_ENDIAN);
 	private static final VarHandle SHORT = MethodHandles.byteArrayViewVarHandle(short[].class, ByteOrder.LITTLE_ENDIAN);
+
+	private final CharsetDecoder ascii = StandardCharsets.US_ASCII.newDecoder();
 
 	/** code point in building */
 	private int cp;
@@ -35,39 +38,24 @@ public class Utf8Decoder implements Decoder {
 	}
 
 	private void fastDecode(ByteBuffer bbuf, CharBuffer cbuf) {
+
 		byte[] barr = bbuf.array();
-		int bpos = bbuf.position() + bbuf.arrayOffset();
 		int blim = bbuf.limit() + bbuf.arrayOffset();
 		char[] carr = cbuf.array();
-		int cpos = cbuf.position() + cbuf.arrayOffset();
 		int clim = cbuf.limit() - 1 + cbuf.arrayOffset();
 		if (r > 0) {
+			int bpos = bbuf.position() + bbuf.arrayOffset();
+			int cpos = cbuf.position() + cbuf.arrayOffset();
 			remainingArray(bbuf, bpos, cbuf, cpos, cp, r);
 			if (r > 0)
 				return;
-			bpos = bbuf.position() + bbuf.arrayOffset();
-			cpos = cbuf.position() + cbuf.arrayOffset();
 		}
-		int max = Math.min(clim, cpos + blim - bpos) - 8;
-		while (cpos < max) {
-			long l = (long) LONG.get(barr, bpos);
-			if ((l & 0x8080808080808080L) != 0L)
-				break;
-			carr[cpos] = (char) l;
-			carr[cpos + 1] = (char) (l >>> 8);
-			carr[cpos + 2] = (char) (l >>> 16);
-			carr[cpos + 3] = (char) (l >>> 24);
-			carr[cpos + 4] = (char) (l >>> 32);
-			carr[cpos + 5] = (char) (l >>> 40);
-			carr[cpos + 6] = (char) (l >>> 48);
-			carr[cpos + 7] = (char) (l >>> 56);
-			bpos += 8;
-			cpos += 8;
-		}
+		ascii.decode(bbuf, cbuf, false);
+		int bpos = bbuf.position() + bbuf.arrayOffset();
+		int cpos = cbuf.position() + cbuf.arrayOffset();
 		int cp;
 		while (bpos < blim && cpos < clim) {
 			int b = barr[bpos++];
-
 			if (b >= 0)
 				carr[cpos++] = (char) b;
 			else if (b < -64)
@@ -170,29 +158,10 @@ public class Utf8Decoder implements Decoder {
 		cbuf.position(cpos - cbuf.arrayOffset());
 	}
 
-	private final char[] CARR = new char[8];
-
 	private void slowDecode(ByteBuffer bbuf, CharBuffer cbuf) {
 		if (r > 0 && slowRemaining(bbuf, cbuf, cp, r))
 			return;
 
-		int max = Math.min(bbuf.limit(), bbuf.position() + cbuf.remaining()) - 8;
-		int bpos = bbuf.position();
-		while (bpos < max) {
-			long l = bbuf.getLong(bpos);
-			if ((l & 0x8080808080808080L) != 0L)
-				break;
-			CARR[0] = (char) l;
-			CARR[1] = (char) (l >>> 8);
-			CARR[2] = (char) (l >>> 16);
-			CARR[3] = (char) (l >>> 24);
-			CARR[4] = (char) (l >>> 32);
-			CARR[5] = (char) (l >>> 40);
-			CARR[6] = (char) (l >>> 48);
-			CARR[7] = (char) (l >>> 56);
-			cbuf.put(CARR);
-			bpos += 8;
-		}
 		int cp;
 		while (bbuf.hasRemaining() && cbuf.remaining() > 1) {
 			int b = bbuf.get();

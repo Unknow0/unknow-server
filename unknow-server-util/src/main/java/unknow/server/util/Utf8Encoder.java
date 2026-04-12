@@ -5,13 +5,17 @@ import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.CharBuffer;
+import java.nio.charset.CharsetEncoder;
+import java.nio.charset.StandardCharsets;
 
 public class Utf8Encoder implements Encoder {
 	private static final VarHandle INT = MethodHandles.byteArrayViewVarHandle(int[].class, ByteOrder.LITTLE_ENDIAN);
 
 	private static final int repl = 0x00BDBFEF;
 
-	private int cp;
+	private final CharsetEncoder ascii = StandardCharsets.US_ASCII.newEncoder();
+
+	private int hi;
 
 	@Override
 	public void encode(CharBuffer cbuf, ByteBuffer bbuf, boolean endOfInput) {
@@ -25,50 +29,47 @@ public class Utf8Encoder implements Encoder {
 
 	@Override
 	public boolean flush(ByteBuffer bbuf) {
-		if (cp != 0) {
+		if (hi != 0) {
 			if (bbuf.remaining() < 3)
 				return true;
 			bbuf.put(REPL);
-			cp = 0;
+			hi = 0;
 		}
 		return false;
 	}
 
 	private void fastEncode(CharBuffer cbuf, ByteBuffer bbuf, boolean endOfInput) {
 		char[] carr = cbuf.array();
-		int cpos = cbuf.position() + cbuf.arrayOffset();
-		int clim = cbuf.limit() + cbuf.arrayOffset();
+		int coff = cbuf.arrayOffset();
+		int clim = cbuf.limit() + coff;
 
 		byte[] barr = bbuf.array();
-		int bpos = bbuf.position() + bbuf.arrayOffset();
-		int blim = bbuf.limit() - 3 + bbuf.arrayOffset();
+		int boff = bbuf.arrayOffset();
+		int blim = bbuf.limit() - 3 + boff;
 
-		if (cp != 0) {
+		if (hi != 0) {
+			int bpos = bbuf.position() + boff;
+			int cpos = cbuf.position() + coff;
 			int low = carr[cpos];
 			if (low >= 0xDC00 && low <= 0xDFFF) {
-				cpos++;
-				int c = 0x10000 + ((cp & 0x7FF) << 10) + (low & 0x3FF);
+				cbuf.position(cpos - coff + 1);
+				int c = 0x10000 + ((hi & 0x7FF) << 10) + (low & 0x3FF);
 				c = 0x808080F0 | (c >> 18) | ((c >> 4) & 0x00003F00) | ((c << 10) & 0x003F0000) | (c << 24 & 0x3F000000);
 				INT.set(barr, bpos, c);
-				bpos += 4;
+				bbuf.position(bpos - boff + 4);
 			} else {
 				INT.set(barr, bpos, repl);
-				bpos += 3;
+				bbuf.position(bpos - boff + 3);
 			}
-			cp = 0;
+			hi = 0;
 		}
 
-		int max = Math.min(clim, cpos + blim - bpos);
-		int start = cpos;
-		while (cpos < max && carr[cpos] < 0x80)
-			cpos++;
-		int len = cpos - start;
-		for (int i = 0; i < len; i++)
-			barr[bpos + i] = (byte) carr[start + i];
-		bpos += len;
+		ascii.encode(cbuf, bbuf, false);
+		int bpos = bbuf.position() + boff;
+		int cpos = cbuf.position() + coff;
 
 		while (cpos < clim && bpos < blim) {
-			int code = carr[cpos++];
+			char code = carr[cpos++];
 			if (code < 0x80) {
 				barr[bpos++] = (byte) code;
 			} else if (code < 0x800) {
@@ -97,7 +98,7 @@ public class Utf8Encoder implements Encoder {
 					INT.set(barr, bpos, repl);
 					bpos += 3;
 				} else {
-					cp = code;
+					hi = code;
 					break;
 				}
 			} else if (code < 0xE000) { // lone low surrogate
@@ -109,17 +110,17 @@ public class Utf8Encoder implements Encoder {
 				bpos += 3;
 			}
 		}
-		cbuf.position(cpos - cbuf.arrayOffset());
-		bbuf.position(bpos - bbuf.arrayOffset());
+		cbuf.position(cpos - coff);
+		bbuf.position(bpos - boff);
 	}
 
 	private void slowEncode(CharBuffer cbuf, ByteBuffer bbuf, boolean endOfInput) {
-		if (cp != 0) {
+		if (hi != 0) {
 			int cpos = cbuf.position();
 			int low = cbuf.get(cpos);
-			if (slowSurrogate(bbuf, cp, low))
+			if (slowSurrogate(bbuf, hi, low))
 				cbuf.position(cpos + 1);
-			cp = 0;
+			hi = 0;
 		}
 		while (cbuf.hasRemaining() && bbuf.remaining() >= 4) {
 			int code = cbuf.get();
@@ -141,7 +142,7 @@ public class Utf8Encoder implements Encoder {
 				} else if (endOfInput)
 					bbuf.put(REPL);
 				else {
-					cp = code;
+					hi = code;
 					break;
 				}
 			} else if (code < 0xE000)  // lone low surrogate
