@@ -11,7 +11,7 @@ import java.nio.charset.StandardCharsets;
 public class Utf8Encoder implements Encoder {
 	private static final VarHandle INT = MethodHandles.byteArrayViewVarHandle(int[].class, ByteOrder.LITTLE_ENDIAN);
 
-	private static final int repl = 0x00BDBFEF;
+	private static final int INT_REPL = 0x00BDBFEF;
 
 	private final CharsetEncoder ascii = StandardCharsets.US_ASCII.newEncoder();
 
@@ -58,7 +58,7 @@ public class Utf8Encoder implements Encoder {
 				INT.set(barr, bpos, c);
 				bbuf.position(bpos - boff + 4);
 			} else {
-				INT.set(barr, bpos, repl);
+				INT.set(barr, bpos, INT_REPL);
 				bbuf.position(bpos - boff + 3);
 			}
 			hi = 0;
@@ -91,18 +91,18 @@ public class Utf8Encoder implements Encoder {
 						INT.set(barr, bpos, c);
 						bpos += 4;
 					} else {
-						INT.set(barr, bpos, repl);
+						INT.set(barr, bpos, INT_REPL);
 						bpos += 3;
 					}
 				} else if (endOfInput) {
-					INT.set(barr, bpos, repl);
+					INT.set(barr, bpos, INT_REPL);
 					bpos += 3;
 				} else {
 					hi = code;
 					break;
 				}
 			} else if (code < 0xE000) { // lone low surrogate
-				INT.set(barr, bpos, repl);
+				INT.set(barr, bpos, INT_REPL);
 				bpos += 3;
 			} else {
 				int c = 0x008080E0 | (code >> 12) | ((code << 2) & 0x3F00) | (code << 16 & 0x3F0000);

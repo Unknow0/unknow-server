@@ -10,7 +10,6 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import javax.net.ssl.SSLEngineResult.Status;
-import javax.net.ssl.SSLException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -147,8 +146,6 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 		try {
 			co.write(EMPTY);
 		} catch (@SuppressWarnings("unused") IOException e) { // ok
-		} catch (@SuppressWarnings("unused") InterruptedException e) {
-			Thread.currentThread().interrupt();
 		}
 		return false;
 	}
@@ -172,13 +169,8 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 					hs = r.getHandshakeStatus();
 					break;
 				case NEED_WRAP:
-					try {
-						co.write(EMPTY);
-						return true;
-					} catch (InterruptedException e) {
-						Thread.currentThread().interrupt();
-						throw new SSLException("Handshake interrupted", e);
-					}
+					co.write(EMPTY);
+					return true;
 				case FINISHED:
 					onHandshakeDone(sslEngine, now);
 					// fallthrough

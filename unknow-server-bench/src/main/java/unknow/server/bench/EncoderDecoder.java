@@ -123,6 +123,7 @@ public class EncoderDecoder {
 				case "complex":
 					init(COMPLEX);
 					break;
+				default:
 			}
 		}
 
@@ -132,19 +133,6 @@ public class EncoderDecoder {
 			bytes = ByteBuffer.wrap(str.getBytes(StandardCharsets.UTF_8));
 		}
 	}
-
-//	@Benchmark
-//	public ByteBuffer encoderUtf8Servlet(EncodeData data) {
-//		ByteBuffer b = ByteBuffer.allocate(4096);
-//		Utf8Encoder.encode(data.str, b);
-//		return b.flip();
-//	}
-//
-//	@Benchmark
-//	public String decoderUtf8Servlet(DecodeData data) {
-//		ByteBuffer b = ByteBuffer.wrap(data.bytes);
-//		return new Utf8Decoder().append(b.array(), 0, b.limit()).done();
-//	}
 
 	@Benchmark
 	public ByteBuffer encoderUtf8(Data data) {

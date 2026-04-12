@@ -31,10 +31,11 @@ public class DecoderTest {
 			;
 	}
 
-	protected void decodeChunck(Decoder decoder, byte[] bytes, CharBuffer cbuf) {
-		for (int i = 0; i < bytes.length; i++) {
-			ByteBuffer bbuf = ByteBuffer.wrap(new byte[] { bytes[i] });
-			decoder.decode(bbuf, cbuf, i == bytes.length - 1);
+	protected void decodeChunck(Decoder decoder, ByteBuffer input, CharBuffer cbuf) {
+		int l = input.limit();
+		for (int i = 0; i < l; i++) {
+			ByteBuffer bbuf = input.slice(i, 1);
+			decoder.decode(bbuf, cbuf, i == l - 1);
 		}
 		while (decoder.flush(cbuf))
 			;
@@ -56,7 +57,7 @@ public class DecoderTest {
 	void testFastPathChuncked(String input) {
 		Decoder decoder = decoder();
 
-		byte[] bytes = input.getBytes(StandardCharsets.UTF_8);
+		ByteBuffer bytes = ByteBuffer.wrap(input.getBytes(StandardCharsets.UTF_8));
 		CharBuffer cbuf = CharBuffer.allocate(100);
 		decodeChunck(decoder, bytes, cbuf);
 		assertEquals(input, cbuf.flip().toString());
@@ -78,9 +79,10 @@ public class DecoderTest {
 	void testFastPathErrorChuncked(byte[] bytes) {
 		Decoder decoder = decoder();
 
+		ByteBuffer bbuf = ByteBuffer.wrap(bytes);
 		CharBuffer cbuf = CharBuffer.allocate(100);
 
-		assertThrows(IllegalArgumentException.class, () -> decodeChunck(decoder, bytes, cbuf));
+		assertThrows(IllegalArgumentException.class, () -> decodeChunck(decoder, bbuf, cbuf));
 	}
 
 	@ParameterizedTest
@@ -101,7 +103,7 @@ public class DecoderTest {
 	void testSlowPathChuncked(String input) {
 		Decoder decoder = decoder();
 
-		byte[] bytes = input.getBytes(StandardCharsets.UTF_8);
+		ByteBuffer bytes = ByteBuffer.wrap(input.getBytes(StandardCharsets.UTF_8)).asReadOnlyBuffer();
 		CharBuffer cbuf = CharBuffer.allocate(100);
 
 		decodeChunck(decoder, bytes, cbuf);
@@ -125,8 +127,9 @@ public class DecoderTest {
 	void testSlowPathErrorChuncked(byte[] bytes) {
 		Decoder decoder = decoder();
 
+		ByteBuffer bbuf = ByteBuffer.wrap(bytes).asReadOnlyBuffer();
 		CharBuffer cbuf = CharBuffer.allocate(100);
 
-		assertThrows(IllegalArgumentException.class, () -> decodeChunck(decoder, bytes, cbuf));
+		assertThrows(IllegalArgumentException.class, () -> decodeChunck(decoder, bbuf, cbuf));
 	}
 }

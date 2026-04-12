@@ -29,11 +29,11 @@ public class EncoderTest {
 			;
 	}
 
-	private void encodeChunck(Encoder encoder, String input, ByteBuffer bbuf) {
-		char[] chars = input.toCharArray();
-		for (int i = 0; i < chars.length; i++) {
-			CharBuffer cbuf = CharBuffer.wrap(new char[] { chars[i] });
-			encoder.encode(cbuf, bbuf, i == chars.length - 1);
+	private void encodeChunck(Encoder encoder, CharBuffer input, ByteBuffer bbuf) {
+		int l = input.limit();
+		for (int i = 0; i < l; i++) {
+			CharBuffer cbuf = input.slice(i, 1);
+			encoder.encode(cbuf, bbuf, i == l - 1);
 		}
 		while (encoder.flush(bbuf))
 			;
@@ -54,8 +54,9 @@ public class EncoderTest {
 	@MethodSource("utf8Strings")
 	void testFastPathChuncked(String input, String expected) {
 		Encoder encoder = encoder();
+		CharBuffer cbuf = CharBuffer.wrap(input.toCharArray());
 		ByteBuffer bbuf = ByteBuffer.allocate(100);
-		encodeChunck(encoder, input, bbuf);
+		encodeChunck(encoder, cbuf, bbuf);
 		assertEquals(expected, new String(bbuf.array(), 0, bbuf.position(), StandardCharsets.UTF_8));
 	}
 
@@ -75,9 +76,10 @@ public class EncoderTest {
 	@MethodSource("utf8Strings")
 	void testSlowPathChuncked(String input, String expected) {
 		Encoder encoder = encoder();
+		CharBuffer cbuf = CharBuffer.wrap(input);
 		ByteBuffer bbuf = ByteBuffer.allocate(100);
 
-		encodeChunck(encoder, input, bbuf);
+		encodeChunck(encoder, cbuf, bbuf);
 
 		assertEquals(expected, new String(bbuf.array(), 0, bbuf.position(), StandardCharsets.UTF_8));
 	}
