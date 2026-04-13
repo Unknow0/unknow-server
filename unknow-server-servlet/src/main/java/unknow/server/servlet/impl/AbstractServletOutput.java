@@ -29,7 +29,7 @@ public abstract class AbstractServletOutput extends ServletOutputStream {
 		this.res = res;
 		this.position = position;
 		if (res != null) {
-			this.bufferSize = Math.max(res.getBufferSize(), 4096);
+			this.bufferSize = Math.max(res.getBufferSize(), 16 * 1024);
 			this.buffer = ByteBuffer.allocate(bufferSize + position).position(position);
 		} else {
 			this.buffer = null;

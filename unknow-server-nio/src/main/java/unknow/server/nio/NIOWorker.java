@@ -33,7 +33,7 @@ import unknow.server.nio.NIOServer.ConnectionFactory;
 public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	private static final Logger logger = LoggerFactory.getLogger(NIOWorker.class);
 
-	private static final int BUF_LEN = 16000;
+	private static final int BUF_LEN = 64 * 1024;
 
 	/** executor for delegating task */
 	private final ExecutorService executor;
@@ -141,7 +141,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		Iterator<NIOConnection> it = closing.iterator();
 		while (it.hasNext()) {
 			NIOConnection co = it.next();
-			if (!co.key.isValid() || !co.hasPendingWrites() && co.finishClosing(now) || closingTimeout(co, now)) {
+			if (!co.key.isValid() || co.finishClosing(now) || closingTimeout(co, now)) {
 				it.remove();
 				doneClose(co);
 			}
@@ -173,6 +173,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 				if (co.next != co)
 					logger.error("failed to write {}", co, e);
 				startClose(co, now);
+				key.cancel();
 			} finally {
 				buf.clear();
 			}
@@ -203,21 +204,18 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			toTail(co, now);
 			if (l == 0)
 				return;
-			buf.flip();
-			ByteBuffer data = ByteBuffer.allocate(buf.remaining());
-			data.put(buf);
-			data.flip();
-			co.onRead(data, now);
+			co.onRead(buf.flip(), now);
 			if (l < BUF_LEN)
 				return;
-			buf.compact();
+			buf.clear();
 		}
 	}
 
 	private void doWrite(NIOConnection co, long now) throws IOException {
-		co.beforeWrite(now);
+		if (co.writes.isEmpty())
+			co.beforeWrite(now);
 		long l = co.channel.write(co.writes.buf, 0, co.writes.len);
-		logger.trace("{} writen {}", co, l);
+		logger.trace("{} writen {} {}", co, l, co.key);
 		if (l > 0) {
 			co.onWrite(now);
 			if (co.isClosed())

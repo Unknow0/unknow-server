@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * basic selector loop
  * @author unknow
  */
 public class NIOLoop implements Runnable {

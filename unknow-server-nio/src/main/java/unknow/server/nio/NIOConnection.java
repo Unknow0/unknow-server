@@ -10,9 +10,10 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.Arrays;
-import java.util.concurrent.BlockingQueue;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.net.ssl.SSLEngine;
 
@@ -36,10 +37,13 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	protected final SelectionKey key;
 	protected final SocketChannel channel;
 
+	private final AtomicBoolean writeScheduled;
+	private final WriteCheck writeCheck;
+
 	private InetSocketAddress local;
 	private InetSocketAddress remote;
 
-	final BlockingQueue<ByteBuffer> pending;
+	final Queue<ByteBuffer> pending;
 	final ByteBuffers writes;
 
 	long lastCheck;
@@ -59,8 +63,10 @@ public final class NIOConnection extends NIOHandlerDelegate {
 		this.worker = worker;
 		this.key = key;
 		this.channel = (SocketChannel) key.channel();
+		this.writeScheduled = new AtomicBoolean(false);
+		this.writeCheck = new WriteCheck();
 		this.out = new Out(this);
-		this.pending = new LinkedBlockingDeque<>();
+		this.pending = new ConcurrentLinkedQueue<>();
 		this.writes = new ByteBuffers(16);
 	}
 
@@ -91,25 +97,14 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	 * add a buffers to the writing queue
 	 * 
 	 * @param buf buffer to be written
-	 * @throws InterruptedException in case of interruption
-	 * @throws IOException
+	 * @throws IOException in case of io error
 	 */
-	public final void write(ByteBuffer buf) throws InterruptedException, IOException {
+	public final void write(ByteBuffer buf) throws IOException {
 		if (!key.isValid())
 			throw new IOException("already closed");
-		pending.put(buf);
-		if (pending.size() > 10)
-			flush();
-		else
-			key.interestOpsOr(SelectionKey.OP_WRITE);
-	}
-
-	@SuppressWarnings("resource")
-	public final void flush() {
-		if (!hasPendingWrites())
-			return;
-		key.interestOpsOr(SelectionKey.OP_WRITE);
-		key.selector().wakeup();
+		pending.offer(buf);
+		if (writeScheduled.compareAndSet(false, true))
+			execute(writeCheck);
 	}
 
 	/**
@@ -161,17 +156,23 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	}
 
 	protected final void beforeWrite(long now) throws IOException {
-		while (writes.len < 16 && !pending.isEmpty())
-			handler.prepareWrite(pending.poll(), now, writes);
-		handler.beforeWrite(now, writes);
+		ByteBuffer b;
+		while ((b = pending.poll()) != null)
+			writes.accept(b);
+		handler.transformWrite(writes, now);
 	}
 
 	@Override
 	public final void onWrite(long now) throws IOException {
 		lastAction = now;
 		writes.compact();
-		if (!hasPendingWrites())
-			key.interestOpsAnd(~SelectionKey.OP_WRITE);
+		if (!hasPendingWrites()) {
+			writeScheduled.set(false);
+			if (!hasPendingWrites())
+				key.interestOpsAnd(~SelectionKey.OP_WRITE);
+			else if (writeScheduled.compareAndSet(false, true))
+				key.interestOpsOr(SelectionKey.OP_WRITE);
+		}
 		handler.onWrite(now);
 	}
 
@@ -203,18 +204,19 @@ public final class NIOConnection extends NIOHandlerDelegate {
 
 	@Override
 	public String toString() {
-		return getClass() + "[local=" + getLocal() + " remote=" + getRemote() + "]";
+		return getClass() + "[local=" + getLocal() + " remote=" + getRemote() + "] writes: " + hasPendingWrites();
 	}
 
 	/** output stream for this connection */
 	public static final class Out extends OutputStream {
+		private static final int BUF_SIZE = 16 * 1024;
 		private NIOConnection h;
 
 		private ByteBuffer buf;
 
 		private Out(NIOConnection h) {
 			this.h = h;
-			this.buf = ByteBuffer.allocate(4096);
+			this.buf = ByteBuffer.allocate(BUF_SIZE);
 		}
 
 		@Override
@@ -246,15 +248,10 @@ public final class NIOConnection extends NIOHandlerDelegate {
 				len -= r;
 				off += r;
 				writeBuffer();
-				if (len < 4096)
+				if (len < BUF_SIZE)
 					buf.put(b, off, len);
 				else
-					try {
-						h.write(ByteBuffer.wrap(Arrays.copyOfRange(b, off, off + len)));
-					} catch (InterruptedException e) {
-						Thread.currentThread().interrupt();
-						throw new IOException(e);
-					}
+					h.write(ByteBuffer.wrap(Arrays.copyOfRange(b, off, off + len)));
 			} else if (len == r) {
 				buf.put(b, off, len);
 				writeBuffer();
@@ -272,12 +269,7 @@ public final class NIOConnection extends NIOHandlerDelegate {
 			if (h == null)
 				throw new IOException("already closed");
 			writeBuffer();
-			try {
-				h.write(b);
-			} catch (InterruptedException e) {
-				Thread.currentThread().interrupt();
-				throw new IOException(e);
-			}
+			h.write(b);
 		}
 
 		@Override
@@ -302,19 +294,23 @@ public final class NIOConnection extends NIOHandlerDelegate {
 			if (h == null)
 				return;
 			writeBuffer();
-			h.flush();
 		}
 
 		private void writeBuffer() throws IOException {
 			if (h == null || buf.position() == 0)
 				return;
-			try {
-				h.write(buf.flip());
-				buf = ByteBuffer.allocate(4096);
-			} catch (InterruptedException e) {
-				Thread.currentThread().interrupt();
-				throw new IOException(e);
-			}
+			h.write(buf.flip());
+			buf = ByteBuffer.allocate(BUF_SIZE);
+		}
+	}
+
+	private class WriteCheck implements WorkerTask {
+		@Override
+		public void run(long now) {
+			if (hasPendingWrites())
+				key.interestOpsOr(SelectionKey.OP_WRITE);
+			else
+				writeScheduled.set(false);
 		}
 	}
 }

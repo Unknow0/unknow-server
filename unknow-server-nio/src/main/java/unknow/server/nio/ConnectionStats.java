@@ -1,5 +1,8 @@
 package unknow.server.nio;
 
+/**
+ * statistics of a nio connection
+ */
 public class ConnectionStats {
 	private final boolean hasPengingWrite;
 	private final boolean closing;
@@ -13,18 +16,30 @@ public class ConnectionStats {
 		this.lastAction = lastAction;
 	}
 
+	/**
+	 * @return true if the connection has pending write
+	 */
 	public boolean hasPengingWrite() {
 		return hasPengingWrite;
 	}
 
+	/**
+	 * @return true if the connection is closing
+	 */
 	public boolean isClosing() {
 		return closing;
 	}
 
+	/**
+	 * @return nanotime of last connection check
+	 */
 	public long lastCheck() {
 		return lastCheck;
 	}
 
+	/**
+	 * @return nano time of last action  on the connection
+	 */
 	public long lastAction() {
 		return lastAction;
 	}

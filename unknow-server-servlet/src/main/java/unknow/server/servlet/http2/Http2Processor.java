@@ -34,7 +34,7 @@ import unknow.server.util.data.IntArrayMap;
 public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 	static final Logger logger = LoggerFactory.getLogger(Http2Processor.class);
 
-	public static final byte[] PRI = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes(StandardCharsets.US_ASCII);
+	public static final ByteBuffer PRI = ByteBuffer.wrap("PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
 
 	public static final int NO_ERROR = 0;
 	public static final int PROTOCOL_ERROR = 1;

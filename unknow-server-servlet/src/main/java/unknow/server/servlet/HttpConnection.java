@@ -6,7 +6,6 @@ package unknow.server.servlet;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -81,8 +80,8 @@ public final class HttpConnection implements NIOConnectionHandler, ServletConnec
 	@Override
 	public final void onRead(ByteBuffer b, long now) throws IOException {
 		if (p == null) {
-			if (b.remaining() > Http2Processor.PRI.length
-					&& Arrays.equals(b.array(), b.position(), b.position() + Http2Processor.PRI.length, Http2Processor.PRI, 0, Http2Processor.PRI.length))
+			int mismatch = Http2Processor.PRI.mismatch(b);
+			if (mismatch == 24 || mismatch == -1)
 				p = new Http2Processor(this);
 			else
 				p = new Http11Processor(this);
@@ -120,7 +119,7 @@ public final class HttpConnection implements NIOConnectionHandler, ServletConnec
 
 	@Override
 	public boolean finishClosing(long now) {
-		return p == null || p.finishClosing(now);
+		return co.hasPendingWrites() || p == null || p.finishClosing(now);
 	}
 
 	@Override
@@ -154,12 +153,7 @@ public final class HttpConnection implements NIOConnectionHandler, ServletConnec
 	}
 
 	public void write(ByteBuffer buf) throws IOException {
-		try {
-			co.write(buf);
-		} catch (InterruptedException e) {
-			Thread.currentThread().interrupt();
-			throw new IOException("Failed to write", e);
-		}
+		co.write(buf);
 	}
 
 	public ServletContextImpl getCtx() {

@@ -15,11 +15,24 @@ public class ByteBuffers implements Consumer<ByteBuffer> {
 		len = 0;
 	}
 
+	private void ensureCapacity(int l) {
+		if (l > buf.length)
+			buf = Arrays.copyOf(buf, l);
+	}
+
 	@Override
 	public void accept(ByteBuffer b) {
-		if (len == buf.length)
-			buf = Arrays.copyOf(buf, len + 1);
+		ensureCapacity(len + 1);
 		buf[len++] = b;
+	}
+
+	public void accept(ByteBuffers buffers) {
+		if (buffers.isEmpty())
+			return;
+		ensureCapacity(len + buffers.len);
+		System.arraycopy(buffers.buf, 0, buf, len, buffers.len);
+		len += buffers.len;
+		buffers.clear();
 	}
 
 	public boolean isEmpty() {
@@ -71,5 +84,32 @@ public class ByteBuffers implements Consumer<ByteBuffer> {
 			buf[i] = null;
 		}
 		len = 0;
+	}
+
+	/**
+	 * drain buffers
+	 * @param <E> exception thrown from consumer
+	 * @param c consumer of buffer
+	 * @throws E from Consumer
+	 */
+	public <E extends Throwable> void drainNonEmpty(ConsumerWithException<ByteBuffer, E> c) throws E {
+		if (len == 0)
+			return;
+
+		int i = 0;
+		while (i < len) {
+			ByteBuffer b = buf[i];
+			if (b.position() == 0 && b.limit() == b.capacity())
+				break;
+			c.accept(b.flip());
+			i++;
+		}
+		if (i == 0)
+			return;
+		int l = len - 1;
+		len -= i;
+		System.arraycopy(buf, i, buf, 0, len);
+		while (l >= len)
+			buf[l] = null;
 	}
 }

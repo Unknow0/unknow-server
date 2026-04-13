@@ -46,7 +46,8 @@ public class Utf8Encoder {
 				code = ((code << 10) + str.charAt(i++)) + (0x10000 - (0xD800 << 10) - 0xDC00);
 			else
 				code = 0xFFFD;
-		}
+		} else if (code >= 0xDC00 && code <= 0xDFFF)
+			code = 0xFFFD;
 
 		count++;
 		if (code <= 0x7F)
@@ -56,7 +57,7 @@ public class Utf8Encoder {
 			return (byte) (0xC0 | (code >> 6));
 		}
 		if (code <= 0xFFFF) {
-			tmp[r++] = (byte) (0x80 | (0x80 | (code & 0x3F)));
+			tmp[r++] = (byte) (0x80 | (code & 0x3F));
 			tmp[r++] = (byte) (0x80 | ((code >> 6) & 0x3F));
 			return (byte) (0xE0 | (code >> 12));
 		}

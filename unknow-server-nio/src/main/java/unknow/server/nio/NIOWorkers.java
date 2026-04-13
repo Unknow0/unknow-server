@@ -11,6 +11,7 @@ import java.util.Collection;
 import unknow.server.nio.NIOServer.ConnectionFactory;
 
 /**
+ * represent a worker groups
  * @author unknow
  */
 public interface NIOWorkers {

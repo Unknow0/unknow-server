@@ -5,7 +5,6 @@ package unknow.server.servlet.impl;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
@@ -48,7 +47,10 @@ import jakarta.servlet.http.Part;
 import unknow.server.servlet.HttpConnection;
 import unknow.server.servlet.impl.session.SessionFactory;
 import unknow.server.servlet.utils.PathUtils;
+import unknow.server.servlet.utils.UrlDecoder;
 import unknow.server.util.data.ArrayMap;
+import unknow.server.util.io.ByteBufferInputStream;
+import unknow.server.util.io.ByteBufferReader;
 
 /**
  * @author unknow
@@ -62,7 +64,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	protected final HttpConnection co;
 	private final DispatcherType type;
-	private final ServletInputStreamImpl input;
+	private final ByteBufferInputStream input;
 
 	private String requestUri;
 	private int pathInfoIndex;
@@ -92,6 +94,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 	private List<Locale> locales;
 
 	private BufferedReader reader;
+	private ServletInputStreamImpl stream;
 
 	/**
 	 * create new ServletRequestImpl
@@ -102,13 +105,13 @@ public class ServletRequestImpl implements HttpServletRequest {
 	public ServletRequestImpl(HttpConnection co, DispatcherType type) {
 		this.co = co;
 		this.type = type;
-		this.input = new ServletInputStreamImpl();
+		this.input = new ByteBufferInputStream();
 
 		this.headers = new HashMap<>();
 	}
 
 	public void append(ByteBuffer buf) {
-		input.append(buf);
+		input.addBuffer(buf);
 	}
 
 	public void close() {
@@ -116,7 +119,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 	}
 
 	public boolean isClosed() {
-		return input.isFinished();
+		return input.isClosed();
 	}
 
 	public void setMethod(String method) {
@@ -161,8 +164,10 @@ public class ServletRequestImpl implements HttpServletRequest {
 		}
 
 		try {
-			if ("POST".equals(getMethod()) && "application/x-www-form-urlencoded".equalsIgnoreCase(getContentType()))
-				parseContentParam(map);
+			if ("POST".equals(getMethod()) && "application/x-www-form-urlencoded".equalsIgnoreCase(getContentType())) {
+				new UrlDecoder(input).process(map);
+				contentLength = 0;
+			}
 		} catch (IOException e) {
 			logger.error("failed to parse params from content", e);
 		}
@@ -170,17 +175,6 @@ public class ServletRequestImpl implements HttpServletRequest {
 		String[] s = new String[0];
 		for (Entry<String, List<String>> e : map.entrySet())
 			parameter.put(e.getKey(), e.getValue().toArray(s));
-	}
-
-	/**
-	 * @param p
-	 * @throws IOException
-	 */
-	private void parseContentParam(Map<String, List<String>> p) throws IOException {
-		try (BufferedReader r = new BufferedReader(new InputStreamReader(input, getCharacterEncoding()))) {
-			PathUtils.pathQuery(r, p);
-		}
-		contentLength = 0;
 	}
 
 	/**
@@ -193,7 +187,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 	}
 
 	public void clearInput() throws IOException {
-		while (!input.isFinished())
+		while (!input.isClosed())
 			input.skip(Long.MAX_VALUE);
 	}
 
@@ -327,14 +321,18 @@ public class ServletRequestImpl implements HttpServletRequest {
 	public ServletInputStream getInputStream() throws IOException {
 		if (reader != null)
 			throw new IllegalStateException("getReader() called");
-		return input;
+		if (stream == null)
+			stream = new ServletInputStreamImpl(input);
+		return stream;
 	}
 
 	@Override
 	public BufferedReader getReader() throws IOException {
+		if (stream != null)
+			throw new IllegalStateException("getInputStream() called");
 		if (reader != null)
 			return reader;
-		return reader = new BufferedReader(new InputStreamReader(input, getCharacterEncoding()));
+		return reader = new BufferedReader(new ByteBufferReader(input, getCharacterEncoding()));
 	}
 
 	@Override
