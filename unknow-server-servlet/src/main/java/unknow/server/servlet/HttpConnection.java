@@ -153,12 +153,7 @@ public final class HttpConnection implements NIOConnectionHandler, ServletConnec
 	}
 
 	public void write(ByteBuffer buf) throws IOException {
-		try {
-			co.write(buf);
-		} catch (InterruptedException e) {
-			Thread.currentThread().interrupt();
-			throw new IOException("Failed to write", e);
-		}
+		co.write(buf);
 	}
 
 	public ServletContextImpl getCtx() {

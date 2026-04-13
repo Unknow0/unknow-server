@@ -8,6 +8,9 @@ import javax.net.ssl.SSLEngine;
 
 import unknow.server.util.io.ByteBuffers;
 
+/**
+ * handle nio connection event
+ */
 @SuppressWarnings("unused")
 public interface NIOConnectionHandler {
 

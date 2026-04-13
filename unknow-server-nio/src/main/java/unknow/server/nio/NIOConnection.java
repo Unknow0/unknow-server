@@ -97,8 +97,7 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	 * add a buffers to the writing queue
 	 * 
 	 * @param buf buffer to be written
-	 * @throws InterruptedException in case of interruption
-	 * @throws IOException
+	 * @throws IOException in case of io error
 	 */
 	public final void write(ByteBuffer buf) throws IOException {
 		if (!key.isValid())
