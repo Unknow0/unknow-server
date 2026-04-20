@@ -264,13 +264,10 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 
 		byte[] b = data.array();
 		formatFrame(b, data.position(), size, type, flags, id);
-		synchronized (co) {
-			co.write(data);
-		}
+		co.write(data);
 
 		if (logger.isTraceEnabled())
 			logger.trace(String.format("%s send frame: %02x, size: %s, flags: %02x, id: %s", co, type, size, flags, id));
-		co.flush();
 	}
 
 	@SuppressWarnings("resource")
@@ -316,7 +313,6 @@ public class Http2Processor implements NIOConnectionHandler, Http2FlowControl {
 				sendFrame(0, 0, id, data);
 		}
 		sendFrame(0, done ? 0x1 : 0, id, data);
-		co.flush();
 	}
 
 	public void sendWindowUpdate(int id, int window) throws IOException {
