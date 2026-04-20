@@ -28,6 +28,8 @@ import unknow.server.util.io.ByteBuffers;
 public final class NIOConnection extends NIOHandlerDelegate {
 	private static final InetSocketAddress DISCONECTED = InetSocketAddress.createUnresolved("", 0);
 
+	private static final long SOFT_LIMIT = 1024 * 1024;
+
 	/** Output stream */
 	protected final Out out;
 
@@ -91,6 +93,10 @@ public final class NIOConnection extends NIOHandlerDelegate {
 	public void init(NIOConnection co, long now, SSLEngine sslEngine) throws IOException {
 		lastAction = now;
 		handler.init(co, now, sslEngine);
+	}
+
+	public final boolean canWrite() {
+		return writes.remaining() < SOFT_LIMIT;
 	}
 
 	/**
@@ -157,9 +163,8 @@ public final class NIOConnection extends NIOHandlerDelegate {
 
 	protected final void beforeWrite(long now) throws IOException {
 		ByteBuffer b;
-		while ((b = pending.poll()) != null)
-			writes.accept(b);
-		handler.transformWrite(writes, now);
+		while (writes.remaining() < SOFT_LIMIT && (b = pending.poll()) != null)
+			handler.transformWrite(b, writes, now);
 	}
 
 	@Override
@@ -172,6 +177,9 @@ public final class NIOConnection extends NIOHandlerDelegate {
 				key.interestOpsAnd(~SelectionKey.OP_WRITE);
 			else if (writeScheduled.compareAndSet(false, true))
 				key.interestOpsOr(SelectionKey.OP_WRITE);
+		}
+		synchronized (out) {
+			out.notifyAll();
 		}
 		handler.onWrite(now);
 	}
@@ -251,7 +259,7 @@ public final class NIOConnection extends NIOHandlerDelegate {
 				if (len < BUF_SIZE)
 					buf.put(b, off, len);
 				else
-					h.write(ByteBuffer.wrap(Arrays.copyOfRange(b, off, off + len)));
+					tryWrite(ByteBuffer.wrap(Arrays.copyOfRange(b, off, off + len)));
 			} else if (len == r) {
 				buf.put(b, off, len);
 				writeBuffer();
@@ -269,7 +277,19 @@ public final class NIOConnection extends NIOHandlerDelegate {
 			if (h == null)
 				throw new IOException("already closed");
 			writeBuffer();
-			h.write(b);
+			tryWrite(b);
+		}
+
+		private void tryWrite(ByteBuffer b) throws IOException {
+			NIOConnection co = h;
+			try {
+				while (!co.canWrite()) {
+					wait();
+				}
+			} catch (@SuppressWarnings("unused") InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
+			co.write(b);
 		}
 
 		@Override
@@ -299,7 +319,7 @@ public final class NIOConnection extends NIOHandlerDelegate {
 		private void writeBuffer() throws IOException {
 			if (h == null || buf.position() == 0)
 				return;
-			h.write(buf.flip());
+			tryWrite(buf.flip());
 			buf = ByteBuffer.allocate(BUF_SIZE);
 		}
 	}

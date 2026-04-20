@@ -104,13 +104,16 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 	}
 
 	@Override
-	public void transformWrite(ByteBuffers buffers, long now) throws IOException {
-		rawOut.accept(buffers);
+	public void transformWrite(ByteBuffer in, ByteBuffers writes, long now) throws IOException {
+		rawOut.accept(in);
 		while (!rawOut.isEmpty()) {
-			ByteBuffer out = ByteBuffer.allocate(packetBufferSize);
-			SSLEngineResult r = sslEngine.wrap(rawOut.buf, 0, rawOut.len, out);
+			ByteBuffer net = ByteBuffer.allocate(packetBufferSize);
+			SSLEngineResult r = sslEngine.wrap(rawOut.buf, 0, rawOut.len, net);
 			logger.debug("wrap {}", r);
-			buffers.accept(out.flip());
+			if (net.position() > 0) {
+				handler.transformWrite(net.flip(), writes, now);
+				net = null;
+			}
 			if (r.getStatus() == Status.CLOSED) {
 				AtomicInteger l = new AtomicInteger(0);
 				rawOut.drain(b -> l.getAndAdd(b.remaining()));
@@ -119,15 +122,18 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 				break;
 			}
 			while (r.getHandshakeStatus() == HandshakeStatus.NEED_WRAP) {
-				out = ByteBuffer.allocate(packetBufferSize);
-				r = sslEngine.wrap(rawOut.buf, 0, rawOut.len, out);
-				buffers.accept(out.flip());
+				if (net == null)
+					net = ByteBuffer.allocate(packetBufferSize);
+				r = sslEngine.wrap(rawOut.buf, 0, rawOut.len, net);
+				if (net.position() > 0) {
+					handler.transformWrite(net.flip(), writes, now);
+					net = null;
+				}
 				logger.debug("wrap {}", r);
 			}
 			checkHandshake(r.getHandshakeStatus(), now);
 			rawOut.compact();
 		}
-		handler.transformWrite(buffers, now);
 	}
 
 	@Override

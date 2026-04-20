@@ -55,11 +55,13 @@ public interface NIOConnectionHandler {
 	/**
 	 * called before some buffers are written
 	 * 
-	 * @param buffers buffers to be written
+	 * @param in buffer to transform
+	 * @param out buffers to be written
 	 * @param now nanoTime
 	 * @throws IOException on io exception
 	 */
-	default void transformWrite(ByteBuffers buffers, long now) throws IOException { // ok
+	default void transformWrite(ByteBuffer in, ByteBuffers out, long now) throws IOException {
+		out.accept(in);
 	}
 
 	/**

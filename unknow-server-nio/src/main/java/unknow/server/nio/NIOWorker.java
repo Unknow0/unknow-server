@@ -8,14 +8,12 @@ import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -34,6 +32,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	private static final Logger logger = LoggerFactory.getLogger(NIOWorker.class);
 
 	private static final int BUF_LEN = 64 * 1024;
+	private static final int MAX_READS = 8;
 
 	/** executor for delegating task */
 	private final ExecutorService executor;
@@ -156,12 +155,6 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		return false;
 	}
 
-	public Future<Collection<ConnectionStats>> connectionStats() {
-		StatCollector statCollector = new StatCollector();
-		execute(statCollector);
-		return statCollector;
-	}
-
 	@Override
 	protected final void selected(long now, SelectionKey key) throws IOException {
 		NIOConnection co = (NIOConnection) key.attachment();
@@ -194,7 +187,8 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	}
 
 	private void doRead(NIOConnection co, long now) throws IOException {
-		while (true) {
+		int i = 0;
+		while (i++ < MAX_READS) {
 			int l = co.channel.read(buf);
 			if (l == -1) {
 				co.key.interestOpsAnd(~SelectionKey.OP_READ);
@@ -212,11 +206,11 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	}
 
 	private void doWrite(NIOConnection co, long now) throws IOException {
-		if (co.writes.isEmpty())
-			co.beforeWrite(now);
+		co.beforeWrite(now);
 		long l = co.channel.write(co.writes.buf, 0, co.writes.len);
 		logger.trace("{} writen {} {}", co, l, co.key);
 		if (l > 0) {
+			co.writes.remaining -= l;
 			co.onWrite(now);
 			if (co.isClosed())
 				startClose(co, now);
@@ -345,21 +339,5 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 				co.key.cancel();
 			}
 		}
-	}
-
-	private class StatCollector extends CompletableFuture<Collection<ConnectionStats>> implements WorkerTask {
-		@Override
-		public void run(long now) {
-			List<ConnectionStats> list = new ArrayList<>();
-			NIOConnection co = head;
-			while (co != null) {
-				list.add(new ConnectionStats(co.hasPendingWrites(), false, co.lastCheck, co.lastAction));
-				co = co.next;
-			}
-			for (NIOConnection c : closing)
-				list.add(new ConnectionStats(c.hasPendingWrites(), true, c.lastCheck, c.lastAction));
-			complete(list);
-		}
-
 	}
 }
