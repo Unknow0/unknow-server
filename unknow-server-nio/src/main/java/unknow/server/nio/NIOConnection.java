@@ -28,7 +28,7 @@ import unknow.server.util.io.ByteBuffers;
 public final class NIOConnection extends NIOHandlerDelegate {
 	private static final InetSocketAddress DISCONECTED = InetSocketAddress.createUnresolved("", 0);
 
-	private static final long SOFT_LIMIT = 1024 * 1024;
+	private static final long SOFT_LIMIT = 1048576L;
 
 	/** Output stream */
 	protected final Out out;
@@ -280,7 +280,7 @@ public final class NIOConnection extends NIOHandlerDelegate {
 			tryWrite(b);
 		}
 
-		private void tryWrite(ByteBuffer b) throws IOException {
+		private synchronized void tryWrite(ByteBuffer b) throws IOException {
 			NIOConnection co = h;
 			try {
 				while (!co.canWrite()) {
