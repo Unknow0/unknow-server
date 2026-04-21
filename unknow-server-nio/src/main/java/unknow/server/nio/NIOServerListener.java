@@ -10,6 +10,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import unknow.server.nio.NIOWorker.WorkerTask;
+
 /**
  * nio server listener
  * @author unknow
@@ -30,6 +32,30 @@ public interface NIOServerListener {
 	 * @param h  client handler
 	 */
 	void accepted(String name, NIOConnection h);
+
+	/**
+	 * a task is accepted
+	 * 
+	 * @param name worker name
+	 * @param task  the task
+	 */
+	void accepted(String name, WorkerTask task);
+
+	/**
+	 * a task is done
+	 * 
+	 * @param name worker name
+	 * @param task  the task
+	 */
+	void done(String name, WorkerTask task);
+
+	/**
+	* a connection is closing
+	* 
+	* @param name worker name
+	* @param h  client handler
+	*/
+	void closing(String name, NIOConnection h);
 
 	/**
 	 * a connection is closed
@@ -54,16 +80,25 @@ public interface NIOServerListener {
 	 */
 	void onSelect(String name, long now);
 
-	/**
-	 * do nothing
-	 */
-	public static final NIOServerListener NOP = new NIOServerListener() {
+	public static class NOPListener implements NIOServerListener {
 		@Override
 		public void starting(NIOServer server) { // OK
 		}
 
 		@Override
+		public void accepted(String name, WorkerTask task) { // OK
+		}
+
+		@Override
+		public void done(String name, WorkerTask task) { // OK
+		}
+
+		@Override
 		public void accepted(String name, NIOConnection h) { // OK
+		}
+
+		@Override
+		public void closing(String name, NIOConnection h) { // OK
 		}
 
 		@Override
@@ -77,7 +112,12 @@ public interface NIOServerListener {
 		@Override
 		public void onSelect(String name, long now) { // ok
 		}
+	}
 
+	/**
+	 * do nothing
+	 */
+	public static final NIOServerListener NOP = new NOPListener() {
 		@Override
 		public String toString() {
 			return "NIOServerListener.NOP";
@@ -87,7 +127,7 @@ public interface NIOServerListener {
 	/**
 	 * Listener that log all event
 	 */
-	public static final NIOServerListener LOG = new NIOServerListener() {
+	public static final NIOServerListener LOG = new NOPListener() {
 		private final Logger logger = LoggerFactory.getLogger(NIOServerListener.class);
 
 		private final AtomicInteger c = new AtomicInteger();
@@ -103,8 +143,13 @@ public interface NIOServerListener {
 		}
 
 		@Override
+		public void closing(String name, NIOConnection h) {
+			logger.info("{} closing {} ({})", name, h, c.decrementAndGet());
+		}
+
+		@Override
 		public void closed(String name, NIOConnection h) {
-			logger.info("{} closed {} ({})", name, h, c.decrementAndGet());
+			logger.info("{} closed {} ({})", name, h, c.get());
 		}
 
 		@Override
@@ -155,9 +200,27 @@ public interface NIOServerListener {
 		}
 
 		@Override
+		public void accepted(String name, WorkerTask task) {
+			for (int i = 0; i < listeners.length; i++)
+				listeners[i].accepted(name, task);
+		}
+
+		@Override
+		public void done(String name, WorkerTask task) {
+			for (int i = 0; i < listeners.length; i++)
+				listeners[i].done(name, task);
+		}
+
+		@Override
 		public void accepted(String name, NIOConnection h) {
 			for (int i = 0; i < listeners.length; i++)
 				listeners[i].accepted(name, h);
+		}
+
+		@Override
+		public void closing(String name, NIOConnection h) {
+			for (int i = 0; i < listeners.length; i++)
+				listeners[i].closing(name, h);
 		}
 
 		@Override

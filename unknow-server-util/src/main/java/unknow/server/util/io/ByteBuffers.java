@@ -9,6 +9,7 @@ import unknow.server.util.ConsumerWithException;
 public class ByteBuffers implements Consumer<ByteBuffer> {
 	public ByteBuffer[] buf;
 	public int len;
+	public long remaining;
 
 	public ByteBuffers(int l) {
 		buf = new ByteBuffer[l];
@@ -24,6 +25,7 @@ public class ByteBuffers implements Consumer<ByteBuffer> {
 	public void accept(ByteBuffer b) {
 		ensureCapacity(len + 1);
 		buf[len++] = b;
+		remaining += b.remaining();
 	}
 
 	public void accept(ByteBuffers buffers) {
@@ -32,6 +34,7 @@ public class ByteBuffers implements Consumer<ByteBuffer> {
 		ensureCapacity(len + buffers.len);
 		System.arraycopy(buffers.buf, 0, buf, len, buffers.len);
 		len += buffers.len;
+		remaining += buffers.remaining;
 		buffers.clear();
 	}
 
@@ -43,13 +46,11 @@ public class ByteBuffers implements Consumer<ByteBuffer> {
 		for (int i = 0; i < len; i++)
 			buf[i] = null;
 		len = 0;
+		remaining = 0;
 	}
 
-	public int remaining() {
-		int r = 0;
-		for (int i = 0; i < len; i++)
-			r += buf[i].remaining();
-		return r;
+	public long remaining() {
+		return remaining;
 	}
 
 	/**
@@ -84,6 +85,7 @@ public class ByteBuffers implements Consumer<ByteBuffer> {
 			buf[i] = null;
 		}
 		len = 0;
+		remaining = 0;
 	}
 
 	/**

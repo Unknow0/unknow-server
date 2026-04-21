@@ -35,8 +35,8 @@ public class NIOHandlerDelegate implements NIOConnectionHandler {
 	}
 
 	@Override
-	public void transformWrite(ByteBuffers buffers, long now) throws IOException {
-		handler.transformWrite(buffers, now);
+	public void transformWrite(ByteBuffer in, ByteBuffers buffers, long now) throws IOException {
+		handler.transformWrite(in, buffers, now);
 	}
 
 	@Override

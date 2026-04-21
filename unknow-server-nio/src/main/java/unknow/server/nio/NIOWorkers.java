@@ -41,6 +41,7 @@ public interface NIOWorkers {
 
 	/**
 	 * list all workers
+	 * @return the workers
 	 */
 	Collection<NIOWorker> workers();
 

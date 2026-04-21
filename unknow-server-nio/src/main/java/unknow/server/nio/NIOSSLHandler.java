@@ -3,7 +3,6 @@ package unknow.server.nio;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
@@ -23,7 +22,6 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 	private static final ByteBuffer EMPTY = ByteBuffer.allocate(0);
 
 	private final SSLContext sslContext;
-	private final ByteBuffers rawOut;
 
 	private NIOConnection co;
 	private SSLEngine sslEngine;
@@ -36,7 +34,6 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 	public NIOSSLHandler(SSLContext sslContext, NIOConnectionHandler handler) {
 		super(handler);
 		this.sslContext = sslContext;
-		this.rawOut = new ByteBuffers(16);
 	}
 
 	@Override
@@ -104,35 +101,22 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 	}
 
 	@Override
-	public void transformWrite(ByteBuffers buffers, long now) throws IOException {
-		rawOut.accept(buffers);
-		while (!rawOut.isEmpty()) {
-			ByteBuffer out = ByteBuffer.allocate(packetBufferSize);
-			SSLEngineResult r = sslEngine.wrap(rawOut.buf, 0, rawOut.len, out);
+	public void transformWrite(ByteBuffer in, ByteBuffers writes, long now) throws IOException {
+		ByteBuffer net = ByteBuffer.allocate(packetBufferSize);
+		SSLEngineResult r = sslEngine.wrap(in, net);
+		logger.debug("wrap {}", r);
+		if (net.position() > 0)
+			handler.transformWrite(net.flip(), writes, now);
+		if (r.getStatus() == Status.CLOSED)
+			return;
+		while (in.hasRemaining() || r.getHandshakeStatus() == HandshakeStatus.NEED_WRAP) {
+			net = ByteBuffer.allocate(packetBufferSize);
+			r = sslEngine.wrap(in, net);
+			if (net.position() > 0)
+				handler.transformWrite(net.flip(), writes, now);
 			logger.debug("wrap {}", r);
-			buffers.accept(out.flip());
-			if (r.getStatus() == Status.CLOSED) {
-				AtomicInteger l = new AtomicInteger(0);
-				rawOut.drain(b -> l.getAndAdd(b.remaining()));
-				if (l.get() > 0)
-					logger.warn("{} remaining data {}", co, l);
-				break;
-			}
-			while (r.getHandshakeStatus() == HandshakeStatus.NEED_WRAP) {
-				out = ByteBuffer.allocate(packetBufferSize);
-				r = sslEngine.wrap(rawOut.buf, 0, rawOut.len, out);
-				buffers.accept(out.flip());
-				logger.debug("wrap {}", r);
-			}
-			checkHandshake(r.getHandshakeStatus(), now);
-			rawOut.compact();
 		}
-		handler.transformWrite(buffers, now);
-	}
-
-	@Override
-	public boolean hasPendingWrites() {
-		return !rawOut.isEmpty() || handler.hasPendingWrites();
+		checkHandshake(r.getHandshakeStatus(), now);
 	}
 
 	@Override
