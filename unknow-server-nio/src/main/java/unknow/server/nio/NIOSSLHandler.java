@@ -164,7 +164,7 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 		}
 	}
 
-	private final class RunTask implements Runnable, WorkerTask {
+	private final class RunTask extends WorkerTask implements Runnable {
 		@Override
 		public void run() {
 			logger.trace("start task");
@@ -175,7 +175,7 @@ public class NIOSSLHandler extends NIOHandlerDelegate {
 		}
 
 		@Override
-		public void run(long now) {
+		protected void run(long now) {
 			logger.trace("resume handshake");
 			try {
 				checkHandshake(sslEngine.getHandshakeStatus(), now);
