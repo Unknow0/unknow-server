@@ -53,6 +53,10 @@ public class NIOLoop implements Runnable {
 		t.start();
 	}
 
+	public final boolean isAlive() {
+		return t.isAlive();
+	}
+
 	/**
 	 * stop the loop
 	 */

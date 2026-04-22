@@ -70,6 +70,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	}
 
 	protected final void execute(WorkerTask task) {
+		listener.accepted(name, task);
 		tasks.add(task);
 		selector.wakeup();
 	}
@@ -99,8 +100,10 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	@Override
 	protected void onSelect(long now, boolean close) {
 		WorkerTask r;
-		while ((r = tasks.poll()) != null)
-			r.run(now);
+		while ((r = tasks.poll()) != null) {
+			r.work(now);
+			listener.done(name, r);
+		}
 
 		checkPending(now, close);
 		finishClosing(now);
@@ -227,7 +230,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 	private void startClose(NIOConnection co, long now) {
 		if (!remove(co))
 			return;
-		logger.debug("{} start closing", co);
+		listener.closing(name, co);
 		closing.add(co);
 		co.startClose(now);
 	}
@@ -250,8 +253,21 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		return tasks.size();
 	}
 
-	public static interface WorkerTask {
-		void run(long now);
+	public static class WorkerTask {
+		final void work(long now) {
+			try {
+				run(now);
+			} catch (Exception e) {
+				error(e, now);
+			}
+		}
+
+		protected void run(@SuppressWarnings("unused") long now) { // ok
+		}
+
+		protected void error(Exception e, @SuppressWarnings("unused") long now) { // ok
+			logger.warn("Error on task {}", this, e);
+		}
 	}
 
 	private final void unlink(NIOConnection co) {
@@ -291,7 +307,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			head = co;
 	}
 
-	private final class RegisterTask implements WorkerTask {
+	private final class RegisterTask extends WorkerTask {
 		private final SelectionKey key;
 		private final ConnectionFactory factory;
 
@@ -301,7 +317,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 		}
 
 		@Override
-		public void run(long now) {
+		protected void run(long now) {
 			NIOConnection co = new NIOConnection(NIOWorker.this, key, factory.build());
 			key.attach(co);
 			listener.accepted(name, co);
@@ -317,6 +333,12 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			} else
 				submit(new AsyncInit(co));
 			toTail(co, now);
+		}
+
+		@Override
+		protected void error(Exception e, long now) {
+			logger.warn("Failed to register key {}", key, e);
+			key.cancel();
 		}
 	}
 

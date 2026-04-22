@@ -324,9 +324,11 @@ public final class NIOConnection extends NIOHandlerDelegate {
 		}
 	}
 
-	private class WriteCheck implements WorkerTask {
+	private class WriteCheck extends WorkerTask {
 		@Override
-		public void run(long now) {
+		protected void run(long now) {
+			if (!key.isValid())
+				return;
 			if (hasPendingWrites())
 				key.interestOpsOr(SelectionKey.OP_WRITE);
 			else
