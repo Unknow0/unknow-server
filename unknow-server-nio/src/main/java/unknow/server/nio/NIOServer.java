@@ -65,20 +65,20 @@ public class NIOServer extends NIOLoop {
 	@SuppressWarnings("resource")
 	@Override
 	protected void selected(long now, SelectionKey key) throws IOException, InterruptedException {
+		ConnectionFactory factory = (ConnectionFactory) key.attachment();
+		ServerSocketChannel ssc = (ServerSocketChannel) key.channel();
 		SocketChannel socket = null;
-		try {
-			ConnectionFactory factory = (ConnectionFactory) key.attachment();
-			socket = ((ServerSocketChannel) key.channel()).accept();
-			workers.register(socket, factory);
-		} catch (IOException e) {
-			if (socket != null) {
+		while ((socket = ssc.accept()) != null) {
+			try {
+				workers.register(socket, factory);
+			} catch (IOException e) {
 				try {
 					socket.close();
 				} catch (IOException ex) {
 					e.addSuppressed(ex);
 				}
+				logger.warn("Failed to accept", e);
 			}
-			logger.warn("Failed to accept", e);
 		}
 	}
 
