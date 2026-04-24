@@ -26,7 +26,7 @@ import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import unknow.server.nio.NIOWorkers.RoundRobin;
+import unknow.server.nio.worker.RoundRobin;
 
 /** builder for the an NIOServer */
 public class NIOServerBuilder {
@@ -180,6 +180,7 @@ public class NIOServerBuilder {
 		return server;
 	}
 
+	@SuppressWarnings("resource")
 	private NIOWorkers createWorkers(int i, long selectTime, long closingTime, NIOServerListener l) throws IOException {
 		ExecutorService executor = getExecutor();
 		if (i == 1)
@@ -187,7 +188,7 @@ public class NIOServerBuilder {
 		NIOWorker[] w = new NIOWorker[i];
 		while (i > 0)
 			w[--i] = new NIOWorker(i, executor, l, selectTime, closingTime);
-		return new RoundRobin(w);
+		return RoundRobin.create(w);
 	}
 
 	protected ExecutorService getExecutor() {

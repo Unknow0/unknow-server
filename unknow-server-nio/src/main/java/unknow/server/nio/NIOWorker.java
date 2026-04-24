@@ -166,7 +166,7 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			try {
 				doWrite(co, now);
 			} catch (Exception e) {
-				if (co.next != co)
+				if (co.next != co && !isConnectionIssue(e))
 					logger.error("failed to write {}", co, e);
 				startClose(co, now);
 				key.cancel();
@@ -180,13 +180,27 @@ public final class NIOWorker extends NIOLoop implements NIOWorkers {
 			try {
 				doRead(co, now);
 			} catch (Exception e) {
-				if (co.next != co)
+				if (co.next != co && !isConnectionIssue(e))
 					logger.error("failed to read {}", co, e);
 				startClose(co, now);
 			} finally {
 				buf.clear();
 			}
 		}
+	}
+
+	private static boolean isConnectionIssue(Exception e) {
+		if (e instanceof java.net.SocketException)
+			return true;
+		if (e instanceof java.nio.channels.ClosedChannelException)
+			return true;
+
+		String msg = e.getMessage();
+		if (msg == null)
+			return false;
+
+		msg = msg.toLowerCase();
+		return msg.contains("connection reset") || msg.contains("broken pipe") || msg.contains("forcibly closed");
 	}
 
 	private void doRead(NIOConnection co, long now) throws IOException {
