@@ -281,7 +281,9 @@ public final class NIOConnection extends NIOHandlerDelegate {
 		}
 
 		private synchronized void tryWrite(ByteBuffer b) throws IOException {
-			NIOConnection co = h;
+			final NIOConnection co = h;
+			if (co == null)
+				throw new IOException("already closed");
 			try {
 				while (!co.canWrite()) {
 					wait();
