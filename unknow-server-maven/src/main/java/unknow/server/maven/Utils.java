@@ -23,6 +23,8 @@ import unknow.server.util.data.ArraySet;
  * @author unknow
  */
 public class Utils {
+	private Utils() {
+	}
 
 	/**
 	 * create a new ArrayMap

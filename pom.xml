@@ -41,7 +41,6 @@
 		<swagger.version>2.2.36</swagger.version>
 		<cxf.version>4.0.3</cxf.version>
 		<jackson.version>2.19.2</jackson.version>
-		<unknow-sax.version>0.0.3</unknow-sax.version>
 		<prometheus.version>0.16.0</prometheus.version>
 		<jmh.version>1.37</jmh.version>
 		<protostuff.version>1.8.0</protostuff.version>
@@ -323,11 +322,6 @@
 				<version>${maven.version}</version>
 			</dependency>
 			<dependency>
-				<groupId>org.apache.maven.resolver</groupId>
-				<artifactId>maven-resolver-api</artifactId>
-				<version>1.9.18</version>
-			</dependency>
-			<dependency>
 				<groupId>javax.inject</groupId>
 				<artifactId>javax.inject</artifactId>
 				<version>1</version>
@@ -383,11 +377,11 @@
 				<artifactId>protobuf-javalite</artifactId>
 				<version>${protobuf.version}</version>
 			</dependency>
-			
+
 			<dependency>
 				<groupId>io.github.unknow0.maven</groupId>
 				<artifactId>unknow-maven-codegen</artifactId>
-				<version>0.0.1</version>
+				<version>0.02</version>
 			</dependency>
 			<dependency>
 				<groupId>io.github.unknow0.model</groupId>
