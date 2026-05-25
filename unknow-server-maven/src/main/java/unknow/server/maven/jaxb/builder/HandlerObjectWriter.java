@@ -39,11 +39,11 @@ import com.github.javaparser.ast.stmt.ThrowStmt;
 import jakarta.xml.bind.JAXBElement;
 import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Marshaller;
+import unknow.maven.codegen.CodeGenUtils;
+import unknow.maven.codegen.TypeFactory;
 import unknow.model.api.TypeModel;
 import unknow.server.jaxb.MarshallerImpl;
 import unknow.server.maven.SourceBuilder.AbstractSourceBuilder;
-import unknow.server.maven.TypeCache;
-import unknow.server.maven.Utils;
 import unknow.server.maven.jaxb.HandlerContext;
 import unknow.server.maven.jaxb.model.XmlChoice;
 import unknow.server.maven.jaxb.model.XmlCollection;
@@ -59,31 +59,31 @@ public class HandlerObjectWriter extends AbstractSourceBuilder<HandlerContext> {
 	protected void build() {
 		XmlTypeComplex xml = ctx.xml();
 
-		BlockStmt b = cl.addMethod("write", Utils.PUBLIC).addMarkerAnnotation(Override.class).addThrownException(types.getClass(XMLStreamException.class))
+		BlockStmt b = cl.addMethod("write", CodeGenUtils.PUBLIC).addMarkerAnnotation(Override.class).addThrownException(types.getClass(XMLStreamException.class))
 				.addThrownException(types.getClass(JAXBException.class)).addParameter(types.get(XMLStreamWriter.class), "w").addParameter(types.get(xml.type()), "t")
 				.addParameter(types.get(MarshallerImpl.class), "m").addParameter(types.get(Marshaller.Listener.class), "listener").createBody();
 		xml.type().asClass().method("beforeMarshal", ctx.type(Marshaller.class.getName()))
-				.ifPresent(m -> b.addStatement(new MethodCallExpr(new NameExpr("o"), "beforeMarshal", Utils.list(LISTENER))));
+				.ifPresent(m -> b.addStatement(new MethodCallExpr(new NameExpr("o"), "beforeMarshal", CodeGenUtils.list(LISTENER))));
 		b.addStatement(new IfStmt(new BinaryExpr(LISTENER, new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS),
-				new ExpressionStmt(new MethodCallExpr(LISTENER, "beforeMarshal", Utils.list(new NameExpr("t")))), null));
+				new ExpressionStmt(new MethodCallExpr(LISTENER, "beforeMarshal", CodeGenUtils.list(new NameExpr("t")))), null));
 
 		buildAttributes(xml.getAttributes(), b);
 
 		AtomicInteger i = new AtomicInteger(0);
 		for (XmlElement e : xml.getElements())
-			buildElement(types, e, b, i);
+			buildElement(e, b, i);
 
 		if (xml.getValue() != null) {
 			XmlElement value = xml.getValue();
 			b.addStatement(new MethodCallExpr(new NameExpr("w"), "writeCharacters",
-					Utils.list(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(ctx.handler(value.xmlType()))), INSTANCE), "toString",
-							Utils.list(new MethodCallExpr(new NameExpr("t"), value.getter()))))));
+					CodeGenUtils.list(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(ctx.handler(value.xmlType()))), INSTANCE), "toString",
+							CodeGenUtils.list(new MethodCallExpr(new NameExpr("t"), value.getter()))))));
 		}
 
 		xml.type().asClass().method("afterMarshal", ctx.type(Marshaller.class.getName()))
-				.ifPresent(m -> b.addStatement(new MethodCallExpr(new NameExpr("o"), "afterMarshal", Utils.list(LISTENER))));
+				.ifPresent(m -> b.addStatement(new MethodCallExpr(new NameExpr("o"), "afterMarshal", CodeGenUtils.list(LISTENER))));
 		b.addStatement(new IfStmt(new BinaryExpr(LISTENER, new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS),
-				new ExpressionStmt(new MethodCallExpr(LISTENER, "afterMarshal", Utils.list(new NameExpr("t")))), null));
+				new ExpressionStmt(new MethodCallExpr(LISTENER, "afterMarshal", CodeGenUtils.list(new NameExpr("t")))), null));
 	}
 
 	private void buildAttributes(List<XmlElement> attrs, BlockStmt b) {
@@ -93,12 +93,12 @@ public class HandlerObjectWriter extends AbstractSourceBuilder<HandlerContext> {
 		b.addStatement(new VariableDeclarationExpr(types.get(String.class), "s"));
 		for (XmlElement e : attrs) {
 			Expression v = new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(ctx.handler(e.xmlType()))), INSTANCE), "toString",
-					Utils.list(new MethodCallExpr(new NameExpr("t"), e.getter())));
+					CodeGenUtils.list(new MethodCallExpr(new NameExpr("t"), e.getter())));
 			v = new EnclosedExpr(new AssignExpr(new NameExpr("s"), v, AssignExpr.Operator.ASSIGN));
-			NodeList<Expression> l = Utils.list();
+			NodeList<Expression> l = CodeGenUtils.list();
 			if (!e.ns().isEmpty())
-				l.add(Utils.text(e.ns()));
-			l.add(Utils.text(e.name()));
+				l.add(CodeGenUtils.text(e.ns()));
+			l.add(CodeGenUtils.text(e.name()));
 			l.add(new NameExpr("s"));
 			if (e.type().isPrimitive())
 				b.addStatement(new MethodCallExpr(new NameExpr("w"), "writeAttribute", l));
@@ -108,7 +108,7 @@ public class HandlerObjectWriter extends AbstractSourceBuilder<HandlerContext> {
 		}
 	}
 
-	private void buildElement(TypeCache types, XmlElement e, BlockStmt b, AtomicInteger i) {
+	private void buildElement(XmlElement e, BlockStmt b, AtomicInteger i) {
 		String n = "o$" + i.getAndIncrement();
 		BlockStmt w;
 
@@ -121,32 +121,32 @@ public class HandlerObjectWriter extends AbstractSourceBuilder<HandlerContext> {
 			TypeModel c = t.isArray() ? t.asArray().type() : t.asClass().ancestor(Collection.class.getName()).parameter(0).type();
 			BlockStmt p = new BlockStmt()
 					.addStatement(new IfStmt(new BinaryExpr(new NameExpr("e"), new NullLiteralExpr(), BinaryExpr.Operator.EQUALS), new ContinueStmt(), null));
-			buildElement(types, e, xml, p, new NameExpr("e"));
+			buildElement(e, xml, p, new NameExpr("e"));
 
 			if (t.isArray()) {
-				p.addStatement(0, Utils.assign(types.get(xml.type()), "e", new ArrayAccessExpr(new NameExpr(n), new NameExpr("i"))));
-				w = new BlockStmt().addStatement(new ForStmt(Utils.list(Utils.assign(types.get("int"), "i", new IntegerLiteralExpr("0"))),
+				p.addStatement(0, CodeGenUtils.assign(types.get(xml.type()), "e", new ArrayAccessExpr(new NameExpr(n), new NameExpr("i"))));
+				w = new BlockStmt().addStatement(new ForStmt(CodeGenUtils.list(CodeGenUtils.assign(types.get("int"), "i", new IntegerLiteralExpr("0"))),
 						new BinaryExpr(new NameExpr("i"), new FieldAccessExpr(new NameExpr(n), "length"), BinaryExpr.Operator.LESS),
-						Utils.list(new UnaryExpr(new NameExpr("i"), UnaryExpr.Operator.POSTFIX_INCREMENT)), p));
+						CodeGenUtils.list(new UnaryExpr(new NameExpr("i"), UnaryExpr.Operator.POSTFIX_INCREMENT)), p));
 			} else {
 				w = new BlockStmt().addStatement(new ForEachStmt(new VariableDeclarationExpr(types.get(c), "e"), new NameExpr(n), p));
 			}
 		} else
-			w = buildElement(types, e, xml, new BlockStmt(), new NameExpr(n));
+			w = buildElement(e, xml, new BlockStmt(), new NameExpr(n));
 
-		b.addStatement(Utils.assign(types.get(e.type()), n, new MethodCallExpr(new NameExpr("t"), e.getter())));
+		b.addStatement(CodeGenUtils.assign(types.get(e.type()), n, new MethodCallExpr(new NameExpr("t"), e.getter())));
 		if (e.type().isPrimitive())
 			b.addStatement(w);
 		else
 			b.addStatement(new IfStmt(new BinaryExpr(new NameExpr(n), new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS), w, null));
 	}
 
-	private BlockStmt buildElement(TypeCache types, XmlElement e, XmlType xml, BlockStmt p, Expression name) {
+	private BlockStmt buildElement(XmlElement e, XmlType xml, BlockStmt p, Expression name) {
 		if (!(xml instanceof XmlChoice)) {
-			p.addStatement(new MethodCallExpr(new NameExpr("w"), "writeStartElement", Utils.list(Utils.text(e.ns()), Utils.text(e.name()))))
+			p.addStatement(new MethodCallExpr(new NameExpr("w"), "writeStartElement", CodeGenUtils.list(CodeGenUtils.text(e.ns()), CodeGenUtils.text(e.name()))))
 					.addStatement(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(ctx.handler(xml))), INSTANCE), "write",
-							Utils.list(new NameExpr("w"), name, new NameExpr("m"), LISTENER)))
-					.addStatement(new MethodCallExpr(new NameExpr("w"), "writeEndElement", Utils.list()));
+							CodeGenUtils.list(new NameExpr("w"), name, new NameExpr("m"), LISTENER)))
+					.addStatement(new MethodCallExpr(new NameExpr("w"), "writeEndElement", CodeGenUtils.list()));
 			return p;
 		}
 		XmlChoice c = (XmlChoice) xml;
@@ -159,13 +159,13 @@ public class HandlerObjectWriter extends AbstractSourceBuilder<HandlerContext> {
 				list.add(v.get(0));
 		}
 
-		Statement s = new ThrowStmt(new ObjectCreationExpr(null, types.getClass(JAXBException.class), Utils.list(Utils.text("Expected unexpected type"))));
+		Statement s = new ThrowStmt(new ObjectCreationExpr(null, types.getClass(JAXBException.class), CodeGenUtils.list(CodeGenUtils.text("Expected unexpected type"))));
 
 		for (XmlElement x : list)
 			s = new IfStmt(new InstanceOfExpr(name, types.getClass(x.xmlType().type())),
-					buildElement(types, x, x.xmlType(), new BlockStmt(), new CastExpr(types.get(x.xmlType().type()), name)), s);
+					buildElement(x, x.xmlType(), new BlockStmt(), new CastExpr(types.get(x.xmlType().type()), name)), s);
 		p.addStatement(new IfStmt(new InstanceOfExpr(name, types.getClass(JAXBElement.class)), new ExpressionStmt(new MethodCallExpr(new NameExpr("m"), "write",
-				Utils.list(new CastExpr(types.getClass(JAXBElement.class, TypeCache.ANY), name), new NameExpr("w"), new NullLiteralExpr()))), s));
+				CodeGenUtils.list(new CastExpr(types.getClass(JAXBElement.class, TypeFactory.ANY), name), new NameExpr("w"), new NullLiteralExpr()))), s));
 		return p;
 	}
 }

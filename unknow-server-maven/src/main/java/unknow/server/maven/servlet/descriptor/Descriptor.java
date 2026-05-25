@@ -23,9 +23,9 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpSessionAttributeListener;
 import jakarta.servlet.http.HttpSessionIdListener;
 import jakarta.servlet.http.HttpSessionListener;
+import unknow.maven.codegen.AbstractCodeGenMojo.TypeConsumer;
 import unknow.model.api.AnnotationModel;
 import unknow.model.api.TypeModel;
-import unknow.server.maven.AbstractGeneratorMojo.TypeConsumer;
 import unknow.server.servlet.impl.ServletCookieConfigImpl;
 import unknow.server.servlet.utils.Resource;
 

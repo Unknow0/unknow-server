@@ -19,8 +19,8 @@ import com.github.javaparser.ast.expr.ObjectCreationExpr;
 import com.github.javaparser.ast.stmt.ReturnStmt;
 import com.github.javaparser.ast.type.PrimitiveType;
 
-import unknow.server.maven.TypeCache;
-import unknow.server.maven.Utils;
+import unknow.maven.codegen.CodeGenUtils;
+import unknow.maven.codegen.TypeFactory;
 import unknow.server.maven.servlet.Builder;
 import unknow.server.maven.servlet.Names;
 import unknow.server.maven.servlet.descriptor.Descriptor;
@@ -36,13 +36,13 @@ public class CreateServletManager extends Builder {
 	@Override
 	public void add(BuilderContext ctx) {
 		Descriptor descriptor = ctx.descriptor();
-		TypeCache types = ctx.type();
+		TypeFactory types = ctx.type();
 		ctx.self().addMethod("createServletManager", Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL).setType(types.getClass(ServletManager.class))
 				.addMarkerAnnotation(Override.class).createBody().addStatement(new ReturnStmt(
-						new ObjectCreationExpr(null, types.getClass(ServletManager.class), Utils.list(errorCode(descriptor, types), errorClass(descriptor, types)))));
+						new ObjectCreationExpr(null, types.getClass(ServletManager.class), CodeGenUtils.list(errorCode(descriptor, types), errorClass(descriptor, types)))));
 	}
 
-	private static ObjectCreationExpr errorCode(Descriptor descriptor, TypeCache t) {
+	private static ObjectCreationExpr errorCode(Descriptor descriptor, TypeFactory t) {
 		NodeList<Expression> k = new NodeList<>();
 		NodeList<Expression> v = new NodeList<>();
 		List<Integer> l = new ArrayList<>(descriptor.errorCode.keySet());
@@ -53,13 +53,13 @@ public class CreateServletManager extends Builder {
 			if (s == null)
 				continue;
 			k.add(new IntegerLiteralExpr(e.toString()));
-			v.add(Utils.text(path));
+			v.add(CodeGenUtils.text(path));
 		}
-		return new ObjectCreationExpr(null, t.getClass(IntArrayMap.class, TypeCache.EMPTY),
-				Utils.list(Utils.array(PrimitiveType.intType(), k), Utils.array(t.getClass(String.class), v)));
+		return new ObjectCreationExpr(null, t.getClass(IntArrayMap.class, TypeFactory.EMPTY),
+				CodeGenUtils.list(CodeGenUtils.array(PrimitiveType.intType(), k), CodeGenUtils.array(t.getClass(String.class), v)));
 	}
 
-	private static ObjectCreationExpr errorClass(Descriptor descriptor, TypeCache t) {
+	private static ObjectCreationExpr errorClass(Descriptor descriptor, TypeFactory t) {
 		NodeList<Expression> k = new NodeList<>();
 		NodeList<Expression> v = new NodeList<>();
 		List<String> l = new ArrayList<>(descriptor.errorClass.keySet());
@@ -70,11 +70,11 @@ public class CreateServletManager extends Builder {
 			if (s == null || e.isEmpty())
 				continue;
 			k.add(new ClassExpr(t.get(e.toString())));
-			k.add(Utils.text(path));
+			k.add(CodeGenUtils.text(path));
 		}
-		LambdaExpr cmp = new LambdaExpr(Utils.list(new Parameter(TypeCache.EMPTY, "a"), new Parameter(TypeCache.EMPTY, "b")),
-				new MethodCallExpr(new MethodCallExpr(Names.a, "getName"), "compareTo", Utils.list(new MethodCallExpr(Names.b, "getName"))));
-		return new ObjectCreationExpr(null, t.getClass(ObjectArrayMap.class, TypeCache.EMPTY),
-				Utils.list(Utils.array(t.getClass(Class.class), k), Utils.array(t.getClass(String.class), v), cmp));
+		LambdaExpr cmp = new LambdaExpr(CodeGenUtils.list(new Parameter(TypeFactory.EMPTY, "a"), new Parameter(TypeFactory.EMPTY, "b")),
+				new MethodCallExpr(new MethodCallExpr(Names.a, "getName"), "compareTo", CodeGenUtils.list(new MethodCallExpr(Names.b, "getName"))));
+		return new ObjectCreationExpr(null, t.getClass(ObjectArrayMap.class, TypeFactory.EMPTY),
+				CodeGenUtils.list(CodeGenUtils.array(t.getClass(Class.class), k), CodeGenUtils.array(t.getClass(String.class), v), cmp));
 	}
 }

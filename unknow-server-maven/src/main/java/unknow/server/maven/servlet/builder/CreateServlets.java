@@ -16,7 +16,8 @@ import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.stmt.ReturnStmt;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 
-import unknow.server.maven.TypeCache;
+import unknow.maven.codegen.CodeGenUtils;
+import unknow.maven.codegen.TypeFactory;
 import unknow.server.maven.Utils;
 import unknow.server.maven.servlet.Builder;
 import unknow.server.maven.servlet.Names;
@@ -32,7 +33,7 @@ public class CreateServlets extends Builder {
 	@Override
 	public void add(BuilderContext ctx) {
 		Descriptor descriptor = ctx.descriptor();
-		TypeCache types = ctx.type();
+		TypeFactory types = ctx.type();
 		ClassOrInterfaceType t = types.getClass(ServletConfigImpl.class);
 		BlockStmt b = ctx.self().addMethod("createServlets", Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL).setType(types.array(ServletConfigImpl.class))
 				.addMarkerAnnotation(Override.class).createBody();
@@ -47,10 +48,10 @@ public class CreateServlets extends Builder {
 			NodeList<Expression> params = new NodeList<>();
 			if (s.name.startsWith("Resource:")) {
 				Resource r = descriptor.resources.get(s.pattern.get(0));
-				params = Utils.list(Utils.text(s.pattern.get(0)), new LongLiteralExpr(r.getLastModified() + "L"), new LongLiteralExpr(r.getSize() + "L"));
+				params = CodeGenUtils.list(CodeGenUtils.text(s.pattern.get(0)), new LongLiteralExpr(r.getLastModified() + "L"), new LongLiteralExpr(r.getSize() + "L"));
 			}
-			b.addStatement(Utils.assign(t, n, new ObjectCreationExpr(null, t, Utils.list(Utils.text(s.name), new ObjectCreationExpr(null, types.getClass(s.clazz), params),
-					Names.CTX, Utils.mapString(s.param, types), Utils.arraySet(s.pattern, types)))));
+			b.addStatement(CodeGenUtils.assign(t, n, new ObjectCreationExpr(null, t, CodeGenUtils.list(CodeGenUtils.text(s.name),
+					new ObjectCreationExpr(null, types.getClass(s.clazz), params), Names.CTX, Utils.mapString(s.param, types), Utils.arraySet(s.pattern, types)))));
 			for (String p : s.pattern) {
 				if (saw.contains(p))
 					System.err.println("duplicate servlet pattern '" + p + "'");
@@ -58,6 +59,6 @@ public class CreateServlets extends Builder {
 			}
 		}
 
-		b.addStatement(new ReturnStmt(Utils.array(t, servlets)));
+		b.addStatement(new ReturnStmt(CodeGenUtils.array(t, servlets)));
 	}
 }

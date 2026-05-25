@@ -23,10 +23,10 @@ import com.github.javaparser.ast.expr.TypeExpr;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 
 import jakarta.ws.rs.core.MediaType;
+import unknow.maven.codegen.CodeGenUtils;
+import unknow.maven.codegen.CompilationUnitWriter;
+import unknow.maven.codegen.TypeFactory;
 import unknow.server.http.jaxrs.MTPredicate;
-import unknow.server.maven.Output;
-import unknow.server.maven.TypeCache;
-import unknow.server.maven.Utils;
 
 /**
  * @author unknow
@@ -34,7 +34,7 @@ import unknow.server.maven.Utils;
 public class MediaTypesBuilder {
 	private final CompilationUnit cu;
 	private final ClassOrInterfaceDeclaration cl;
-	private final TypeCache types;
+	private final TypeFactory types;
 
 	private final ClassOrInterfaceType mt;
 
@@ -43,8 +43,8 @@ public class MediaTypesBuilder {
 
 	public MediaTypesBuilder(CompilationUnit cu, Map<String, String> existingClass) {
 		this.cu = cu;
-		types = new TypeCache(cu, existingClass);
-		cl = cu.addClass("MediaTypes", Utils.PUBLIC);
+		types = new TypeFactory(cu, existingClass);
+		cl = cu.addClass("MediaTypes", CodeGenUtils.PUBLIC);
 
 		mt = types.getClass(MediaType.class);
 
@@ -66,9 +66,9 @@ public class MediaTypesBuilder {
 		mts.put("application/json-patch+json", new FieldAccessExpr(new TypeExpr(mt), "APPLICATION_JSON_PATCH_JSON_TYPE"));
 	}
 
-	public void save(Output out) throws MojoExecutionException {
+	public void save(CompilationUnitWriter writer) throws MojoExecutionException {
 		if (!predicates.isEmpty() || mts.size() > 13)
-			out.save(cu);
+			writer.write(cu);
 	}
 
 	public Expression type(String t) {
@@ -79,8 +79,8 @@ public class MediaTypesBuilder {
 		String name = t.toUpperCase().replaceAll("[^_a-zA-Z]", "_");
 
 		cl.addFieldWithInitializer(mt, name,
-				new ObjectCreationExpr(null, types.getClass(MediaType.class), Utils.list(new StringLiteralExpr(split[0]), new StringLiteralExpr(split[1]))),
-				Utils.PUBLIC_STATIC);
+				new ObjectCreationExpr(null, types.getClass(MediaType.class), CodeGenUtils.list(new StringLiteralExpr(split[0]), new StringLiteralExpr(split[1]))),
+				CodeGenUtils.PUBLIC_STATIC);
 		mts.put(t, n = new FieldAccessExpr(new TypeExpr(types.getClass(cl)), name));
 		return n;
 	}
@@ -113,7 +113,7 @@ public class MediaTypesBuilder {
 		} else
 			e = new FieldAccessExpr(new TypeExpr(types.get(MTPredicate.class)), "ANY");
 
-		cl.addFieldWithInitializer(types.getClass(MTPredicate.class), name, e, Utils.PUBLIC_STATIC);
+		cl.addFieldWithInitializer(types.getClass(MTPredicate.class), name, e, CodeGenUtils.PUBLIC_STATIC);
 		predicates.put(k, n = new FieldAccessExpr(new TypeExpr(types.getClass(cl)), name));
 		return n;
 	}

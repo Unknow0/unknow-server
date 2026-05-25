@@ -23,6 +23,7 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,9 +31,9 @@ import org.slf4j.LoggerFactory;
 import com.github.javaparser.ast.CompilationUnit;
 
 import jakarta.jws.WebService;
+import unknow.maven.codegen.TypeFactory;
 import unknow.model.api.AnnotationModel;
 import unknow.server.maven.AbstractGeneratorMojo;
-import unknow.server.maven.TypeCache;
 import unknow.server.maven.jaxb.model.XmlLoader;
 import unknow.server.maven.jaxws.binding.Service;
 
@@ -44,23 +45,20 @@ public class JaxwsGeneratorMojo extends AbstractGeneratorMojo {
 	private static final Logger logger = LoggerFactory.getLogger(JaxwsGeneratorMojo.class);
 	private static final XMLOutputFactory f = XMLOutputFactory.newInstance();
 
-	@org.apache.maven.plugins.annotations.Parameter(name = "publishUrl", defaultValue = "http://127.0.0.1:8080")
+	@Parameter(name = "graalvm", defaultValue = "true")
+	protected boolean graalvm;
+	@Parameter(name = "publishUrl", defaultValue = "http://127.0.0.1:8080")
 	private String publishUrl;
-	@org.apache.maven.plugins.annotations.Parameter(name = "basePath", defaultValue = "/")
+	@Parameter(name = "basePath", defaultValue = "/")
 	private String basePath;
-	@org.apache.maven.plugins.annotations.Parameter(name = "jaxbFactory")
+	@Parameter(name = "jaxbFactory")
 	private String jaxbFactory;
 
 	private final XmlLoader xmlLoader = new XmlLoader();
 
 	@Override
-	protected String id() {
-		return "jaxws-generator";
-	}
-
-	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
-		init();
+		init(session, mojo, repository, codegen);
 
 		if (!basePath.endsWith("/"))
 			basePath += "/";
@@ -71,27 +69,27 @@ public class JaxwsGeneratorMojo extends AbstractGeneratorMojo {
 			throw new MojoFailureException("no jaxb factory found");
 
 		List<String> wsdl = new ArrayList<>();
-		process(t -> {
+		processSrc(t -> {
 			if (!t.isClass())
 				return;
 			Optional<AnnotationModel> a = t.annotation(WebService.class);
 			if (!a.isPresent())
 				return;
 			CompilationUnit cu = newCu();
-			TypeCache types = new TypeCache(cu, existingClass);
+			TypeFactory types = new TypeFactory(cu, existingClass);
 
 			try {
 				Service service = Service.build(t.asClass(), basePath, loader, xmlLoader);
 
-				String n = "generated/" + id() + "/" + service.name + ".wsdl";
-				Path path = Paths.get(resources, n);
+				String n = "generated/" + uniquePath + "/" + service.name + ".wsdl";
+				Path path = Paths.get(codegen.resources, n);
 				Files.createDirectories(path.getParent());
 				try (BufferedWriter w = Files.newBufferedWriter(path)) {
 					new WsdlBuilder(service, publishUrl).write(f.createXMLStreamWriter(w));
 				}
 				wsdl.add(n);
 				new JaxwsServletBuilder(t.asClass(), service).generate(cu, types, jaxbFactory, n);
-				out.save(cu);
+				writer.write(cu);
 			} catch (Exception e) {
 				throw new MojoFailureException("failed to generate/save output class", e);
 			}
@@ -99,7 +97,7 @@ public class JaxwsGeneratorMojo extends AbstractGeneratorMojo {
 
 		if (graalvm && !wsdl.isEmpty()) {
 			try {
-				Path path = Paths.get(resources + "/META-INF/native-image/" + id() + "/resource-config.json");
+				Path path = Paths.get(codegen.resources + "/META-INF/native-image/" + uniquePath + "/resource-config.json");
 				Files.createDirectories(path.getParent());
 				try (BufferedWriter w = Files.newBufferedWriter(path)) {
 					w.write("{\"resources\":{\"includes\":[");

@@ -5,8 +5,8 @@ package unknow.server.maven.servlet;
 
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 
+import unknow.maven.codegen.TypeFactory;
 import unknow.model.api.ModelLoader;
-import unknow.server.maven.TypeCache;
 import unknow.server.maven.servlet.descriptor.Descriptor;
 
 /**
@@ -22,7 +22,7 @@ public abstract class Builder {
 
 		Descriptor descriptor();
 
-		TypeCache type();
+		TypeFactory type();
 
 		ModelLoader loader();
 

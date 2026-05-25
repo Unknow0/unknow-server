@@ -21,8 +21,8 @@ import com.github.javaparser.ast.stmt.Statement;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import unknow.server.maven.TypeCache;
-import unknow.server.maven.Utils;
+import unknow.maven.codegen.CodeGenUtils;
+import unknow.maven.codegen.TypeFactory;
 import unknow.server.servlet.impl.ServletJsp;
 
 /**
@@ -49,14 +49,14 @@ public class JspGeneratorMojo {
 	private final StringBuilder print = new StringBuilder();
 	private final StringBuilder sb = new StringBuilder();
 
-	private TypeCache types;
+	private TypeFactory types;
 
 	private BlockStmt b;
 
 	public void generate(Path file) throws IOException {
 		CompilationUnit cu = new CompilationUnit("jsp");
 		ClassOrInterfaceDeclaration cl = cu.addClass("Impl", Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL).addExtendedType(ServletJsp.class);
-		types = new TypeCache(cu, Collections.emptyMap());
+		types = new TypeFactory(cu, Collections.emptyMap());
 
 		b = cl.addMethod("jspService", Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL).addParameter(types.getClass(HttpServletRequest.class), "request")
 				.addParameter(types.getClass(HttpServletResponse.class), "response").addMarkerAnnotation(Override.class).createBody();
@@ -84,7 +84,7 @@ public class JspGeneratorMojo {
 	private void print() {
 		if (print.length() == 0)
 			return;
-		b.addStatement(new MethodCallExpr(OUT, "print", Utils.list(Utils.text(print.toString()))));
+		b.addStatement(new MethodCallExpr(OUT, "print", CodeGenUtils.list(CodeGenUtils.text(print.toString()))));
 		print.setLength(0);
 	}
 
@@ -187,7 +187,7 @@ public class JspGeneratorMojo {
 			}
 			sb.append((char) c);
 		}
-		b.addStatement(new MethodCallExpr(OUT, "print", Utils.list(StaticJavaParser.parseExpression(sb.toString()))));
+		b.addStatement(new MethodCallExpr(OUT, "print", CodeGenUtils.list(StaticJavaParser.parseExpression(sb.toString()))));
 		sb.setLength(0);
 	}
 

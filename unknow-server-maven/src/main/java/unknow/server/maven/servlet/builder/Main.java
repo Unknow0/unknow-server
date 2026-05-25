@@ -8,8 +8,8 @@ import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
 
-import unknow.server.maven.TypeCache;
-import unknow.server.maven.Utils;
+import unknow.maven.codegen.CodeGenUtils;
+import unknow.maven.codegen.TypeFactory;
 import unknow.server.maven.servlet.Builder;
 
 /**
@@ -19,8 +19,8 @@ public class Main extends Builder {
 
 	@Override
 	public void add(BuilderContext ctx) {
-		TypeCache t = ctx.type();
+		TypeFactory t = ctx.type();
 		ctx.self().addMethod("main", Modifier.Keyword.PUBLIC, Modifier.Keyword.STATIC).addParameter(String[].class, "arg").addThrownException(t.getClass(Exception.class))
-				.createBody().addStatement(new MethodCallExpr(new ObjectCreationExpr(null, t.getClass(ctx.self()), Utils.list()), "process", Utils.list(new NameExpr("arg"))));
+				.createBody().addStatement(new MethodCallExpr(new ObjectCreationExpr(null, t.getClass(ctx.self()), CodeGenUtils.list()), "process", CodeGenUtils.list(new NameExpr("arg"))));
 	}
 }
