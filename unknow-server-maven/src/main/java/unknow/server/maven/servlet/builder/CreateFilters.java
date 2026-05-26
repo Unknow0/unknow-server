@@ -15,7 +15,8 @@ import com.github.javaparser.ast.stmt.ReturnStmt;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 
 import jakarta.servlet.DispatcherType;
-import unknow.server.maven.TypeCache;
+import unknow.maven.codegen.CodeGenUtils;
+import unknow.maven.codegen.TypeFactory;
 import unknow.server.maven.Utils;
 import unknow.server.maven.servlet.Builder;
 import unknow.server.maven.servlet.Names;
@@ -31,7 +32,7 @@ public class CreateFilters extends Builder {
 	@Override
 	public void add(BuilderContext ctx) {
 		Descriptor descriptor = ctx.descriptor();
-		TypeCache types = ctx.type();
+		TypeFactory types = ctx.type();
 		ClassOrInterfaceType t = types.getClass(FilterConfigImpl.class);
 		BlockStmt b = ctx.self().addMethod("createFilters", Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL).setType(types.array(FilterConfigImpl.class))
 				.addMarkerAnnotation(Override.class).createBody();
@@ -45,14 +46,14 @@ public class CreateFilters extends Builder {
 			TypeExpr type = new TypeExpr(types.getClass(DispatcherType.class));
 			for (DispatcherType d : f.dispatcher)
 				list.add(new FieldAccessExpr(type, d.name()));
-			Expression dispatcher = new ObjectCreationExpr(null, types.getClass(ArraySet.class, TypeCache.EMPTY),
-					Utils.list(Utils.array(types.getClass(DispatcherType.class), list)));
+			Expression dispatcher = new ObjectCreationExpr(null, types.getClass(ArraySet.class, TypeFactory.EMPTY),
+					CodeGenUtils.list(CodeGenUtils.array(types.getClass(DispatcherType.class), list)));
 
-			b.addStatement(
-					Utils.assign(t, n, new ObjectCreationExpr(null, t, Utils.list(Utils.text(f.name), new ObjectCreationExpr(null, types.getClass(f.clazz), Utils.list()),
+			b.addStatement(CodeGenUtils.assign(t, n,
+					new ObjectCreationExpr(null, t, CodeGenUtils.list(CodeGenUtils.text(f.name), new ObjectCreationExpr(null, types.getClass(f.clazz), CodeGenUtils.list()),
 							Names.CTX, Utils.mapString(f.param, types), Utils.arraySet(f.servletNames, types), Utils.arraySet(f.pattern, types), dispatcher))));
 		}
 
-		b.addStatement(new ReturnStmt(Utils.array(t, filters)));
+		b.addStatement(new ReturnStmt(CodeGenUtils.array(t, filters)));
 	}
 }

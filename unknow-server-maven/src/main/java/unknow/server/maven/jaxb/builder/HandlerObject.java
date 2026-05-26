@@ -17,12 +17,12 @@ import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.stmt.ReturnStmt;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 
+import unknow.maven.codegen.CodeGenUtils;
+import unknow.maven.codegen.TypeFactory;
 import unknow.model.api.TypeModel;
 import unknow.server.jaxb.XmlHandler;
 import unknow.server.jaxb.XmlRootHandler;
 import unknow.server.maven.SourceBuilder.AbstractSourceBuilder;
-import unknow.server.maven.TypeCache;
-import unknow.server.maven.Utils;
 import unknow.server.maven.jaxb.HandlerContext;
 import unknow.server.maven.jaxb.JaxbGeneratorMojo;
 import unknow.server.maven.jaxb.model.XmlChoice;
@@ -42,12 +42,12 @@ public class HandlerObject extends AbstractSourceBuilder<HandlerContext> {
 		cl.addImplementedType(types.getClass(XmlHandler.class, types.getClass(t)));
 
 		cl.addFieldWithInitializer(new ClassOrInterfaceType(null, cl.getNameAsString()), "INSTANCE",
-				new ObjectCreationExpr(null, new ClassOrInterfaceType(null, cl.getNameAsString()), Utils.list()), Utils.PUBLIC_STATIC);
+				new ObjectCreationExpr(null, new ClassOrInterfaceType(null, cl.getNameAsString()), CodeGenUtils.list()), CodeGenUtils.PUBLIC_STATIC);
 
 		AtomicInteger i = new AtomicInteger(0);
 		for (XmlElement e : xml.getAttributes())
 			cl.addFieldWithInitializer(types.get(QName.class), e.name() + "$a" + i.getAndIncrement(),
-					new ObjectCreationExpr(null, types.getClass(QName.class), Utils.list(new StringLiteralExpr(e.ns()), new StringLiteralExpr(e.name()))), Utils.PSF);
+					new ObjectCreationExpr(null, types.getClass(QName.class), CodeGenUtils.list(new StringLiteralExpr(e.ns()), new StringLiteralExpr(e.name()))), CodeGenUtils.PSF);
 
 		i.set(0);
 		for (XmlElement e : xml.getElements())
@@ -57,18 +57,18 @@ public class HandlerObject extends AbstractSourceBuilder<HandlerContext> {
 		QName qname = JaxbGeneratorMojo.getRootQN(t);
 		if (qname != null) {
 			cl.addExtendedType(types.getClass(XmlRootHandler.class, types.getClass(t)));
-			b.addStatement(new MethodCallExpr(null, "super", Utils.list(new ObjectCreationExpr(null, types.getClass(QName.class),
-					Utils.list(new StringLiteralExpr(qname.getNamespaceURI()), new StringLiteralExpr(qname.getLocalPart()))))));
+			b.addStatement(new MethodCallExpr(null, "super", CodeGenUtils.list(new ObjectCreationExpr(null, types.getClass(QName.class),
+					CodeGenUtils.list(new StringLiteralExpr(qname.getNamespaceURI()), new StringLiteralExpr(qname.getLocalPart()))))));
 		}
 
-		cl.addMethod("clazz", Utils.PUBLIC).setType(types.getClass(Class.class, types.getClass(t))).addMarkerAnnotation(Override.class).createBody()
+		cl.addMethod("clazz", CodeGenUtils.PUBLIC).setType(types.getClass(Class.class, types.getClass(t))).addMarkerAnnotation(Override.class).createBody()
 				.addStatement(new ReturnStmt(new ClassExpr(types.getClass(t))));
 
 		for (AbstractSourceBuilder<HandlerContext> m : methods)
 			m.process(cl, types, ctx);
 	}
 
-	private void appendInitElement(ClassOrInterfaceDeclaration cl, TypeCache types, XmlElement e, AtomicInteger i) {
+	private void appendInitElement(ClassOrInterfaceDeclaration cl, TypeFactory types, XmlElement e, AtomicInteger i) {
 		XmlType x = e.xmlType();
 		if (x instanceof XmlCollection)
 			x = ((XmlCollection) x).component();
@@ -80,9 +80,9 @@ public class HandlerObject extends AbstractSourceBuilder<HandlerContext> {
 		}
 
 		cl.addFieldWithInitializer(types.get(QName.class), e.name() + "$e" + i.getAndIncrement(),
-				new ObjectCreationExpr(null, types.getClass(QName.class), Utils.list(new StringLiteralExpr(e.ns()), new StringLiteralExpr(e.name()))), Utils.PSF);
+				new ObjectCreationExpr(null, types.getClass(QName.class), CodeGenUtils.list(new StringLiteralExpr(e.ns()), new StringLiteralExpr(e.name()))), CodeGenUtils.PSF);
 
 		if (e.xmlType() instanceof XmlCollection && e.type().isArray())
-			ctx.emptyArray(e.type(), name -> cl.addFieldWithInitializer(types.get(e.type()), name, new ArrayInitializerExpr(), Utils.PSF));
+			ctx.emptyArray(e.type(), name -> cl.addFieldWithInitializer(types.get(e.type()), name, new ArrayInitializerExpr(), CodeGenUtils.PSF));
 	}
 }

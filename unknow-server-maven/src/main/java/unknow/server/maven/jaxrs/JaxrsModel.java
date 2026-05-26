@@ -62,6 +62,8 @@ import jakarta.ws.rs.ext.MessageBodyReader;
 import jakarta.ws.rs.ext.MessageBodyWriter;
 import jakarta.ws.rs.ext.ParamConverterProvider;
 import jakarta.ws.rs.ext.Provider;
+import unknow.maven.codegen.CodeGenUtils;
+import unknow.maven.codegen.TypeFactory;
 import unknow.model.api.AncestrorIterator;
 import unknow.model.api.AnnotationModel;
 import unknow.model.api.BeanProperty;
@@ -79,8 +81,6 @@ import unknow.server.http.jaxrs.protostuff.ProtostuffJsonListAbstract.Protostuff
 import unknow.server.http.jaxrs.protostuff.ProtostuffJsonProvider;
 import unknow.server.http.jaxrs.protostuff.ProtostuffListProvider;
 import unknow.server.http.jaxrs.protostuff.ProtostuffProvider;
-import unknow.server.maven.TypeCache;
-import unknow.server.maven.Utils;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam.JaxrsBeanFieldParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBodyParam;
@@ -367,8 +367,8 @@ public class JaxrsModel {
 		return ancestor.parameter(0).type();
 	}
 
-	public static Expression getParam(JaxrsParam<?> p, TypeCache types, Map<JaxrsParam<?>, String> converterVar) {
-		NodeList<Expression> list = Utils.list(Utils.text(p.value), p.def == null ? new NullLiteralExpr() : Utils.text(p.def));
+	public static Expression getParam(JaxrsParam<?> p, TypeFactory types, Map<JaxrsParam<?>, String> converterVar) {
+		NodeList<Expression> list = CodeGenUtils.list(CodeGenUtils.text(p.value), p.def == null ? new NullLiteralExpr() : CodeGenUtils.text(p.def));
 		String m = "get" + p.getClass().getSimpleName().substring(5, p.getClass().getSimpleName().length() - 5);
 
 		if (p.type.isArray()) {
@@ -384,9 +384,9 @@ public class JaxrsModel {
 		list.add(new NameExpr(converterVar.get(p)));
 		Expression e = new MethodCallExpr(new NameExpr("r"), m, list);
 		if (p.type.isAssignableTo(SortedSet.class.getName()))
-			e = new ObjectCreationExpr(null, types.getClass(TreeSet.class), Utils.list(e));
+			e = new ObjectCreationExpr(null, types.getClass(TreeSet.class), CodeGenUtils.list(e));
 		else if (p.type.isAssignableTo(Set.class.getName()))
-			e = new ObjectCreationExpr(null, types.getClass(HashSet.class), Utils.list(e));
+			e = new ObjectCreationExpr(null, types.getClass(HashSet.class), CodeGenUtils.list(e));
 		return e;
 	}
 

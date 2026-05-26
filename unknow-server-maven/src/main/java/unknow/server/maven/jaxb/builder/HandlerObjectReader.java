@@ -39,13 +39,13 @@ import com.github.javaparser.ast.type.Type;
 import jakarta.xml.bind.JAXBElement;
 import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Unmarshaller;
+import unknow.maven.codegen.CodeGenUtils;
+import unknow.maven.codegen.TypeFactory;
 import unknow.model.api.TypeModel;
 import unknow.server.jaxb.StrReader;
 import unknow.server.jaxb.UnmarshallerImpl;
 import unknow.server.jaxb.XmlHandler;
 import unknow.server.maven.SourceBuilder.AbstractSourceBuilder;
-import unknow.server.maven.TypeCache;
-import unknow.server.maven.Utils;
 import unknow.server.maven.jaxb.HandlerContext;
 import unknow.server.maven.jaxb.model.XmlChoice;
 import unknow.server.maven.jaxb.model.XmlCollection;
@@ -65,17 +65,17 @@ public class HandlerObjectReader extends AbstractSourceBuilder<HandlerContext> {
 
 		Expression create;
 		if ("".equals(xml.factory().method))
-			create = new ObjectCreationExpr(null, types.getClass(xml.factory().clazz), Utils.list());
+			create = new ObjectCreationExpr(null, types.getClass(xml.factory().clazz), CodeGenUtils.list());
 		else
 			create = new MethodCallExpr(new TypeExpr(types.getClass(xml.factory().clazz)), xml.factory().method);
 
-		BlockStmt b = cl.addMethod("read", Utils.PUBLIC).addMarkerAnnotation(Override.class).addThrownException(types.getClass(XMLStreamException.class))
+		BlockStmt b = cl.addMethod("read", CodeGenUtils.PUBLIC).addMarkerAnnotation(Override.class).addThrownException(types.getClass(XMLStreamException.class))
 				.addThrownException(types.getClass(JAXBException.class)).addParameter(types.get(XMLStreamReader.class), "r").setType(types.get(xml.type()))
 				.addParameter(types.get(Object.class), PARENT).addParameter(types.get(UnmarshallerImpl.class), "listener").createBody()
-				.addStatement(Utils.assign(types.get(xml.type()), "o", create));
+				.addStatement(CodeGenUtils.assign(types.get(xml.type()), "o", create));
 		xml.type().asClass().method("beforeUnmarshal", ctx.type(Unmarshaller.class.getName()), ctx.type(Object.class.getName()))
-				.ifPresent(m -> b.addStatement(new MethodCallExpr(new NameExpr("o"), "beforeUnmarshal", Utils.list(LISTENER, new NameExpr(PARENT)))));
-		b.addStatement(new MethodCallExpr(LISTENER, "beforeUnmarshal", Utils.list(new NameExpr("o"), new NameExpr(PARENT))));
+				.ifPresent(m -> b.addStatement(new MethodCallExpr(new NameExpr("o"), "beforeUnmarshal", CodeGenUtils.list(LISTENER, new NameExpr(PARENT)))));
+		b.addStatement(new MethodCallExpr(LISTENER, "beforeUnmarshal", CodeGenUtils.list(new NameExpr("o"), new NameExpr(PARENT))));
 
 		readAttributes(xml, b);
 
@@ -83,39 +83,39 @@ public class HandlerObjectReader extends AbstractSourceBuilder<HandlerContext> {
 		processCollection(xml.getElements(), b, end);
 
 		xml.type().asClass().method("afterUnmarshal", ctx.type(Unmarshaller.class.getName()), ctx.type(Object.class.getName()))
-				.ifPresent(m -> end.addStatement(new MethodCallExpr(new NameExpr("o"), "afterUnmarshal", Utils.list(LISTENER, new NameExpr(PARENT)))));
+				.ifPresent(m -> end.addStatement(new MethodCallExpr(new NameExpr("o"), "afterUnmarshal", CodeGenUtils.list(LISTENER, new NameExpr(PARENT)))));
 
 		IfStmt i = new IfStmt(
 				new BinaryExpr(new NameExpr("n"), new FieldAccessExpr(new TypeExpr(types.get(XMLStreamConstants.class)), "END_ELEMENT"), BinaryExpr.Operator.EQUALS),
-				end.addStatement(new MethodCallExpr(LISTENER, "afterUnmarshal", Utils.list(new NameExpr("o"), new NameExpr(PARENT))))
+				end.addStatement(new MethodCallExpr(LISTENER, "afterUnmarshal", CodeGenUtils.list(new NameExpr("o"), new NameExpr(PARENT))))
 						.addStatement(new ReturnStmt(new NameExpr("o"))),
 				null);
 
 		if (xml.getElements().iterator().hasNext()) {
 			AtomicInteger c = new AtomicInteger(0);
-			Statement j = new ExpressionStmt(new MethodCallExpr(new TypeExpr(types.get(XmlHandler.class)), "skipTag", Utils.list(new NameExpr("r"))));
+			Statement j = new ExpressionStmt(new MethodCallExpr(new TypeExpr(types.get(XmlHandler.class)), "skipTag", CodeGenUtils.list(new NameExpr("r"))));
 			for (XmlElement e : xml.getElements())
 				j = readElement(e, j, new NameExpr("o"), e.setter(), c);
 
 			i = new IfStmt(
 					new BinaryExpr(new NameExpr("n"), new FieldAccessExpr(new TypeExpr(types.get(XMLStreamConstants.class)), "START_ELEMENT"), BinaryExpr.Operator.EQUALS),
-					new BlockStmt().addStatement(Utils.assign(types.get(QName.class), "q", new MethodCallExpr(new NameExpr("r"), "getName"))).addStatement(j), i);
+					new BlockStmt().addStatement(CodeGenUtils.assign(types.get(QName.class), "q", new MethodCallExpr(new NameExpr("r"), "getName"))).addStatement(j), i);
 		}
 
-		BlockStmt w = new BlockStmt().addStatement(Utils.assign(types.get("int"), "n", new MethodCallExpr(new NameExpr("r"), "next")));
+		BlockStmt w = new BlockStmt().addStatement(CodeGenUtils.assign(types.get("int"), "n", new MethodCallExpr(new NameExpr("r"), "next")));
 		if (xml.getValue() != null) {
 			XmlElement v = xml.getValue();
 			w.addStatement(new IfStmt(
 					new BinaryExpr(new NameExpr("n"), new FieldAccessExpr(new TypeExpr(types.get(XMLStreamConstants.class)), "CHARACTERS"), BinaryExpr.Operator.EQUALS),
 					new BlockStmt()
 							.addStatement(new MethodCallExpr(new NameExpr("o"), v.setter(),
-									Utils.list(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(ctx.handler(v.xmlType()))), INSTANCE), "toObject",
-											Utils.list(new MethodCallExpr(new TypeExpr(types.get(StrReader.class)), "read", Utils.list(new NameExpr("r"))))))))
+									CodeGenUtils.list(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(ctx.handler(v.xmlType()))), INSTANCE), "toObject",
+											CodeGenUtils.list(new MethodCallExpr(new TypeExpr(types.get(StrReader.class)), "read", CodeGenUtils.list(new NameExpr("r"))))))))
 							.addStatement(new AssignExpr(new NameExpr("n"), new MethodCallExpr(new NameExpr("r"), "getEventType"), AssignExpr.Operator.ASSIGN)),
 					null));
 		}
 		b.addStatement(new WhileStmt(new MethodCallExpr(new NameExpr("r"), "hasNext"), w.addStatement(i)))
-				.addStatement(new ThrowStmt(new ObjectCreationExpr(null, types.getClass(XMLStreamException.class), Utils.list(new StringLiteralExpr("EOF")))));
+				.addStatement(new ThrowStmt(new ObjectCreationExpr(null, types.getClass(XMLStreamException.class), CodeGenUtils.list(new StringLiteralExpr("EOF")))));
 
 	}
 
@@ -126,17 +126,17 @@ public class HandlerObjectReader extends AbstractSourceBuilder<HandlerContext> {
 		Statement i = null;
 		int c = 0;
 		for (XmlElement e : xml.getAttributes()) {
-			i = new IfStmt(new MethodCallExpr(new NameExpr(e.name() + "$a" + c++), "equals", Utils.list(new NameExpr("n"))),
+			i = new IfStmt(new MethodCallExpr(new NameExpr(e.name() + "$a" + c++), "equals", CodeGenUtils.list(new NameExpr("n"))),
 					new ExpressionStmt(new MethodCallExpr(new NameExpr("o"), e.setter(),
-							Utils.list(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(ctx.handler(e.xmlType()))), INSTANCE), "toObject",
-									Utils.list(new MethodCallExpr(new NameExpr("r"), "getAttributeValue", Utils.list(new NameExpr("i")))))))),
+							CodeGenUtils.list(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(ctx.handler(e.xmlType()))), INSTANCE), "toObject",
+									CodeGenUtils.list(new MethodCallExpr(new NameExpr("r"), "getAttributeValue", CodeGenUtils.list(new NameExpr("i")))))))),
 					i);
 		}
-		b.addStatement(new ForStmt(Utils.list(Utils.assign(types.get("int"), "i", new IntegerLiteralExpr("0"))),
+		b.addStatement(new ForStmt(CodeGenUtils.list(CodeGenUtils.assign(types.get("int"), "i", new IntegerLiteralExpr("0"))),
 				new BinaryExpr(new NameExpr("i"), new MethodCallExpr(new NameExpr("r"), "getAttributeCount"), BinaryExpr.Operator.LESS),
-				Utils.list(new UnaryExpr(new NameExpr("i"), UnaryExpr.Operator.POSTFIX_INCREMENT)),
+				CodeGenUtils.list(new UnaryExpr(new NameExpr("i"), UnaryExpr.Operator.POSTFIX_INCREMENT)),
 				new BlockStmt()
-						.addStatement(Utils.assign(types.get(QName.class), "n", new MethodCallExpr(new NameExpr("r"), "getAttributeName", Utils.list(new NameExpr("i")))))
+						.addStatement(CodeGenUtils.assign(types.get(QName.class), "n", new MethodCallExpr(new NameExpr("r"), "getAttributeName", CodeGenUtils.list(new NameExpr("i")))))
 						.addStatement(i)));
 	}
 
@@ -146,12 +146,12 @@ public class HandlerObjectReader extends AbstractSourceBuilder<HandlerContext> {
 				continue;
 			Expression v = new NameExpr("l$" + e.name());
 			if (e.type().isArray())
-				v = new MethodCallExpr(v, "toArray", Utils.list(new NameExpr(ctx.emptyArray(e.type()))));
+				v = new MethodCallExpr(v, "toArray", CodeGenUtils.list(new NameExpr(ctx.emptyArray(e.type()))));
 			end.addStatement(new IfStmt(new BinaryExpr(new NameExpr("l$" + e.name()), new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS),
-					new ExpressionStmt(new MethodCallExpr(new NameExpr("o"), e.setter(), Utils.list(v))), null));
+					new ExpressionStmt(new MethodCallExpr(new NameExpr("o"), e.setter(), CodeGenUtils.list(v))), null));
 
 			Type t = e.type().isArray() ? types.getClass(List.class, types.get(e.type().asArray().type().asClass())) : types.get(e.type());
-			b.addStatement(Utils.assign(t, "l$" + e.name(), new NullLiteralExpr()));
+			b.addStatement(CodeGenUtils.assign(t, "l$" + e.name(), new NullLiteralExpr()));
 		}
 	}
 
@@ -164,15 +164,15 @@ public class HandlerObjectReader extends AbstractSourceBuilder<HandlerContext> {
 			setter = "add";
 			s.addStatement(new IfStmt(new BinaryExpr(n, new NullLiteralExpr(), BinaryExpr.Operator.EQUALS),
 					new ExpressionStmt(new AssignExpr(n,
-							new ObjectCreationExpr(null, types.getClass(e.type().isAssignableTo(Set.class) ? HashSet.class : ArrayList.class, TypeCache.EMPTY), Utils.list()),
+							new ObjectCreationExpr(null, types.getClass(e.type().isAssignableTo(Set.class) ? HashSet.class : ArrayList.class, TypeFactory.EMPTY), CodeGenUtils.list()),
 							AssignExpr.Operator.ASSIGN)),
 					null));
 		}
 
 		if (!(xmlType instanceof XmlChoice)) {
-			Expression call = new MethodCallExpr(n, setter, Utils.list(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(ctx.handler(xmlType))), INSTANCE), "read",
-					Utils.list(new NameExpr("r"), new NameExpr("o"), LISTENER))));
-			return new IfStmt(new MethodCallExpr(new NameExpr(e.name() + "$e" + c.getAndIncrement()), "equals", Utils.list(new NameExpr("q"))),
+			Expression call = new MethodCallExpr(n, setter, CodeGenUtils.list(new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(ctx.handler(xmlType))), INSTANCE), "read",
+					CodeGenUtils.list(new NameExpr("r"), new NameExpr("o"), LISTENER))));
+			return new IfStmt(new MethodCallExpr(new NameExpr(e.name() + "$e" + c.getAndIncrement()), "equals", CodeGenUtils.list(new NameExpr("q"))),
 					s.getStatements().isEmpty() ? new ExpressionStmt(call) : s.addStatement(call), j);
 		}
 
@@ -188,14 +188,14 @@ public class HandlerObjectReader extends AbstractSourceBuilder<HandlerContext> {
 				xmlType = ((XmlCollection) xmlType).component();
 
 			Expression v = new MethodCallExpr(new FieldAccessExpr(new TypeExpr(types.get(ctx.handler(xmlType))), INSTANCE), "read",
-					Utils.list(new NameExpr("r"), new NameExpr("o"), LISTENER));
+					CodeGenUtils.list(new NameExpr("r"), new NameExpr("o"), LISTENER));
 
 			if (map.get(xmlType.type()).size() > 1)
-				v = new ObjectCreationExpr(null, types.getClass(JAXBElement.class, TypeCache.EMPTY),
-						Utils.list(new NameExpr("q"), new ClassExpr(types.get(xmlType.type())), new NullLiteralExpr(), v));
+				v = new ObjectCreationExpr(null, types.getClass(JAXBElement.class, TypeFactory.EMPTY),
+						CodeGenUtils.list(new NameExpr("q"), new ClassExpr(types.get(xmlType.type())), new NullLiteralExpr(), v));
 
-			Expression call = new MethodCallExpr(n, setter, Utils.list(v));
-			j = new IfStmt(new MethodCallExpr(new NameExpr(x.name() + "$e" + c.getAndIncrement()), "equals", Utils.list(new NameExpr("q"))),
+			Expression call = new MethodCallExpr(n, setter, CodeGenUtils.list(v));
+			j = new IfStmt(new MethodCallExpr(new NameExpr(x.name() + "$e" + c.getAndIncrement()), "equals", CodeGenUtils.list(new NameExpr("q"))),
 					b.getStatements().isEmpty() ? new ExpressionStmt(call) : b.addStatement(call), j);
 		}
 		return j;

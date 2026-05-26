@@ -8,7 +8,8 @@ import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
 import com.github.javaparser.ast.stmt.ReturnStmt;
 
-import unknow.server.maven.TypeCache;
+import unknow.maven.codegen.CodeGenUtils;
+import unknow.maven.codegen.TypeFactory;
 import unknow.server.maven.Utils;
 import unknow.server.maven.servlet.Builder;
 import unknow.server.maven.servlet.Names;
@@ -21,13 +22,13 @@ public class CreateContext extends Builder {
 
 	@Override
 	public void add(BuilderContext ctx) {
-		TypeCache t = ctx.type();
+		TypeFactory t = ctx.type();
 
 		ctx.self().addMethod("createContext", Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL).setType(t.getClass(ServletContextImpl.class))
 				.addParameter(String.class, "vhost").addMarkerAnnotation(Override.class).createBody()
 				.addStatement(new ReturnStmt(new ObjectCreationExpr(null, t.getClass(ServletContextImpl.class),
-						Utils.list(Utils.text(ctx.descriptor().name), new NameExpr("vhost"), Utils.mapString(ctx.descriptor().param, t), Names.EVENTS,
-								new ObjectCreationExpr(null, t.getClass(ctx.sessionFactory()), Utils.list()), Utils.mapString(ctx.descriptor().localeMapping, t),
+						CodeGenUtils.list(CodeGenUtils.text(ctx.descriptor().name), new NameExpr("vhost"), Utils.mapString(ctx.descriptor().param, t), Names.EVENTS,
+								new ObjectCreationExpr(null, t.getClass(ctx.sessionFactory()), CodeGenUtils.list()), Utils.mapString(ctx.descriptor().localeMapping, t),
 								Utils.mapString(ctx.descriptor().mimeTypes, t)))));
 	}
 }

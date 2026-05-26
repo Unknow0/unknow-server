@@ -27,14 +27,13 @@ import org.slf4j.LoggerFactory;
 
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Modifier;
-import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.ServletContainerInitializer;
+import unknow.maven.codegen.TypeFactory;
 import unknow.model.api.ModelLoader;
 import unknow.server.maven.AbstractGeneratorMojo;
-import unknow.server.maven.TypeCache;
 import unknow.server.maven.servlet.Builder.BuilderContext;
 import unknow.server.maven.servlet.builder.CreateContext;
 import unknow.server.maven.servlet.builder.CreateEventManager;
@@ -67,13 +66,16 @@ public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderCont
 	private static final Path WEBXML = Paths.get("WEB-INF", "web.xml");
 	private static final Path INITIALIZER = Paths.get("META-INF", "services", ServletContainerInitializer.class.getName());
 
-	private final CompilationUnit cu = new CompilationUnit();
+	private CompilationUnit cu;
 
-	private TypeCache types;
+	private TypeFactory types;
 
 	private ClassOrInterfaceDeclaration cl;
 
 	private final Descriptor descriptor = new Descriptor();
+
+	@Parameter(name = "graalvm", defaultValue = "true")
+	protected boolean graalvm;
 
 	@Parameter(defaultValue = "Server")
 	private String className;
@@ -91,17 +93,14 @@ public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderCont
 	private List<String> ignoredResources;
 
 	@Override
-	protected String id() {
-		return "servlet-generator";
-	}
-
-	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
-		init();
+		init(session, mojo, repository, codegen);
 
-		cu.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolSolver);
+		cu = newCu();
+
 		if (addAccessLog)
-			descriptor.filters.add(new SD(descriptor.filters.size()).addPattern("/*").clazz(AccessLogFilter.class.getName()).name("acessLog").addDispatcher(DispatcherType.REQUEST));
+			descriptor.filters
+					.add(new SD(descriptor.filters.size()).addPattern("/*").clazz(AccessLogFilter.class.getName()).name("acessLog").addDispatcher(DispatcherType.REQUEST));
 		try {
 			classLoader.loadClass("io.prometheus.client.Counter");
 			descriptor.filters
@@ -109,7 +108,7 @@ public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderCont
 		} catch (@SuppressWarnings("unused") Throwable t) { // ok
 		}
 
-		process(descriptor);
+		processSrc(descriptor);
 		processResources(this::process);
 		if (graalvm && !descriptor.resources.isEmpty())
 			generateGraalvmResources();
@@ -117,16 +116,14 @@ public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderCont
 		logger.info("descriptor:\n{}", descriptor);
 
 		// generate class
-		types = new TypeCache(cu, existingClass);
+		types = new TypeFactory(cu, existingClass);
 
-		if (packageName != null && !packageName.isEmpty())
-			cu.setPackageDeclaration(packageName);
 		cl = cu.addClass(className, Modifier.Keyword.FINAL).addExtendedType(AbstractHttpServer.class);
 
 		for (Builder b : BUILDER)
 			b.add(this);
 
-		out.save(cu);
+		writer.write(cu);
 	}
 
 	private void process(Path full, Path file) {
@@ -176,7 +173,7 @@ public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderCont
 	 */
 	private void generateGraalvmResources() throws MojoFailureException {
 		try {
-			Path path = Paths.get(resources + "/META-INF/native-image/" + id() + "/resource-config.json");
+			Path path = Paths.get(codegen.resources + "/META-INF/native-image/" + uniquePath + "/resource-config.json");
 			Files.createDirectories(path.getParent());
 			try (BufferedWriter w = Files.newBufferedWriter(path)) {
 				w.write("{\"resources\":{\"includes\":[");
@@ -207,7 +204,7 @@ public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderCont
 	}
 
 	@Override
-	public TypeCache type() {
+	public TypeFactory type() {
 		return types;
 	}
 

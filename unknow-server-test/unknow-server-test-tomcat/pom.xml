@@ -45,11 +45,13 @@
 						</goals>
 						<phase>generate-sources</phase>
 						<configuration>
+							<codegen>
+								<packageName>unknow.server.http.test.generated</packageName>
+								<artifacts>
+									<artifact>${project.groupId}:unknow-server-test-pojo:${project.version}</artifact>
+								</artifacts>
+							</codegen>
 							<basePath>/rest</basePath>
-							<packageName>unknow.server.http.test.generated</packageName>
-							<artifacts>
-								<artifact>${project.groupId}:unknow-server-test-pojo:${project.version}</artifact>
-							</artifacts>
 						</configuration>
 					</execution>
 					<execution>
@@ -60,12 +62,14 @@
 						</goals>
 						<phase>generate-sources</phase>
 						<configuration>
+							<codegen>
+								<packageName>unknow.server.http.test.generated</packageName>
+								<artifacts>
+									<artifact>${project.groupId}:unknow-server-test-pojo:${project.version}</artifact>
+								</artifacts>
+							</codegen>
 							<addAccessLog>false</addAccessLog>
-							<packageName>unknow.server.http.test.generated</packageName>
 							<!--sessionFactory>bla</sessionFactory -->
-							<artifacts>
-								<artifact>${project.groupId}:unknow-server-test-pojo:${project.version}</artifact>
-							</artifacts>
 						</configuration>
 					</execution>
 				</executions>
