@@ -33,6 +33,7 @@
 		<maven.compiler.source>11</maven.compiler.source>
 		<maven.compiler.target>11</maven.compiler.target>
 		<maven.compiler.release>11</maven.compiler.release>
+		<maven.deploy.skip>false</maven.deploy.skip>
 
 		<slf4j.version>2.0.13</slf4j.version>
 		<javaparser.version>3.26.1</javaparser.version>
@@ -129,9 +130,9 @@
 					<version>3.6.0</version>
 				</plugin>
 				<plugin>
-					<groupId>org.sonatype.central</groupId>
+					<groupId>io.github.mavenplugins</groupId>
 					<artifactId>central-publishing-maven-plugin</artifactId>
-					<version>0.5.0</version>
+					<version>1.2.0</version>
 				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
@@ -483,8 +484,9 @@
 						<extensions>true</extensions>
 						<configuration>
 							<deploymentName>${project.groupId}:${project.version}</deploymentName>
+							<skipPublishing>${maven.deploy.skip}</skipPublishing>
 							<autoPublish>true</autoPublish>
-							<waitUntil>published</waitUntil>
+							<waitUntil>validated</waitUntil>
 						</configuration>
 					</plugin>
 				</plugins>
