@@ -338,8 +338,10 @@ public class JaxrsModel {
 			addProtostuffMessage(param.type());
 		}
 		addProtostuffMessage(m.type());
-
-		consume = m.annotation(Consumes.class).flatMap(v -> v.value()).filter(v -> v.isSet()).map(v -> v.asArrayLiteral()).orElse(consume);
+		if (hasBody(params))
+			consume = m.annotation(Consumes.class).flatMap(v -> v.value()).filter(v -> v.isSet()).map(v -> v.asArrayLiteral()).orElse(consume);
+		else
+			consume = ALL;
 		produce = m.annotation(Produces.class).flatMap(v -> v.value()).filter(v -> v.isSet()).map(v -> v.asArrayLiteral()).orElse(produce);
 
 		mappings.add(new JaxrsMapping("m$" + mappings.size(), clazz, m, method, params, p, consume, produce));
@@ -350,6 +352,14 @@ public class JaxrsModel {
 			type = type.asClass().parameter(0).type();
 		if (type.isAssignableTo(Message.class))
 			protostuffMessage.add(type.name());
+	}
+
+	private static boolean hasBody(List<JaxrsParam<?>> params) {
+		for (JaxrsParam<?> p : params) {
+			if (p.inBody())
+				return true;
+		}
+		return false;
 	}
 
 	public static TypeModel getParamType(TypeModel type) {

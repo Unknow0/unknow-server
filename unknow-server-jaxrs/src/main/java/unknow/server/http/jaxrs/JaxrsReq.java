@@ -72,10 +72,9 @@ public class JaxrsReq {
 	}
 
 	public MediaType getAccepted(MTPredicate allowed, MediaType def) {
-		accept = def;
 		String a = r.getHeader("accept");
 		if (a == null)
-			return accept;
+			return accept = def;
 		int i;
 		int l = 0;
 		double lq = -1;

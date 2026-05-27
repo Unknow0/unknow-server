@@ -45,8 +45,6 @@ public class JaxwsGeneratorMojo extends AbstractGeneratorMojo {
 	private static final Logger logger = LoggerFactory.getLogger(JaxwsGeneratorMojo.class);
 	private static final XMLOutputFactory f = XMLOutputFactory.newInstance();
 
-	@Parameter(name = "graalvm", defaultValue = "true")
-	protected boolean graalvm;
 	@Parameter(name = "publishUrl", defaultValue = "http://127.0.0.1:8080")
 	private String publishUrl;
 	@Parameter(name = "basePath", defaultValue = "/")
@@ -95,7 +93,7 @@ public class JaxwsGeneratorMojo extends AbstractGeneratorMojo {
 			}
 		});
 
-		if (graalvm && !wsdl.isEmpty()) {
+		if (codegen.graalvm && !wsdl.isEmpty()) {
 			try {
 				Path path = Paths.get(codegen.resources + "/META-INF/native-image/" + uniquePath + "/resource-config.json");
 				Files.createDirectories(path.getParent());

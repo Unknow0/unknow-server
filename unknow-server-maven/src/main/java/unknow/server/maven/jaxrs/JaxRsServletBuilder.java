@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -128,8 +129,7 @@ public class JaxRsServletBuilder {
 		this.mappings = mappings;
 
 		types = new TypeFactory(cu, existingClass);
-		cl = cu.addClass("Jaxrs" + path.replace('/', '_').replace("*", ""), CodeGenUtils.PUBLIC).addSingleMemberAnnotation(WebServlet.class, CodeGenUtils.text(path))
-				.addExtendedType(HttpServlet.class);
+		cl = cu.addClass(toClass(path), CodeGenUtils.PUBLIC).addSingleMemberAnnotation(WebServlet.class, CodeGenUtils.text(path)).addExtendedType(HttpServlet.class);
 		cl.addFieldWithInitializer(long.class, "serialVersionUID", new LongLiteralExpr("1L"), CodeGenUtils.PSF);
 
 		builder = path.endsWith("*") ? new PatternService(path.length() - 1) : new SimpleService();
@@ -142,6 +142,21 @@ public class JaxRsServletBuilder {
 				cl.addFieldWithInitializer(types.get(c.name()), n, new ObjectCreationExpr(null, types.getClass(c), CodeGenUtils.list()), CodeGenUtils.PSF);
 			}
 		}
+	}
+
+	private static String toClass(String path) {
+		StringBuilder sb = new StringBuilder("Jaxrs");
+		String[] split = path.split("[^a-zA-Z0-9_$*]+");
+		for (int i = 0; i < split.length; i++) {
+			String s = split[i];
+			if (s.isEmpty())
+				continue;
+			if ("*".equals(s))
+				sb.append("Wildcard");
+			else
+				sb.append(Character.toUpperCase(s.charAt(0))).append(s.substring(1).toLowerCase());
+		}
+		return sb.append('_').append(Integer.toString(path.hashCode(), 36)).toString();
 	}
 
 	public CompilationUnit build() {
@@ -298,51 +313,78 @@ public class JaxRsServletBuilder {
 	 * @param mapping
 	 */
 	private void buildMethod(String name, List<JaxrsMapping> list) {
-		BlockStmt b = new BlockStmt();
-		cl.addMethod(name, CodeGenUtils.PRIVATE).addParameter(types.getClass(JaxrsReq.class), "req").addParameter(types.getClass(HttpServletResponse.class), "res")
-				.addThrownException(IOException.class).createBody()
-				.addStatement(new TryStmt(b,
-						CodeGenUtils.list(new CatchClause(new com.github.javaparser.ast.body.Parameter(types.getClass(Throwable.class), "e"),
-								new BlockStmt().addStatement(new MethodCallExpr(new TypeExpr(types.getClass(JaxrsContext.class)), "sendError",
-										CodeGenUtils.list(new NameExpr("req"), new NameExpr("e"), new NameExpr("res")))))),
-						null));
 
-		Map<String, Map<String, JaxrsMapping>> consume = new LinkedHashMap<>();
-		for (JaxrsMapping mapping : list) {
-			for (int i = 0; i < mapping.consume.length; i++) {
-				String c = mapping.consume[i];
-				Map<String, JaxrsMapping> map = consume.get(c);
-				if (map == null)
-					consume.put(c, map = new LinkedHashMap<>());
+		BlockStmt b = cl.addMethod(name, CodeGenUtils.PRIVATE).addParameter(types.getClass(JaxrsReq.class), "req")
+				.addParameter(types.getClass(HttpServletResponse.class), "res").addThrownException(Exception.class).createBody();
 
-				for (int j = 0; j < mapping.produce.length; j++) {
-					String p = mapping.produce[j];
-					JaxrsMapping m = map.get(p);
-					if (map.containsKey(p))
-						throw new RuntimeException("Duplicate mapping on " + m.m + " and " + mapping.m);
-					map.put(p, mapping);
-				}
+		Map<List<JaxrsMapping>, Collection<String>> consume = buildConsumeMap(list);
+		Iterator<Entry<List<JaxrsMapping>, Collection<String>>> it = consume.entrySet().iterator();
+		List<JaxrsMapping> def = null;
+		while (it.hasNext()) {
+			Entry<List<JaxrsMapping>, Collection<String>> e = it.next();
+			if (e.getValue().contains("*/*")) {
+				it.remove();
+				def = e.getKey();
+				break;
 			}
 		}
-
-		Map<String, JaxrsMapping> def = consume.remove("*/*");
-		if (consume.isEmpty())
+		if (consume.isEmpty()) {
 			buildProduces(b, def);
-		else {
-			b.addStatement(CodeGenUtils.assign(types.getClass(MediaType.class), "contentType", new MethodCallExpr(new NameExpr("req"), "getContentType")));
-			List<String> k = new ArrayList<>(consume.keySet());
-			k.sort(MIME);
-
-			Statement stmt = def == null ? new ThrowStmt(new ObjectCreationExpr(null, types.getClass(NotSupportedException.class), CodeGenUtils.list()))
-					: buildProduces(new BlockStmt(), def);
-			for (String s : k)
-				stmt = new IfStmt(new MethodCallExpr(new NameExpr("contentType"), "isCompatible", CodeGenUtils.list(mt.type(s))),
-						buildProduces(new BlockStmt(), consume.get(s)), stmt);
-			b.addStatement(stmt);
+			return;
 		}
+		b.addStatement(CodeGenUtils.assign(types.getClass(MediaType.class), "contentType", new MethodCallExpr(new NameExpr("req"), "getContentType")));
+
+		Statement stmt = new ThrowStmt(new ObjectCreationExpr(null, types.getClass(NotSupportedException.class), CodeGenUtils.list()));
+		if (def != null)
+			stmt = buildProduces(new BlockStmt(), def);
+		for (Entry<List<JaxrsMapping>, Collection<String>> e : consume.entrySet()) {
+			List<JaxrsMapping> key = e.getKey();
+			Collection<String> value = e.getValue();
+			stmt = new IfStmt(new MethodCallExpr(mt.predicate(value), "isCompatible", CodeGenUtils.list(new NameExpr("contentType"))), buildProduces(new BlockStmt(), key),
+					stmt);
+		}
+		b.addStatement(stmt);
+
+//			List<String> k = new ArrayList<>(consume.keySet());
+//			k.sort(MIME);
+//
+//			Statement stmt = def == null ? new ThrowStmt(new ObjectCreationExpr(null, types.getClass(NotSupportedException.class), CodeGenUtils.list()))
+//					: buildProduces(new BlockStmt(), def);
+//			for (String s : k)
+//				stmt = new IfStmt(new MethodCallExpr(new NameExpr("contentType"), "isCompatible", CodeGenUtils.list(mt.type(s))),
+//						buildProduces(new BlockStmt(), consume.get(s)), stmt);
+//			b.addStatement(stmt);
+//		}
 	}
 
-	private Statement buildProduces(BlockStmt b, Map<String, JaxrsMapping> produce) {
+	private static Map<List<JaxrsMapping>, Collection<String>> buildConsumeMap(List<JaxrsMapping> list) {
+		Map<String, List<JaxrsMapping>> map = new LinkedHashMap<>();
+
+		for (JaxrsMapping m : list) {
+			for (String c : m.consume)
+				map.computeIfAbsent(c, k -> new ArrayList<>()).add(m);
+		}
+
+		Map<List<JaxrsMapping>, Collection<String>> group = new HashMap<>();
+		for (Entry<String, List<JaxrsMapping>> e : map.entrySet()) {
+			String c = e.getKey();
+			List<JaxrsMapping> l = e.getValue();
+			l.sort((a, b) -> a.hashCode() - b.hashCode()); // only need to be stable for this run
+			group.computeIfAbsent(l, k -> new ArrayList<>()).add(c);
+		}
+		return group;
+	}
+
+	private Statement buildProduces(BlockStmt b, Collection<JaxrsMapping> mappings) {
+
+		Map<String, JaxrsMapping> produce = new HashMap<>();
+		for (JaxrsMapping m : mappings) {
+			for (String p : m.produce) {
+				JaxrsMapping other = produce.put(p, m);
+				if (other != null)
+					throw new RuntimeException("Duplicate mapping on " + m.m + " and " + other.m);
+			}
+		}
 
 		MethodCallExpr accept = new MethodCallExpr(new NameExpr("req"), "getAccepted",
 				CodeGenUtils.list(mt.predicate(produce.keySet()), mt.type(produce.keySet().iterator().next())));
@@ -355,15 +397,21 @@ public class JaxRsServletBuilder {
 		if (produce.isEmpty())
 			return b.addStatement(accept).addStatement(stmt);
 
-		b.addStatement(CodeGenUtils.assign(types.getClass(MediaType.class), "accept", accept))
-				.addStatement(new IfStmt(new BinaryExpr(new NameExpr("accept"), new NullLiteralExpr(), BinaryExpr.Operator.EQUALS),
-						new ThrowStmt(new ObjectCreationExpr(null, types.getClass(NotAcceptableException.class), CodeGenUtils.list())), null));
+		Map<JaxrsMapping, List<String>> map = new HashMap<>();
+		for (Entry<String, JaxrsMapping> e : produce.entrySet())
+			map.computeIfAbsent(e.getValue(), k -> new ArrayList<>()).add(e.getKey());
 
-		List<String> k = new ArrayList<>(produce.keySet());
-		k.sort(MIME);
-		for (String s : k) {
-			stmt = new IfStmt(new MethodCallExpr(new NameExpr("accept"), "isCompatible", CodeGenUtils.list(mt.type(s))),
-					new ExpressionStmt(new MethodCallExpr(produce.get(s).v + "$call", new NameExpr("req"), new NameExpr("res"))), stmt);
+		if (map.size() == 1) {
+			JaxrsMapping m = map.keySet().iterator().next();
+			return b.addStatement(new IfStmt(new BinaryExpr(accept, new NullLiteralExpr(), BinaryExpr.Operator.NOT_EQUALS),
+					new ExpressionStmt(new MethodCallExpr(m.v + "$call", new NameExpr("req"), new NameExpr("res"))), stmt));
+		}
+
+		b.addStatement(CodeGenUtils.assign(types.getClass(MediaType.class), "accept", accept));
+
+		for (Entry<JaxrsMapping, List<String>> e : map.entrySet()) {
+			stmt = new IfStmt(new MethodCallExpr(mt.predicate(produce.keySet()), "isCompatible", CodeGenUtils.list(new NameExpr("accept"))),
+					new ExpressionStmt(new MethodCallExpr(e.getKey().v + "$call", new NameExpr("req"), new NameExpr("res"))), stmt);
 		}
 		b.addStatement(stmt);
 		return b;
@@ -563,10 +611,19 @@ public class JaxRsServletBuilder {
 			for (String method : methods.keySet())
 				i = new IfStmt(new MethodCallExpr(CodeGenUtils.text(method), "equals", CodeGenUtils.list(m)),
 						new ExpressionStmt(new MethodCallExpr(name + "$" + method.toLowerCase(), p)), i);
+			BlockStmt b = new BlockStmt().addStatement(CodeGenUtils.assign(types.getClass(String.class), "m", new MethodCallExpr(new NameExpr("r"), "getMethod")))
+					.addStatement(i);
 
-			cl.addMethod(name, CodeGenUtils.PRIVATE).addParameter(types.getClass(JaxrsReq.class), "r").addParameter(types.getClass(HttpServletResponse.class), "res")
-					.addThrownException(IOException.class).setBody(new BlockStmt()
-							.addStatement(CodeGenUtils.assign(types.getClass(String.class), "m", new MethodCallExpr(new NameExpr("r"), "getMethod"))).addStatement(i));
+			cl.addMethod(name,
+					CodeGenUtils.PRIVATE).addParameter(types.getClass(JaxrsReq.class),
+							"r")
+					.addParameter(types.getClass(HttpServletResponse.class), "res").createBody()
+					.addStatement(new TryStmt(b,
+							CodeGenUtils.list(new CatchClause(new com.github.javaparser.ast.body.Parameter(types.getClass(Throwable.class), "e"),
+									new BlockStmt().addStatement(new MethodCallExpr(new TypeExpr(types.getClass(JaxrsContext.class)), "sendError",
+											CodeGenUtils.list(new NameExpr("r"), new NameExpr("e"), new NameExpr("res")))))),
+							null));
+			;
 		}
 	}
 
