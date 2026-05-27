@@ -22,6 +22,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import org.apache.maven.plugin.MojoFailureException;
+
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
@@ -159,7 +161,7 @@ public class JaxRsServletBuilder {
 		return sb.append('_').append(Integer.toString(path.hashCode(), 36)).toString();
 	}
 
-	public CompilationUnit build() {
+	public CompilationUnit build() throws MojoFailureException {
 		buildInializer();
 		builder.build();
 
@@ -167,6 +169,10 @@ public class JaxRsServletBuilder {
 			buildCall(mapping, services);
 
 		return cu;
+	}
+
+	private static Expression sendError(String res, int code) {
+		return new MethodCallExpr(new NameExpr(res), "sendError", CodeGenUtils.list(new IntegerLiteralExpr(Integer.toString(code))));
 	}
 
 	/**
@@ -311,8 +317,9 @@ public class JaxRsServletBuilder {
 	/**
 	 * @param method
 	 * @param mapping
+	 * @throws MojoFailureException 
 	 */
-	private void buildMethod(String name, List<JaxrsMapping> list) {
+	private void buildMethod(String name, List<JaxrsMapping> list) throws MojoFailureException {
 
 		BlockStmt b = cl.addMethod(name, CodeGenUtils.PRIVATE).addParameter(types.getClass(JaxrsReq.class), "req")
 				.addParameter(types.getClass(HttpServletResponse.class), "res").addThrownException(Exception.class).createBody();
@@ -344,17 +351,6 @@ public class JaxRsServletBuilder {
 					stmt);
 		}
 		b.addStatement(stmt);
-
-//			List<String> k = new ArrayList<>(consume.keySet());
-//			k.sort(MIME);
-//
-//			Statement stmt = def == null ? new ThrowStmt(new ObjectCreationExpr(null, types.getClass(NotSupportedException.class), CodeGenUtils.list()))
-//					: buildProduces(new BlockStmt(), def);
-//			for (String s : k)
-//				stmt = new IfStmt(new MethodCallExpr(new NameExpr("contentType"), "isCompatible", CodeGenUtils.list(mt.type(s))),
-//						buildProduces(new BlockStmt(), consume.get(s)), stmt);
-//			b.addStatement(stmt);
-//		}
 	}
 
 	private static Map<List<JaxrsMapping>, Collection<String>> buildConsumeMap(List<JaxrsMapping> list) {
@@ -375,14 +371,14 @@ public class JaxRsServletBuilder {
 		return group;
 	}
 
-	private Statement buildProduces(BlockStmt b, Collection<JaxrsMapping> mappings) {
+	private Statement buildProduces(BlockStmt b, Collection<JaxrsMapping> mappings) throws MojoFailureException {
 
 		Map<String, JaxrsMapping> produce = new HashMap<>();
 		for (JaxrsMapping m : mappings) {
 			for (String p : m.produce) {
 				JaxrsMapping other = produce.put(p, m);
 				if (other != null)
-					throw new RuntimeException("Duplicate mapping on " + m.m + " and " + other.m);
+					throw new MojoFailureException("Duplicate mapping on " + m.m + " and " + other.m);
 			}
 		}
 
@@ -432,7 +428,7 @@ public class JaxRsServletBuilder {
 
 		MethodCallExpr call = new MethodCallExpr(services.get(mapping.clazz.name()), m.name(), arg);
 		if (m.type().isVoid()) {
-			b.addStatement(call).addStatement(new MethodCallExpr(new NameExpr("res"), "sendError", CodeGenUtils.list(new IntegerLiteralExpr("204"))));
+			b.addStatement(call).addStatement(sendError("res", 204));
 		} else {
 			Expression result = CodeGenUtils.assign(types.get(m.type()), "result", call);
 			Expression write = new MethodCallExpr(new NameExpr(mapping.v + "$r"), "write", CodeGenUtils.list(new NameExpr("r"), new NameExpr("result"), new NameExpr("res")));
@@ -460,18 +456,18 @@ public class JaxRsServletBuilder {
 		final NameExpr m = new NameExpr("m");
 		final Expression[] p = { new NameExpr("r"), new NameExpr("res") };
 
-		void build();
+		void build() throws MojoFailureException;
 	}
 
 	private class SimpleService implements ServiceBuilder {
 
 		@Override
-		public void build() {
+		public void build() throws MojoFailureException {
 			Map<String, List<JaxrsMapping>> methods = new HashMap<>();
 			for (JaxrsMapping m : mappings)
 				methods.computeIfAbsent(m.httpMethod, k -> new ArrayList<>()).add(m);
 
-			Statement i = new ExpressionStmt(new MethodCallExpr(new NameExpr("res"), "sendError", CodeGenUtils.list(new IntegerLiteralExpr("405"))));
+			Statement i = new ExpressionStmt(sendError("res", 405));
 			if (!methods.containsKey("OPTIONS"))
 				i = new IfStmt(new MethodCallExpr(CodeGenUtils.text("OPTIONS"), "equals", CodeGenUtils.list(m)), new ExpressionStmt(new MethodCallExpr("doOptions", p)), i);
 			if (!methods.containsKey("HEAD") && methods.containsKey("GET"))
@@ -548,7 +544,7 @@ public class JaxRsServletBuilder {
 		}
 
 		@Override
-		public void build() {
+		public void build() throws MojoFailureException {
 
 			List<Path> list = new ArrayList<>(pattern.keySet());
 			list.sort((p1, p2) -> p2.length - p1.length);
@@ -583,7 +579,7 @@ public class JaxRsServletBuilder {
 
 			cl.addMethod("service", CodeGenUtils.PUBLIC).addMarkerAnnotation(Override.class).addParameter(types.getClass(HttpServletRequest.class), "req")
 					.addParameter(types.getClass(HttpServletResponse.class), "res").addThrownException(IOException.class).addThrownException(ServletException.class)
-					.setBody(b.addStatement(new MethodCallExpr(new NameExpr("res"), "sendError", CodeGenUtils.list(new IntegerLiteralExpr("404")))));
+					.setBody(b.addStatement(sendError("res", 404)));
 
 			i = 0;
 			for (Path l : list) {
@@ -602,7 +598,7 @@ public class JaxRsServletBuilder {
 		}
 
 		private void buildService(String name, Map<String, List<JaxrsMapping>> methods) {
-			Statement i = new ExpressionStmt(new MethodCallExpr(new NameExpr("res"), "sendError", CodeGenUtils.list(new IntegerLiteralExpr("405"))));
+			Statement i = new ExpressionStmt(sendError("res", 405));
 			if (!methods.containsKey("OPTIONS"))
 				i = new IfStmt(new MethodCallExpr(CodeGenUtils.text("OPTIONS"), "equals", CodeGenUtils.list(m)), new ExpressionStmt(new MethodCallExpr(name + "$options", p)),
 						i);
@@ -623,7 +619,6 @@ public class JaxRsServletBuilder {
 									new BlockStmt().addStatement(new MethodCallExpr(new TypeExpr(types.getClass(JaxrsContext.class)), "sendError",
 											CodeGenUtils.list(new NameExpr("r"), new NameExpr("e"), new NameExpr("res")))))),
 							null));
-			;
 		}
 	}
 
