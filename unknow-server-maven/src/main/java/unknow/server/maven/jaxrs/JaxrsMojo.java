@@ -81,9 +81,6 @@ public class JaxrsMojo extends AbstractGeneratorMojo {
 	private TypeFactory types;
 	private ClassOrInterfaceDeclaration cl;
 
-	@Parameter(name = "graalvm", defaultValue = "true")
-	protected boolean graalvm;
-
 	@Parameter(name = "openapi")
 	private OpenApiConfig openapi = new OpenApiConfig();
 
@@ -268,7 +265,7 @@ public class JaxrsMojo extends AbstractGeneratorMojo {
 	}
 
 	private void generateGraalvmResources() throws MojoFailureException {
-		if (!graalvm)
+		if (!codegen.graalvm)
 			return;
 
 		try {

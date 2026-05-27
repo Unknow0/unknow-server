@@ -91,10 +91,8 @@ public class MediaTypesBuilder {
 			List<String> l = new ArrayList<>(mediaTypes);
 			l.sort(null);
 			StringJoiner s = new StringJoiner(",");
-			for (String str : l) {
-				if (!"*/*".equals(str))
-					s.add(str);
-			}
+			for (String str : l)
+				s.add(str);
 			k = s.toString();
 		}
 
@@ -105,13 +103,16 @@ public class MediaTypesBuilder {
 		String name = "p$" + predicates.size();
 
 		Expression e = null;
-		if (!mediaTypes.contains("*/*")) {
+		if (mediaTypes.contains("*/*"))
+			e = new FieldAccessExpr(new TypeExpr(types.get(MTPredicate.class)), "ANY");
+		else if (mediaTypes.size() == 1)
+			e = new ObjectCreationExpr(null, types.getClass(MTPredicate.Single.class), CodeGenUtils.list(type(mediaTypes.iterator().next())));
+		else {
 			NodeList<Expression> l = new NodeList<>();
 			for (String s : mediaTypes)
 				l.add(type(s));
 			e = new ObjectCreationExpr(null, types.getClass(MTPredicate.OneOf.class), l);
-		} else
-			e = new FieldAccessExpr(new TypeExpr(types.get(MTPredicate.class)), "ANY");
+		}
 
 		cl.addFieldWithInitializer(types.getClass(MTPredicate.class), name, e, CodeGenUtils.PUBLIC_STATIC);
 		predicates.put(k, n = new FieldAccessExpr(new TypeExpr(types.getClass(cl)), name));

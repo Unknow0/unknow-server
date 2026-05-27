@@ -74,9 +74,6 @@ public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderCont
 
 	private final Descriptor descriptor = new Descriptor();
 
-	@Parameter(name = "graalvm", defaultValue = "true")
-	protected boolean graalvm;
-
 	@Parameter(defaultValue = "Server")
 	private String className;
 
@@ -110,7 +107,7 @@ public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderCont
 
 		processSrc(descriptor);
 		processResources(this::process);
-		if (graalvm && !descriptor.resources.isEmpty())
+		if (codegen.graalvm && !descriptor.resources.isEmpty())
 			generateGraalvmResources();
 
 		logger.info("descriptor:\n{}", descriptor);

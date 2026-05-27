@@ -49,6 +49,12 @@
 								<artifacts>
 									<artifact>${project.groupId}:unknow-server-test-pojo:${project.version}</artifact>
 								</artifacts>
+								<formatting>
+									<indentation>
+										<type>TABS</type>
+										<value>1</value>
+									</indentation>
+								</formatting>
 							</codegen>
 							<basePath>/rest</basePath>
 						</configuration>
@@ -67,6 +73,12 @@
 								<artifacts>
 									<artifact>${project.groupId}:unknow-server-test-pojo:${project.version}</artifact>
 								</artifacts>
+								<formatting>
+									<indentation>
+										<type>TABS</type>
+										<value>1</value>
+									</indentation>
+								</formatting>
 							</codegen>
 							<addAccessLog>true</addAccessLog>
 

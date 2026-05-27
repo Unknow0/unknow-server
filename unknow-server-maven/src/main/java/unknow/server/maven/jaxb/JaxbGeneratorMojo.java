@@ -22,7 +22,6 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
-import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 
 import com.github.javaparser.ast.CompilationUnit;
@@ -74,9 +73,6 @@ public class JaxbGeneratorMojo extends AbstractGeneratorMojo {
 
 	private final Map<XmlType, String> handlers = new HashMap<>();
 	private final XmlLoader xmlLoader = new XmlLoader();
-
-	@Parameter(name = "graalvm", defaultValue = "true")
-	protected boolean graalvm;
 
 	public JaxbGeneratorMojo() {
 		handlers.put(XmlLoader.BOOLEAN, BooleanHandler.class.getName());
@@ -179,7 +175,7 @@ public class JaxbGeneratorMojo extends AbstractGeneratorMojo {
 	}
 
 	private void generateGraalVmResources() throws MojoFailureException {
-		if (!graalvm)
+		if (!codegen.graalvm)
 			return;
 
 		try {
