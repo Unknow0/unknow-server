@@ -4,8 +4,6 @@ on:
   push:
     tags:
       - 'release/*'
-    branches:
-    - clean-deploy
 
 jobs:
   build:

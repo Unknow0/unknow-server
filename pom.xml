@@ -485,7 +485,7 @@
 						<configuration>
 							<deploymentName>${project.groupId}:${project.version}</deploymentName>
 							<skipPublishing>${maven.deploy.skip}</skipPublishing>
-							<autoPublish>false</autoPublish>
+							<autoPublish>true</autoPublish>
 							<waitUntil>validated</waitUntil>
 						</configuration>
 					</plugin>
