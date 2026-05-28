@@ -158,7 +158,7 @@ public class JaxRsServletBuilder {
 			else
 				sb.append(Character.toUpperCase(s.charAt(0))).append(s.substring(1).toLowerCase());
 		}
-		return sb.append('_').append(Integer.toString(path.hashCode(), 36)).toString();
+		return sb.append('_').append(Integer.toHexString(path.hashCode())).toString();
 	}
 
 	public CompilationUnit build() throws MojoFailureException {
