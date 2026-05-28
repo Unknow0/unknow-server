@@ -35,6 +35,7 @@ import com.github.javaparser.ast.expr.BinaryExpr;
 import com.github.javaparser.ast.expr.BooleanLiteralExpr;
 import com.github.javaparser.ast.expr.ClassExpr;
 import com.github.javaparser.ast.expr.Expression;
+import com.github.javaparser.ast.expr.FieldAccessExpr;
 import com.github.javaparser.ast.expr.IntegerLiteralExpr;
 import com.github.javaparser.ast.expr.LongLiteralExpr;
 import com.github.javaparser.ast.expr.MethodCallExpr;
@@ -321,6 +322,10 @@ public class JaxRsServletBuilder {
 	 */
 	private void buildMethod(String name, List<JaxrsMapping> list) throws MojoFailureException {
 
+		// do<Method>/$call may surface arbitrary checked exceptions from the user resource method.
+		// Both dispatch paths wrap the chain in try/catch(Throwable) -> JaxrsContext.sendError
+		// (PatternService.buildService and SimpleService.build), so 'throws Exception' is safe and
+		// service(...) never has to widen its own throws clause.
 		BlockStmt b = cl.addMethod(name, CodeGenUtils.PRIVATE).addParameter(types.getClass(JaxrsReq.class), "req")
 				.addParameter(types.getClass(HttpServletResponse.class), "res").addThrownException(Exception.class).createBody();
 
@@ -382,8 +387,13 @@ public class JaxRsServletBuilder {
 			}
 		}
 
-		MethodCallExpr accept = new MethodCallExpr(new NameExpr("req"), "getAccepted",
-				CodeGenUtils.list(mt.predicate(produce.keySet()), mt.type(produce.keySet().iterator().next())));
+		// mt.type(..) returns either MediaType.XXX (well-known type -> needs the MediaType import on
+		// this CU) or MediaTypes.XXX (custom static field -> no MediaType import needed). Register the
+		// import only when the inlined expression actually references MediaType.
+		Expression type = mt.type(produce.keySet().iterator().next());
+		if (type instanceof FieldAccessExpr && "MediaType".equals(((FieldAccessExpr) type).getScope().toString()))
+			types.getClass(MediaType.class);
+		MethodCallExpr accept = new MethodCallExpr(new NameExpr("req"), "getAccepted", CodeGenUtils.list(mt.predicate(produce.keySet()), type));
 
 		JaxrsMapping def = produce.remove("*/*");
 		Statement stmt = new ThrowStmt(new ObjectCreationExpr(null, types.getClass(NotAcceptableException.class), CodeGenUtils.list()));
@@ -476,10 +486,19 @@ public class JaxRsServletBuilder {
 				i = new IfStmt(new MethodCallExpr(CodeGenUtils.text(method), "equals", CodeGenUtils.list(m)),
 						new ExpressionStmt(new MethodCallExpr("do" + method.charAt(0) + method.substring(1).toLowerCase(), p)), i);
 
+			// dispatch may throw anything bubbling up from the user resource method; route it through
+			// JaxrsContext.sendError just like PatternService does, so service(...) only ever throws
+			// IOException/ServletException and do<Method>/$call stay free to 'throws Exception'.
+			BlockStmt dispatch = new BlockStmt().addStatement(CodeGenUtils.assign(types.getClass(String.class), "m", new MethodCallExpr(new NameExpr("req"), "getMethod")))
+					.addStatement(i);
 			cl.addMethod("service", CodeGenUtils.PUBLIC).addMarkerAnnotation(Override.class).addParameter(types.getClass(HttpServletRequest.class), "req")
 					.addParameter(types.getClass(HttpServletResponse.class), "res").addThrownException(IOException.class).addThrownException(ServletException.class).getBody()
 					.get().addStatement(CodeGenUtils.create(types.getClass(JaxrsReq.class), "r", CodeGenUtils.list(new NameExpr("req"), new NullLiteralExpr())))
-					.addStatement(CodeGenUtils.assign(types.getClass(String.class), "m", new MethodCallExpr(new NameExpr("req"), "getMethod"))).addStatement(i);
+					.addStatement(new TryStmt(dispatch,
+							CodeGenUtils.list(new CatchClause(new com.github.javaparser.ast.body.Parameter(types.getClass(Throwable.class), "e"),
+									new BlockStmt().addStatement(new MethodCallExpr(new TypeExpr(types.getClass(JaxrsContext.class)), "sendError",
+											CodeGenUtils.list(new NameExpr("r"), new NameExpr("e"), new NameExpr("res")))))),
+							null));
 
 			if (!methods.containsKey("OPTIONS"))
 				buildOptions("doOptions", methods.keySet());
