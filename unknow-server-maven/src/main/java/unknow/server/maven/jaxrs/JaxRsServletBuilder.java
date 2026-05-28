@@ -347,8 +347,8 @@ public class JaxRsServletBuilder {
 		for (Entry<List<JaxrsMapping>, Collection<String>> e : consume.entrySet()) {
 			List<JaxrsMapping> key = e.getKey();
 			Collection<String> value = e.getValue();
-			stmt = new IfStmt(new MethodCallExpr(mt.predicate(value), "isCompatible", CodeGenUtils.list(new NameExpr("contentType"))), buildProduces(new BlockStmt(), key),
-					stmt);
+			stmt = new IfStmt(new MethodCallExpr(mt.predicate(types, value), "isCompatible", CodeGenUtils.list(new NameExpr("contentType"))),
+					buildProduces(new BlockStmt(), key), stmt);
 		}
 		b.addStatement(stmt);
 	}
@@ -383,7 +383,7 @@ public class JaxRsServletBuilder {
 		}
 
 		MethodCallExpr accept = new MethodCallExpr(new NameExpr("req"), "getAccepted",
-				CodeGenUtils.list(mt.predicate(produce.keySet()), mt.type(produce.keySet().iterator().next())));
+				CodeGenUtils.list(mt.predicate(types, produce.keySet()), mt.type(types, produce.keySet().iterator().next())));
 
 		JaxrsMapping def = produce.remove("*/*");
 		Statement stmt = new ThrowStmt(new ObjectCreationExpr(null, types.getClass(NotAcceptableException.class), CodeGenUtils.list()));
@@ -406,7 +406,7 @@ public class JaxRsServletBuilder {
 		b.addStatement(CodeGenUtils.assign(types.getClass(MediaType.class), "accept", accept));
 
 		for (Entry<JaxrsMapping, List<String>> e : map.entrySet()) {
-			stmt = new IfStmt(new MethodCallExpr(mt.predicate(produce.keySet()), "isCompatible", CodeGenUtils.list(new NameExpr("accept"))),
+			stmt = new IfStmt(new MethodCallExpr(mt.predicate(types, produce.keySet()), "isCompatible", CodeGenUtils.list(new NameExpr("accept"))),
 					new ExpressionStmt(new MethodCallExpr(e.getKey().v + "$call", new NameExpr("req"), new NameExpr("res"))), stmt);
 		}
 		b.addStatement(stmt);
