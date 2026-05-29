@@ -28,13 +28,13 @@ import jakarta.ws.rs.core.Response;
 /**
  * @author unknow
  */
-@Path("/{q}")
+@Path("/")
 @Produces("application/json")
 public class Rest {
 	private static final Logger logger = LoggerFactory.getLogger(Rest.class);
 
 	@GET
-	@Path("t")
+	@Path("{q}/t")
 	@SuppressWarnings("unused")
 	public void t(@PathParam("q") String q) throws InterruptedException {
 		Thread.sleep(3000);
@@ -44,26 +44,25 @@ public class Rest {
 	@GET
 	@Path("q/{v}")
 	@SuppressWarnings("unused")
-	public void q(@PathParam("q") String q, @PathParam("v") String v) { // ok
+	public void q(@PathParam("v") String v) { // ok
 	}
 
 	@POST
-	public void oneWay(@PathParam("q") String q, @BeanParam Bean bean) {
-		logger.info("oneWay>> q: '{}' bean: {}", q, bean);
+	public void oneWay(@BeanParam Bean bean) throws Exception {
+		logger.info("oneWay>> bean: {}", bean);
 	}
 
 	@PUT
 	@Consumes({ "application/json", "application/x-ndjson" })
-	public Response response(@PathParam("q") String q, @FormParam("k") String k) {
-		logger.info("response>> q: '{}' bean: {}", q, k);
+	public Response response(@FormParam("k") String k) {
+		logger.info("response>> bean: {}", k);
 		return Response.status(200).entity("echo").build();
 	}
 
 	@POST
 	@Consumes({ "application/x-protobuf", "application/json", "application/jsonl", "application/x-ndjson" })
 	@Produces({ "application/x-protobuf", "application/json", "application/jsonl", "application/x-ndjson" })
-	@SuppressWarnings("unused")
-	public Truc call(@PathParam("q") String q, Truc truc) {
+	public Truc call(Truc truc) {
 		return truc;
 	}
 
@@ -71,8 +70,7 @@ public class Rest {
 	@Path("list")
 	@Consumes({ "application/x-protobuf", "application/json", "application/jsonl", "application/x-ndjson" })
 	@Produces({ "application/x-protobuf", "application/json", "application/jsonl", "application/x-ndjson" })
-	@SuppressWarnings("unused")
-	public Collection<Truc> list(@PathParam("q") String q, Collection<Truc> truc) {
+	public Collection<Truc> list(Collection<Truc> truc) {
 		return truc;
 	}
 

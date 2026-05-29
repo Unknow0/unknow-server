@@ -83,6 +83,7 @@ import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBeanParam;
 import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBodyParam;
 
 /**
+ * Build a jaxrs servlet
  * @author unknow
  */
 public class JaxRsServletBuilder {
@@ -146,6 +147,11 @@ public class JaxRsServletBuilder {
 		}
 	}
 
+	/**
+	 * convert a path mapping to a java class name
+	 * @param path the path
+	 * @return the class name
+	 */
 	private static String toClass(String path) {
 		StringBuilder sb = new StringBuilder("Jaxrs");
 		String[] split = path.split("[^a-zA-Z0-9_$*]+");
@@ -278,9 +284,11 @@ public class JaxRsServletBuilder {
 	}
 
 	/**
-	 * @param p
-	 * @param string
-	 * @param b
+	 * create all required converter and add them to servlet fields
+	 * @param p the param
+	 * @param n converter field name
+	 * @param i parameter index
+	 * @param b static block
 	 */
 	private void processConverter(JaxrsParam<?> p, String n, int i, BlockStmt b) {
 		if (p instanceof JaxrsBeanParam)
@@ -315,15 +323,21 @@ public class JaxRsServletBuilder {
 	}
 
 	/**
-	 * @param method
-	 * @param mapping
-	 * @throws MojoFailureException 
+	 * build the call for one method on one path
+	 * @param name java method name
+	 * @param list list of mapping on this path and method
+	 * @throws MojoFailureException  in case of error
 	 */
 	private void buildMethod(String name, List<JaxrsMapping> list) throws MojoFailureException {
 
-		BlockStmt b = cl.addMethod(name, CodeGenUtils.PRIVATE).addParameter(types.getClass(JaxrsReq.class), "req")
-				.addParameter(types.getClass(HttpServletResponse.class), "res").addThrownException(Exception.class).createBody();
-
+		BlockStmt b = new BlockStmt();
+		cl.addMethod(name, CodeGenUtils.PRIVATE).addParameter(types.getClass(JaxrsReq.class), "req").addParameter(types.getClass(HttpServletResponse.class), "res")
+				.createBody()
+				.addStatement(new TryStmt(b,
+						CodeGenUtils.list(new CatchClause(new com.github.javaparser.ast.body.Parameter(types.getClass(Throwable.class), "e"),
+								new BlockStmt().addStatement(new MethodCallExpr(new TypeExpr(types.getClass(JaxrsContext.class)), "sendError",
+										CodeGenUtils.list(new NameExpr("req"), new NameExpr("e"), new NameExpr("res")))))),
+						null));
 		Map<List<JaxrsMapping>, Collection<String>> consume = buildConsumeMap(list);
 		Iterator<Entry<List<JaxrsMapping>, Collection<String>>> it = consume.entrySet().iterator();
 		List<JaxrsMapping> def = null;
@@ -371,8 +385,14 @@ public class JaxRsServletBuilder {
 		return group;
 	}
 
-	private Statement buildProduces(BlockStmt b, Collection<JaxrsMapping> mappings) throws MojoFailureException {
-
+	/**
+	 * build the block to route with the accept header to the right service method
+	 * @param b where to add  statement 
+	 * @param mappings the mapping to manage
+	 * @return b
+	 * @throws MojoFailureException in case of error
+	 */
+	private BlockStmt buildProduces(BlockStmt b, Collection<JaxrsMapping> mappings) throws MojoFailureException {
 		Map<String, JaxrsMapping> produce = new HashMap<>();
 		for (JaxrsMapping m : mappings) {
 			for (String p : m.produce) {
@@ -413,6 +433,11 @@ public class JaxRsServletBuilder {
 		return b;
 	}
 
+	/**
+	 * build the method that will parse service parameter, call the service method and write the response
+	 * @param mapping the mapping
+	 * @param services service class -> Expression
+	 */
 	private void buildCall(JaxrsMapping mapping, Map<String, NameExpr> services) {
 		BlockStmt b = cl.addMethod(mapping.v + "$call", CodeGenUtils.PSF).addParameter(types.getClass(JaxrsReq.class), "r")
 				.addParameter(types.getClass(HttpServletResponse.class), "res").addThrownException(types.getClass(Exception.class)).createBody();
@@ -440,8 +465,9 @@ public class JaxRsServletBuilder {
 	}
 
 	/**
-	 * @param key
-	 * @param value
+	 * get the Exception to conver a param to java type
+	 * @param p the param
+	 * @return the excpetion to convert the param
 	 */
 
 	private Expression getParam(JaxrsParam<?> p) {
@@ -459,6 +485,10 @@ public class JaxRsServletBuilder {
 		void build() throws MojoFailureException;
 	}
 
+	/**
+	 * service without pattern
+	 * will implements do<Method>() directly 
+	 */
 	private class SimpleService implements ServiceBuilder {
 
 		@Override
@@ -607,18 +637,10 @@ public class JaxRsServletBuilder {
 			for (String method : methods.keySet())
 				i = new IfStmt(new MethodCallExpr(CodeGenUtils.text(method), "equals", CodeGenUtils.list(m)),
 						new ExpressionStmt(new MethodCallExpr(name + "$" + method.toLowerCase(), p)), i);
-			BlockStmt b = new BlockStmt().addStatement(CodeGenUtils.assign(types.getClass(String.class), "m", new MethodCallExpr(new NameExpr("r"), "getMethod")))
-					.addStatement(i);
 
-			cl.addMethod(name,
-					CodeGenUtils.PRIVATE).addParameter(types.getClass(JaxrsReq.class),
-							"r")
-					.addParameter(types.getClass(HttpServletResponse.class), "res").createBody()
-					.addStatement(new TryStmt(b,
-							CodeGenUtils.list(new CatchClause(new com.github.javaparser.ast.body.Parameter(types.getClass(Throwable.class), "e"),
-									new BlockStmt().addStatement(new MethodCallExpr(new TypeExpr(types.getClass(JaxrsContext.class)), "sendError",
-											CodeGenUtils.list(new NameExpr("r"), new NameExpr("e"), new NameExpr("res")))))),
-							null));
+			cl.addMethod(name, CodeGenUtils.PRIVATE).addParameter(types.getClass(JaxrsReq.class), "r").addParameter(types.getClass(HttpServletResponse.class), "res")
+					.addThrownException(types.getClass(IOException.class)).createBody()
+					.addStatement(CodeGenUtils.assign(types.getClass(String.class), "m", new MethodCallExpr(new NameExpr("r"), "getMethod"))).addStatement(i);
 		}
 	}
 
