@@ -60,6 +60,7 @@ import jakarta.ws.rs.Priorities;
 import jakarta.ws.rs.ext.ParamConverter;
 import jakarta.ws.rs.ext.ParamConverterProvider;
 import jakarta.ws.rs.ext.RuntimeDelegate;
+import unknow.maven.codegen.AbstractCodeGenMojo;
 import unknow.maven.codegen.CodeGenUtils;
 import unknow.maven.codegen.TypeFactory;
 import unknow.model.api.ClassModel;
@@ -67,13 +68,12 @@ import unknow.model.api.TypeModel;
 import unknow.server.http.jaxrs.JaxrsContext;
 import unknow.server.http.jaxrs.JaxrsRuntime;
 import unknow.server.http.jaxrs.protostuff.ProtostuffSchema;
-import unknow.server.maven.AbstractGeneratorMojo;
 
 /**
  * @author unknow
  */
 @Mojo(defaultPhase = LifecyclePhase.GENERATE_SOURCES, name = "jaxrs-generator", requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME, requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
-public class JaxrsMojo extends AbstractGeneratorMojo {
+public class JaxrsMojo extends AbstractCodeGenMojo {
 	private static final String VALUE = "value";
 
 	private JaxrsModel model;
@@ -94,8 +94,7 @@ public class JaxrsMojo extends AbstractGeneratorMojo {
 	private MediaTypesBuilder mt;
 
 	@Override
-	public void execute() throws MojoExecutionException, MojoFailureException {
-		init(session, mojo, repository, codegen);
+	protected void doexecute() throws MojoExecutionException, MojoFailureException {
 		if (basePath.endsWith("/"))
 			basePath = basePath.substring(0, basePath.length() - 1);
 		model = new JaxrsModel(loader, classLoader, basePath);
@@ -124,7 +123,7 @@ public class JaxrsMojo extends AbstractGeneratorMojo {
 		for (Entry<String, List<JaxrsMapping>> e : map.entrySet())
 			writer.write(new JaxRsServletBuilder(newCu(), existingClass, e.getKey(), e.getValue(), beans, mt).build());
 
-		new OpenApiBuilder().build(openapi.getSpec(project), model, codegen.resources + basePath + "/openapi.json");
+		new OpenApiBuilder().build(openapi.getSpec(project), model, codegen.getResources() + basePath + "/openapi.json");
 		beans.save(writer);
 		mt.save(writer);
 
@@ -136,7 +135,7 @@ public class JaxrsMojo extends AbstractGeneratorMojo {
 	 */
 
 	private void generateInitalizer() throws IOException, MojoExecutionException {
-		Path path = Paths.get(codegen.resources, "META-INF", "services", ServletContainerInitializer.class.getName());
+		Path path = Paths.get(codegen.getResources(), "META-INF", "services", ServletContainerInitializer.class.getName());
 		Files.createDirectories(path.getParent());
 		try (Writer w = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
 			w.append(fullName("JaxrsInit")).write('\n');
@@ -265,11 +264,11 @@ public class JaxrsMojo extends AbstractGeneratorMojo {
 	}
 
 	private void generateGraalvmResources() throws MojoFailureException {
-		if (!codegen.graalvm)
+		if (!codegen.isGraalvm())
 			return;
 
 		try {
-			Path path = Paths.get(codegen.resources + "/META-INF/native-image/" + uniquePath + "/resource-config.json");
+			Path path = Paths.get(codegen.getResources() + "/META-INF/native-image/" + uniquePath + "/resource-config.json");
 			Files.createDirectories(path.getParent());
 			try (BufferedWriter w = Files.newBufferedWriter(path)) {
 				w.write("{\"resources\":{\"includes\":[");

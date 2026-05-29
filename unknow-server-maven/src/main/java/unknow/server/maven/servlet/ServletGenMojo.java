@@ -31,9 +31,9 @@ import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.ServletContainerInitializer;
+import unknow.maven.codegen.AbstractCodeGenMojo;
 import unknow.maven.codegen.TypeFactory;
 import unknow.model.api.ModelLoader;
-import unknow.server.maven.AbstractGeneratorMojo;
 import unknow.server.maven.servlet.Builder.BuilderContext;
 import unknow.server.maven.servlet.builder.CreateContext;
 import unknow.server.maven.servlet.builder.CreateEventManager;
@@ -55,7 +55,7 @@ import unknow.server.servlet.utils.ServletResourceStatic;
  * @author unknow
  */
 @Mojo(defaultPhase = LifecyclePhase.GENERATE_SOURCES, name = "servlet-generator", requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME, requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
-public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderContext {
+public class ServletGenMojo extends AbstractCodeGenMojo implements BuilderContext {
 	private static final Logger logger = LoggerFactory.getLogger(ServletGenMojo.class);
 
 	private static final List<Builder> BUILDER = Arrays.asList(new CreateEventManager(), new CreateServletManager(), new CreateContext(), new CreateServlets(),
@@ -90,9 +90,7 @@ public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderCont
 	private List<String> ignoredResources;
 
 	@Override
-	public void execute() throws MojoExecutionException, MojoFailureException {
-		init(session, mojo, repository, codegen);
-
+	protected void doexecute() throws MojoExecutionException, MojoFailureException {
 		cu = newCu();
 
 		if (addAccessLog)
@@ -107,7 +105,7 @@ public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderCont
 
 		processSrc(descriptor);
 		processResources(this::process);
-		if (codegen.graalvm && !descriptor.resources.isEmpty())
+		if (codegen.isGraalvm() && !descriptor.resources.isEmpty())
 			generateGraalvmResources();
 
 		logger.info("descriptor:\n{}", descriptor);
@@ -170,7 +168,7 @@ public class ServletGenMojo extends AbstractGeneratorMojo implements BuilderCont
 	 */
 	private void generateGraalvmResources() throws MojoFailureException {
 		try {
-			Path path = Paths.get(codegen.resources + "/META-INF/native-image/" + uniquePath + "/resource-config.json");
+			Path path = Paths.get(codegen.getResources() + "/META-INF/native-image/" + uniquePath + "/resource-config.json");
 			Files.createDirectories(path.getParent());
 			try (BufferedWriter w = Files.newBufferedWriter(path)) {
 				w.write("{\"resources\":{\"includes\":[");

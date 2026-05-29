@@ -34,6 +34,7 @@ import com.github.javaparser.ast.expr.TypeExpr;
 import com.github.javaparser.ast.stmt.ReturnStmt;
 
 import jakarta.xml.bind.annotation.XmlRootElement;
+import unknow.maven.codegen.AbstractCodeGenMojo;
 import unknow.maven.codegen.CodeGenUtils;
 import unknow.maven.codegen.TypeFactory;
 import unknow.model.api.AnnotationModel;
@@ -58,7 +59,6 @@ import unknow.server.jaxb.handler.PeriodHandler;
 import unknow.server.jaxb.handler.ShortHandler;
 import unknow.server.jaxb.handler.StringHandler;
 import unknow.server.jaxb.handler.ZonedDateTimeHandler;
-import unknow.server.maven.AbstractGeneratorMojo;
 import unknow.server.maven.jaxb.builder.HandlerBuilder;
 import unknow.server.maven.jaxb.model.XmlCollection;
 import unknow.server.maven.jaxb.model.XmlLoader;
@@ -68,7 +68,7 @@ import unknow.server.maven.jaxb.model.XmlType;
  * @author unknow
  */
 @Mojo(defaultPhase = LifecyclePhase.GENERATE_SOURCES, name = "jaxb-generator", requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME, requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
-public class JaxbGeneratorMojo extends AbstractGeneratorMojo {
+public class JaxbGeneratorMojo extends AbstractCodeGenMojo {
 	private static final HandlerBuilder HANDLER = new HandlerBuilder();
 
 	private final Map<XmlType, String> handlers = new HashMap<>();
@@ -98,8 +98,7 @@ public class JaxbGeneratorMojo extends AbstractGeneratorMojo {
 	}
 
 	@Override
-	public void execute() throws MojoExecutionException, MojoFailureException {
-		init(session, mojo, repository, codegen);
+	protected void doexecute() throws MojoExecutionException, MojoFailureException {
 		processSrc(type -> {
 			if (type.annotation(jakarta.xml.bind.annotation.XmlType.class).isPresent())
 				xmlLoader.add(type);
@@ -147,7 +146,7 @@ public class JaxbGeneratorMojo extends AbstractGeneratorMojo {
 		ClassOrInterfaceDeclaration cl = cu.addClass("XmlLoader", CodeGenUtils.PUBLIC).addImplementedType(types.getClass(XmlHandlerLoader.class));
 
 		cl.addMethod("contextPath", CodeGenUtils.PUBLIC).addMarkerAnnotation(Override.class).setType(types.getClass(String.class)).createBody()
-				.addStatement(new ReturnStmt(CodeGenUtils.text(codegen.packageName)));
+				.addStatement(new ReturnStmt(CodeGenUtils.text(codegen.getPackageName())));
 
 		NodeList<Expression> list = new NodeList<>();
 		for (Entry<XmlType, String> e : handlers.entrySet()) {
@@ -162,7 +161,7 @@ public class JaxbGeneratorMojo extends AbstractGeneratorMojo {
 
 		writer.write(cu);
 
-		Path path = Paths.get(codegen.resources, "META-INF", "services", XmlHandlerLoader.class.getName());
+		Path path = Paths.get(codegen.getResources(), "META-INF", "services", XmlHandlerLoader.class.getName());
 		try {
 			Files.createDirectories(path.getParent());
 			try (BufferedWriter w = Files.newBufferedWriter(path)) {
@@ -175,11 +174,11 @@ public class JaxbGeneratorMojo extends AbstractGeneratorMojo {
 	}
 
 	private void generateGraalVmResources() throws MojoFailureException {
-		if (!codegen.graalvm)
+		if (!codegen.isGraalvm())
 			return;
 
 		try {
-			Path path = Paths.get(codegen.resources + "/META-INF/native-image/" + uniquePath + "/resource-config.json");
+			Path path = Paths.get(codegen.getResources() + "/META-INF/native-image/" + uniquePath + "/resource-config.json");
 			Files.createDirectories(path.getParent());
 			try (BufferedWriter w = Files.newBufferedWriter(path)) {
 				w.write("{\"resources\":{\"includes\":[");
