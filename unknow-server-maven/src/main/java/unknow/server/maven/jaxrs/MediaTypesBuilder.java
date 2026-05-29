@@ -32,6 +32,24 @@ import unknow.server.http.jaxrs.MTPredicate;
  * @author unknow
  */
 public class MediaTypesBuilder {
+	private static final Map<String, String> DEFAULT = new HashMap<>();
+
+	static {
+		DEFAULT.put("application/xml", "APPLICATION_XML_TYPE");
+		DEFAULT.put("application/atom+xml", "APPLICATION_ATOM_XML_TYPE");
+		DEFAULT.put("application/xhtml+xml", "APPLICATION_XHTML_XML_TYPE");
+		DEFAULT.put("application/svg+xml", "APPLICATION_SVG_XML_TYPE");
+		DEFAULT.put("application/json", "APPLICATION_JSON_TYPE");
+		DEFAULT.put("application/x-www-form-urlencoded", "APPLICATION_FORM_URLENCODED_TYPE");
+		DEFAULT.put("multipart/form-data", "MULTIPART_FORM_DATA_TYPE");
+		DEFAULT.put("application/octet-stream", "APPLICATION_OCTET_STREAM_TYPE");
+		DEFAULT.put("text/plain", "TEXT_PLAIN_TYPE");
+		DEFAULT.put("text/xml", "TEXT_XML_TYPE");
+		DEFAULT.put("text/html", "TEXT_HTML_TYPE");
+		DEFAULT.put("text/event-stream", "SERVER_SENT_EVENTS_TYPE");
+		DEFAULT.put("application/json-patch+json", "APPLICATION_JSON_PATCH_JSON_TYPE");
+	}
+
 	private final CompilationUnit cu;
 	private final ClassOrInterfaceDeclaration cl;
 	private final TypeFactory types;
@@ -51,19 +69,6 @@ public class MediaTypesBuilder {
 		mts = new HashMap<>();
 		predicates = new HashMap<>();
 
-		mts.put("application/xml", new FieldAccessExpr(new TypeExpr(mt), "APPLICATION_XML_TYPE"));
-		mts.put("application/atom+xml", new FieldAccessExpr(new TypeExpr(mt), "APPLICATION_ATOM_XML_TYPE"));
-		mts.put("application/xhtml+xml", new FieldAccessExpr(new TypeExpr(mt), "APPLICATION_XHTML_XML_TYPE"));
-		mts.put("application/svg+xml", new FieldAccessExpr(new TypeExpr(mt), "APPLICATION_SVG_XML_TYPE"));
-		mts.put("application/json", new FieldAccessExpr(new TypeExpr(mt), "APPLICATION_JSON_TYPE"));
-		mts.put("application/x-www-form-urlencoded", new FieldAccessExpr(new TypeExpr(mt), "APPLICATION_FORM_URLENCODED_TYPE"));
-		mts.put("multipart/form-data", new FieldAccessExpr(new TypeExpr(mt), "MULTIPART_FORM_DATA_TYPE"));
-		mts.put("application/octet-stream", new FieldAccessExpr(new TypeExpr(mt), "APPLICATION_OCTET_STREAM_TYPE"));
-		mts.put("text/plain", new FieldAccessExpr(new TypeExpr(mt), "TEXT_PLAIN_TYPE"));
-		mts.put("text/xml", new FieldAccessExpr(new TypeExpr(mt), "TEXT_XML_TYPE"));
-		mts.put("text/html", new FieldAccessExpr(new TypeExpr(mt), "TEXT_HTML_TYPE"));
-		mts.put("text/event-stream", new FieldAccessExpr(new TypeExpr(mt), "SERVER_SENT_EVENTS_TYPE"));
-		mts.put("application/json-patch+json", new FieldAccessExpr(new TypeExpr(mt), "APPLICATION_JSON_PATCH_JSON_TYPE"));
 	}
 
 	public void save(CompilationUnitWriter writer) throws MojoExecutionException {
@@ -71,10 +76,18 @@ public class MediaTypesBuilder {
 			writer.write(cu);
 	}
 
-	public Expression type(String t) {
+	public Expression type(TypeFactory f, String t) {
 		Expression n = mts.get(t);
 		if (n != null)
 			return n;
+
+		String field = DEFAULT.get(t);
+		if (field != null) {
+			n = new FieldAccessExpr(new TypeExpr(f.getClass(MediaType.class)), field);
+			mts.put(t, n);
+			return n;
+		}
+
 		String[] split = t.split("/");
 		String name = t.toUpperCase().replaceAll("[^_a-zA-Z]", "_");
 
@@ -85,7 +98,7 @@ public class MediaTypesBuilder {
 		return n;
 	}
 
-	public Expression predicate(Collection<String> mediaTypes) {
+	public Expression predicate(TypeFactory t, Collection<String> mediaTypes) {
 		String k = "";
 		if (!mediaTypes.contains("*/*")) {
 			List<String> l = new ArrayList<>(mediaTypes);
@@ -106,16 +119,16 @@ public class MediaTypesBuilder {
 		if (mediaTypes.contains("*/*"))
 			e = new FieldAccessExpr(new TypeExpr(types.get(MTPredicate.class)), "ANY");
 		else if (mediaTypes.size() == 1)
-			e = new ObjectCreationExpr(null, types.getClass(MTPredicate.Single.class), CodeGenUtils.list(type(mediaTypes.iterator().next())));
+			e = new ObjectCreationExpr(null, types.getClass(MTPredicate.Single.class), CodeGenUtils.list(type(types, mediaTypes.iterator().next())));
 		else {
 			NodeList<Expression> l = new NodeList<>();
 			for (String s : mediaTypes)
-				l.add(type(s));
+				l.add(type(types, s));
 			e = new ObjectCreationExpr(null, types.getClass(MTPredicate.OneOf.class), l);
 		}
 
 		cl.addFieldWithInitializer(types.getClass(MTPredicate.class), name, e, CodeGenUtils.PUBLIC_STATIC);
-		predicates.put(k, n = new FieldAccessExpr(new TypeExpr(types.getClass(cl)), name));
+		predicates.put(k, n = new FieldAccessExpr(new TypeExpr(t.getClass(cl)), name));
 		return n;
 	}
 }
