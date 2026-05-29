@@ -1,6 +1,3 @@
-/**
- * 
- */
 package unknow.server.maven.jaxrs;
 
 import java.util.ArrayList;
@@ -29,6 +26,7 @@ import unknow.maven.codegen.TypeFactory;
 import unknow.server.http.jaxrs.MTPredicate;
 
 /**
+ * Build MediaTypes class with added MTPredicate and MediaType
  * @author unknow
  */
 public class MediaTypesBuilder {
@@ -71,22 +69,30 @@ public class MediaTypesBuilder {
 
 	}
 
+	/**
+	 * write the MediaTypes class if needed
+	 * @param writer writer to write to
+	 * @throws MojoExecutionException in case od error
+	 */
 	public void save(CompilationUnitWriter writer) throws MojoExecutionException {
 		if (!predicates.isEmpty() || mts.size() > 13)
 			writer.write(cu);
 	}
 
+	/**
+	 * get an exception to an MediaType
+	 * @param f factory to add the required import
+	 * @param t mediaType
+	 * @return the exception
+	 */
 	public Expression type(TypeFactory f, String t) {
+		String field = DEFAULT.get(t);
+		if (field != null)
+			return new FieldAccessExpr(new TypeExpr(f.getClass(MediaType.class)), field);
+
 		Expression n = mts.get(t);
 		if (n != null)
 			return n;
-
-		String field = DEFAULT.get(t);
-		if (field != null) {
-			n = new FieldAccessExpr(new TypeExpr(f.getClass(MediaType.class)), field);
-			mts.put(t, n);
-			return n;
-		}
 
 		String[] split = t.split("/");
 		String name = t.toUpperCase().replaceAll("[^_a-zA-Z]", "_");
@@ -98,7 +104,13 @@ public class MediaTypesBuilder {
 		return n;
 	}
 
-	public Expression predicate(TypeFactory t, Collection<String> mediaTypes) {
+	/**
+	 * get an exception to an MTPredicate
+	 * @param f factory to add the required import
+	 * @param mediaTypes types accepted by the predicate
+	 * @return the exception
+	 */
+	public Expression predicate(TypeFactory f, Collection<String> mediaTypes) {
 		String k = "";
 		if (!mediaTypes.contains("*/*")) {
 			List<String> l = new ArrayList<>(mediaTypes);
@@ -128,7 +140,7 @@ public class MediaTypesBuilder {
 		}
 
 		cl.addFieldWithInitializer(types.getClass(MTPredicate.class), name, e, CodeGenUtils.PUBLIC_STATIC);
-		predicates.put(k, n = new FieldAccessExpr(new TypeExpr(t.getClass(cl)), name));
+		predicates.put(k, n = new FieldAccessExpr(new TypeExpr(f.getClass(cl)), name));
 		return n;
 	}
 }
