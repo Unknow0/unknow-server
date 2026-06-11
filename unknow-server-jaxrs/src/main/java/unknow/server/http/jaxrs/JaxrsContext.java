@@ -116,19 +116,23 @@ public class JaxrsContext {
 	}
 
 	@SuppressWarnings("unchecked")
-	public static void sendError(JaxrsReq r, Throwable t, HttpServletResponse res) throws IOException {
-		Class<?> c = t.getClass();
-		do {
-			ExceptionMapper<Throwable> m = exceptions.get(c);
-			if (m != null) {
-				try (Response response = m.toResponse(t)) {
-					JaxrsEntityWriter.RESPONSE.write(r, response, res);
+	public static void sendError(JaxrsReq r, Throwable t, HttpServletResponse res) {
+		try {
+			Class<?> c = t.getClass();
+			do {
+				ExceptionMapper<Throwable> m = exceptions.get(c);
+				if (m != null) {
+					try (Response response = m.toResponse(t)) {
+						JaxrsEntityWriter.RESPONSE.write(r, response, res);
+					}
+					return;
 				}
-				return;
-			}
-		} while ((c = c.getSuperclass()) != Object.class);
-		logger.error("No exception mapping found", t);
-		res.sendError(500);
+			} while ((c = c.getSuperclass()) != Object.class);
+			logger.error("No exception mapping found", t);
+			res.sendError(500);
+		} catch (IOException | IllegalStateException e) {
+			logger.warn("Failed to send error", e);
+		}
 	}
 
 	@SuppressWarnings("unchecked")

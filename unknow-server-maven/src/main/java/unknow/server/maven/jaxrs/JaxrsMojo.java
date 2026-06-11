@@ -60,14 +60,14 @@ import jakarta.ws.rs.Priorities;
 import jakarta.ws.rs.ext.ParamConverter;
 import jakarta.ws.rs.ext.ParamConverterProvider;
 import jakarta.ws.rs.ext.RuntimeDelegate;
+import unknow.maven.codegen.CodeGenUtils;
+import unknow.maven.codegen.TypeFactory;
 import unknow.model.api.ClassModel;
 import unknow.model.api.TypeModel;
 import unknow.server.http.jaxrs.JaxrsContext;
 import unknow.server.http.jaxrs.JaxrsRuntime;
 import unknow.server.http.jaxrs.protostuff.ProtostuffSchema;
 import unknow.server.maven.AbstractGeneratorMojo;
-import unknow.server.maven.TypeCache;
-import unknow.server.maven.Utils;
 
 /**
  * @author unknow
@@ -78,7 +78,7 @@ public class JaxrsMojo extends AbstractGeneratorMojo {
 
 	private JaxrsModel model;
 
-	private TypeCache types;
+	private TypeFactory types;
 	private ClassOrInterfaceDeclaration cl;
 
 	@Parameter(name = "openapi")
@@ -94,18 +94,13 @@ public class JaxrsMojo extends AbstractGeneratorMojo {
 	private MediaTypesBuilder mt;
 
 	@Override
-	protected String id() {
-		return "jaxrs-generator";
-	}
-
-	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
-		init();
+		init(session, mojo, repository, codegen);
 		if (basePath.endsWith("/"))
 			basePath = basePath.substring(0, basePath.length() - 1);
 		model = new JaxrsModel(loader, classLoader, basePath);
 
-		process(t -> t.ifClass(model::process));
+		processSrc(t -> t.ifClass(model::process));
 		model.implicitConstructor.remove("java.lang.String");
 
 		beans = new BeanParamBuilder(newCu(), existingClass);
@@ -127,11 +122,11 @@ public class JaxrsMojo extends AbstractGeneratorMojo {
 		}
 
 		for (Entry<String, List<JaxrsMapping>> e : map.entrySet())
-			out.save(new JaxRsServletBuilder(newCu(), existingClass, e.getKey(), e.getValue(), beans, mt).build());
+			writer.write(new JaxRsServletBuilder(newCu(), existingClass, e.getKey(), e.getValue(), beans, mt).build());
 
-		new OpenApiBuilder().build(openapi.getSpec(project), model, resources + basePath + "/openapi.json");
-		beans.save(out);
-		mt.save(out);
+		new OpenApiBuilder().build(openapi.getSpec(project), model, codegen.resources + basePath + "/openapi.json");
+		beans.save(writer);
+		mt.save(writer);
 
 		generateGraalvmResources();
 	}
@@ -141,32 +136,33 @@ public class JaxrsMojo extends AbstractGeneratorMojo {
 	 */
 
 	private void generateInitalizer() throws IOException, MojoExecutionException {
-		Path path = Paths.get(resources, "META-INF", "services", ServletContainerInitializer.class.getName());
+		Path path = Paths.get(codegen.resources, "META-INF", "services", ServletContainerInitializer.class.getName());
 		Files.createDirectories(path.getParent());
 		try (Writer w = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
-			w.append(packageName).write(".JaxrsInit\n");
+			w.append(fullName("JaxrsInit")).write('\n');
 		}
 
 		CompilationUnit cu = newCu();
-		types = new TypeCache(cu, existingClass);
+		types = new TypeFactory(cu, existingClass);
 
 		TypeExpr ctx = new TypeExpr(types.getClass(JaxrsContext.class));
 
-		cl = cu.addClass("JaxrsInit", Utils.PUBLIC).addImplementedType(ServletContainerInitializer.class);
-		BlockStmt b = cl.addMethod("onStartup", Utils.PUBLIC).addMarkerAnnotation(Override.class)
-				.addParameter(types.getClass(Set.class, types.getClass(Class.class, TypeCache.ANY)), "c").addParameter(types.getClass(ServletContext.class), "ctx")
+		cl = cu.addClass("JaxrsInit", CodeGenUtils.PUBLIC).addImplementedType(ServletContainerInitializer.class);
+		BlockStmt b = cl.addMethod("onStartup", CodeGenUtils.PUBLIC).addMarkerAnnotation(Override.class)
+				.addParameter(types.getClass(Set.class, types.getClass(Class.class, TypeFactory.ANY)), "c").addParameter(types.getClass(ServletContext.class), "ctx")
 				.createBody().addStatement(new MethodCallExpr(new TypeExpr(types.getClass(RuntimeDelegate.class)), "setInstance",
-						Utils.list(new ObjectCreationExpr(null, types.getClass(JaxrsRuntime.class), Utils.list()))));
+						CodeGenUtils.list(new ObjectCreationExpr(null, types.getClass(JaxrsRuntime.class), CodeGenUtils.list()))));
 		for (ClassModel s : model.converter) {
 			ClassOrInterfaceType t = types.getClass(s);
 			if (!s.parameters().isEmpty()) {
 				t = t.clone();
-				t.setTypeArguments(Utils.list(TypeCache.EMPTY));
+				t.setTypeArguments(CodeGenUtils.list(TypeFactory.EMPTY));
 			}
-			b.addStatement(new MethodCallExpr(ctx, "registerConverter", Utils.list(new ObjectCreationExpr(null, t, Utils.list()))));
+			b.addStatement(new MethodCallExpr(ctx, "registerConverter", CodeGenUtils.list(new ObjectCreationExpr(null, t, CodeGenUtils.list()))));
 		}
 		if (!model.implicitConstructor.isEmpty() || !model.implicitFromString.isEmpty() || !model.implicitValueOf.isEmpty())
-			b.addStatement(new MethodCallExpr(ctx, "registerConverter", Utils.list(new ObjectCreationExpr(null, new ClassOrInterfaceType(null, "P"), Utils.list()))));
+			b.addStatement(
+					new MethodCallExpr(ctx, "registerConverter", CodeGenUtils.list(new ObjectCreationExpr(null, new ClassOrInterfaceType(null, "P"), CodeGenUtils.list()))));
 
 		Expression m = null;
 		if (objectMapper != null) {
@@ -184,32 +180,32 @@ public class JaxrsMojo extends AbstractGeneratorMojo {
 		for (Entry<TypeModel, ClassModel> e : model.exceptions.entrySet()) {
 
 			b.addStatement(new MethodCallExpr(ctx, "registerException",
-					Utils.list(new ClassExpr(types.get(e.getKey())), new ObjectCreationExpr(null, types.getClass(e.getValue()), Utils.list()))));
+					CodeGenUtils.list(new ClassExpr(types.get(e.getKey())), new ObjectCreationExpr(null, types.getClass(e.getValue()), CodeGenUtils.list()))));
 		}
 
 		for (String clazz : model.protostuffMessage) {
 			ClassOrInterfaceType type = types.getClass(clazz);
 			b.addStatement(new MethodCallExpr(new TypeExpr(types.get(ProtostuffSchema.class)), "register",
-					Utils.list(new ClassExpr(type), new MethodCallExpr(new ObjectCreationExpr(null, type, Utils.list()), "cachedSchema"))));
+					CodeGenUtils.list(new ClassExpr(type), new MethodCallExpr(new ObjectCreationExpr(null, type, CodeGenUtils.list()), "cachedSchema"))));
 		}
 
-		out.save(cu);
+		writer.write(cu);
 	}
 
 	private NodeList<Expression> registerParams(ClassModel c, List<String> mimes, Expression m) {
-		NodeList<Expression> list = Utils.list();
+		NodeList<Expression> list = CodeGenUtils.list();
 		if (m != null && c.constructors(loader.get(ObjectMapper.class.getName())).isPresent())
 			list.add(m);
 		ClassOrInterfaceType t = types.getClass(c);
 		if (!c.parameters().isEmpty()) {
 			t = t.clone();
-			t.setTypeArguments(Utils.list(TypeCache.EMPTY));
+			t.setTypeArguments(CodeGenUtils.list(TypeFactory.EMPTY));
 		}
 		NodeList<Expression> l = new NodeList<>(new ObjectCreationExpr(null, t, list));
 		l.add(c.annotation(Priority.class).flatMap(a -> a.value()).filter(v -> v.isSet()).map(a -> (Expression) new IntegerLiteralExpr(a.asLiteral()))
 				.orElseGet(() -> new FieldAccessExpr(new TypeExpr(types.get(Priorities.class)), "USER")));
 		for (String s : mimes)
-			l.add(Utils.text(s));
+			l.add(CodeGenUtils.text(s));
 		return l;
 	}
 
@@ -241,8 +237,9 @@ public class JaxrsMojo extends AbstractGeneratorMojo {
 					new ReturnStmt(new CastExpr(p, new NameExpr(n))), null));
 		}
 
-		clazz.addMethod("getConverter", Utils.PUBLIC).addMarkerAnnotation(Override.class).addSingleMemberAnnotation(SuppressWarnings.class, Utils.text("unchecked"))
-				.addTypeParameter(t).setType(p).addParameter(types.getClass(Class.class, t), "rawType").addParameter(types.getClass(Type.class), "genericType")
+		clazz.addMethod("getConverter", CodeGenUtils.PUBLIC).addMarkerAnnotation(Override.class)
+				.addSingleMemberAnnotation(SuppressWarnings.class, CodeGenUtils.text("unchecked")).addTypeParameter(t).setType(p)
+				.addParameter(types.getClass(Class.class, t), "rawType").addParameter(types.getClass(Type.class), "genericType")
 				.addParameter(types.array(Annotation.class), "Annotation").setBody(b.addStatement(new ReturnStmt(new NullLiteralExpr())));
 	}
 
@@ -250,27 +247,29 @@ public class JaxrsMojo extends AbstractGeneratorMojo {
 		ClassOrInterfaceType type = types.getClass(cl);
 		Expression e;
 		if (m == null)
-			e = new ObjectCreationExpr(null, type, Utils.list(new NameExpr(VALUE)));
+			e = new ObjectCreationExpr(null, type, CodeGenUtils.list(new NameExpr(VALUE)));
 		else
-			e = new MethodCallExpr(new TypeExpr(type), m, Utils.list(new NameExpr(VALUE)));
+			e = new MethodCallExpr(new TypeExpr(type), m, CodeGenUtils.list(new NameExpr(VALUE)));
 
-		NodeList<BodyDeclaration<?>> methods = Utils.list(
-				new MethodDeclaration(Modifier.createModifierList(Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL), Utils.list(new MarkerAnnotationExpr("Override")),
-						Utils.list(), type, new SimpleName("fromString"), Utils.list(new com.github.javaparser.ast.body.Parameter(types.getClass(String.class), VALUE)),
-						Utils.list(), new BlockStmt().addStatement(new ReturnStmt(e))),
-				new MethodDeclaration(Modifier.createModifierList(Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL), Utils.list(new MarkerAnnotationExpr("Override")),
-						Utils.list(), types.getClass(String.class), new SimpleName("toString"), Utils.list(new com.github.javaparser.ast.body.Parameter(type, VALUE)),
-						Utils.list(), new BlockStmt().addStatement(new ReturnStmt(new MethodCallExpr(new NameExpr(VALUE), "toString")))));
+		NodeList<BodyDeclaration<?>> methods = CodeGenUtils.list(
+				new MethodDeclaration(Modifier.createModifierList(Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL), CodeGenUtils.list(new MarkerAnnotationExpr("Override")),
+						CodeGenUtils.list(), type, new SimpleName("fromString"),
+						CodeGenUtils.list(new com.github.javaparser.ast.body.Parameter(types.getClass(String.class), VALUE)), CodeGenUtils.list(),
+						new BlockStmt().addStatement(new ReturnStmt(e))),
+				new MethodDeclaration(Modifier.createModifierList(Modifier.Keyword.PUBLIC, Modifier.Keyword.FINAL), CodeGenUtils.list(new MarkerAnnotationExpr("Override")),
+						CodeGenUtils.list(), types.getClass(String.class), new SimpleName("toString"),
+						CodeGenUtils.list(new com.github.javaparser.ast.body.Parameter(type, VALUE)), CodeGenUtils.list(),
+						new BlockStmt().addStatement(new ReturnStmt(new MethodCallExpr(new NameExpr(VALUE), "toString")))));
 		clazz.addFieldWithInitializer(types.getClass(ParamConverter.class, type), name,
-				new ObjectCreationExpr(null, types.getClass(ParamConverter.class, TypeCache.EMPTY), null, Utils.list(), methods), Utils.PSF);
+				new ObjectCreationExpr(null, types.getClass(ParamConverter.class, TypeFactory.EMPTY), null, CodeGenUtils.list(), methods), CodeGenUtils.PSF);
 	}
 
 	private void generateGraalvmResources() throws MojoFailureException {
-		if (!graalvm)
+		if (!codegen.graalvm)
 			return;
 
 		try {
-			Path path = Paths.get(resources + "/META-INF/native-image/" + id() + "/resource-config.json");
+			Path path = Paths.get(codegen.resources + "/META-INF/native-image/" + uniquePath + "/resource-config.json");
 			Files.createDirectories(path.getParent());
 			try (BufferedWriter w = Files.newBufferedWriter(path)) {
 				w.write("{\"resources\":{\"includes\":[");

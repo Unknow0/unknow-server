@@ -19,8 +19,8 @@ import com.github.javaparser.ast.expr.TypeExpr;
 import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.stmt.ReturnStmt;
 
-import unknow.server.maven.TypeCache;
-import unknow.server.maven.Utils;
+import unknow.maven.codegen.CodeGenUtils;
+import unknow.maven.codegen.TypeFactory;
 import unknow.server.maven.servlet.Builder;
 import unknow.server.maven.servlet.descriptor.Descriptor;
 import unknow.server.maven.servlet.descriptor.LD;
@@ -32,7 +32,7 @@ import unknow.server.servlet.utils.EventManager;
 public class CreateEventManager extends Builder {
 	@Override
 	public void add(BuilderContext ctx) {
-		TypeCache t = ctx.type();
+		TypeFactory t = ctx.type();
 		BlockStmt init = ctx.self().addMethod("createEventManager", Modifier.Keyword.PROTECTED, Modifier.Keyword.FINAL).setType(t.getClass(EventManager.class))
 				.addMarkerAnnotation(Override.class).createBody();
 		Map<Class<?>, NodeList<Expression>> map = new HashMap<>();
@@ -41,7 +41,7 @@ public class CreateEventManager extends Builder {
 		for (LD l : ctx.descriptor().listeners) {
 			String n = "l" + i++;
 			NameExpr name = new NameExpr(n);
-			init.addStatement(Utils.assign(t.getClass(l.clazz), n, new ObjectCreationExpr(null, t.getClass(l.clazz), Utils.list())));
+			init.addStatement(CodeGenUtils.assign(t.getClass(l.clazz), n, new ObjectCreationExpr(null, t.getClass(l.clazz), CodeGenUtils.list())));
 
 			for (Class<?> cl : l.listener) {
 				NodeList<Expression> ll = map.get(cl);
@@ -60,7 +60,7 @@ public class CreateEventManager extends Builder {
 			else
 				a = new IntegerLiteralExpr("0");
 
-			list.add(new ObjectCreationExpr(null, t.getClass(ArrayList.class, TypeCache.EMPTY), Utils.list(a)));
+			list.add(new ObjectCreationExpr(null, t.getClass(ArrayList.class, TypeFactory.EMPTY), CodeGenUtils.list(a)));
 		}
 		init.addStatement(new ReturnStmt(new ObjectCreationExpr(null, t.getClass(EventManager.class), list)));
 	}

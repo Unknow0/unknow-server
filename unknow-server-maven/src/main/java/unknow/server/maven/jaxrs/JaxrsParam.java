@@ -59,6 +59,10 @@ public abstract class JaxrsParam<T extends WithName & WithAnnotation & WithType>
 		c.accept(this);
 	}
 
+	public boolean inBody() {
+		return false;
+	}
+
 	public static class JaxrsBeanParam<T extends WithName & WithAnnotation & WithType> extends JaxrsParam<T> {
 		public final ClassModel clazz;
 		public final List<JaxrsBeanFieldParam> params;
@@ -74,6 +78,15 @@ public abstract class JaxrsParam<T extends WithName & WithAnnotation & WithType>
 			for (JaxrsBeanFieldParam p : params)
 				p.param.collect(c);
 			c.accept(this);
+		}
+
+		@Override
+		public boolean inBody() {
+			for (JaxrsBeanFieldParam p : params) {
+				if (p.param.inBody())
+					return true;
+			}
+			return false;
 		}
 
 		public static class JaxrsBeanFieldParam {
@@ -107,6 +120,11 @@ public abstract class JaxrsParam<T extends WithName & WithAnnotation & WithType>
 		public JaxrsFormParam(T p, String param) {
 			super(p, "f", param);
 		}
+
+		@Override
+		public boolean inBody() {
+			return true;
+		}
 	}
 
 	public static class JaxrsHeaderParam<T extends WithName & WithAnnotation & WithType> extends JaxrsParam<T> {
@@ -134,6 +152,11 @@ public abstract class JaxrsParam<T extends WithName & WithAnnotation & WithType>
 
 		public JaxrsBodyParam(T p) {
 			super(p, "b", null);
+		}
+
+		@Override
+		public boolean inBody() {
+			return true;
 		}
 	}
 }

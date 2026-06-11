@@ -54,7 +54,7 @@ public class JaxrsReqTest {
 	public static final Stream<Arguments> accept() {
 		//@formatter:off
 		return Stream.of(
-				Arguments.of(MediaType.WILDCARD_TYPE, "*/*", (MTPredicate) m -> null),
+				Arguments.of(null, "*/*", MTPredicate.NONE),
 				Arguments.of(MediaType.WILDCARD_TYPE, "*/*", MTPredicate.ANY),
 				Arguments.of(MediaType.TEXT_XML_TYPE, "text/plain,text/xml", new MTPredicate.OneOf(MediaType.TEXT_XML_TYPE)),
 				Arguments.of(MediaType.WILDCARD_TYPE, null, new MTPredicate.OneOf(MediaType.TEXT_XML_TYPE)),

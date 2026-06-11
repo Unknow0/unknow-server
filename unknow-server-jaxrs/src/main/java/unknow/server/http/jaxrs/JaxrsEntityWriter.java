@@ -99,6 +99,8 @@ public interface JaxrsEntityWriter<T> {
 				MediaType mediaType = e.getMediaType();
 				if (mediaType == null)
 					mediaType = r.getAccept();
+				if (mediaType == null)
+					mediaType = MediaType.TEXT_PLAIN_TYPE;
 				res.setContentType(mediaType.toString());
 
 				Class<?> clazz = o.getClass();

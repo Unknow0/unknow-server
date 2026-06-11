@@ -5,8 +5,8 @@ import org.slf4j.LoggerFactory;
 
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 
+import unknow.maven.codegen.TypeFactory;
 import unknow.server.maven.SourceBuilder;
-import unknow.server.maven.TypeCache;
 import unknow.server.maven.jaxb.HandlerContext;
 import unknow.server.maven.jaxb.model.XmlEnum;
 import unknow.server.maven.jaxb.model.XmlTypeComplex;
@@ -18,7 +18,7 @@ public class HandlerBuilder implements SourceBuilder<HandlerContext> {
 	private static final HandlerObject OBJECT = new HandlerObject();
 
 	@Override
-	public void process(ClassOrInterfaceDeclaration cl, TypeCache types, HandlerContext ctx) {
+	public void process(ClassOrInterfaceDeclaration cl, TypeFactory types, HandlerContext ctx) {
 		if (ctx.xml() instanceof XmlEnum)
 			ENUM.process(cl, types, ctx);
 		else if (ctx.xml() instanceof XmlTypeComplex)
