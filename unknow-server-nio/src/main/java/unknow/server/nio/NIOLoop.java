@@ -93,7 +93,7 @@ public class NIOLoop implements Runnable {
 		if (!selector.isOpen()) {
 			afterStop();
 			return;
-		}
+		}	
 
 		// stop mode
 		// TODO add timeout ?
