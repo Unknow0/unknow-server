@@ -104,10 +104,7 @@ public class ServletGenMojo extends AbstractCodeGenMojo implements BuilderContex
 		}
 
 		processSrc(descriptor);
-		processResources((full, relative, attr) -> {
-			process(full, relative);
-			return true;
-		});
+		processResources(this::process);
 		if (codegen.isGraalvm() && !descriptor.resources.isEmpty())
 			generateGraalvmResources();
 
