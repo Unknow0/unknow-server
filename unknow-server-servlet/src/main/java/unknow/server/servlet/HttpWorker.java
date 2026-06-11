@@ -68,33 +68,32 @@ public abstract class HttpWorker implements Runnable, HttpAdapter {
 		}
 	}
 
+	private final boolean start() {
+		try {
+			return doStart();
+		} catch (Exception e) {
+			logger.warn("init req failed", e);
+			if (e instanceof InterruptedException)
+				Thread.currentThread().interrupt();
+			return false;
+		}
+	}
+
 	@Override
 	public void run() {
 		try {
-			if (!doStart()) {
+			if (!start()) {
 				co.getOut().close();
 				return;
 			}
-			try {
-				doRun();
-			} catch (Exception e) {
-				logger.error("processor error", e);
-				try {
-					if (!res.isCommitted())
-						res.sendError(500);
-				} catch (@SuppressWarnings("unused") IOException e1) { //ok
-				}
-				if (e instanceof InterruptedException)
-					Thread.currentThread().interrupt();
-			}
+			doRun();
 		} catch (Exception e) {
-			logger.warn("init req failed", e);
+			logger.error("processor error", e);
 			try {
-				co.getOut().close();
-			} catch (IOException ex) {
-				logger.warn("Failed to close connection", ex);
+				if (!res.isCommitted())
+					res.sendError(500);
+			} catch (@SuppressWarnings("unused") IOException e1) { //ok
 			}
-			return;
 		} finally {
 			try {
 				doDone();
