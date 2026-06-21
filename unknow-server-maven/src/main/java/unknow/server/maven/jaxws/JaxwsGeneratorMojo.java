@@ -31,9 +31,9 @@ import org.slf4j.LoggerFactory;
 import com.github.javaparser.ast.CompilationUnit;
 
 import jakarta.jws.WebService;
+import unknow.maven.codegen.AbstractCodeGenMojo;
 import unknow.maven.codegen.TypeFactory;
 import unknow.model.api.AnnotationModel;
-import unknow.server.maven.AbstractGeneratorMojo;
 import unknow.server.maven.jaxb.model.XmlLoader;
 import unknow.server.maven.jaxws.binding.Service;
 
@@ -41,7 +41,7 @@ import unknow.server.maven.jaxws.binding.Service;
  * @author unknow
  */
 @Mojo(defaultPhase = LifecyclePhase.GENERATE_SOURCES, name = "jaxws-generator", requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME, requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
-public class JaxwsGeneratorMojo extends AbstractGeneratorMojo {
+public class JaxwsGeneratorMojo extends AbstractCodeGenMojo {
 	private static final Logger logger = LoggerFactory.getLogger(JaxwsGeneratorMojo.class);
 	private static final XMLOutputFactory f = XMLOutputFactory.newInstance();
 
@@ -55,9 +55,7 @@ public class JaxwsGeneratorMojo extends AbstractGeneratorMojo {
 	private final XmlLoader xmlLoader = new XmlLoader();
 
 	@Override
-	public void execute() throws MojoExecutionException, MojoFailureException {
-		init(session, mojo, repository, codegen);
-
+	protected void doexecute() throws MojoExecutionException, MojoFailureException {
 		if (!basePath.endsWith("/"))
 			basePath += "/";
 
@@ -80,7 +78,7 @@ public class JaxwsGeneratorMojo extends AbstractGeneratorMojo {
 				Service service = Service.build(t.asClass(), basePath, loader, xmlLoader);
 
 				String n = "generated/" + uniquePath + "/" + service.name + ".wsdl";
-				Path path = Paths.get(codegen.resources, n);
+				Path path = Paths.get(codegen.getResources(), n);
 				Files.createDirectories(path.getParent());
 				try (BufferedWriter w = Files.newBufferedWriter(path)) {
 					new WsdlBuilder(service, publishUrl).write(f.createXMLStreamWriter(w));
@@ -93,9 +91,9 @@ public class JaxwsGeneratorMojo extends AbstractGeneratorMojo {
 			}
 		});
 
-		if (codegen.graalvm && !wsdl.isEmpty()) {
+		if (codegen.isGraalvm() && !wsdl.isEmpty()) {
 			try {
-				Path path = Paths.get(codegen.resources + "/META-INF/native-image/" + uniquePath + "/resource-config.json");
+				Path path = Paths.get(codegen.getResources() + "/META-INF/native-image/" + uniquePath + "/resource-config.json");
 				Files.createDirectories(path.getParent());
 				try (BufferedWriter w = Files.newBufferedWriter(path)) {
 					w.write("{\"resources\":{\"includes\":[");

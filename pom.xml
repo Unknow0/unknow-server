@@ -34,6 +34,7 @@
 		<maven.compiler.target>11</maven.compiler.target>
 		<maven.compiler.release>11</maven.compiler.release>
 		<maven.deploy.skip>false</maven.deploy.skip>
+		<project.build.outputTimestamp>0</project.build.outputTimestamp>
 
 		<slf4j.version>2.0.13</slf4j.version>
 		<javaparser.version>3.26.1</javaparser.version>
@@ -69,7 +70,7 @@
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-compiler-plugin</artifactId>
-					<version>3.10.1</version>
+					<version>3.15.0</version>
 					<configuration>
 						<annotationProcessorPaths>
 							<path>
@@ -88,7 +89,7 @@
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-surefire-plugin</artifactId>
-					<version>3.0.0-M7</version>
+					<version>3.5.6</version>
 					<configuration>
 						<statelessTestsetReporter implementation="org.apache.maven.plugin.surefire.extensions.junit5.JUnit5Xml30StatelessReporter">
 							<disable>false</disable>
@@ -113,21 +114,29 @@
 				</plugin>
 				<plugin>
 					<artifactId>maven-war-plugin</artifactId>
-					<version>3.3.2</version>
+					<version>3.5.1</version>
 				</plugin>
 				<plugin>
 					<artifactId>maven-clean-plugin</artifactId>
-					<version>3.2.0</version>
+					<version>3.5.0</version>
 				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-shade-plugin</artifactId>
-					<version>3.2.4</version>
+					<version>3.6.2</version>
 				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-plugin-plugin</artifactId>
-					<version>3.6.0</version>
+					<version>3.15.2</version>
+					<configuration>
+						<requiredMavenVersion>3.9</requiredMavenVersion>
+					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>org.eclipse.sisu</groupId>
+					<artifactId>sisu-maven-plugin</artifactId>
+					<version>1.0.0</version>
 				</plugin>
 				<plugin>
 					<groupId>io.github.mavenplugins</groupId>
@@ -137,17 +146,17 @@
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-gpg-plugin</artifactId>
-					<version>3.2.4</version>
+					<version>3.2.8</version>
 				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-source-plugin</artifactId>
-					<version>3.3.0</version>
+					<version>3.4.0</version>
 				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-javadoc-plugin</artifactId>
-					<version>3.6.3</version>
+					<version>3.12.0</version>
 					<executions>
 						<execution>
 							<goals>
@@ -155,12 +164,31 @@
 							</goals>
 						</execution>
 					</executions>
+					<dependencies>
+						<dependency>
+							<groupId>org.apache.maven</groupId>
+							<artifactId>maven-archiver</artifactId>
+							<version>3.6.6</version>
+						</dependency>
+					</dependencies>
 				</plugin>
+
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-jar-plugin</artifactId>
+					<version>3.5.0</version>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-resources-plugin</artifactId>
+					<version>3.5.0</version>
+				</plugin>
+
 
 				<plugin>
 					<groupId>org.codehaus.mojo</groupId>
 					<artifactId>versions-maven-plugin</artifactId>
-					<version>2.16.2</version>
+					<version>2.21.0</version>
 					<configuration>
 						<processDependencyManagementTransitive>false</processDependencyManagementTransitive>
 						<ruleSet>
@@ -171,7 +199,7 @@
 								</ignoreVersion>
 								<ignoreVersion>
 									<type>regex</type>
-									<version>.+-(alpha|beta|rc|M)[0-9]*</version>
+									<version>.+[-.](alpha|beta|rc|RC|M)[0-9]*</version>
 								</ignoreVersion>
 							</ignoreVersions>
 							<rules>
@@ -382,7 +410,7 @@
 			<dependency>
 				<groupId>io.github.unknow0.maven</groupId>
 				<artifactId>unknow-maven-codegen</artifactId>
-				<version>0.02</version>
+				<version>0.2.0</version>
 			</dependency>
 			<dependency>
 				<groupId>io.github.unknow0.model</groupId>

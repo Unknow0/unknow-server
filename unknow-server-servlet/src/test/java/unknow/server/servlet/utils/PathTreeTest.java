@@ -4,19 +4,14 @@
 package unknow.server.servlet.utils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.FilterChain;
-import unknow.server.servlet.HttpConnection;
-import unknow.server.servlet.impl.ServletContextImpl;
 import unknow.server.servlet.impl.ServletRequestImpl;
 import unknow.server.servlet.utils.PathTree.Node;
 import unknow.server.servlet.utils.PathTree.PartNode;
@@ -25,15 +20,13 @@ import unknow.server.servlet.utils.PathTree.PartNode;
  * @author unknow
  */
 public class PathTreeTest {
-	ServletRequestImpl mock;
+	ServletRequestImpl req;
 
 	@BeforeEach
 	public void init() {
-		ServletContextImpl ctx = new ServletContextImpl("", "", null, null, null, null, null);
-		HttpConnection p = mock(HttpConnection.class);
-		when(p.getCtx()).thenReturn(ctx);
+//		ServletContextImpl ctx = new ServletContextImpl("", "", null, null, null, null, null);
 
-		mock = mock(ServletRequestImpl.class, Mockito.withSettings().useConstructor(p, DispatcherType.REQUEST));
+		req = new ServletRequestImpl(null, DispatcherType.REQUEST);
 	}
 
 	@Test
@@ -43,11 +36,11 @@ public class PathTreeTest {
 
 		PathTree tree = new PathTree(new PartNode(null, null, null, exacts, defaults));
 
-		when(mock.getRequestURI()).thenReturn("/");
-		assertEquals(exacts, tree.find(mock));
+		req.setRequestUri("/");
+		assertEquals(exacts, tree.find(req));
 
-		when(mock.getRequestURI()).thenReturn("/blabla");
-		assertEquals(defaults, tree.find(mock));
+		req.setRequestUri("/blabla");
+		assertEquals(defaults, tree.find(req));
 	}
 
 	@Test
@@ -60,14 +53,14 @@ public class PathTreeTest {
 
 		PathTree tree = new PathTree(new PartNode(null, next, null, null, defaults));
 
-		when(mock.getRequestURI()).thenReturn("/toto");
-		assertEquals(defaults, tree.find(mock));
+		req.setRequestUri("/toto");
+		assertEquals(defaults, tree.find(req));
 
-		when(mock.getRequestURI()).thenReturn("/first");
-		assertEquals(first, tree.find(mock));
+		req.setRequestUri("/first");
+		assertEquals(first, tree.find(req));
 
-		when(mock.getRequestURI()).thenReturn("/second");
-		assertEquals(second, tree.find(mock));
+		req.setRequestUri("/second");
+		assertEquals(second, tree.find(req));
 	}
 
 	@Test
@@ -80,14 +73,14 @@ public class PathTreeTest {
 
 		PathTree tree = new PathTree(new PartNode(null, null, ends, null, defaults));
 
-		when(mock.getRequestURI()).thenReturn("/bla.txt");
-		assertEquals(defaults, tree.find(mock));
+		req.setRequestUri("/bla.txt");
+		assertEquals(defaults, tree.find(req));
 
-		when(mock.getRequestURI()).thenReturn("/bla.jsp");
-		assertEquals(jsp, tree.find(mock));
+		req.setRequestUri("/bla.jsp");
+		assertEquals(jsp, tree.find(req));
 
-		when(mock.getRequestURI()).thenReturn("/bla.html");
-		assertEquals(html, tree.find(mock));
+		req.setRequestUri("/bla.html");
+		assertEquals(html, tree.find(req));
 	}
 
 }

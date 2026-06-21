@@ -68,11 +68,21 @@ public abstract class HttpWorker implements Runnable, HttpAdapter {
 		}
 	}
 
+	private final boolean start() {
+		try {
+			return doStart();
+		} catch (Exception e) {
+			logger.warn("init req failed", e);
+			if (e instanceof InterruptedException)
+				Thread.currentThread().interrupt();
+			return false;
+		}
+	}
+
 	@Override
 	public void run() {
 		try {
-			if (!doStart()) {
-				logger.warn("init req failed");
+			if (!start()) {
 				co.getOut().close();
 				return;
 			}
@@ -84,8 +94,6 @@ public abstract class HttpWorker implements Runnable, HttpAdapter {
 					res.sendError(500);
 			} catch (@SuppressWarnings("unused") IOException e1) { //ok
 			}
-			if (e instanceof InterruptedException)
-				Thread.currentThread().interrupt();
 		} finally {
 			try {
 				doDone();
