@@ -6,8 +6,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -32,6 +35,8 @@ import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.ServletContainerInitializer;
 import unknow.maven.codegen.AbstractCodeGenMojo;
+import unknow.maven.codegen.FileScanner.FileHandler;
+import unknow.maven.codegen.PathMatchers;
 import unknow.maven.codegen.TypeFactory;
 import unknow.model.api.ModelLoader;
 import unknow.server.maven.servlet.Builder.BuilderContext;
@@ -55,7 +60,7 @@ import unknow.server.servlet.utils.ServletResourceStatic;
  * @author unknow
  */
 @Mojo(defaultPhase = LifecyclePhase.GENERATE_SOURCES, name = "servlet-generator", requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME, requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
-public class ServletGenMojo extends AbstractCodeGenMojo implements BuilderContext {
+public class ServletGenMojo extends AbstractCodeGenMojo implements BuilderContext, FileHandler {
 	private static final Logger logger = LoggerFactory.getLogger(ServletGenMojo.class);
 
 	private static final List<Builder> BUILDER = Arrays.asList(new CreateEventManager(), new CreateServletManager(), new CreateContext(), new CreateServlets(),
@@ -86,8 +91,12 @@ public class ServletGenMojo extends AbstractCodeGenMojo implements BuilderContex
 	@Parameter(defaultValue = "false")
 	private boolean addAccessLog;
 
-	@Parameter(defaultValue = "WEB-INF,META-INF,generated")
-	private List<String> ignoredResources;
+	private PathMatcher ignoredResources;
+
+	@Parameter(defaultValue = "WEB-INF/**,META-INF/**,generated/**")
+	public void setIgnoredResources(Collection<String> ignore) {
+		ignoredResources = PathMatchers.oneofGlob(ignore);
+	}
 
 	@Override
 	protected void doexecute() throws MojoExecutionException, MojoFailureException {
@@ -104,7 +113,7 @@ public class ServletGenMojo extends AbstractCodeGenMojo implements BuilderContex
 		}
 
 		processSrc(descriptor);
-		processResources(this::process);
+		processResources(this);
 		if (codegen.isGraalvm() && !descriptor.resources.isEmpty())
 			generateGraalvmResources();
 
@@ -121,8 +130,9 @@ public class ServletGenMojo extends AbstractCodeGenMojo implements BuilderContex
 		writer.write(cu);
 	}
 
-	private void process(Path full, Path file) {
-		if (file.equals(WEBXML)) {
+	@Override
+	public boolean handle(Path full, Path relative, BasicFileAttributes attrs) throws IOException {
+		if (relative.equals(WEBXML)) {
 			try (InputStream is = Files.newInputStream(full)) {
 				XMLStreamReader r = XML_IN.createXMLStreamReader(is);
 				WebXml.parse(loader, descriptor, r);
@@ -130,9 +140,9 @@ public class ServletGenMojo extends AbstractCodeGenMojo implements BuilderContex
 			} catch (XMLStreamException | IOException e) {
 				logger.warn("Failed to parse web.xml {}", full, e);
 			}
-			return;
+			return true;
 		}
-		if (file.equals(INITIALIZER)) {
+		if (relative.equals(INITIALIZER)) {
 			try (BufferedReader r = Files.newBufferedReader(full)) {
 				String l;
 				while ((l = r.readLine()) != null)
@@ -142,12 +152,10 @@ public class ServletGenMojo extends AbstractCodeGenMojo implements BuilderContex
 			}
 		}
 
-		for (String p : ignoredResources) {
-			if (file.startsWith(p))
-				return;
-		}
+		if (ignoredResources.matches(relative))
+			return true;
 
-		String p = "/" + file.toString().replace('\\', '/');
+		String p = "/" + relative.toString().replace('\\', '/');
 		try {
 			long size = Files.size(full);
 			descriptor.resources.put(p, new Resource(Files.getLastModifiedTime(full).to(TimeUnit.MILLISECONDS), size));
@@ -159,7 +167,7 @@ public class ServletGenMojo extends AbstractCodeGenMojo implements BuilderContex
 		} catch (IOException e) {
 			logger.error("Failed to process resources {}", full, e);
 		}
-
+		return true;
 	}
 
 	/**

@@ -410,7 +410,7 @@
 			<dependency>
 				<groupId>io.github.unknow0.maven</groupId>
 				<artifactId>unknow-maven-codegen</artifactId>
-				<version>0.1.0</version>
+				<version>0.2.0</version>
 			</dependency>
 			<dependency>
 				<groupId>io.github.unknow0.model</groupId>
