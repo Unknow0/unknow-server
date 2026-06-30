@@ -37,14 +37,16 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-plugin-plugin</artifactId>
 				<configuration>
-					<mojoDependencies />
+					<mojoDependencies>
+						<mojoDependencie>io.github.unknow0.maven:unknow-maven-codegen</mojoDependencie>
+					</mojoDependencies>
 					<skipErrorNoDescriptorsFound>true</skipErrorNoDescriptorsFound>
+					<goalPrefix>unknow-server</goalPrefix>
 				</configuration>
 			</plugin>
 			<plugin>
 				<groupId>org.eclipse.sisu</groupId>
 				<artifactId>sisu-maven-plugin</artifactId>
-				<version>0.3.3</version>
 				<executions>
 					<execution>
 						<id>generate-index</id>

@@ -215,20 +215,26 @@ public class ServletRequestImpl implements HttpServletRequest {
 	@Override
 	public String getCharacterEncoding() {
 		if (encoding == null) {
-			String header = getHeader("content-type");
-			if (header != null) {
-				int i = header.indexOf(";encoding=");
-				if (i > 0) {
-					int e = header.indexOf(';', i);
-					if (e < 0)
-						e = header.length();
-					encoding = header.substring(i + 10, e);
-				}
-			}
+			encoding = getCharset(getHeader("content-type"));
 			if (encoding == null)
 				encoding = co.getCtx().getRequestCharacterEncoding();
 		}
 		return encoding;
+	}
+
+	private static String getCharset(String header) {
+		int i = header.indexOf(';');
+		while (i > 0) {
+			int e = header.indexOf(';', i);
+			if (e < 0)
+				e = header.length();
+			int c = header.indexOf("charset=", i);
+			if (c < e) {
+				return header.substring(c + 10, e);
+			}
+			i = e;
+		}
+		return null;
 	}
 
 	@Override
@@ -274,7 +280,11 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public String getContentType() {
-		return getHeader("content-type");
+		String s = getHeader("content-type");
+		int i = s.indexOf(';');
+		if (i > 0)
+			return s.substring(0, i);
+		return s;
 	}
 
 	@Override
@@ -366,7 +376,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public String getScheme() {
-		return "http";
+		return isSecure() ? "https" : "http";
 	}
 
 	@Override
