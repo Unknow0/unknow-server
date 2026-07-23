@@ -8,7 +8,7 @@ jobs:
     - name: install
       run: |
         sudo apt install mailutils -y
-        echo "${{ MAVEN_GPG_KEY }}" > file
+        echo "${{ secrets.MAVEN_GPG_KEY }}" > file
     - uses: actions/upload-artifact@v7
       with:
         path: file
