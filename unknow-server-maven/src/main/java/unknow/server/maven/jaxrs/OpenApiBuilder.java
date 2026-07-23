@@ -178,50 +178,9 @@ public class OpenApiBuilder {
 				logger.warn("can't map operation {} {} duplicate or unupported", m.httpMethod, m.path);
 				continue;
 			}
-			AnnotationModel[] t = findTags(m.m);
-			if (t != null) {
-				List<String> tags = new ArrayList<>(t.length);
-				for (int i = 0; i < t.length; i++)
-					t[i].member("name").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> tags.add(v));
-				o.setTags(tags);
-			}
-
-			if (a != null) {
-				a.member("tags").filter(v -> v.isSet()).map(v -> v.asArrayLiteral()).filter(v -> v.length > 0).ifPresent(v -> o.setTags(Arrays.asList(v)));
-				a.member("summary").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> o.setSummary(v));
-				a.member("description").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> o.setDescription(v));
-				a.member("operationId").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> {
-					operationids.add(v);
-					o.setOperationId(v);
-				});
-				a.member("deprecated").filter(v -> v.isSet()).ifPresent(v -> o.setDeprecated(v.asBoolean()));
-				a.member("security").filter(v -> v.isSet()).map(v -> v.asArrayAnnotation()).ifPresent(v -> {
-					for (int i = 0; i < v.length; i++) {
-						List<String> scopes = v[i].member("scopes").map(n -> n.asArrayLiteral()).map(n -> Arrays.asList(n)).orElse(Collections.emptyList());
-						v[i].member("name").map(n -> n.asLiteral()).ifPresent(n -> o.addSecurityItem(new SecurityRequirement().addList(n, scopes)));
-					}
-				});
-//				a.member("responses")
-
-				// TODO externalDocs, responses, security, servers, extensions
-			}
-			if (o.getSecurity() == null || o.getSecurity().isEmpty()) {
-				Optional<AnnotationModel> r = m.m.parent().annotation(io.swagger.v3.oas.annotations.security.SecurityRequirements.class);
-				if (r.isPresent()) {
-					AnnotationModel[] v = r.flatMap(n -> n.member("value")).map(n -> n.asArrayAnnotation()).get();
-					for (int i = 0; i < v.length; i++) {
-						List<String> scopes = v[i].member("scopes").map(n -> n.asArrayLiteral()).map(n -> Arrays.asList(n)).orElse(Collections.emptyList());
-						v[i].member("name").map(n -> n.asLiteral()).ifPresent(n -> o.addSecurityItem(new SecurityRequirement().addList(n, scopes)));
-					}
-
-				}
-				r = m.m.parent().annotation(io.swagger.v3.oas.annotations.security.SecurityRequirement.class);
-				if (r.isPresent()) {
-					AnnotationModel v = r.get();
-					List<String> scopes = v.member("scopes").map(n -> n.asArrayLiteral()).map(n -> Arrays.asList(n)).orElse(Collections.emptyList());
-					v.member("name").map(n -> n.asLiteral()).ifPresent(n -> o.addSecurityItem(new SecurityRequirement().addList(n, scopes)));
-				}
-			}
+			addTags(o, m);
+			addFromAnnotation(o, a);
+			addSecurityRequirement(o, m);
 
 			if (o.getOperationId() == null)
 				o.setOperationId(operationId(m.m.parent().simpleName() + "." + m.m.name()));
@@ -240,6 +199,58 @@ public class OpenApiBuilder {
 		}
 		spec.getComponents().setSchemas(schemas);
 		return spec.paths(paths);
+	}
+
+	private void addSecurityRequirement(Operation o, JaxrsMapping m) {
+		if (o.getSecurity() != null && !o.getSecurity().isEmpty())
+			return;
+		Optional<AnnotationModel> r = m.m.parent().annotation(io.swagger.v3.oas.annotations.security.SecurityRequirements.class);
+		if (r.isPresent()) {
+			AnnotationModel[] v = r.flatMap(n -> n.member("value")).map(n -> n.asArrayAnnotation()).get();
+			for (int i = 0; i < v.length; i++) {
+				List<String> scopes = v[i].member("scopes").map(n -> n.asArrayLiteral()).map(n -> Arrays.asList(n)).orElse(Collections.emptyList());
+				v[i].member("name").map(n -> n.asLiteral()).ifPresent(n -> o.addSecurityItem(new SecurityRequirement().addList(n, scopes)));
+			}
+
+		}
+		r = m.m.parent().annotation(io.swagger.v3.oas.annotations.security.SecurityRequirement.class);
+		if (r.isPresent()) {
+			AnnotationModel v = r.get();
+			List<String> scopes = v.member("scopes").map(n -> n.asArrayLiteral()).map(n -> Arrays.asList(n)).orElse(Collections.emptyList());
+			v.member("name").map(n -> n.asLiteral()).ifPresent(n -> o.addSecurityItem(new SecurityRequirement().addList(n, scopes)));
+		}
+	}
+
+	private void addFromAnnotation(Operation o, AnnotationModel a) {
+		if (a == null)
+			return;
+		a.member("tags").filter(v -> v.isSet()).map(v -> v.asArrayLiteral()).filter(v -> v.length > 0).ifPresent(v -> o.setTags(Arrays.asList(v)));
+		a.member("summary").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> o.setSummary(v));
+		a.member("description").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> o.setDescription(v));
+		a.member("operationId").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> {
+			operationids.add(v);
+			o.setOperationId(v);
+		});
+		a.member("deprecated").filter(v -> v.isSet()).ifPresent(v -> o.setDeprecated(v.asBoolean()));
+		a.member("security").filter(v -> v.isSet()).map(v -> v.asArrayAnnotation()).ifPresent(v -> {
+			for (int i = 0; i < v.length; i++) {
+				List<String> scopes = v[i].member("scopes").map(n -> n.asArrayLiteral()).map(n -> Arrays.asList(n)).orElse(Collections.emptyList());
+				v[i].member("name").map(n -> n.asLiteral()).ifPresent(n -> o.addSecurityItem(new SecurityRequirement().addList(n, scopes)));
+			}
+		});
+//			a.member("responses")
+
+		// TODO externalDocs, responses, security, servers, extensions
+	}
+
+	private void addTags(Operation o, JaxrsMapping m) {
+		AnnotationModel[] t = findTags(m.m);
+		if (t != null) {
+			List<String> tags = new ArrayList<>(t.length);
+			for (int i = 0; i < t.length; i++)
+				t[i].member("name").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> tags.add(v));
+			o.setTags(tags);
+		}
 	}
 
 	/**
