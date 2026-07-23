@@ -84,6 +84,7 @@ import unknow.server.maven.jaxrs.JaxrsParam.JaxrsBodyParam;
 
 /**
  * Build a jaxrs servlet
+ * 
  * @author unknow
  */
 public class JaxRsServletBuilder {
@@ -149,6 +150,7 @@ public class JaxRsServletBuilder {
 
 	/**
 	 * convert a path mapping to a java class name
+	 * 
 	 * @param path the path
 	 * @return the class name
 	 */
@@ -285,6 +287,7 @@ public class JaxRsServletBuilder {
 
 	/**
 	 * create all required converter and add them to servlet fields
+	 * 
 	 * @param p the param
 	 * @param n converter field name
 	 * @param i parameter index
@@ -324,9 +327,10 @@ public class JaxRsServletBuilder {
 
 	/**
 	 * build the call for one method on one path
+	 * 
 	 * @param name java method name
 	 * @param list list of mapping on this path and method
-	 * @throws MojoFailureException  in case of error
+	 * @throws MojoFailureException in case of error
 	 */
 	private void buildMethod(String name, List<JaxrsMapping> list) throws MojoFailureException {
 
@@ -387,14 +391,18 @@ public class JaxRsServletBuilder {
 
 	/**
 	 * build the block to route with the accept header to the right service method
-	 * @param b where to add  statement 
+	 * 
+	 * @param b where to add statement
 	 * @param mappings the mapping to manage
 	 * @return b
 	 * @throws MojoFailureException in case of error
 	 */
 	private BlockStmt buildProduces(BlockStmt b, Collection<JaxrsMapping> mappings) throws MojoFailureException {
 		Map<String, JaxrsMapping> produce = new HashMap<>();
+		String defaultType = null;
 		for (JaxrsMapping m : mappings) {
+			if (defaultType == null)
+				defaultType = m.produce[0];
 			for (String p : m.produce) {
 				JaxrsMapping other = produce.put(p, m);
 				if (other != null)
@@ -402,8 +410,7 @@ public class JaxRsServletBuilder {
 			}
 		}
 
-		MethodCallExpr accept = new MethodCallExpr(new NameExpr("req"), "getAccepted",
-				CodeGenUtils.list(mt.predicate(types, produce.keySet()), mt.type(types, produce.keySet().iterator().next())));
+		MethodCallExpr accept = new MethodCallExpr(new NameExpr("req"), "getAccepted", CodeGenUtils.list(mt.predicate(types, produce.keySet()), mt.type(types, defaultType)));
 
 		JaxrsMapping def = produce.remove("*/*");
 		Statement stmt = new ThrowStmt(new ObjectCreationExpr(null, types.getClass(NotAcceptableException.class), CodeGenUtils.list()));
@@ -435,6 +442,7 @@ public class JaxRsServletBuilder {
 
 	/**
 	 * build the method that will parse service parameter, call the service method and write the response
+	 * 
 	 * @param mapping the mapping
 	 * @param services service class -> Expression
 	 */
@@ -466,6 +474,7 @@ public class JaxRsServletBuilder {
 
 	/**
 	 * get the Exception to conver a param to java type
+	 * 
 	 * @param p the param
 	 * @return the excpetion to convert the param
 	 */
@@ -487,7 +496,7 @@ public class JaxRsServletBuilder {
 
 	/**
 	 * service without pattern
-	 * will implements do<Method>() directly 
+	 * will implements do<Method>() directly
 	 */
 	private class SimpleService implements ServiceBuilder {
 
