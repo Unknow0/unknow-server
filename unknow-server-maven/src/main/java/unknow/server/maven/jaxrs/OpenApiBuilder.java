@@ -11,7 +11,9 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +46,7 @@ import io.swagger.v3.oas.models.parameters.Parameter.StyleEnum;
 import io.swagger.v3.oas.models.parameters.RequestBody;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
 import unknow.model.api.AnnotationModel;
 import unknow.model.api.ClassModel;
 import unknow.model.api.EnumModel;
@@ -67,8 +70,8 @@ public class OpenApiBuilder {
 	private static final String NUMBER = "number";
 	private static final String STRING = "string";
 
-	private static Schema<?> getDefault(String n) {
-		switch (n) {
+	private static Schema<?> getDefault(TypeModel type) {
+		switch (type.name()) {
 			case "boolean":
 			case "Z":
 				return new Schema<>().type("boolean").nullable(false);
@@ -124,9 +127,8 @@ public class OpenApiBuilder {
 			case "java.time.LocalTime":
 				return new Schema<>().type(STRING).format("time");
 			case "java.time.LocalDateTime":
-				return new Schema<>().type(STRING).format("date-time");
+			case "java.time.Instant":
 			case "java.time.ZonedDateTime":
-				return new Schema<>().type(STRING).format("date-time");
 			case "java.time.OffsetDateTime":
 				return new Schema<>().type(STRING).format("date-time");
 			case "java.time.Duration":
@@ -140,6 +142,9 @@ public class OpenApiBuilder {
 
 	@SuppressWarnings("rawtypes")
 	private final Map<String, Schema> schemas = new HashMap<>();
+	private final Map<String, TypeModel> schemaTypes = new HashMap<>();
+
+	private final Set<String> operationids = new HashSet<>();
 
 	public void build(OpenAPI spec, JaxrsModel model, String file) throws MojoExecutionException {
 		SimpleModule module = new SimpleModule().setSerializerModifier(new IgnoreOpenapiField());
@@ -173,25 +178,12 @@ public class OpenApiBuilder {
 				logger.warn("can't map operation {} {} duplicate or unupported", m.httpMethod, m.path);
 				continue;
 			}
-			AnnotationModel[] t = findTags(m.m);
-			if (t != null) {
-				List<String> tags = new ArrayList<>(t.length);
-				for (int i = 0; i < t.length; i++)
-					t[i].member("name").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> tags.add(v));
-				o.setTags(tags);
-			}
+			addTags(o, m);
+			addFromAnnotation(o, a);
+			addSecurityRequirement(o, m);
 
-			if (a != null) {
-				a.member("tags").filter(v -> v.isSet()).map(v -> v.asArrayLiteral()).filter(v -> v.length > 0).ifPresent(v -> o.setTags(Arrays.asList(v)));
-				a.member("summary").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> o.setSummary(v));
-				a.member("description").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> o.setDescription(v));
-				a.member("operationId").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> o.setOperationId(v));
-				a.member("deprecated").filter(v -> v.isSet()).ifPresent(v -> o.setDeprecated(v.asBoolean()));
-
-//				a.member("responses")
-
-				// TODO externalDocs, responses, security, servers, extensions
-			}
+			if (o.getOperationId() == null)
+				o.setOperationId(operationId(m.m.parent().simpleName() + "." + m.m.name()));
 
 			if (!m.m.type().isVoid()) {
 				Content c = new Content();
@@ -207,6 +199,58 @@ public class OpenApiBuilder {
 		}
 		spec.getComponents().setSchemas(schemas);
 		return spec.paths(paths);
+	}
+
+	private void addSecurityRequirement(Operation o, JaxrsMapping m) {
+		if (o.getSecurity() != null && !o.getSecurity().isEmpty())
+			return;
+		Optional<AnnotationModel> r = m.m.parent().annotation(io.swagger.v3.oas.annotations.security.SecurityRequirements.class);
+		if (r.isPresent()) {
+			AnnotationModel[] v = r.flatMap(n -> n.member("value")).map(n -> n.asArrayAnnotation()).get();
+			for (int i = 0; i < v.length; i++) {
+				List<String> scopes = v[i].member("scopes").map(n -> n.asArrayLiteral()).map(n -> Arrays.asList(n)).orElse(Collections.emptyList());
+				v[i].member("name").map(n -> n.asLiteral()).ifPresent(n -> o.addSecurityItem(new SecurityRequirement().addList(n, scopes)));
+			}
+
+		}
+		r = m.m.parent().annotation(io.swagger.v3.oas.annotations.security.SecurityRequirement.class);
+		if (r.isPresent()) {
+			AnnotationModel v = r.get();
+			List<String> scopes = v.member("scopes").map(n -> n.asArrayLiteral()).map(n -> Arrays.asList(n)).orElse(Collections.emptyList());
+			v.member("name").map(n -> n.asLiteral()).ifPresent(n -> o.addSecurityItem(new SecurityRequirement().addList(n, scopes)));
+		}
+	}
+
+	private void addFromAnnotation(Operation o, AnnotationModel a) {
+		if (a == null)
+			return;
+		a.member("tags").filter(v -> v.isSet()).map(v -> v.asArrayLiteral()).filter(v -> v.length > 0).ifPresent(v -> o.setTags(Arrays.asList(v)));
+		a.member("summary").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> o.setSummary(v));
+		a.member("description").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> o.setDescription(v));
+		a.member("operationId").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> {
+			operationids.add(v);
+			o.setOperationId(v);
+		});
+		a.member("deprecated").filter(v -> v.isSet()).ifPresent(v -> o.setDeprecated(v.asBoolean()));
+		a.member("security").filter(v -> v.isSet()).map(v -> v.asArrayAnnotation()).ifPresent(v -> {
+			for (int i = 0; i < v.length; i++) {
+				List<String> scopes = v[i].member("scopes").map(n -> n.asArrayLiteral()).map(n -> Arrays.asList(n)).orElse(Collections.emptyList());
+				v[i].member("name").map(n -> n.asLiteral()).ifPresent(n -> o.addSecurityItem(new SecurityRequirement().addList(n, scopes)));
+			}
+		});
+//			a.member("responses")
+
+		// TODO externalDocs, responses, security, servers, extensions
+	}
+
+	private void addTags(Operation o, JaxrsMapping m) {
+		AnnotationModel[] t = findTags(m.m);
+		if (t != null) {
+			List<String> tags = new ArrayList<>(t.length);
+			for (int i = 0; i < t.length; i++)
+				t[i].member("name").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> tags.add(v));
+			o.setTags(tags);
+		}
 	}
 
 	/**
@@ -276,6 +320,21 @@ public class OpenApiBuilder {
 
 	}
 
+	private String schemaName(TypeModel type) {
+		String n = type.simpleName();
+		int i = 0;
+		while (true) {
+			TypeModel t = schemaTypes.get(n);
+			if (t == null) {
+				schemaTypes.put(n, type);
+				return n;
+			}
+			if (t.equals(type))
+				return n;
+			n = type.simpleName() + "-" + i++;
+		}
+	}
+
 	/**
 	 * @param type
 	 * @return
@@ -285,12 +344,11 @@ public class OpenApiBuilder {
 		if (type.isWildCard())
 			type = type.asWildcard().bound();
 
-		String n = type.genericName();
-
+		String n = schemaName(type);
 		if (schemas.containsKey(n))
 			return new Schema<>().$ref("#/components/schemas/" + n);
 
-		Schema<?> s = getDefault(n);
+		Schema<?> s = getDefault(type);
 		if (s != null)
 			return s;
 
@@ -420,6 +478,14 @@ public class OpenApiBuilder {
 		while (t == null && it.hasNext())
 			t = findTags(it.next());
 		return t;
+	}
+
+	private String operationId(String base) {
+		String n = base;
+		int i = 0;
+		while (!operationids.add(n))
+			n = base + i++;
+		return n;
 	}
 
 	@SuppressWarnings("rawtypes")
