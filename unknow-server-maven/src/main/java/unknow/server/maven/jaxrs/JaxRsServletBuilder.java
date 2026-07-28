@@ -398,11 +398,8 @@ public class JaxRsServletBuilder {
 	 * @throws MojoFailureException in case of error
 	 */
 	private BlockStmt buildProduces(BlockStmt b, Collection<JaxrsMapping> mappings) throws MojoFailureException {
-		Map<String, JaxrsMapping> produce = new HashMap<>();
-		String defaultType = null;
+		Map<String, JaxrsMapping> produce = new LinkedHashMap<>();
 		for (JaxrsMapping m : mappings) {
-			if (defaultType == null)
-				defaultType = m.produce[0];
 			for (String p : m.produce) {
 				JaxrsMapping other = produce.put(p, m);
 				if (other != null)
@@ -410,7 +407,7 @@ public class JaxRsServletBuilder {
 			}
 		}
 
-		MethodCallExpr accept = new MethodCallExpr(new NameExpr("req"), "getAccepted", CodeGenUtils.list(mt.predicate(types, produce.keySet()), mt.type(types, defaultType)));
+		MethodCallExpr accept = new MethodCallExpr(new NameExpr("req"), "getAccepted", CodeGenUtils.list(mt.predicate(types, produce.keySet())));
 
 		JaxrsMapping def = produce.remove("*/*");
 		Statement stmt = new ThrowStmt(new ObjectCreationExpr(null, types.getClass(NotAcceptableException.class), CodeGenUtils.list()));

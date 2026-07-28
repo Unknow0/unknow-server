@@ -1,9 +1,7 @@
 package unknow.server.maven.jaxrs;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
 
@@ -27,6 +25,7 @@ import unknow.server.http.jaxrs.MTPredicate;
 
 /**
  * Build MediaTypes class with added MTPredicate and MediaType
+ * 
  * @author unknow
  */
 public class MediaTypesBuilder {
@@ -71,6 +70,7 @@ public class MediaTypesBuilder {
 
 	/**
 	 * write the MediaTypes class if needed
+	 * 
 	 * @param writer writer to write to
 	 * @throws MojoExecutionException in case od error
 	 */
@@ -81,6 +81,7 @@ public class MediaTypesBuilder {
 
 	/**
 	 * get an exception to an MediaType
+	 * 
 	 * @param f factory to add the required import
 	 * @param t mediaType
 	 * @return the exception
@@ -106,6 +107,7 @@ public class MediaTypesBuilder {
 
 	/**
 	 * get an exception to an MTPredicate
+	 * 
 	 * @param f factory to add the required import
 	 * @param mediaTypes types accepted by the predicate
 	 * @return the exception
@@ -113,10 +115,8 @@ public class MediaTypesBuilder {
 	public Expression predicate(TypeFactory f, Collection<String> mediaTypes) {
 		String k = "";
 		if (!mediaTypes.contains("*/*")) {
-			List<String> l = new ArrayList<>(mediaTypes);
-			l.sort(null);
 			StringJoiner s = new StringJoiner(",");
-			for (String str : l)
+			for (String str : mediaTypes)
 				s.add(str);
 			k = s.toString();
 		}

@@ -57,7 +57,7 @@ public class JaxrsReqTest {
 				Arguments.of(null, "*/*", MTPredicate.NONE),
 				Arguments.of(MediaType.WILDCARD_TYPE, "*/*", MTPredicate.ANY),
 				Arguments.of(MediaType.TEXT_XML_TYPE, "text/plain,text/xml", new MTPredicate.OneOf(MediaType.TEXT_XML_TYPE)),
-				Arguments.of(MediaType.WILDCARD_TYPE, null, new MTPredicate.OneOf(MediaType.TEXT_XML_TYPE)),
+				Arguments.of(MediaType.TEXT_XML_TYPE, null, new MTPredicate.OneOf(MediaType.TEXT_XML_TYPE)),
 				Arguments.of(MediaType.TEXT_XML_TYPE, "*/*",new MTPredicate.OneOf(MediaType.TEXT_XML_TYPE)),
 				Arguments.of(new MediaType("text", "json"), "text/xml;q=.5,text/json", MTPredicate.ANY));
 		//@formatter:on
@@ -70,6 +70,6 @@ public class JaxrsReqTest {
 		HttpServletRequest r = Mockito.mock(HttpServletRequest.class);
 		Mockito.when(r.getHeader("accept")).thenReturn(accept);
 		JaxrsReq req = new JaxrsReq(r, Collections.emptyList());
-		assertEquals(expected, req.getAccepted(allowed, MediaType.WILDCARD_TYPE));
+		assertEquals(expected, req.getAccepted(allowed));
 	}
 }
