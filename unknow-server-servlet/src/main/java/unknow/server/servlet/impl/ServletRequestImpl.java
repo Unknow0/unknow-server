@@ -225,12 +225,12 @@ public class ServletRequestImpl implements HttpServletRequest {
 	private static String getCharset(String header) {
 		int i = header.indexOf(';');
 		while (i > 0) {
-			int e = header.indexOf(';', i);
+			int e = header.indexOf(';', i + 1);
 			if (e < 0)
 				e = header.length();
 			int c = header.indexOf("charset=", i);
 			if (c < e) {
-				return header.substring(c + 10, e);
+				return header.substring(c + 8, e).trim();
 			}
 			i = e;
 		}
