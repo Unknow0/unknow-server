@@ -223,14 +223,17 @@ public class ServletRequestImpl implements HttpServletRequest {
 	}
 
 	private static String getCharset(String header) {
+		if (header == null || header.isBlank())
+			return null;
+
 		int i = header.indexOf(';');
 		while (i > 0) {
-			int e = header.indexOf(';', i);
+			int e = header.indexOf(';', i + 1);
 			if (e < 0)
 				e = header.length();
 			int c = header.indexOf("charset=", i);
 			if (c < e) {
-				return header.substring(c + 10, e);
+				return header.substring(c + 8, e).trim();
 			}
 			i = e;
 		}
@@ -281,6 +284,8 @@ public class ServletRequestImpl implements HttpServletRequest {
 	@Override
 	public String getContentType() {
 		String s = getHeader("content-type");
+		if (s == null || s.isBlank())
+			return null;
 		int i = s.indexOf(';');
 		if (i > 0)
 			return s.substring(0, i);
