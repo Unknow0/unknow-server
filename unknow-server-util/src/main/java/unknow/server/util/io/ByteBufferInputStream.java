@@ -99,10 +99,9 @@ public class ByteBufferInputStream extends InputStream {
 			if (b == EOF)
 				return o - n;
 			int r = b.remaining();
-			if (n > r)
-				b.position(r);
-			else
-				b.position(r = (int) n);
+			if (n < r)
+				r = (int) n;
+			b.position(b.position() + r);
 			n -= r;
 		}
 		return o - n;

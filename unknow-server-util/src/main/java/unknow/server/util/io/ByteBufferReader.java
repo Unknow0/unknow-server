@@ -66,6 +66,8 @@ public class ByteBufferReader extends Reader {
 	public int read(CharBuffer target) throws IOException {
 		if (target.isReadOnly())
 			throw new IOException("Target should be writable");
+		if (!target.hasRemaining())
+			return 0;
 		decode();
 		if (!buf.hasRemaining())
 			return -1;
