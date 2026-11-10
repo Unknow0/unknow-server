@@ -201,7 +201,7 @@ public class JaxrsMojo extends AbstractCodeGenMojo {
 			t.setTypeArguments(CodeGenUtils.list(TypeFactory.EMPTY));
 		}
 		NodeList<Expression> l = new NodeList<>(new ObjectCreationExpr(null, t, list));
-		l.add(c.annotation(Priority.class).flatMap(a -> a.value()).filter(v -> v.isSet()).map(a -> (Expression) new IntegerLiteralExpr(a.asLiteral()))
+		l.add(c.annotation(Priority.class).flatMap(a -> a.value()).map(a -> (Expression) new IntegerLiteralExpr(a.asLiteral()))
 				.orElseGet(() -> new FieldAccessExpr(new TypeExpr(types.get(Priorities.class)), "USER")));
 		for (String s : mimes)
 			l.add(CodeGenUtils.text(s));

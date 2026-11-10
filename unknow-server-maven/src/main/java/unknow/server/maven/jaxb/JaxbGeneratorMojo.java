@@ -200,7 +200,7 @@ public class JaxbGeneratorMojo extends AbstractCodeGenMojo {
 			return null;
 		// TODO
 //		XmlSchema
-		return new QName(r.member("namespace").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !"##default".equals(v)).orElse(""),
-				r.member("name").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !"##default".equals(v)).orElse(t.simpleName()));
+		return new QName(r.member("namespace").map(v -> v.asLiteral()).filter(v -> !"##default".equals(v)).orElse(""),
+				r.member("name").map(v -> v.asLiteral()).filter(v -> !"##default".equals(v)).orElse(t.simpleName()));
 	}
 }

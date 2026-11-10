@@ -60,12 +60,12 @@ public class Service {
 
 	public static Service build(ClassModel clazz, String basePath, ModelLoader loader, XmlLoader xmlLoader) {
 		AnnotationModel ws = clazz.annotation(WebService.class).orElse(null);
-		String name = ws.member("serviceName").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).orElse(clazz.simpleName() + "Service");
-		String portType = ws.member("name").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).orElse(clazz.simpleName());
-		String portName = ws.member("portName").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).orElse(portType + "Port");
-		String ns = ws.member("targetNamespace").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).orElse(clazz.packageName());
+		String name = ws.member("serviceName").map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).orElse(clazz.simpleName() + "Service");
+		String portType = ws.member("name").map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).orElse(clazz.simpleName());
+		String portName = ws.member("portName").map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).orElse(portType + "Port");
+		String ns = ws.member("targetNamespace").map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).orElse(clazz.packageName());
 
-		String[] url = clazz.annotation(WebServiceUrl.class).flatMap(a -> a.value()).filter(v -> v.isSet()).map(v -> v.asArrayLiteral()).orElse(new String[] { name });
+		String[] url = clazz.annotation(WebServiceUrl.class).flatMap(a -> a.value()).map(v -> v.asArrayLiteral()).orElse(new String[] { name });
 		for (int i = 0; i < url.length; i++) {
 			String u = url[i];
 			if (u.startsWith("/"))
@@ -74,18 +74,18 @@ public class Service {
 		}
 
 		Optional<AnnotationModel> a = clazz.annotation(SOAPBinding.class);
-		Style style = a.flatMap(v -> v.member("style")).filter(v -> v.isSet()).map(v -> v.asEnum(Style.class)).orElse(Style.DOCUMENT);
+		Style style = a.flatMap(v -> v.member("style")).map(v -> v.asEnum(Style.class)).orElse(Style.DOCUMENT);
 		if (style != Style.DOCUMENT)
 			throw new RuntimeException("Only Document style is managed " + clazz);
-		Use use = a.flatMap(v -> v.member("use")).filter(v -> v.isSet()).map(v -> v.asEnum(Use.class)).orElse(Use.LITERAL);
+		Use use = a.flatMap(v -> v.member("use")).map(v -> v.asEnum(Use.class)).orElse(Use.LITERAL);
 		if (use != Use.LITERAL)
 			throw new RuntimeException("Only literal use is managed " + clazz);
 
-		ParameterStyle paramStyle = a.flatMap(v -> v.member("parameterStyle")).filter(v -> v.isSet()).map(s -> s.asEnum(ParameterStyle.class)).orElse(ParameterStyle.WRAPPED);
+		ParameterStyle paramStyle = a.flatMap(v -> v.member("parameterStyle")).map(s -> s.asEnum(ParameterStyle.class)).orElse(ParameterStyle.WRAPPED);
 
 		Service service = new Service(name, portType, portName, ns, url, paramStyle);
 
-		String inter = ws.member("endpointInterface").filter(v -> v.isSet()).map(v -> v.asLiteral()).orElse("");
+		String inter = ws.member("endpointInterface").map(v -> v.asLiteral()).orElse("");
 		if (!inter.isEmpty()) {
 			TypeModel typeModel = loader.get(inter);
 			if (typeModel == null)
@@ -122,39 +122,39 @@ public class Service {
 	private void collectOp(ClassModel cl, XmlLoader xmlLoader) {
 		for (MethodModel m : cl.methods()) {
 			Optional<AnnotationModel> a = m.annotation(WebMethod.class);
-			if (a.flatMap(v -> v.member("exclude")).filter(v -> v.isSet()).map(v -> v.asBoolean()).orElse(false))
+			if (a.flatMap(v -> v.member("exclude")).map(v -> v.asBoolean()).orElse(false))
 				continue;
-			String opName = a.flatMap(v -> v.member("operationName")).filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).orElse(m.name());
-			String action = a.flatMap(v -> v.member("action")).filter(v -> v.isSet()).map(v -> v.asLiteral()).orElse("");
+			String opName = a.flatMap(v -> v.member("operationName")).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).orElse(m.name());
+			String action = a.flatMap(v -> v.member("action")).map(v -> v.asLiteral()).orElse("");
 
 			a = m.annotation(SOAPBinding.class);
-			Style style = a.flatMap(v -> v.member("style")).filter(v -> v.isSet()).map(v -> v.asEnum(Style.class)).orElse(Style.DOCUMENT);
+			Style style = a.flatMap(v -> v.member("style")).map(v -> v.asEnum(Style.class)).orElse(Style.DOCUMENT);
 			if (style != Style.DOCUMENT)
 				throw new RuntimeException("Only Document style is managed " + m);
-			Use use = a.flatMap(v -> v.member("use")).filter(v -> v.isSet()).map(v -> v.asEnum(Use.class)).orElse(Use.LITERAL);
+			Use use = a.flatMap(v -> v.member("use")).map(v -> v.asEnum(Use.class)).orElse(Use.LITERAL);
 			if (use != Use.LITERAL)
 				throw new RuntimeException("Only literal use is managed " + m);
-			ParameterStyle paramStyle = a.flatMap(v -> v.member("parameterStyle")).filter(v -> v.isSet()).map(v -> v.asEnum(ParameterStyle.class)).orElse(defaultParamStyle);
+			ParameterStyle paramStyle = a.flatMap(v -> v.member("parameterStyle")).map(v -> v.asEnum(ParameterStyle.class)).orElse(defaultParamStyle);
 
 			Parameter r = null;
 			TypeModel type = m.type();
 			if (!type.isVoid()) {
 				a = m.annotation(WebResult.class);
-				boolean h = a.flatMap(v -> v.member("header")).filter(v -> v.isSet()).map(v -> v.asBoolean()).orElse(false);
-				String paramName = a.flatMap(v -> v.member("name")).filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty())
+				boolean h = a.flatMap(v -> v.member("header")).map(v -> v.asBoolean()).orElse(false);
+				String paramName = a.flatMap(v -> v.member("name")).map(v -> v.asLiteral()).filter(v -> !v.isEmpty())
 						.orElse(paramStyle == ParameterStyle.BARE ? opName + "Response" : "return");
-				String paramNs = a.flatMap(v -> v.member("targetNamespace")).filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty())
+				String paramNs = a.flatMap(v -> v.member("targetNamespace")).map(v -> v.asLiteral()).filter(v -> !v.isEmpty())
 						.orElse(paramStyle != ParameterStyle.WRAPPED || h ? this.ns : "");
 
 				r = new Parameter(new QName(paramNs, paramName), m.type(), xmlLoader.add(m.type()), h);
 			}
 			List<Parameter> params = new ArrayList<>();
-			for (ParamModel<?> p : m.parameters()) {
+			for (ParamModel p : m.parameters()) {
 				a = p.annotation(WebParam.class);
 				boolean h = a.flatMap(v -> v.member("header")).map(v -> v.asBoolean()).orElse(false);
-				String paramName = a.flatMap(v -> v.member("name")).filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty())
+				String paramName = a.flatMap(v -> v.member("name")).map(v -> v.asLiteral()).filter(v -> !v.isEmpty())
 						.orElse(paramStyle == ParameterStyle.BARE ? opName : "arg" + p.index());
-				String paramNs = a.flatMap(v -> v.member("targetNamespace")).filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty())
+				String paramNs = a.flatMap(v -> v.member("targetNamespace")).map(v -> v.asLiteral()).filter(v -> !v.isEmpty())
 						.orElse(paramStyle == ParameterStyle.WRAPPED && !h ? "" : this.ns);
 				params.add(new Parameter(new QName(paramNs, paramName), p.type(), xmlLoader.add(p.type()), h));
 			}

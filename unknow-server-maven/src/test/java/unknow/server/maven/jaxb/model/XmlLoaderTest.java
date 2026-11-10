@@ -14,7 +14,6 @@ import javax.xml.namespace.QName;
 import org.junit.jupiter.api.Test;
 
 import unknow.model.api.PrimitiveModel;
-import unknow.model.jvm.JvmModelLoader;
 import unknow.model.simple.SimpleAnnotationArray;
 import unknow.model.simple.SimpleClass;
 import unknow.server.maven.jaxb.model.XmlElements.XmlGroup;
@@ -50,10 +49,8 @@ public class XmlLoaderTest {
 
 		SimpleAnnotationArray a = clazz.withMethod("getA", Modifier.PUBLIC, PrimitiveModel.INT).withAnnotation(jakarta.xml.bind.annotation.XmlElements.class)
 				.withArray("value");
-		a.withAnnotation(jakarta.xml.bind.annotation.XmlElement.class).withClass("type", PrimitiveModel.INT,
-				JvmModelLoader.GLOBAL.get(jakarta.xml.bind.annotation.XmlElement.DEFAULT.class.getName()));
-		a.withAnnotation(jakarta.xml.bind.annotation.XmlElement.class).withClass("type", PrimitiveModel.DOUBLE,
-				JvmModelLoader.GLOBAL.get(jakarta.xml.bind.annotation.XmlElement.DEFAULT.class.getName()));
+		a.withAnnotation(jakarta.xml.bind.annotation.XmlElement.class).withClass("type", PrimitiveModel.INT);
+		a.withAnnotation(jakarta.xml.bind.annotation.XmlElement.class).withClass("type", PrimitiveModel.DOUBLE);
 		clazz.withMethod("setA", Modifier.PUBLIC, PrimitiveModel.VOID).withParam("a", PrimitiveModel.INT);
 
 		XmlLoader xmlLoader = new XmlLoader();

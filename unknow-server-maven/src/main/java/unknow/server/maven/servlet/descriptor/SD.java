@@ -36,18 +36,18 @@ public class SD extends WithParams {
 		this.index = index;
 		this.clazz = e.name();
 
-		this.name = a.member("name").filter(v -> v.isSet()).or(() -> a.member("filterName")).map(v -> v.asLiteral()).orElse(e.name());
-		a.member("value").filter(v -> v.isSet()).or(() -> a.member("urlPatterns")).ifPresent(v -> pattern.addAll(Arrays.asList(v.asArrayLiteral())));
-		a.member("loadOnStartup").filter(v -> v.isSet()).ifPresent(v -> loadOnStartup = v.asInt());
-		a.member("initParams").filter(v -> v.isSet()).map(v -> v.asArrayAnnotation()).ifPresent(v -> {
+		this.name = a.member("name").or(() -> a.member("filterName")).map(v -> v.asLiteral()).orElse(e.name());
+		a.member("value").or(() -> a.member("urlPatterns")).ifPresent(v -> pattern.addAll(Arrays.asList(v.asArrayLiteral())));
+		a.member("loadOnStartup").ifPresent(v -> loadOnStartup = v.asInt());
+		a.member("initParams").map(v -> v.asArrayAnnotation()).ifPresent(v -> {
 			for (int i = 0; i < v.length; i++) {
 				String key = v[i].member("name").orElseThrow().asLiteral();
 				String value = v[i].member("value").orElseThrow().asLiteral();
 				param.put(key, value);
 			}
 		});
-		a.member("servletNames").filter(v -> v.isSet()).ifPresent(v -> servletNames.addAll(Arrays.asList(v.asArrayLiteral())));
-		a.member("dispatcherTypes").filter(v -> v.isSet()).map(v -> v.asArrayLiteral()).ifPresent(v -> {
+		a.member("servletNames").ifPresent(v -> servletNames.addAll(Arrays.asList(v.asArrayLiteral())));
+		a.member("dispatcherTypes").map(v -> v.asArrayLiteral()).ifPresent(v -> {
 			for (int i = 0; i < v.length; i++)
 				dispatcher.add(DispatcherType.valueOf(v[i]));
 		});

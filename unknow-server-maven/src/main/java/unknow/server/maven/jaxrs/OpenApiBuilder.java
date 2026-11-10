@@ -177,16 +177,16 @@ public class OpenApiBuilder {
 			if (t != null) {
 				List<String> tags = new ArrayList<>(t.length);
 				for (int i = 0; i < t.length; i++)
-					t[i].member("name").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> tags.add(v));
+					t[i].member("name").map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> tags.add(v));
 				o.setTags(tags);
 			}
 
 			if (a != null) {
-				a.member("tags").filter(v -> v.isSet()).map(v -> v.asArrayLiteral()).filter(v -> v.length > 0).ifPresent(v -> o.setTags(Arrays.asList(v)));
-				a.member("summary").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> o.setSummary(v));
-				a.member("description").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> o.setDescription(v));
-				a.member("operationId").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> o.setOperationId(v));
-				a.member("deprecated").filter(v -> v.isSet()).ifPresent(v -> o.setDeprecated(v.asBoolean()));
+				a.member("tags").map(v -> v.asArrayLiteral()).filter(v -> v.length > 0).ifPresent(v -> o.setTags(Arrays.asList(v)));
+				a.member("summary").map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> o.setSummary(v));
+				a.member("description").map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> o.setDescription(v));
+				a.member("operationId").map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> o.setOperationId(v));
+				a.member("deprecated").ifPresent(v -> o.setDeprecated(v.asBoolean()));
 
 //				a.member("responses")
 
@@ -253,14 +253,14 @@ public class OpenApiBuilder {
 
 		AnnotationModel a = param.p.annotation(io.swagger.v3.oas.annotations.Parameter.class).orElse(null);
 		if (a != null) {
-			if (a.member("hidden").filter(v -> v.isSet()).map(v -> v.asBoolean()).orElse(false))
+			if (a.member("hidden").map(v -> v.asBoolean()).orElse(false))
 				return;
 
-			a.member("name").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> p.setName(v));
-			a.member("in").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !"DEFAULT".equals(v)).ifPresent(v -> p.setIn(v));
-			a.member("description").filter(v -> v.isSet()).map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> p.setDescription(v));
-			a.member("required").filter(v -> v.isSet()).ifPresent(v -> p.setRequired(v.asBoolean()));
-			a.member("deprecated").filter(v -> v.isSet()).ifPresent(v -> p.setDeprecated(v.asBoolean()));
+			a.member("name").map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> p.setName(v));
+			a.member("in").map(v -> v.asLiteral()).filter(v -> !"DEFAULT".equals(v)).ifPresent(v -> p.setIn(v));
+			a.member("description").map(v -> v.asLiteral()).filter(v -> !v.isEmpty()).ifPresent(v -> p.setDescription(v));
+			a.member("required").ifPresent(v -> p.setRequired(v.asBoolean()));
+			a.member("deprecated").ifPresent(v -> p.setDeprecated(v.asBoolean()));
 			// allowEmptyValue
 			// style
 			// explode
@@ -339,9 +339,9 @@ public class OpenApiBuilder {
 		if (annotation.isEmpty())
 			return s;
 		AnnotationModel a = annotation.get();
-		a.member("name").filter(v -> v.isSet()).ifPresent(v -> s.setName(v.asLiteral()));
-		a.member("title").filter(v -> v.isSet()).ifPresent(v -> s.setTitle(v.asLiteral()));
-		a.member("description").filter(v -> v.isSet()).ifPresent(v -> s.setDescription(v.asLiteral()));
+		a.member("name").ifPresent(v -> s.setName(v.asLiteral()));
+		a.member("title").ifPresent(v -> s.setTitle(v.asLiteral()));
+		a.member("description").ifPresent(v -> s.setDescription(v.asLiteral()));
 		return s;
 	}
 
@@ -399,7 +399,7 @@ public class OpenApiBuilder {
 	}
 
 	public static AnnotationModel[] findTags(MethodModel m) {
-		AnnotationModel[] t = m.annotation(Tags.class).flatMap(v -> v.value()).filter(v -> v.isSet()).map(v -> v.asArrayAnnotation()).orElse(null);
+		AnnotationModel[] t = m.annotation(Tags.class).flatMap(v -> v.value()).map(v -> v.asArrayAnnotation()).orElse(null);
 		if (t == null)
 			t = m.annotation(io.swagger.v3.oas.annotations.tags.Tag.class).map(v -> new AnnotationModel[] { v }).orElse(null);
 		if (t != null)
@@ -411,7 +411,7 @@ public class OpenApiBuilder {
 		if (m == null)
 			return null;
 
-		AnnotationModel[] t = m.annotation(Tags.class).flatMap(v -> v.value()).filter(v -> v.isSet()).map(v -> v.asArrayAnnotation()).orElse(null);
+		AnnotationModel[] t = m.annotation(Tags.class).flatMap(v -> v.value()).map(v -> v.asArrayAnnotation()).orElse(null);
 		if (t == null)
 			t = m.annotation(io.swagger.v3.oas.annotations.tags.Tag.class).map(v -> new AnnotationModel[] { v }).orElse(null);
 		if (t == null)

@@ -47,6 +47,9 @@
 		<jmh.version>1.37</jmh.version>
 		<protostuff.version>1.8.0</protostuff.version>
 		<protobuf.version>4.28.2</protobuf.version>
+
+		<unknow-model.version>0.0.1-SNAPSHOT</unknow-model.version>
+		<unknow-codegen.version>0.0.1-SNAPSHOT</unknow-codegen.version>
 	</properties>
 
 
@@ -410,12 +413,12 @@
 			<dependency>
 				<groupId>io.github.unknow0.maven</groupId>
 				<artifactId>unknow-maven-codegen</artifactId>
-				<version>0.2.0</version>
+				<version>${unknow-codegen.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>io.github.unknow0.model</groupId>
 				<artifactId>unknow-model-bom</artifactId>
-				<version>1.1.0</version>
+				<version>${unknow-model.version}</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>

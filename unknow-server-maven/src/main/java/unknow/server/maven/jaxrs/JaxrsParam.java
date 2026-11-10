@@ -34,7 +34,7 @@ public abstract class JaxrsParam<T extends WithName & WithAnnotation & WithType>
 	private JaxrsParam(T p, String prefix, String value) {
 		this.p = p;
 		if (p instanceof ParamModel)
-			this.parent = ((ParamModel<?>) p).parent().parent();
+			this.parent = ((ParamModel) p).parent().parent();
 		else if (p instanceof BeanProperty)
 			this.parent = ((BeanProperty) p).getter().parent();
 		else
@@ -45,7 +45,7 @@ public abstract class JaxrsParam<T extends WithName & WithAnnotation & WithType>
 		this.value = value;
 
 		this.v = prefix + "$" + p.name();
-		this.def = p.annotation(DefaultValue.class).flatMap(a -> a.value()).filter(a -> a.isSet()).map(a -> a.asLiteral()).orElseGet(() -> {
+		this.def = p.annotation(DefaultValue.class).flatMap(a -> a.value()).map(a -> a.asLiteral()).orElseGet(() -> {
 			if (!type.isPrimitive())
 				return null;
 			if (type == PrimitiveModel.BOOLEAN)

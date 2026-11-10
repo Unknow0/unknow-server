@@ -187,9 +187,9 @@ public class JaxRsServletBuilder {
 			b.addStatement(new VariableDeclarationExpr(types.getClass(Type.class), "r")).addStatement(new VariableDeclarationExpr(types.array(Annotation.class), "ra"));
 
 		for (JaxrsMapping m : mappings) {
-			List<ParamModel<MethodModel>> parameters = m.m.parameters();
+			List<ParamModel> parameters = m.m.parameters();
 			NodeList<Expression> classes = new NodeList<>();
-			for (ParamModel<MethodModel> p : parameters)
+			for (ParamModel p : parameters)
 				classes.add(new ClassExpr(types.get(p.type().name())));
 			NodeList<Expression> getMethod = new NodeList<>();
 			getMethod.add(CodeGenUtils.text(m.m.name()));
