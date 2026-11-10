@@ -36,7 +36,7 @@ public class ByteBufferInputStream extends InputStream {
 	 * @throws IOException
 	 */
 	public boolean isEof() throws IOException {
-		return current == EOF || !current.hasRemaining() && !buffers.isEmpty() && buffers.peek() == EOF;
+		return current == EOF || (current == null || !current.hasRemaining()) && !buffers.isEmpty() && buffers.peek() == EOF;
 	}
 
 	/**
@@ -75,6 +75,8 @@ public class ByteBufferInputStream extends InputStream {
 
 	@Override
 	public int read(byte[] b, int off, int len) throws IOException {
+		if (len == 0)
+			return 0;
 		ByteBuffer buffer = buffer();
 		if (buffer == EOF)
 			return -1;

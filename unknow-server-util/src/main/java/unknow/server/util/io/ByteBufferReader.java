@@ -45,6 +45,8 @@ public class ByteBufferReader extends Reader {
 
 	@Override
 	public int read(char[] cbuf, int off, int len) throws IOException {
+		if(len==0)
+			return 0;
 		decode();
 		if (!buf.hasRemaining())
 			return -1;
@@ -77,7 +79,7 @@ public class ByteBufferReader extends Reader {
 			return 0;
 		int l = (int) Math.min(n, buf.remaining());
 		buf.position(buf.position() + l);
-		return n;
+		return l;
 	}
 
 	@Override

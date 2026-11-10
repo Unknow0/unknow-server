@@ -48,18 +48,25 @@ public interface Decoder {
 		@Override
 		public void decode(ByteBuffer bbuf, CharBuffer cbuf, boolean endOfInput) {
 			int l = bbuf.limit();
-			while (bbuf.position() < l) {
+			while (bbuf.remaining() > b.remaining()) {
 				b.put(bbuf.limit(Math.min(l, bbuf.position() + b.remaining())));
-				CoderResult r = dec.decode(b.flip(), cbuf, endOfInput);
+				CoderResult r = dec.decode(b.flip(), cbuf, false);
 				b.compact();
 				bbuf.limit(l);
-				if (endOfInput)
-					endCalled = true;
 				if (r.isOverflow())
 					return;
 				if (r.isError())
 					throw new IllegalArgumentException(r.toString());
 			}
+			b.put(bbuf);
+			CoderResult r = dec.decode(b.flip(), cbuf, endOfInput);
+			b.compact();
+			if (endOfInput)
+				endCalled = true;
+			if (r.isOverflow())
+				return;
+			if (r.isError())
+				throw new IllegalArgumentException(r.toString());
 		}
 
 		@Override

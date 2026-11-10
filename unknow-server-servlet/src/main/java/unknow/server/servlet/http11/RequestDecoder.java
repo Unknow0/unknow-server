@@ -37,7 +37,6 @@ public class RequestDecoder {
 
 	public void closeContent() {
 		req.close();
-		reset();
 	}
 
 	public boolean closed() {
