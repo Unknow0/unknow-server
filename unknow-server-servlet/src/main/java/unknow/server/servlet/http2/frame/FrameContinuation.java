@@ -17,7 +17,7 @@ public class FrameContinuation extends FrameHeader {
 			frame.type = -1;
 			p.goaway(Http2Processor.PROTOCOL_ERROR);
 		}
-		if ((frame.flags & 0x20) == 1) // PRIORITY
+		if ((frame.flags & 0x20) == 0x20) // PRIORITY
 			frame.skip = 5;
 		else
 			frame.skip = 0;

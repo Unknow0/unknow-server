@@ -37,6 +37,7 @@ public class FrameHeader extends FrameReader {
 		if (frame.skip > 0) {
 			int i = Math.min(frame.skip, buf.remaining());
 			buf.position(buf.position() + i);
+			frame.size -= i;
 			if ((frame.skip -= i) > 0 || !buf.hasRemaining())
 				return;
 		}
