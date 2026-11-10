@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import java.nio.ByteBuffer;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -18,6 +19,7 @@ public class RequestDecoderTest {
 				Arguments.of("GET / HTTP/1.1", new byte[][] { "GET / HTTP/1.1\r\n\r\n".getBytes() }), //
 				Arguments.of("GET / HTTP/1.1", new byte[][] { "GET / HTTP/1.1\r".getBytes(), "\n\r\n".getBytes() }), //
 				Arguments.of("GET / HTTP/1.1\nk: [v]", new byte[][] { "GET / HTTP/1.1\r\nK  :  v  \r\n\r\n".getBytes() }), //
+				Arguments.of("GET / HTTP/1.1\nk: [v]", new byte[][] { "GET / HTTP/1.1\r\nK  :  v  \r\r\n\r\n".getBytes() }), //
 				Arguments.of("GET / HTTP/1.1\nk: [v\rv]", new byte[][] { "GET / HTTP/1.1\r\nK  :  v\r".getBytes(), "v\r\n\r\n".getBytes() }), //
 				Arguments.of("GET / HTTP/1.1\nk: [v\rv]", new byte[][] { "GET / HTTP/1.1\r\nK  :  v\r".getBytes(), "v\r\n\r\nblablabla".getBytes() }),//
 				Arguments.of("GET / HTTP/1.1\nk: [v\rv]", new byte[][] { "GET / HTTP/1.1\r\nK  :  v\r".getBytes(), "v\r\n\r\nblablabla".getBytes() }) //
@@ -35,5 +37,17 @@ public class RequestDecoderTest {
 
 		assertNotNull(req);
 		assertEquals(expected, req.toString());
+	}
+
+	@Test
+	public void testContinuation() {
+		Http11Processor co = new Http11Processor(null);
+		RequestDecoder d = new RequestDecoder(co);
+		ByteBuffer buf = ByteBuffer.wrap("GET / HTTP/1.1\r\n\r\nGET".getBytes());
+		ServletRequestImpl req = d.append(buf);
+
+		assertNotNull(req);
+		assertEquals("GET / HTTP/1.1", req.toString());
+		assertEquals(3, buf.remaining());
 	}
 }

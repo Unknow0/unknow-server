@@ -7,8 +7,9 @@ import unknow.server.servlet.impl.ServletRequestImpl;
 import unknow.server.servlet.utils.Utf8Decoder;
 
 public class RequestDecoder {
-	private static final byte[] CRLF = { '\r', '\n' };
 	private static final byte SPACE = ' ';
+	private static final byte CR = '\r';
+	private static final byte LF = '\n';
 
 	private enum State {
 		METHOD, URI, PROTOCOL, HEADER, DONE
@@ -20,7 +21,7 @@ public class RequestDecoder {
 
 	private ServletRequestImpl req;
 	private State state;
-	private int f;
+	private boolean cr;
 	private int o;
 	private int l;
 
@@ -81,13 +82,13 @@ public class RequestDecoder {
 				}
 				return;
 			case PROTOCOL:
-				if ((str = readUntil(CRLF)) != null) {
+				if ((str = readUntilCrlf()) != null) {
 					state = State.HEADER;
 					req.setProtocol(str);
 				}
 				return;
 			case HEADER:
-				if ((str = readUntil(CRLF)) != null) {
+				if ((str = readUntilCrlf()) != null) {
 					if (str.isEmpty()) {
 						state = State.DONE;
 						return;
@@ -118,29 +119,43 @@ public class RequestDecoder {
 		return null;
 	}
 
-	private String readUntil(byte[] c) {
+	private String readUntilCrlf() {
 		int i = o;
-		while (i < l) {
-			byte t = buf[i++];
-			if (c[f++] != t) {
-				decoder.append(c, 0, f - 1);
-				f = 0;
-			} else if (f == c.length) {
-				if (i > c.length)
-					decoder.append(buf, o, i - c.length);
-				f = 0;
-				o = i;
+		if (i == l)
+			return null;
+		if (cr) {
+			cr = false;
+			if (buf[i] == LF) {
+				o++;
 				return decoder.done();
 			}
+			decoder.append(CR);
 		}
-		decoder.append(buf, o, l - f);
+
+		while (i < l) {
+			byte t = buf[i++];
+			if (t == CR) {
+				if (i == l) {
+					cr = true;
+					decoder.append(buf, o, l - 1);
+					o = l;
+					return null;
+				}
+				if (buf[i] == LF) {
+					String str = decoder.append(buf, o, i - 1).done();
+					o = i + 1;
+					return str;
+				}
+			}
+		}
+		decoder.append(buf, o, l);
 		o = l;
 		return null;
 	}
 
 	public void reset() {
 		state = State.METHOD;
-		f = 0;
+		cr = false;
 		req = new ServletRequestImpl(co.co(), DispatcherType.REQUEST);
 	}
 }
