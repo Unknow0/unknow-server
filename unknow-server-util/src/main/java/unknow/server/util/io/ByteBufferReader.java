@@ -5,6 +5,7 @@ import java.io.Reader;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
+import java.util.Objects;
 
 import unknow.server.util.Decoder;
 
@@ -52,6 +53,7 @@ public class ByteBufferReader extends Reader {
 
 	@Override
 	public int read(char[] cbuf, int off, int len) throws IOException {
+		Objects.checkFromIndexSize(off, len, cbuf.length);
 		if (len == 0)
 			return 0;
 		decode();
