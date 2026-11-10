@@ -12,6 +12,7 @@ public class ByteBufferReader extends Reader {
 	private final ByteBufferInputStream in;
 	private final Decoder decoder;
 	private final CharBuffer buf;
+	private boolean flushed;
 
 	public ByteBufferReader(ByteBufferInputStream in, String charset) {
 		this(in, Charset.forName(charset));
@@ -21,17 +22,23 @@ public class ByteBufferReader extends Reader {
 		this.in = in;
 		this.decoder = Decoder.from(charset);
 		buf = CharBuffer.allocate(8192).flip();
+		flushed = false;
 	}
 
 	private void decode() throws IOException {
-		if (buf.hasRemaining() || in.isEof())
+		if (buf.hasRemaining())
 			return;
 		buf.compact();
-		ByteBuffer b = in.buffer();
-		if (b != null)
-			decoder.decode(b, buf, in.isLast());
-		else
-			decoder.flush(buf);
+		if (in.isEof()) {
+			if (!flushed)
+				flushed = !decoder.flush(buf.compact());
+		} else {
+			ByteBuffer b = in.buffer();
+			if (b != null)
+				decoder.decode(b, buf, in.isLast());
+			else
+				flushed = !decoder.flush(buf);
+		}
 		buf.flip();
 	}
 
@@ -45,7 +52,7 @@ public class ByteBufferReader extends Reader {
 
 	@Override
 	public int read(char[] cbuf, int off, int len) throws IOException {
-		if(len==0)
+		if (len == 0)
 			return 0;
 		decode();
 		if (!buf.hasRemaining())
@@ -57,6 +64,8 @@ public class ByteBufferReader extends Reader {
 
 	@Override
 	public int read(CharBuffer target) throws IOException {
+		if (target.isReadOnly())
+			throw new IOException("Target should be writable");
 		decode();
 		if (!buf.hasRemaining())
 			return -1;
