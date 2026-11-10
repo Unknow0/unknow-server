@@ -55,7 +55,6 @@ public final class Http11Processor implements NIOConnectionHandler {
 		byte c;
 		switch (state) {
 			case START:
-				dec.reset();
 				decode(b);
 				break;
 			case CONTENT:

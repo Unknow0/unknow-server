@@ -30,8 +30,13 @@ public class ByteBufferInputStream extends InputStream {
 		buffers.drainTo(list);
 	}
 
-	public boolean isOef() throws IOException {
-		return buffer() == EOF;
+	/**
+	 * return true if the next read will return -1
+	 * @return true if are at the eof
+	 * @throws IOException
+	 */
+	public boolean isEof() throws IOException {
+		return current == EOF || !current.hasRemaining() && !buffers.isEmpty() && buffers.peek() == EOF;
 	}
 
 	/**
@@ -80,7 +85,8 @@ public class ByteBufferInputStream extends InputStream {
 
 	@Override
 	public void close() {
-		buffers.add(EOF);
+		if (!isClosed())
+			buffers.add(EOF);
 	}
 
 	@Override
@@ -98,6 +104,10 @@ public class ByteBufferInputStream extends InputStream {
 			n -= r;
 		}
 		return o - n;
+	}
+
+	public boolean isLast() {
+		return current == EOF || !buffers.isEmpty() && buffers.peek() == EOF;
 	}
 
 	public boolean isClosed() {

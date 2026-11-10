@@ -2,6 +2,7 @@ package unknow.server.util.io;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 
@@ -23,12 +24,12 @@ public class ByteBufferReader extends Reader {
 	}
 
 	private void decode() throws IOException {
-		if (buf.hasRemaining() || in.isOef())
+		if (buf.hasRemaining() || in.isEof())
 			return;
 		buf.compact();
-		boolean end = in.hasRemaining() && in.isClosed();
-		if (!end || in.buffer().hasRemaining())
-			decoder.decode(in.buffer(), buf, end);
+		ByteBuffer b = in.buffer();
+		if (b != null)
+			decoder.decode(b, buf, in.isLast());
 		else
 			decoder.flush(buf);
 		buf.flip();
