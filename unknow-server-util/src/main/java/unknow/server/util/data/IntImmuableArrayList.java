@@ -3,7 +3,6 @@ package unknow.server.util.data;
 import java.util.Arrays;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Objects;
 import java.util.Set;
 import java.util.Spliterator;
 import java.util.stream.Stream;
@@ -61,8 +60,11 @@ public class IntImmuableArrayList extends AbstractImmuableList<Integer> implemen
 
 	@Override
 	public int indexOf(Object obj) {
+		if (!(obj instanceof Integer))
+			return -1;
+		int v = (Integer) obj;
 		for (int i = o; i < e; i++) {
-			if (Objects.equals(t[i], obj))
+			if (t[i] == v)
 				return i - o;
 		}
 		return -1;
@@ -70,8 +72,11 @@ public class IntImmuableArrayList extends AbstractImmuableList<Integer> implemen
 
 	@Override
 	public int lastIndexOf(Object obj) {
+		if (!(obj instanceof Integer))
+			return -1;
+		int v = (Integer) obj;
 		int i = e;
-		while (i >= o && !Objects.equals(t[--i], obj))
+		while (i >= o && t[--i] != v)
 			;
 		return i - o;
 	}
