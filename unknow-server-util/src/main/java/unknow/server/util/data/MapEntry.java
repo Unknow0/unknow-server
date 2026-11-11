@@ -5,7 +5,11 @@ package unknow.server.util.data;
 
 import java.util.Map;
 
-/** a map entry */
+/**
+ * a map entry
+ * @param <K> key type
+ * @param <V> value type
+ */
 public class MapEntry<K, V> implements Map.Entry<K, V> {
 	private final K key;
 	private final V value;

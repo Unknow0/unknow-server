@@ -10,6 +10,8 @@ import java.util.Iterator;
 import java.util.Set;
 
 /**
+ * A set backed by a sorted array
+ * @param <T> element type
  * @author unknow
  */
 public class ArraySet<T extends Comparable<T>> implements Set<T> {

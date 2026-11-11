@@ -4,9 +4,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.Collection;
+import java.util.Objects;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
 
+/**
+ * Input stream reading ByteBuffer
+ */
 public class ByteBufferInputStream extends InputStream {
 	private static final ByteBuffer EOF = ByteBuffer.allocate(0);
 
@@ -22,6 +26,10 @@ public class ByteBufferInputStream extends InputStream {
 			buffers.offer(buffer);
 	}
 
+	/**
+	 * empty the pending buffers into the list
+	 * @param list accepting the buffers
+	 */
 	public void drain(Collection<ByteBuffer> list) {
 		if (current != null && current.hasRemaining() || current == EOF) {
 			list.add(current);
@@ -30,8 +38,12 @@ public class ByteBufferInputStream extends InputStream {
 		buffers.drainTo(list);
 	}
 
-	public boolean isOef() throws IOException {
-		return buffer() == EOF;
+	/**
+	 * return true if the next read will return -1
+	 * @return true if are at the eof
+	 */
+	public boolean isEof() {
+		return current == EOF || (current == null || !current.hasRemaining()) && !buffers.isEmpty() && buffers.peek() == EOF;
 	}
 
 	/**
@@ -70,6 +82,9 @@ public class ByteBufferInputStream extends InputStream {
 
 	@Override
 	public int read(byte[] b, int off, int len) throws IOException {
+		Objects.checkFromIndexSize(off, len, b.length);
+		if (len == 0)
+			return 0;
 		ByteBuffer buffer = buffer();
 		if (buffer == EOF)
 			return -1;
@@ -80,7 +95,8 @@ public class ByteBufferInputStream extends InputStream {
 
 	@Override
 	public void close() {
-		buffers.add(EOF);
+		if (!isClosed())
+			buffers.add(EOF);
 	}
 
 	@Override
@@ -91,19 +107,34 @@ public class ByteBufferInputStream extends InputStream {
 			if (b == EOF)
 				return o - n;
 			int r = b.remaining();
-			if (n > r)
-				b.position(r);
-			else
-				b.position(r = (int) n);
+			if (n < r)
+				r = (int) n;
+			b.position(b.position() + r);
 			n -= r;
 		}
 		return o - n;
 	}
 
+	/**
+	 * return true if the next buffer is EOF 
+	 * @return true if next buffer is EOF
+	 */
+	public boolean isLast() {
+		return current == EOF || !buffers.isEmpty() && buffers.peek() == EOF;
+	}
+
+	/**
+	 * return true if this stream is closed
+	 * @return true if closed
+	 */
 	public boolean isClosed() {
 		return current == EOF || buffers.peekLast() == EOF;
 	}
 
+	/**
+	 * return true if the stream had remaining data  to read
+	 * @return
+	 */
 	public boolean hasRemaining() {
 		if (current != null && current.hasRemaining())
 			return true;

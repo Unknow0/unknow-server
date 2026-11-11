@@ -5,15 +5,15 @@ import java.util.Enumeration;
 import java.util.Map;
 import java.util.Set;
 
-import unknow.server.util.data.ArrayMap;
+import unknow.server.util.data.ObjectArrayMap;
 
 public class AbstractConfig {
 	protected static final String ALREADY_INITIALIZED = "already initialized";
 
 	private final String name;
-	private final ArrayMap<String> parameters;
+	private final ObjectArrayMap<String, String> parameters;
 
-	protected AbstractConfig(String name, ArrayMap<String> parameters) {
+	protected AbstractConfig(String name, ObjectArrayMap<String, String> parameters) {
 		this.name = name;
 		this.parameters = parameters;
 	}
@@ -27,7 +27,7 @@ public class AbstractConfig {
 	}
 
 	public Enumeration<String> getInitParameterNames() {
-		return parameters.names();
+		return parameters.keys();
 	}
 
 	public Map<String, String> getInitParameters() {

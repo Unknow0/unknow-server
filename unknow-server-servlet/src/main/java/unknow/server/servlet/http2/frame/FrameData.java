@@ -29,7 +29,8 @@ public class FrameData extends FrameReader {
 			s.flowRead(1);
 
 		int l = Math.min(buf.remaining(), frame.size - frame.pad);
-		s.append(buf.slice().limit(l));
+		ByteBuffer b = ByteBuffer.allocate(l);
+		s.append(b.put(buf.slice().limit(l)).flip());
 		buf.position(buf.position() + l);
 		frame.size -= l;
 		s.flowRead(l);

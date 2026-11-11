@@ -7,6 +7,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
+ * int map using readwrite lock for concurrency
  * @author unknow
  * @param <T> value type
  */

@@ -25,7 +25,7 @@ public class FrameHeader extends FrameReader {
 		} else
 			p.addStream(frame.s = new Http2Stream(p, frame.id, p.initialWindow));
 
-		if ((frame.flags & 0x20) == 1) // PRIORITY
+		if ((frame.flags & 0x20) != 0) // PRIORITY
 			frame.skip = 5;
 		else
 			frame.skip = 0;
@@ -37,6 +37,7 @@ public class FrameHeader extends FrameReader {
 		if (frame.skip > 0) {
 			int i = Math.min(frame.skip, buf.remaining());
 			buf.position(buf.position() + i);
+			frame.size -= i;
 			if ((frame.skip -= i) > 0 || !buf.hasRemaining())
 				return;
 		}

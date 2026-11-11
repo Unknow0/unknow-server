@@ -10,7 +10,7 @@ import jakarta.servlet.Servlet;
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletRegistration;
-import unknow.server.util.data.ArrayMap;
+import unknow.server.util.data.ObjectArrayMap;
 
 /**
  * implementation of ServletConfig
@@ -32,7 +32,7 @@ public class ServletConfigImpl extends AbstractConfig implements ServletConfig, 
 	 * @param parameters the init param
 	 * @param mappings   the url mappings
 	 */
-	public ServletConfigImpl(String name, Servlet servlet, ServletContext context, ArrayMap<String> parameters, Set<String> mappings) {
+	public ServletConfigImpl(String name, Servlet servlet, ServletContext context, ObjectArrayMap<String, String> parameters, Set<String> mappings) {
 		super(name, parameters);
 		this.servlet = servlet;
 		this.context = context;

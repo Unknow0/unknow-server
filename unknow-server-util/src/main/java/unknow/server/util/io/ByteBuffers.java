@@ -6,11 +6,18 @@ import java.util.function.Consumer;
 
 import unknow.server.util.ConsumerWithException;
 
+/**
+ * list of byte buffer
+ */
 public class ByteBuffers implements Consumer<ByteBuffer> {
 	public ByteBuffer[] buf;
 	public int len;
 	public long remaining;
 
+	/**
+	 * create ne w ByteBuffers
+	 * @param l capacity
+	 */
 	public ByteBuffers(int l) {
 		buf = new ByteBuffer[l];
 		len = 0;
@@ -28,6 +35,10 @@ public class ByteBuffers implements Consumer<ByteBuffer> {
 		remaining += b.remaining();
 	}
 
+	/**
+	 * add and remove from buffers to this buffers
+	 * @param buffers buffers to consume and add to this one
+	 */
 	public void accept(ByteBuffers buffers) {
 		if (buffers.isEmpty())
 			return;
@@ -38,10 +49,16 @@ public class ByteBuffers implements Consumer<ByteBuffer> {
 		buffers.clear();
 	}
 
+	/**
+	 * @return true is it's empty
+	 */
 	public boolean isEmpty() {
 		return len == 0;
 	}
 
+	/**
+	 * remove all buffer
+	 */
 	public void clear() {
 		for (int i = 0; i < len; i++)
 			buf[i] = null;
@@ -49,6 +66,9 @@ public class ByteBuffers implements Consumer<ByteBuffer> {
 		remaining = 0;
 	}
 
+	/**
+	 * @return remaining bytes is all buffers
+	 */
 	public long remaining() {
 		return remaining;
 	}

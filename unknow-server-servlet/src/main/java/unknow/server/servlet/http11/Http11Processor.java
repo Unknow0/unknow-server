@@ -55,13 +55,13 @@ public final class Http11Processor implements NIOConnectionHandler {
 		byte c;
 		switch (state) {
 			case START:
-				dec.reset();
 				decode(b);
 				break;
 			case CONTENT:
 				if (readContent(b)) {
 					state = START;
 					dec.closeContent();
+					dec.reset();
 				}
 				break;
 			case CHUNKED_START:
@@ -103,7 +103,11 @@ public final class Http11Processor implements NIOConnectionHandler {
 						return;
 					}
 					cr = false;
-					state = dec.closed() ? START : CHUNKED_START;
+					if (dec.closed()) {
+						dec.reset();
+						state = START;
+					} else
+						state = CHUNKED_START;
 				} else if (c == '\r')
 					cr = true;
 				else {
@@ -152,6 +156,7 @@ public final class Http11Processor implements NIOConnectionHandler {
 			state = CONTENT;
 		else {
 			dec.closeContent();
+			dec.reset();
 			state = START;
 		}
 		co.submit(new Http11Worker(this, req, lock.nextId()));

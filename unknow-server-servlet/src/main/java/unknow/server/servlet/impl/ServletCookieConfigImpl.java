@@ -7,7 +7,7 @@ import java.util.Collections;
 import java.util.Map;
 
 import jakarta.servlet.SessionCookieConfig;
-import unknow.server.util.data.ArrayMap;
+import unknow.server.util.data.ObjectArrayMap;
 
 /**
  * @author unknow
@@ -20,7 +20,7 @@ public class ServletCookieConfigImpl implements SessionCookieConfig {
 	public static final String SECURE = "secure";
 	public static final String MAX_AGE = "max-age";
 
-	private final Map<String, String> attributes = new ArrayMap<>();
+	private final Map<String, String> attributes = new ObjectArrayMap<>();
 
 	@Override
 	public String getName() {
