@@ -8,6 +8,9 @@ import java.util.Objects;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
 
+/**
+ * Input stream reading ByteBuffer
+ */
 public class ByteBufferInputStream extends InputStream {
 	private static final ByteBuffer EOF = ByteBuffer.allocate(0);
 
@@ -23,6 +26,10 @@ public class ByteBufferInputStream extends InputStream {
 			buffers.offer(buffer);
 	}
 
+	/**
+	 * empty the pending buffers into the list
+	 * @param list accepting the buffers
+	 */
 	public void drain(Collection<ByteBuffer> list) {
 		if (current != null && current.hasRemaining() || current == EOF) {
 			list.add(current);
@@ -108,14 +115,26 @@ public class ByteBufferInputStream extends InputStream {
 		return o - n;
 	}
 
+	/**
+	 * return true if the next buffer is EOF 
+	 * @return true if next buffer is EOF
+	 */
 	public boolean isLast() {
 		return current == EOF || !buffers.isEmpty() && buffers.peek() == EOF;
 	}
 
+	/**
+	 * return true if this stream is closed
+	 * @return true if closed
+	 */
 	public boolean isClosed() {
 		return current == EOF || buffers.peekLast() == EOF;
 	}
 
+	/**
+	 * return true if the stream had remaining data  to read
+	 * @return
+	 */
 	public boolean hasRemaining() {
 		if (current != null && current.hasRemaining())
 			return true;

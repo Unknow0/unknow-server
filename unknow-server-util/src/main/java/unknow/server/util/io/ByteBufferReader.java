@@ -9,16 +9,29 @@ import java.util.Objects;
 
 import unknow.server.util.Decoder;
 
+/**
+ * reader for bytebuffer
+ */
 public class ByteBufferReader extends Reader {
 	private final ByteBufferInputStream in;
 	private final Decoder decoder;
 	private final CharBuffer buf;
 	private boolean flushed;
 
+	/**
+	 * create a new bytebufferReader
+	 * @param in stream to read from
+	 * @param charset charset to use
+	 */
 	public ByteBufferReader(ByteBufferInputStream in, String charset) {
 		this(in, Charset.forName(charset));
 	}
 
+	/**
+	 * create a new bytebufferReader
+	 * @param in stream to read from
+	 * @param charset charset to use
+	 */
 	public ByteBufferReader(ByteBufferInputStream in, Charset charset) {
 		this.in = in;
 		this.decoder = Decoder.from(charset);

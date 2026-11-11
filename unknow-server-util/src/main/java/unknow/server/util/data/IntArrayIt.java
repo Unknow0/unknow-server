@@ -7,8 +7,7 @@ import java.util.ListIterator;
 import java.util.NoSuchElementException;
 
 /**
- * simple iterator over an array
- * @param <T> the object type
+ * simple iterator over an int array
  */
 public class IntArrayIt implements ListIterator<Integer> {
 	private final int[] data;

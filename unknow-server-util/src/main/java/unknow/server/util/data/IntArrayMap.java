@@ -8,6 +8,7 @@ import java.util.Collection;
 import java.util.Set;
 
 /**
+ * int map backed up by sorted array
  * @author unknow
  * @param <T> value type
  */
@@ -167,6 +168,9 @@ public class IntArrayMap<T> {
 		return new IntImmuableArrayList(keys, 0, len);
 	}
 
+	/**
+	 * @return all values
+	 */
 	public Collection<T> values() {
 		return new ImmuableArrayList<>(values, 0, len);
 	}

@@ -13,6 +13,9 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 
 /**
+ * Object map backed by arrays
+ * @param <K> key type
+ * @param <V> value type
  * @author unknow
  */
 public class ObjectArrayMap<K, V> implements Map<K, V> {
@@ -80,8 +83,6 @@ public class ObjectArrayMap<K, V> implements Map<K, V> {
 
 	@Override
 	public V put(K name, V o) {
-		System.out.println("put " + name);
-		System.out.println(Arrays.toString(key));
 		int i = Arrays.binarySearch(key, 0, len, name, cmp);
 		System.out.println(len + " " + i);
 		if (i >= 0) {
