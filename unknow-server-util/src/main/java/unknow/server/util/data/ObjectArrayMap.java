@@ -22,6 +22,14 @@ public class ObjectArrayMap<K, V> implements Map<K, V> {
 	private int len;
 
 	/**
+	 * create an empty array map using natural order
+	 */
+	@SuppressWarnings("unchecked")
+	public ObjectArrayMap() {
+		this((Comparator<K>) Comparator.naturalOrder());
+	}
+
+	/**
 	 * create an empty array map
 	 * @param cmp the key's comparator
 	 */
@@ -31,6 +39,16 @@ public class ObjectArrayMap<K, V> implements Map<K, V> {
 		key = (K[]) new Object[10];
 		value = (V[]) new Object[10];
 		len = 0;
+	}
+
+	/**
+	 * create a new arrayMap with these key/value /!\ key should already be sorted using the natural order
+	 * @param key the keys
+	 * @param value the values
+	 */
+	@SuppressWarnings("unchecked")
+	public ObjectArrayMap(K[] key, V[] value) {
+		this(key, value, (Comparator<K>) Comparator.naturalOrder());
 	}
 
 	/**
@@ -62,21 +80,25 @@ public class ObjectArrayMap<K, V> implements Map<K, V> {
 
 	@Override
 	public V put(K name, V o) {
+		System.out.println("put " + name);
+		System.out.println(Arrays.toString(key));
 		int i = Arrays.binarySearch(key, 0, len, name, cmp);
+		System.out.println(len + " " + i);
 		if (i >= 0) {
+			V old = value[i];
 			value[i] = o;
-			return null;
+			return old;
 		}
+		i = -i - 1;
+		ensure(len + 1);
 		if (i < len) {
 			System.arraycopy(key, i, key, i + 1, len - i);
 			System.arraycopy(value, i, value, i + 1, len - i);
 		}
-		ensure(++len);
-		i = -i - 1;
-		V old = value[i];
 		key[i] = name;
 		value[i] = o;
-		return old;
+		len++;
+		return null;
 	}
 
 	/**
@@ -89,12 +111,12 @@ public class ObjectArrayMap<K, V> implements Map<K, V> {
 		int i = Arrays.binarySearch(key, 0, len, name, cmp);
 		if (i >= 0)
 			return false;
+		i = -i - 1;
 		if (i < len) {
 			System.arraycopy(key, i, key, i + 1, len - i);
 			System.arraycopy(value, i, value, i + 1, len - i);
 		}
 		ensure(++len);
-		i = -i - 1;
 		key[i] = name;
 		value[i] = o;
 		return true;
@@ -103,11 +125,24 @@ public class ObjectArrayMap<K, V> implements Map<K, V> {
 	@SuppressWarnings("unchecked")
 	@Override
 	public V remove(Object name) {
-		return put((K) name, null);
+		int i = Arrays.binarySearch(key, 0, len, (K) name, cmp);
+		if (i < 0)
+			return null;
+		V v = value[i];
+		if (i < len) {
+			System.arraycopy(key, i, key, i - 1, len - i);
+			System.arraycopy(value, i, value, i - 1, len - i);
+		}
+		len--;
+		return v;
 	}
 
 	@Override
 	public void clear() {
+		for (int i = 0; i < len; i++) {
+			key[i] = null;
+			value[i] = null;
+		}
 		len = 0;
 	}
 
@@ -118,7 +153,11 @@ public class ObjectArrayMap<K, V> implements Map<K, V> {
 
 	@Override
 	public boolean containsValue(Object value) {
-		throw new UnsupportedOperationException();
+		for (int i = 0; i < len; i++) {
+			if (this.value[i].equals(value))
+				return true;
+		}
+		return false;
 	}
 
 	@Override
@@ -133,12 +172,12 @@ public class ObjectArrayMap<K, V> implements Map<K, V> {
 
 	@Override
 	public Set<K> keySet() {
-		return new KeySet();
+		return new ImmuableArrayList<>(key, 0, len);
 	}
 
 	@Override
 	public Collection<V> values() {
-		return null;
+		return new ImmuableArrayList<>(value, 0, len);
 	}
 
 	@Override
@@ -270,91 +309,6 @@ public class ObjectArrayMap<K, V> implements Map<K, V> {
 		@Override
 		public V setValue(V value) {
 			throw new UnsupportedOperationException();
-		}
-
-	}
-
-	private class KeySet implements Set<K> {
-
-		@Override
-		public int size() {
-			return ObjectArrayMap.this.size();
-		}
-
-		@Override
-		public boolean isEmpty() {
-			return ObjectArrayMap.this.isEmpty();
-		}
-
-		@Override
-		public boolean contains(Object o) {
-			return false;
-		}
-
-		@Override
-		public Iterator<K> iterator() {
-			return new KeyIt();
-		}
-
-		@Override
-		public Object[] toArray() {
-			throw new UnsupportedOperationException();
-		}
-
-		@Override
-		public <T> T[] toArray(T[] a) {
-			throw new UnsupportedOperationException();
-		}
-
-		@Override
-		public boolean add(K e) {
-			throw new UnsupportedOperationException();
-		}
-
-		@Override
-		public boolean remove(Object o) {
-			throw new UnsupportedOperationException();
-		}
-
-		@Override
-		public boolean containsAll(Collection<?> c) {
-			throw new UnsupportedOperationException();
-		}
-
-		@Override
-		public boolean addAll(Collection<? extends K> c) {
-			throw new UnsupportedOperationException();
-		}
-
-		@Override
-		public boolean retainAll(Collection<?> c) {
-			throw new UnsupportedOperationException();
-		}
-
-		@Override
-		public boolean removeAll(Collection<?> c) {
-			throw new UnsupportedOperationException();
-		}
-
-		@Override
-		public void clear() {
-			ObjectArrayMap.this.clear();
-		}
-	}
-
-	private class KeyIt implements Iterator<K> {
-		private int i = 0;
-
-		@Override
-		public boolean hasNext() {
-			return i < len;
-		}
-
-		@Override
-		public K next() {
-			if (i == len)
-				throw new NoSuchElementException();
-			return key[i++];
 		}
 
 	}

@@ -12,7 +12,7 @@ import jakarta.servlet.Filter;
 import jakarta.servlet.FilterConfig;
 import jakarta.servlet.FilterRegistration;
 import jakarta.servlet.ServletContext;
-import unknow.server.util.data.ArrayMap;
+import unknow.server.util.data.ObjectArrayMap;
 
 /**
  * implementation of FilterConfig
@@ -38,8 +38,8 @@ public class FilterConfigImpl extends AbstractConfig implements FilterConfig, Fi
 	 * @param urlMappings     the url mappings
 	 * @param dispatcherTypes the allowed dispatcher types
 	 */
-	public FilterConfigImpl(String name, Filter filter, ServletContext context, ArrayMap<String> parameters, Set<String> servletMappings, Set<String> urlMappings,
-			Set<DispatcherType> dispatcherTypes) {
+	public FilterConfigImpl(String name, Filter filter, ServletContext context, ObjectArrayMap<String, String> parameters, Set<String> servletMappings,
+			Set<String> urlMappings, Set<DispatcherType> dispatcherTypes) {
 		super(name, parameters);
 		this.filter = filter;
 		this.context = context;

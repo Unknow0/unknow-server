@@ -30,7 +30,7 @@ import jakarta.servlet.SessionTrackingMode;
 import jakarta.servlet.descriptor.JspConfigDescriptor;
 import unknow.server.servlet.impl.session.SessionFactory;
 import unknow.server.servlet.utils.EventManager;
-import unknow.server.util.data.ArrayMap;
+import unknow.server.util.data.ObjectArrayMap;
 
 /**
  * @author unknow
@@ -42,14 +42,14 @@ public class ServletContextImpl implements ServletContext {
 	private final String name;
 	private final String vhost;
 
-	private final ArrayMap<String> parameters;
-	private final ArrayMap<Object> attributes;
+	private final ObjectArrayMap<String,String> parameters;
+	private final ObjectArrayMap<String,Object> attributes;
 
 	private final EventManager events;
 	private final SessionFactory sessions;
 
-	private final ArrayMap<String> localeEncodings;
-	private final ArrayMap<String> mimeTypes;
+	private final ObjectArrayMap<String,String> localeEncodings;
+	private final ObjectArrayMap<String,String> mimeTypes;
 
 	private String requestEncoding = "utf-8";
 	private String responseEncoding = "utf-8";
@@ -65,8 +65,8 @@ public class ServletContextImpl implements ServletContext {
 	 * @param localeEncodings the encoding per locale
 	 * @param mimeTypes the mime type per file extentions
 	 */
-	public ServletContextImpl(String name, String vhost, ArrayMap<String> parameters, EventManager events, SessionFactory sessions, ArrayMap<String> localeEncodings,
-			ArrayMap<String> mimeTypes) {
+	public ServletContextImpl(String name, String vhost, ObjectArrayMap<String,String> parameters, EventManager events, SessionFactory sessions, ObjectArrayMap<String,String> localeEncodings,
+			ObjectArrayMap<String,String> mimeTypes) {
 		this.name = name;
 		this.vhost = vhost;
 		this.parameters = parameters;
@@ -76,7 +76,7 @@ public class ServletContextImpl implements ServletContext {
 		this.localeEncodings = localeEncodings;
 		this.mimeTypes = mimeTypes;
 
-		this.attributes = new ArrayMap<>();
+		this.attributes = new ObjectArrayMap<>();
 	}
 
 	/**
@@ -142,7 +142,7 @@ public class ServletContextImpl implements ServletContext {
 
 	@Override
 	public Enumeration<String> getAttributeNames() {
-		return attributes.names();
+		return attributes.keys();
 	}
 
 	@Override
@@ -217,7 +217,7 @@ public class ServletContextImpl implements ServletContext {
 
 	@Override
 	public Enumeration<String> getInitParameterNames() {
-		return parameters.names();
+		return parameters.keys();
 	}
 
 	@Override

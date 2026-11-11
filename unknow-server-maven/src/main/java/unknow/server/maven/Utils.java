@@ -16,8 +16,8 @@ import com.github.javaparser.ast.expr.ObjectCreationExpr;
 
 import unknow.maven.codegen.CodeGenUtils;
 import unknow.maven.codegen.TypeFactory;
-import unknow.server.util.data.ArrayMap;
 import unknow.server.util.data.ArraySet;
+import unknow.server.util.data.ObjectArrayMap;
 
 /**
  * @author unknow
@@ -27,7 +27,7 @@ public class Utils {
 	}
 
 	/**
-	 * create a new ArrayMap
+	 * create a new ObjectArrayMap
 	 * 
 	 * @param map the map content
 	 * @param types the typeCahe
@@ -42,12 +42,12 @@ public class Utils {
 			k.add(CodeGenUtils.text(key));
 			v.add(new IntegerLiteralExpr(map.get(key).toString()));
 		}
-		return new ObjectCreationExpr(null, types.getClass(ArrayMap.class, TypeFactory.EMPTY),
+		return new ObjectCreationExpr(null, types.getClass(ObjectArrayMap.class, TypeFactory.EMPTY),
 				CodeGenUtils.list(CodeGenUtils.array(types.getClass(String.class), k), CodeGenUtils.array(types.getClass(Integer.class), v)));
 	}
 
 	/**
-	 * create a new ArrayMap
+	 * create a new ObjectArrayMap
 	 * 
 	 * @param map the map content
 	 * @param types the typeCahe
@@ -62,7 +62,7 @@ public class Utils {
 			k.add(CodeGenUtils.text(key));
 			v.add(CodeGenUtils.text(map.get(key)));
 		}
-		return new ObjectCreationExpr(null, types.getClass(ArrayMap.class, TypeFactory.EMPTY),
+		return new ObjectCreationExpr(null, types.getClass(ObjectArrayMap.class, TypeFactory.EMPTY),
 				CodeGenUtils.list(CodeGenUtils.array(types.getClass(String.class), k), CodeGenUtils.array(types.getClass(String.class), v)));
 	}
 

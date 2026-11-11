@@ -34,9 +34,8 @@ public class ByteBufferInputStream extends InputStream {
 	/**
 	 * return true if the next read will return -1
 	 * @return true if are at the eof
-	 * @throws IOException
 	 */
-	public boolean isEof() throws IOException {
+	public boolean isEof() {
 		return current == EOF || (current == null || !current.hasRemaining()) && !buffers.isEmpty() && buffers.peek() == EOF;
 	}
 

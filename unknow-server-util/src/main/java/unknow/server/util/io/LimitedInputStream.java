@@ -41,6 +41,8 @@ public final class LimitedInputStream extends InputStream {
 
 	@Override
 	public int read(byte[] b, int off, int len) throws IOException {
+		if (limit == 0)
+			return -1;
 		if (len > limit)
 			len = limit;
 		limit -= len;
@@ -65,7 +67,9 @@ public final class LimitedInputStream extends InputStream {
 
 	@Override
 	public long skip(long n) throws IOException {
-		return in.skip(n);
+		n = in.skip(Math.min(limit, n));
+		limit -= n;
+		return n;
 	}
 
 	@Override

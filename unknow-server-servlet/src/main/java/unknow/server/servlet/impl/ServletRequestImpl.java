@@ -48,7 +48,7 @@ import unknow.server.servlet.HttpConnection;
 import unknow.server.servlet.impl.session.SessionFactory;
 import unknow.server.servlet.utils.PathUtils;
 import unknow.server.servlet.utils.UrlDecoder;
-import unknow.server.util.data.ArrayMap;
+import unknow.server.util.data.ObjectArrayMap;
 import unknow.server.util.io.ByteBufferInputStream;
 import unknow.server.util.io.ByteBufferReader;
 
@@ -60,7 +60,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	private static final Cookie[] EMPTY = new Cookie[0];
 
-	private final ArrayMap<Object> attributes = new ArrayMap<>();
+	private final ObjectArrayMap<String, Object> attributes = new ObjectArrayMap<>();
 
 	protected final HttpConnection co;
 	private final DispatcherType type;
@@ -198,7 +198,7 @@ public class ServletRequestImpl implements HttpServletRequest {
 
 	@Override
 	public Enumeration<String> getAttributeNames() {
-		return attributes.names();
+		return attributes.keys();
 	}
 
 	@Override

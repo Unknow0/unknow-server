@@ -32,7 +32,7 @@ public class ByteBufferReader extends Reader {
 		buf.compact();
 		if (in.isEof()) {
 			if (!flushed)
-				flushed = !decoder.flush(buf.compact());
+				flushed = !decoder.flush(buf);
 		} else {
 			ByteBuffer b = in.buffer();
 			if (b != null)

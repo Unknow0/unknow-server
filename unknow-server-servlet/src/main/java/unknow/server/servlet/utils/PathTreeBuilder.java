@@ -17,13 +17,13 @@ import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import unknow.server.servlet.impl.FilterChainImpl;
+import unknow.server.servlet.impl.FilterChainImpl.ServletFilter;
 import unknow.server.servlet.impl.FilterConfigImpl;
 import unknow.server.servlet.impl.ServletConfigImpl;
 import unknow.server.servlet.impl.ServletContextImpl;
-import unknow.server.servlet.impl.FilterChainImpl.ServletFilter;
 import unknow.server.servlet.utils.PathTree.PartNode;
-import unknow.server.util.data.ArrayMap;
 import unknow.server.util.data.ArraySet;
+import unknow.server.util.data.ObjectArrayMap;
 
 /**
  * @author unknow
@@ -60,7 +60,7 @@ public class PathTreeBuilder {
 
 		this.sb = new StringBuilder();
 
-		this.defaultServlet = new ServletConfigImpl("", ServletDefault.INSTANCE, ctx, new ArrayMap<>(new String[0], new String[0]), new ArraySet<>(new String[0]));
+		this.defaultServlet = new ServletConfigImpl("", ServletDefault.INSTANCE, ctx, new ObjectArrayMap<>(new String[0], new String[0]), new ArraySet<>(new String[0]));
 	}
 
 	public PathTree build() throws ServletException {
