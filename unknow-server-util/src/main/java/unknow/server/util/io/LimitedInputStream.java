@@ -45,8 +45,9 @@ public final class LimitedInputStream extends InputStream {
 			return -1;
 		if (len > limit)
 			len = limit;
-		limit -= len;
-		return in.read(b, off, len);
+		int i = in.read(b, off, len);
+		limit -= i;
+		return i;
 	}
 
 	@Override

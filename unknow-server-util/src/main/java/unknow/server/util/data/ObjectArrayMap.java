@@ -113,13 +113,14 @@ public class ObjectArrayMap<K, V> implements Map<K, V> {
 		if (i >= 0)
 			return false;
 		i = -i - 1;
+		ensure(len + 1);
 		if (i < len) {
 			System.arraycopy(key, i, key, i + 1, len - i);
 			System.arraycopy(value, i, value, i + 1, len - i);
 		}
-		ensure(++len);
 		key[i] = name;
 		value[i] = o;
+		len++;
 		return true;
 	}
 
@@ -131,8 +132,8 @@ public class ObjectArrayMap<K, V> implements Map<K, V> {
 			return null;
 		V v = value[i];
 		if (i < len) {
-			System.arraycopy(key, i, key, i - 1, len - i);
-			System.arraycopy(value, i, value, i - 1, len - i);
+			System.arraycopy(key, i + 1, key, i, len - i);
+			System.arraycopy(value, i + 1, value, i, len - i);
 		}
 		len--;
 		return v;
