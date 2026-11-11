@@ -1,8 +1,6 @@
 package unknow.server.util.data;
 
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Objects;
@@ -10,7 +8,7 @@ import java.util.Set;
 import java.util.Spliterator;
 import java.util.stream.Stream;
 
-public class ImmuableArrayList<T> implements Set<T>, List<T> {
+public class ImmuableArrayList<T> extends AbstractImmuableList<T> implements Set<T>, List<T> {
 	private final T[] t;
 	private final int o;
 	private final int e;
@@ -45,11 +43,6 @@ public class ImmuableArrayList<T> implements Set<T>, List<T> {
 	}
 
 	@Override
-	public Iterator<T> iterator() {
-		return listIterator();
-	}
-
-	@Override
 	public Object[] toArray() {
 		return Arrays.copyOfRange(t, o, e);
 	}
@@ -67,69 +60,10 @@ public class ImmuableArrayList<T> implements Set<T>, List<T> {
 	}
 
 	@Override
-	public boolean add(T e) {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public boolean remove(Object o) {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public boolean containsAll(Collection<?> c) {
-		for (Object o : c) {
-			if (!contains(o))
-				return false;
-		}
-		return true;
-	}
-
-	@Override
-	public boolean addAll(Collection<? extends T> c) {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public boolean removeAll(Collection<?> c) {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public boolean retainAll(Collection<?> c) {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public void clear() {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public boolean addAll(int index, Collection<? extends T> c) {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
 	public T get(int index) {
 		if (index < 0 || index > size())
 			throw new IndexOutOfBoundsException();
 		return t[index + o];
-	}
-
-	@Override
-	public T set(int index, T element) {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public void add(int index, T element) {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public T remove(int index) {
-		throw new UnsupportedOperationException();
 	}
 
 	@Override

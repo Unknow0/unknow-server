@@ -1,8 +1,6 @@
 package unknow.server.util.data;
 
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Objects;
@@ -10,7 +8,7 @@ import java.util.Set;
 import java.util.Spliterator;
 import java.util.stream.Stream;
 
-public class IntImmuableArrayList implements Set<Integer>, List<Integer> {
+public class IntImmuableArrayList extends AbstractImmuableList<Integer> implements Set<Integer>, List<Integer> {
 	private final int[] t;
 	private final int o;
 	private final int e;
@@ -45,11 +43,6 @@ public class IntImmuableArrayList implements Set<Integer>, List<Integer> {
 	}
 
 	@Override
-	public Iterator<Integer> iterator() {
-		return listIterator();
-	}
-
-	@Override
 	public Object[] toArray() {
 		Integer[] a = new Integer[size()];
 		for (int i = 0; i < t.length; i++)
@@ -71,69 +64,10 @@ public class IntImmuableArrayList implements Set<Integer>, List<Integer> {
 	}
 
 	@Override
-	public boolean add(Integer e) {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public boolean remove(Object o) {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public boolean containsAll(Collection<?> c) {
-		for (Object o : c) {
-			if (!contains(o))
-				return false;
-		}
-		return true;
-	}
-
-	@Override
-	public boolean addAll(Collection<? extends Integer> c) {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public boolean removeAll(Collection<?> c) {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public boolean retainAll(Collection<?> c) {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public void clear() {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public boolean addAll(int index, Collection<? extends Integer> c) {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
 	public Integer get(int index) {
 		if (index < 0 || index > size())
 			throw new IndexOutOfBoundsException();
 		return t[index + o];
-	}
-
-	@Override
-	public Integer set(int index, Integer element) {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public void add(int index, Integer element) {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public Integer remove(int index) {
-		throw new UnsupportedOperationException();
 	}
 
 	@Override
