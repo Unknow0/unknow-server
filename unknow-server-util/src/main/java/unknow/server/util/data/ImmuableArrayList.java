@@ -10,27 +10,14 @@ import java.util.stream.Stream;
 
 public class ImmuableArrayList<T> extends AbstractImmuableList<T> implements Set<T>, List<T> {
 	private final T[] t;
-	private final int o;
-	private final int e;
 
 	public ImmuableArrayList(T[] t) {
 		this(t, 0, t.length);
 	}
 
 	public ImmuableArrayList(T[] t, int o, int e) {
+		super(o, e);
 		this.t = t;
-		this.o = o;
-		this.e = e;
-	}
-
-	@Override
-	public int size() {
-		return e - o;
-	}
-
-	@Override
-	public boolean isEmpty() {
-		return e == o;
 	}
 
 	@Override
@@ -61,8 +48,7 @@ public class ImmuableArrayList<T> extends AbstractImmuableList<T> implements Set
 
 	@Override
 	public T get(int index) {
-		if (index < 0 || index > size())
-			throw new IndexOutOfBoundsException();
+		checkIndex(index);
 		return t[index + o];
 	}
 
@@ -90,20 +76,12 @@ public class ImmuableArrayList<T> extends AbstractImmuableList<T> implements Set
 
 	@Override
 	public ListIterator<T> listIterator(int index) {
-		if (index < 0 || index > size())
-			throw new IndexOutOfBoundsException();
+		checkIndex(index);
 		return new ArrayIt<>(t, o, size(), index);
 	}
 
 	@Override
-	public List<T> subList(int fromIndex, int toIndex) {
-		if (fromIndex == 0 && toIndex == size())
-			return this;
-
-		if ((fromIndex | toIndex) < 0 || fromIndex > toIndex || toIndex > size())
-			throw new IndexOutOfBoundsException();
-		if (fromIndex == toIndex)
-			return List.of();
+	protected List<T> createSublist(int fromIndex, int toIndex) {
 		return new ImmuableArrayList<>(t, fromIndex + o, toIndex + o);
 	}
 

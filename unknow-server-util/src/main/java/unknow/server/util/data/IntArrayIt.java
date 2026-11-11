@@ -9,11 +9,8 @@ import java.util.NoSuchElementException;
 /**
  * simple iterator over an int array
  */
-public class IntArrayIt implements ListIterator<Integer> {
+public class IntArrayIt extends AbstractArrayIt<Integer> implements ListIterator<Integer> {
 	private final int[] data;
-	private final int o;
-	private final int l;
-	private int i;
 
 	/**
 	 * new iterator on array
@@ -31,15 +28,8 @@ public class IntArrayIt implements ListIterator<Integer> {
 	 * @param i start index
 	 */
 	public IntArrayIt(int[] data, int o, int l, int i) {
+		super(o, l, i);
 		this.data = data;
-		this.o = o;
-		this.l = l;
-		this.i = i;
-	}
-
-	@Override
-	public boolean hasNext() {
-		return i < l;
 	}
 
 	@Override
@@ -50,39 +40,9 @@ public class IntArrayIt implements ListIterator<Integer> {
 	}
 
 	@Override
-	public boolean hasPrevious() {
-		return i > 0;
-	}
-
-	@Override
 	public Integer previous() {
 		if (i == 0)
 			throw new NoSuchElementException();
 		return data[--i + o];
-	}
-
-	@Override
-	public int nextIndex() {
-		return i - o;
-	}
-
-	@Override
-	public int previousIndex() {
-		return i - 1 - o;
-	}
-
-	@Override
-	public void remove() {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public void set(Integer e) {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public void add(Integer e) {
-		throw new UnsupportedOperationException();
 	}
 }

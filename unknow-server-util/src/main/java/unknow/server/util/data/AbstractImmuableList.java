@@ -7,8 +7,45 @@ import java.util.Set;
 import java.util.Spliterator;
 
 public abstract class AbstractImmuableList<T> implements Set<T>, List<T> {
+	protected final int o;
+	protected final int e;
+
+	protected AbstractImmuableList(int o, int e) {
+		this.o = o;
+		this.e = e;
+	}
+
+	protected void checkIndex(int index) {
+		if (index < 0 || index > size())
+			throw new IndexOutOfBoundsException(index);
+	}
+
 	@Override
 	public abstract Spliterator<T> spliterator();
+
+	protected abstract List<T> createSublist(int fromIndex, int toIndex);
+
+	@Override
+	public int size() {
+		return e - o;
+	}
+
+	@Override
+	public boolean isEmpty() {
+		return e == o;
+	}
+
+	@Override
+	public List<T> subList(int fromIndex, int toIndex) {
+		if (fromIndex == 0 && toIndex == size())
+			return this;
+
+		if ((fromIndex | toIndex) < 0 || fromIndex > toIndex || toIndex > size())
+			throw new IndexOutOfBoundsException();
+		if (fromIndex == toIndex)
+			return List.of();
+		return createSublist(fromIndex, toIndex);
+	}
 
 	@Override
 	public boolean containsAll(Collection<?> c) {

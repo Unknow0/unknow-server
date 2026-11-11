@@ -10,33 +10,23 @@ import java.util.stream.Stream;
 
 public class IntImmuableArrayList extends AbstractImmuableList<Integer> implements Set<Integer>, List<Integer> {
 	private final int[] t;
-	private final int o;
-	private final int e;
 
 	public IntImmuableArrayList(int[] t) {
 		this(t, 0, t.length);
 	}
 
 	public IntImmuableArrayList(int[] t, int o, int e) {
+		super(o, e);
 		this.t = t;
-		this.o = o;
-		this.e = e;
-	}
-
-	@Override
-	public int size() {
-		return e - o;
-	}
-
-	@Override
-	public boolean isEmpty() {
-		return e == o;
 	}
 
 	@Override
 	public boolean contains(Object obj) {
+		if (!(obj instanceof Integer))
+			return false;
+		int v = (Integer) obj;
 		for (int i = o; i < e; i++) {
-			if (Objects.equals(t[i], obj))
+			if (t[i] == v)
 				return true;
 		}
 		return false;
@@ -65,8 +55,7 @@ public class IntImmuableArrayList extends AbstractImmuableList<Integer> implemen
 
 	@Override
 	public Integer get(int index) {
-		if (index < 0 || index > size())
-			throw new IndexOutOfBoundsException();
+		checkIndex(index);
 		return t[index + o];
 	}
 
@@ -94,20 +83,12 @@ public class IntImmuableArrayList extends AbstractImmuableList<Integer> implemen
 
 	@Override
 	public ListIterator<Integer> listIterator(int index) {
-		if (index < 0 || index > size())
-			throw new IndexOutOfBoundsException();
+		checkIndex(index);
 		return new IntArrayIt(t, o, size(), index);
 	}
 
 	@Override
-	public List<Integer> subList(int fromIndex, int toIndex) {
-		if (fromIndex == 0 && toIndex == size())
-			return this;
-
-		if ((fromIndex | toIndex) < 0 || fromIndex > toIndex || toIndex > size())
-			throw new IndexOutOfBoundsException();
-		if (fromIndex == toIndex)
-			return List.of();
+	protected List<Integer> createSublist(int fromIndex, int toIndex) {
 		return new IntImmuableArrayList(t, fromIndex + o, toIndex + o);
 	}
 
