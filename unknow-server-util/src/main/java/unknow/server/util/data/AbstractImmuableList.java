@@ -49,8 +49,8 @@ public abstract class AbstractImmuableList<T> implements Set<T>, List<T> {
 
 	@Override
 	public boolean containsAll(Collection<?> c) {
-		for (Object o : c) {
-			if (!contains(o))
+		for (Object obj : c) {
+			if (!contains(obj))
 				return false;
 		}
 		return true;

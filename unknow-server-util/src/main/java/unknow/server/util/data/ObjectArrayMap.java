@@ -84,7 +84,6 @@ public class ObjectArrayMap<K, V> implements Map<K, V> {
 	@Override
 	public V put(K name, V o) {
 		int i = Arrays.binarySearch(key, 0, len, name, cmp);
-		System.out.println(len + " " + i);
 		if (i >= 0) {
 			V old = value[i];
 			value[i] = o;
