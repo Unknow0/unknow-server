@@ -180,7 +180,6 @@ public class NIOServerBuilder {
 		return server;
 	}
 
-	@SuppressWarnings("resource")
 	private NIOWorkers createWorkers(int i, long selectTime, long closingTime, NIOServerListener l) throws IOException {
 		ExecutorService executor = getExecutor();
 		if (i == 1)
