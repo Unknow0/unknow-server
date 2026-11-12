@@ -19,7 +19,6 @@ public final class Http11Worker extends HttpWorker {
 	private static final Logger logger = LoggerFactory.getLogger(Http11Worker.class);
 
 	private static final byte[] CRLF = { '\r', '\n' };
-	private static final byte[] QUOTE = new byte[] { '\\', '"' };
 	private static final byte[] CHUNKED = new byte[] { 't', 'r', 'a', 'n', 's', 'f', 'e', 'r', '-', 'e', 'n', 'c', 'o', 'd', 'i', 'n', 'g', ':', ' ', 'c', 'h', 'u', 'n', 'k',
 			'e', 'd', '\r', '\n' };
 	private static final byte[] CONTENT_LENGTH = new byte[] { 'c', 'o', 'n', 't', 'e', 'n', 't', '-', 'l', 'e', 'n', 'g', 't', 'h', ':', ' ' };
@@ -136,29 +135,12 @@ public final class Http11Worker extends HttpWorker {
 		p.requestDone();
 	}
 
-	/**
-	 * check if this string contain a special characters as a header value
-	 * 
-	 * @param s the string to check
-	 * @return true is we should quote in the response
-	 */
-	private static boolean shouldEscape(String s) {
-		int l = s.length();
-		for (int i = 0; i < l; i++) {
-			char c = s.charAt(i);
-			if (c == ' ' || c == '(' || c == ')' || c == '<' || c == '>' || c == '@' || c == ',' || c == ';' || c == ':' || c == '\\' || c == '"' || c == '/' || c == '['
-					|| c == ']' || c == '?' || c == '=' || c == '{' || c == '}')
-				return true;
-		}
-		return false;
-	}
-
 	private static void writeHeader(Out out, String name, Collection<String> values) throws IOException {
-		out.write(name.getBytes(StandardCharsets.US_ASCII));
-		out.write(':');
+		byte[] b = name.getBytes(StandardCharsets.US_ASCII);
 		for (String s : values) {
-			out.write(' ');
-			writeString(out, s);
+			out.write(b);
+			out.write(':');
+			out.write(s.getBytes(StandardCharsets.US_ASCII));
 		}
 		out.write(CRLF);
 	}
@@ -170,35 +152,19 @@ public final class Http11Worker extends HttpWorker {
 		out.write(c.getValue().getBytes(StandardCharsets.US_ASCII));
 		if (c.getPath() != null) {
 			out.write(PATH);
-			writeString(out, c.getPath());
+			out.write(c.getPath().getBytes(StandardCharsets.US_ASCII));
 		}
 		if (c.getDomain() != null) {
 			out.write(DOMAIN);
-			writeString(out, c.getDomain());
+			out.write(c.getDomain().getBytes(StandardCharsets.US_ASCII));
 		}
 		if (c.getMaxAge() > 0) {
 			out.write(MAX_AGE);
-			writeString(out, Integer.toString(c.getMaxAge()));
+			out.write(Integer.toString(c.getMaxAge()).getBytes(StandardCharsets.US_ASCII));
 		}
 		if (c.getSecure())
 			out.write(SECURE);
 		if (c.isHttpOnly())
 			out.write(HTTP_ONLY);
-	}
-
-	private static void writeString(Out out, String s) throws IOException {
-		boolean escape = shouldEscape(s);
-		if (escape)
-			out.write('"');
-		int l = 0;
-		int i;
-		while ((i = s.indexOf('"', l)) != -1) {
-			out.write(s.substring(l, i).getBytes(StandardCharsets.US_ASCII));
-			out.write(QUOTE);
-			l = i + 1;
-		}
-		out.write(s.substring(l).getBytes(StandardCharsets.US_ASCII));
-		if (escape)
-			out.write('"');
 	}
 }
