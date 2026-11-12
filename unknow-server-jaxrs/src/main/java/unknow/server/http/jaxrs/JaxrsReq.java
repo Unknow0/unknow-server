@@ -15,6 +15,9 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.core.MediaType;
@@ -27,6 +30,8 @@ import unknow.server.http.jaxrs.header.MediaTypeDelegate;
  * @author unknow
  */
 public class JaxrsReq {
+	private static final Logger logger = LoggerFactory.getLogger(JaxrsReq.class);
+
 	private final HttpServletRequest r;
 	private final List<String> pathValue;
 
@@ -228,7 +233,11 @@ public class JaxrsReq {
 				sb.append(cbuf, 0, l);
 		}
 		forms = new MultivaluedHashMap<>();
-		parseQueryString(sb.toString(), forms);
+		try {
+			parseQueryString(sb.toString(), forms);
+		} catch (Exception e) {
+			logger.error("Failed to parse form '{}'", sb, e);
+		}
 	}
 
 	private void initCookies() {
